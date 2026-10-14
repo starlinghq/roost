@@ -38,7 +38,7 @@ To make that possible, move R-036 (`Starlings.Generation.Roost`) to M0 against t
 **Why it matters long term.** The packaging shape decides who can use Roost and how upgrades work. It is also expensive to change once packages are published.
 
 **Change.**
-- **Applied: compile time knows only the op vocabulary.** The generator (R-020, S4) checks a definition against C3, the op vocabulary, only. Whether a specialisation exists for a given dtype, head size or SM is checked at startup (R-023), where it already is. `Starlings.Roost.Models.*` ship pre-generated forwards, so a consumer's build never runs the Roost generator or reads a kernel manifest.
+- **Applied: compile time knows only the op vocabulary.** The generator (R-020, S4) checks a definition against C3, the op vocabulary, only. Whether a specialisation exists for a given dtype, head size or SM is checked at startup (R-023), where it already is. `Starlings.Roost.Models.*` ship pre-generated forwards, so a model-package consumer never runs the generator. Someone defining a new model, the G6 onboarding case, references the generator as an analyzer package that depends on C3 only. No build reads a kernel manifest.
 - **Applied: the library packages do not require AOT.** Struct-constrained generics are devirtualised under JIT as well as AOT. AOT is a property of the `roost` binary, not a requirement on the packages, because most ASP.NET services that would host the library are not AOT-published.
 - **Decision: how native code reaches a NuGet consumer.** There are two options:
   - (a) RID-specific native runtime packages per SM set, following the `Microsoft.ML.OnnxRuntime.Gpu.Linux` pattern, with CUDA libraries taken from the system install;
@@ -55,7 +55,7 @@ To make that possible, move R-036 (`Starlings.Generation.Roost`) to M0 against t
 
 **Change.**
 - R-009's acceptance now requires the template renderers and chat profiles to land in a package whose dependency closure contains no `Microsoft.ML.OnnxRuntime*`.
-- R-003 adds a Roost boundary check that fails on any `Microsoft.ML.OnnxRuntime*` or Python reference in the shipped closure, mirroring starling's `tools/check-boundary.py`.
+- R-003 adds a Roost boundary check that fails on any `Microsoft.ML.OnnxRuntime*` or Python reference in an engine package's closure, mirroring starling's `tools/check-boundary.py`. The server is exempt once the M3 pooling routes (R-052) bring Starling's ONNX models into it, because one host for every task is PRD advantage 3.
 - The risk table names this as a refactor of two released packages with three consumers.
 
 ### 4. A diamond dependency makes the submodule interim fragile (applied)
@@ -91,7 +91,7 @@ To make that possible, move R-036 (`Starlings.Generation.Roost`) to M0 against t
 - R-016's acceptance: the kernel library's CMake build compiles with MSVC in CI (build only).
 - R-023's acceptance: the loader resolves library names per OS through a `NativeLibrary` resolver (`libcudart.so.12` or `cudart64_12.dll`, `libroost_kernels.so` or `roost_kernels.dll`).
 - C1 forbids POSIX types in the ABI.
-- WSL2 is a documented, tested path in Preview 1, and native Windows stays `untested`.
+- WSL2 is documented in Preview 1 but stays `untested`, as native Windows does, until someone with a Windows host runs the release drill. The project has no Windows host on record.
 
 ### 7. The ABI and plan structs have no forward-compatibility mechanism (applied)
 
