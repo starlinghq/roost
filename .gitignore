@@ -1,0 +1,30 @@
+# .NET
+bin/
+obj/
+artifacts/
+*.user
+*.suo
+.vs/
+TestResults/
+BenchmarkDotNet.Artifacts/
+*.nupkg
+*.snupkg
+
+# Python (tools, test-time model-pipeline)
+__pycache__/
+*.py[cod]
+.venv/
+.ruff_cache/
+.pytest_cache/
+
+# Native build output. Kernel binaries are release assets, never committed (tools/check-roost-boundaries.py).
+kernels/build/
+
+# Weights and model assets are downloaded, never committed.
+.models/
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+.claude/worktrees/
