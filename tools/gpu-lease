@@ -159,8 +159,17 @@ def cmd_list(_: argparse.Namespace) -> int:
     directory = state_dir()
     for gpu in query_gpus():
         lock = directory / f"{gpu.uuid}.lock"
-        holder = lock.read_text(encoding="utf-8").strip() if lock.is_file() else ""
-        state = f"leased {holder}" if holder else "free"
+        state = "free"
+        if lock.is_file():
+            # The kernel lock is the truth: a holder killed with SIGKILL releases it but leaves its JSON behind.
+            fd = os.open(lock, os.O_RDONLY)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            except BlockingIOError:
+                state = f"leased {lock.read_text(encoding='utf-8').strip()}"
+            finally:
+                os.close(fd)
         print(f"{gpu.index}  {gpu.name}  {gpu.free_mib}/{gpu.total_mib} MiB free  {gpu.uuid}  {state}")
     return 0
 

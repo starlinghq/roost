@@ -208,6 +208,15 @@ def test_lease_times_out_while_another_holds_the_device(tmp_path, fake_smi):
         holder.wait()
 
 
+def test_list_ignores_holder_text_left_by_a_killed_lease(tmp_path, fake_smi, capsys):
+    fake_smi(free_mib=20000)
+    state = tmp_path / "state"
+    state.mkdir()
+    (state / "GPU-aaaa.lock").write_text('{"lease": "stale"}')
+    assert gpu_lease.main(["list"]) == 0
+    assert "stale" not in capsys.readouterr().out
+
+
 def test_ambiguous_device_is_a_usage_error(fake_smi):
     fake_smi(free_mib=20000)
     with pytest.raises(SystemExit, match="matches 2"):
