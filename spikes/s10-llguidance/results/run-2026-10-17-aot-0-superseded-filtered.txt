@@ -1,3 +1,4 @@
+# SUPERSEDED earlier pair of runs (two runs concatenated). The program prints '<schema>: accepting=1 stopped=1' lines for rep 0; they were filtered out of this file, so it is NOT the raw output. No headline number in the report is taken from it; it only sources the tokenizer_new_ms comparison.
 abi_version=1 reps=200 n_vocab=151936
 tokenizer_new_ms=1895.2
 mask_words=4748 mask_bytes=18992 eos=151643
