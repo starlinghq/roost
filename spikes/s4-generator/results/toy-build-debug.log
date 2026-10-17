@@ -1,0 +1,13 @@
+  Determining projects to restore...
+  Restored <repo>/spikes/s4-generator/Ops/Ops.csproj (in 358 ms).
+  Restored <repo>/spikes/s4-generator/Toy/Toy.csproj (in 358 ms).
+  Restored <repo>/spikes/s4-generator/Generator/Generator.csproj (in 386 ms).
+  Ops -> <repo>/spikes/s4-generator/out/Ops/bin/Debug/net10.0/Ops.dll
+  Generator -> <repo>/spikes/s4-generator/out/Generator/bin/Debug/netstandard2.0/Generator.dll
+  Toy -> <repo>/spikes/s4-generator/out/Toy/bin/Debug/net10.0/Toy.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.95

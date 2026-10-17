@@ -6,10 +6,13 @@ set -euo pipefail
 cd "$(dirname "$0")"
 N=${1:-5}
 B=(dotnet build Toy/Toy.csproj -c Release -m:2 --no-restore -nologo -v:q)
-cp Toy/ToyModel.cs /tmp/s4-ToyModel.cs.bak
-cp Toy/Program.cs /tmp/s4-Program.cs.bak
-cp Generator/Graph.cs /tmp/s4-Graph.cs.bak
-restore() { cp /tmp/s4-ToyModel.cs.bak Toy/ToyModel.cs; cp /tmp/s4-Program.cs.bak Toy/Program.cs; cp /tmp/s4-Graph.cs.bak Generator/Graph.cs; }
+cp -p Toy/ToyModel.cs /tmp/s4-ToyModel.cs.bak
+cp -p Toy/Program.cs /tmp/s4-Program.cs.bak
+cp -p Generator/Graph.cs /tmp/s4-Graph.cs.bak
+# restore only files whose content changed. A plain cp would touch the mtime of untouched files, and MSBuild would
+# then recompile Generator and Toy in every "no-op" case (the first version of this script did exactly that).
+restore_one() { if ! cmp -s "$1" "$2"; then cp "$1" "$2"; fi; }
+restore() { restore_one /tmp/s4-ToyModel.cs.bak Toy/ToyModel.cs; restore_one /tmp/s4-Program.cs.bak Toy/Program.cs; restore_one /tmp/s4-Graph.cs.bak Generator/Graph.cs; }
 trap restore EXIT
 
 # run_case <label> <prepare-command-or-:> ; prepare runs before each timed build (with the edit number in $i)
@@ -50,4 +53,10 @@ restore
 echo
 echo "generator time inside csc (-p:ReportAnalyzer=true, one forced Toy compile):"
 echo "// edit" >> Toy/Program.cs
-dotnet build Toy/Toy.csproj -c Release -m:2 --no-restore -nologo -v:d -p:ReportAnalyzer=true 2>&1 | grep -E "ModelGenerator|Total analyzer execution time" | cut -c1-120 || true
+dotnet build Toy/Toy.csproj -c Release -m:2 --no-restore -nologo -v:d -p:ReportAnalyzer=true 2>&1 | grep -E "Total analyzer execution time|Total generator execution time|ModelGenerator" | cut -c1-120 || true
+
+echo
+echo "CoreCompile check (-v:n), counting skipped CoreCompile targets of 3 projects (3 means a true no-op):"
+restore
+"${B[@]}" >/dev/null 2>&1
+echo "  after script-style restore, no-op build: $(dotnet build Toy/Toy.csproj -c Release -m:2 --no-restore -nologo -v:n 2>&1 | grep -c 'Skipping target "CoreCompile"') of 3 skipped"

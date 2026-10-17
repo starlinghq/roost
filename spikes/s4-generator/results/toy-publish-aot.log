@@ -1,0 +1,9 @@
+  Determining projects to restore...
+  Restored <repo>/spikes/s4-generator/Ops/Ops.csproj (in 395 ms).
+  Restored <repo>/spikes/s4-generator/Toy/Toy.csproj (in 395 ms).
+  Restored <repo>/spikes/s4-generator/Generator/Generator.csproj (in 448 ms).
+  Ops -> <repo>/spikes/s4-generator/out/Ops/bin/Release/net10.0/Ops.dll
+  Generator -> <repo>/spikes/s4-generator/out/Generator/bin/Release/netstandard2.0/Generator.dll
+  Toy -> <repo>/spikes/s4-generator/out/Toy/bin/Release/net10.0/linux-x64/Toy.dll
+  Generating native code
+  Toy -> <repo>/spikes/s4-generator/out/Toy/publish/
