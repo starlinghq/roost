@@ -1,0 +1,944 @@
+{
+ "sm": 90,
+ "triton": "3.8.0",
+ "total_compile_seconds": 19.53,
+ "total_cubin_bytes": 1319040,
+ "kernels": [
+  {
+   "stub": "gdn_00_l2norm_fwd_kernel",
+   "kernel": "l2norm_fwd_kernel",
+   "module": "fla.modules.norm.l2norm",
+   "sm": 90,
+   "constexprs": {
+    "D": 128,
+    "BD": 128,
+    "NB": 1,
+    "BT": 16
+   },
+   "runtime_args": [
+    [
+     "x",
+     "*bf16"
+    ],
+    [
+     "y",
+     "*bf16"
+    ],
+    [
+     "rstd",
+     "*fp32"
+    ],
+    [
+     "eps",
+     "fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 3,
+   "shared": 64,
+   "compile_seconds": 1.492,
+   "cubin_bytes": 23024,
+   "cubin_sha256": "186834229c6d2f244466e13304d46fec68e984f0aad4c00f1d63bd8ba47fb38e",
+   "jit_cubin_sha256": "d212937f34b804749a7a6c9d3b8599b47867eb106d30dffd1d448ce05c6b8554"
+  },
+  {
+   "stub": "gdn_01_chunk_local_cumsum_scalar_kernel",
+   "kernel": "chunk_local_cumsum_scalar_kernel",
+   "module": "fla.ops.utils.cumsum",
+   "sm": 90,
+   "constexprs": {
+    "cu_seqlens": null,
+    "chunk_indices": null,
+    "B": 1,
+    "H": 16,
+    "BT": 64,
+    "REVERSE": false,
+    "HAS_SCALE": true,
+    "IS_VARLEN": false,
+    "USE_GRAPH": false
+   },
+   "runtime_args": [
+    [
+     "s",
+     "*fp32"
+    ],
+    [
+     "o",
+     "*fp32"
+    ],
+    [
+     "scale",
+     "fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 1,
+   "num_stages": 3,
+   "shared": 0,
+   "compile_seconds": 0.062,
+   "cubin_bytes": 10320,
+   "cubin_sha256": "5bad2cf71777c04b8e85cb8aabf7777d2806a5695bd80a9362ca49494132d191",
+   "jit_cubin_sha256": "6d95e1b14a0af8aa9fe1970df92eca0b0b3bdc25c98f6371dd9e3ed9f2909496"
+  },
+  {
+   "stub": "gdn_02_chunk_gated_delta_rule_fwd_kkt_solve_kernel",
+   "kernel": "chunk_gated_delta_rule_fwd_kkt_solve_kernel",
+   "module": "fla.ops.gated_delta_rule.chunk_fwd",
+   "sm": 90,
+   "constexprs": {
+    "cu_seqlens": null,
+    "chunk_indices": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "BT": 64,
+    "BC": 16,
+    "BK": 64,
+    "USE_G": true,
+    "IS_VARLEN": false
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "beta",
+     "*bf16"
+    ],
+    [
+     "A",
+     "*bf16"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 1,
+   "num_stages": 3,
+   "shared": 9216,
+   "compile_seconds": 1.564,
+   "cubin_bytes": 193512,
+   "cubin_sha256": "6121ed20ea0a10dfce222eff91a2701ee3cc48d354a8699fe54e3f3aabd7ab74",
+   "jit_cubin_sha256": "a68c091c8cd400d0c872b5dfd3e4d3ecaa99e20647e427478239330558cd9a21"
+  },
+  {
+   "stub": "gdn_03_recompute_w_u_fwd_kernel",
+   "kernel": "recompute_w_u_fwd_kernel",
+   "module": "fla.ops.gated_delta_rule.wy_fast",
+   "sm": 90,
+   "constexprs": {
+    "cu_seqlens": null,
+    "chunk_indices": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BK": 64,
+    "BV": 64,
+    "USE_G": true,
+    "IS_VARLEN": false
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "beta",
+     "*bf16"
+    ],
+    [
+     "w",
+     "*bf16"
+    ],
+    [
+     "u",
+     "*bf16"
+    ],
+    [
+     "A",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 2,
+   "shared": 17408,
+   "compile_seconds": 0.653,
+   "cubin_bytes": 91136,
+   "cubin_sha256": "439c700c143f4fae53676e867bbe925faf01e66b421349161b7b603d6d3d9fbe",
+   "jit_cubin_sha256": "fa741f36dbfc1d96bb7fb097d25edcb0496f76f6d9568fa7088b32655edcbc1a"
+  },
+  {
+   "stub": "gdn_04_chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "kernel": "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "module": "fla.ops.common.chunk_delta_h",
+   "sm": 90,
+   "constexprs": {
+    "gk": null,
+    "h0": null,
+    "cu_seqlens": null,
+    "chunk_offsets": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BV": 32,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_INITIAL_STATE": false,
+    "STORE_FINAL_STATE": true,
+    "SAVE_NEW_VALUE": true,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": false
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "w",
+     "*bf16"
+    ],
+    [
+     "v_new",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "h",
+     "*bf16"
+    ],
+    [
+     "ht",
+     "*fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 2,
+   "shared": 47364,
+   "compile_seconds": 0.973,
+   "cubin_bytes": 105472,
+   "cubin_sha256": "6d2f2d10412d94239cb29b9f2de6019c2ff294f03d1646e0076fc581dd94336b",
+   "jit_cubin_sha256": "15bf23af70c85ad5935b76699be8232f1ac965950d9626e05e69e9cb0b53bf03"
+  },
+  {
+   "stub": "gdn_05_chunk_fwd_kernel_o",
+   "kernel": "chunk_fwd_kernel_o",
+   "module": "fla.ops.common.chunk_o",
+   "sm": 90,
+   "constexprs": {
+    "g_gamma": null,
+    "cu_seqlens": null,
+    "chunk_indices": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BK": 32,
+    "BV": 32,
+    "USE_G": true,
+    "USE_G_GAMMA": false,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": false
+   },
+   "runtime_args": [
+    [
+     "q",
+     "*bf16"
+    ],
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "h",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "o",
+     "*bf16"
+    ],
+    [
+     "scale",
+     "fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 3,
+   "shared": 20480,
+   "compile_seconds": 0.718,
+   "cubin_bytes": 87160,
+   "cubin_sha256": "ac6150344583ceab9d1b18eb8ac62622096546d4e957a10aa48d5844b0ee9129",
+   "jit_cubin_sha256": "2eb60ddbd7a00513526e10baa073b50809dbf00812826bd537329df7424a86a2"
+  },
+  {
+   "stub": "gdn_06_chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "kernel": "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "module": "fla.ops.common.chunk_delta_h",
+   "sm": 90,
+   "constexprs": {
+    "gk": null,
+    "cu_seqlens": null,
+    "chunk_offsets": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BV": 32,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_INITIAL_STATE": true,
+    "STORE_FINAL_STATE": true,
+    "SAVE_NEW_VALUE": true,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": false
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "w",
+     "*bf16"
+    ],
+    [
+     "v_new",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "h",
+     "*bf16"
+    ],
+    [
+     "h0",
+     "*fp32"
+    ],
+    [
+     "ht",
+     "*fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 2,
+   "shared": 47364,
+   "compile_seconds": 1.054,
+   "cubin_bytes": 115080,
+   "cubin_sha256": "e24f8f41a194cdeff85aeb2f7447a1354c6470cb7b756c3fe2dc732c8161cc01",
+   "jit_cubin_sha256": "db1efd8d2a92f51e2d333921444ed2847208370e7ae486cc6d468c9c5b5c4c31"
+  },
+  {
+   "stub": "gdn_07_chunk_local_cumsum_scalar_kernel",
+   "kernel": "chunk_local_cumsum_scalar_kernel",
+   "module": "fla.ops.utils.cumsum",
+   "sm": 90,
+   "constexprs": {
+    "B": 1,
+    "H": 16,
+    "BT": 64,
+    "REVERSE": false,
+    "HAS_SCALE": true,
+    "IS_VARLEN": true,
+    "USE_GRAPH": false
+   },
+   "runtime_args": [
+    [
+     "s",
+     "*fp32"
+    ],
+    [
+     "o",
+     "*fp32"
+    ],
+    [
+     "scale",
+     "fp32"
+    ],
+    [
+     "cu_seqlens",
+     "*i32"
+    ],
+    [
+     "chunk_indices",
+     "*i32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 1,
+   "num_stages": 3,
+   "shared": 0,
+   "compile_seconds": 0.074,
+   "cubin_bytes": 11368,
+   "cubin_sha256": "73fa11f6b7b57cfaf948cd8552f03bb04e6afd860bb25f6044600330fdfa20b6",
+   "jit_cubin_sha256": "0c3666cc87be6635696955caf160b3e92f4828eccb3a1cb3d77933a3fe5b5558"
+  },
+  {
+   "stub": "gdn_08_chunk_gated_delta_rule_fwd_kkt_solve_kernel",
+   "kernel": "chunk_gated_delta_rule_fwd_kkt_solve_kernel",
+   "module": "fla.ops.gated_delta_rule.chunk_fwd",
+   "sm": 90,
+   "constexprs": {
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "BT": 64,
+    "BC": 16,
+    "BK": 64,
+    "USE_G": true,
+    "IS_VARLEN": true
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "beta",
+     "*bf16"
+    ],
+    [
+     "A",
+     "*bf16"
+    ],
+    [
+     "cu_seqlens",
+     "*i32"
+    ],
+    [
+     "chunk_indices",
+     "*i32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 1,
+   "num_stages": 3,
+   "shared": 9216,
+   "compile_seconds": 1.731,
+   "cubin_bytes": 194168,
+   "cubin_sha256": "dccb468c32e16aeb49655a07cefb551f4eae8fdc9ea504e720db3769d0169919",
+   "jit_cubin_sha256": "f09adfbb18bed061ff71b342415b7d61d50a3d34c16ec6cb63f35e9749496bcb"
+  },
+  {
+   "stub": "gdn_09_recompute_w_u_fwd_kernel",
+   "kernel": "recompute_w_u_fwd_kernel",
+   "module": "fla.ops.gated_delta_rule.wy_fast",
+   "sm": 90,
+   "constexprs": {
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BK": 64,
+    "BV": 64,
+    "USE_G": true,
+    "IS_VARLEN": true
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "beta",
+     "*bf16"
+    ],
+    [
+     "w",
+     "*bf16"
+    ],
+    [
+     "u",
+     "*bf16"
+    ],
+    [
+     "A",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "cu_seqlens",
+     "*i32"
+    ],
+    [
+     "chunk_indices",
+     "*i32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 2,
+   "shared": 17408,
+   "compile_seconds": 0.714,
+   "cubin_bytes": 92944,
+   "cubin_sha256": "115e7c3a48096771d119f83b2c081497787cf2573def9e962b3399cf80d3bf05",
+   "jit_cubin_sha256": "95b651e747e989311f066c660d37f98d0b21864527ac3d6ae05960fa9979ac33"
+  },
+  {
+   "stub": "gdn_10_chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "kernel": "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "module": "fla.ops.common.chunk_delta_h",
+   "sm": 90,
+   "constexprs": {
+    "gk": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BV": 32,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_INITIAL_STATE": true,
+    "STORE_FINAL_STATE": true,
+    "SAVE_NEW_VALUE": true,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": true
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "w",
+     "*bf16"
+    ],
+    [
+     "v_new",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "h",
+     "*bf16"
+    ],
+    [
+     "h0",
+     "*fp32"
+    ],
+    [
+     "ht",
+     "*fp32"
+    ],
+    [
+     "cu_seqlens",
+     "*i32"
+    ],
+    [
+     "chunk_offsets",
+     "*i64"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 2,
+   "shared": 47364,
+   "compile_seconds": 1.098,
+   "cubin_bytes": 117912,
+   "cubin_sha256": "3bfb096278a438ffdabe1ede59254ea78f16a41da0a51c0a1d3ef70ee19dd831",
+   "jit_cubin_sha256": "fed01c8aa30e7b2d7c2c04328fba42ee55eba6a8bfc62181c4558e08d9f1c8cb"
+  },
+  {
+   "stub": "gdn_11_chunk_fwd_kernel_o",
+   "kernel": "chunk_fwd_kernel_o",
+   "module": "fla.ops.common.chunk_o",
+   "sm": 90,
+   "constexprs": {
+    "g_gamma": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BK": 32,
+    "BV": 32,
+    "USE_G": true,
+    "USE_G_GAMMA": false,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": true
+   },
+   "runtime_args": [
+    [
+     "q",
+     "*bf16"
+    ],
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "h",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "o",
+     "*bf16"
+    ],
+    [
+     "cu_seqlens",
+     "*i32"
+    ],
+    [
+     "chunk_indices",
+     "*i32"
+    ],
+    [
+     "scale",
+     "fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 3,
+   "shared": 20480,
+   "compile_seconds": 0.722,
+   "cubin_bytes": 87048,
+   "cubin_sha256": "39364f0641d765b88116695b726edd13ff49cc6239cdee177190a293b973674d",
+   "jit_cubin_sha256": "1f7b828760db871b02a1b8af5e6d80c06f580c01296a73cff08006e86e44846f"
+  },
+  {
+   "stub": "gdn_12_chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "kernel": "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "module": "fla.ops.common.chunk_delta_h",
+   "sm": 90,
+   "constexprs": {
+    "gk": null,
+    "h0": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BT": 64,
+    "BV": 32,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_INITIAL_STATE": false,
+    "STORE_FINAL_STATE": true,
+    "SAVE_NEW_VALUE": true,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": true
+   },
+   "runtime_args": [
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "w",
+     "*bf16"
+    ],
+    [
+     "v_new",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "h",
+     "*bf16"
+    ],
+    [
+     "ht",
+     "*fp32"
+    ],
+    [
+     "cu_seqlens",
+     "*i32"
+    ],
+    [
+     "chunk_offsets",
+     "*i64"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 2,
+   "num_stages": 2,
+   "shared": 47364,
+   "compile_seconds": 0.954,
+   "cubin_bytes": 108816,
+   "cubin_sha256": "83426303546343e14c1f30f9cdeaf3ed0f557c22db17bdf8e5f34f1b555c14d7",
+   "jit_cubin_sha256": "554d50e1559cee0e0180900a0f22f5570c1e8bdcbfd406e7f2caca2b9e6cc7d9"
+  },
+  {
+   "stub": "gdn_13_fused_recurrent_gated_delta_rule_fwd_kernel",
+   "kernel": "fused_recurrent_gated_delta_rule_fwd_kernel",
+   "module": "fla.ops.gated_delta_rule.fused_recurrent",
+   "sm": 90,
+   "constexprs": {
+    "gk": null,
+    "gv": null,
+    "A_log": null,
+    "dt_bias": null,
+    "cu_seqlens": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BK": 128,
+    "BV": 8,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_GV": false,
+    "USE_QK_L2NORM_IN_KERNEL": true,
+    "IS_BETA_HEADWISE": true,
+    "USE_INITIAL_STATE": true,
+    "STORE_FINAL_STATE": true,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": false,
+    "USE_GATE_IN_KERNEL": false,
+    "HAS_DT_BIAS": false,
+    "APPLY_BETA_SIGMOID": false,
+    "ALLOW_NEG_EIGVAL": false
+   },
+   "runtime_args": [
+    [
+     "q",
+     "*bf16"
+    ],
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "beta",
+     "*bf16"
+    ],
+    [
+     "o",
+     "*bf16"
+    ],
+    [
+     "h0",
+     "*fp32"
+    ],
+    [
+     "ht",
+     "*fp32"
+    ],
+    [
+     "scale",
+     "fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 1,
+   "num_stages": 3,
+   "shared": 512,
+   "compile_seconds": 0.364,
+   "cubin_bytes": 40216,
+   "cubin_sha256": "9ff568683ea7746584aa34d98884950a6fff0d991c9cd88536eb613863a4bbd3",
+   "jit_cubin_sha256": "7cd165559252821ec9fbd85b6bfa75824974bd4be4b61d859ff6c69252c3b037"
+  },
+  {
+   "stub": "gdn_14_fused_recurrent_gated_delta_rule_fwd_kernel",
+   "kernel": "fused_recurrent_gated_delta_rule_fwd_kernel",
+   "module": "fla.ops.gated_delta_rule.fused_recurrent",
+   "sm": 90,
+   "constexprs": {
+    "gk": null,
+    "gv": null,
+    "A_log": null,
+    "dt_bias": null,
+    "H": 16,
+    "HV": 16,
+    "K": 128,
+    "V": 128,
+    "BK": 128,
+    "BV": 8,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_GV": false,
+    "USE_QK_L2NORM_IN_KERNEL": true,
+    "IS_BETA_HEADWISE": true,
+    "USE_INITIAL_STATE": true,
+    "STORE_FINAL_STATE": true,
+    "STATE_V_FIRST": false,
+    "IS_VARLEN": true,
+    "USE_GATE_IN_KERNEL": false,
+    "HAS_DT_BIAS": false,
+    "APPLY_BETA_SIGMOID": false,
+    "ALLOW_NEG_EIGVAL": false
+   },
+   "runtime_args": [
+    [
+     "q",
+     "*bf16"
+    ],
+    [
+     "k",
+     "*bf16"
+    ],
+    [
+     "v",
+     "*bf16"
+    ],
+    [
+     "g",
+     "*fp32"
+    ],
+    [
+     "beta",
+     "*bf16"
+    ],
+    [
+     "o",
+     "*bf16"
+    ],
+    [
+     "h0",
+     "*fp32"
+    ],
+    [
+     "ht",
+     "*fp32"
+    ],
+    [
+     "cu_seqlens",
+     "*i32"
+    ],
+    [
+     "scale",
+     "fp32"
+    ],
+    [
+     "T",
+     "i32"
+    ]
+   ],
+   "num_warps": 1,
+   "num_stages": 3,
+   "shared": 512,
+   "compile_seconds": 0.324,
+   "cubin_bytes": 40864,
+   "cubin_sha256": "57c08994a9e880848cefc5853bc4bcde13c5f72fe206cad989c7acd7d87ba947",
+   "jit_cubin_sha256": "57e83a27eb0acc4bc6cfe654f03d9e4473d4fb6ccd109c8a5e54c97e920340dc"
+  }
+ ]
+}
