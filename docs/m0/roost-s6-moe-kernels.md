@@ -48,6 +48,8 @@ Pipeline, all on one stream: router GEMM (bf16 logits) -> vLLM top-k softmax -> 
 Reference: double precision on the CPU, bf16 inputs. Two comparisons:
 
 - **Stage-isolated:** each stage's reference takes the GPU's previous stage output as exact input. Tolerance is one bf16 ulp (relative 0.0079) plus 1e-4 absolute for float-accumulation noise near zero. Top-k weights use 1e-5.
+
+History of this gate: the first run compared each stage against a reference that also rounded to bf16 but took its own previous stage as input, with no absolute tolerance. That flagged small values near zero, where one flipped rounding upstream changes the next stage by more than one ulp relative to a tiny result. I changed it to stage-isolated inputs and added the 1e-4 absolute term. The end-to-end figure against pure f64 (rms relative error 3.9e-3) was identical under both forms, and it did not depend on the tolerance.
 - **End to end against pure f64** (no intermediate rounding): gate is rms relative error below 0.01 and max error below 0.03 of the max magnitude.
 
 The top-k expert set must match the independent reference for every token. Stage comparisons run on every token, because every token matched.
