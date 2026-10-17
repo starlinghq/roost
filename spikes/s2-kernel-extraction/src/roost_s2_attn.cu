@@ -57,7 +57,7 @@ int32_t Validate(const RoostS2PagedDecodeParams* p, bool need_dev) {
   return ROOST_S2_OK;
 }
 
-// Group size 1..8 is what FlashInfer dispatches; Qwen3 uses 2 (1.7B) and 4 (0.6B).
+// Group size 1..8 is what FlashInfer dispatches; Qwen3-0.6B and 1.7B are both 16 query / 8 KV heads (group 2); 4 covers 32q/8kv.
 template <typename F>
 cudaError_t DispatchGroup(uint32_t group, F&& f) {
   switch (group) {
