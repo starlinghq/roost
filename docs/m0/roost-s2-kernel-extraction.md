@@ -29,7 +29,7 @@ cuBLASLt ships with the CUDA toolkit under the CUDA EULA. Its redistribution ter
 
 | Op | Upstream and entry | Patch | Wrapper | Status |
 | --- | --- | --- | --- | --- |
-| PagedAttention decode (GQA, bf16, head_dim 128, page 16, NHD) | FlashInfer `BatchDecodeWithPagedKVCacheDispatched`, `DecodePlan` | 0 | about 190 (`roost_s2_attn.cu`) | Run, 5 cases pass (section 4) |
+| PagedAttention decode (GQA, bf16, head_dim 128, page 16, NHD) | FlashInfer `BatchDecodeWithPagedKVCacheDispatched`, `DecodePlan` | 0 | 173 (`roost_s2_attn.cu`) | Run, 5 cases pass (section 4) |
 | PagedAttention prefill | FlashInfer `BatchPrefillWithPagedKVCacheDispatched`, `PrefillPlan` | 0 | not written | Compile probe only: 1 tile 10 s / 273 KB, 3 tiles (16, 64, 128) 16 s / 672 KB. Planner wrapper is the remaining work (about the size of the decode wrapper again). |
 | RmsNorm | FlashInfer `norm::RMSNorm` | 0 | 6 | Run, pass |
 | RmsNorm (alternative) | vLLM `layernorm_kernels.cu` `rms_norm_kernel` | 6 | 8 | Run, pass; same max error as FlashInfer on this case (3.0e-3) |
