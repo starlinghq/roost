@@ -1,0 +1,6 @@
+# 2026-10-17T16:39:54-07:00 uptime:  16:39:54 up 3 days, 10:16,  1 user,  load average: 4.74, 2.64, 2.85
+fault mode=proc kind=crash deadline=300ms
+  warm steps ok (last status=ok)
+  detected via waitpid (worker exited without a result) after 148.25 ms
+  respawn (no weights): ready=1 in 129.2 ms, first step result status=ok at +131.4 ms
+exit=0

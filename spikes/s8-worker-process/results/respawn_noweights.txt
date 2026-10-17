@@ -1,0 +1,13 @@
+# 2026-10-17T16:39:51-07:00 uptime:  16:39:51 up 3 days, 10:16,  1 user,  load average: 4.74, 2.64, 2.85
+respawn weights=none (0 bytes) rounds=6
+  round  kill->reaped  fork->state  exec+cuda_init  register  weights   handshake->ready  ready->first_step  spawn->first_step (ms)
+    0       61.24          1.99       128.08         0.14       0.11       0.04              1.29             131.65
+    1       52.15          2.72       127.01         0.13       0.11       0.04              1.27             131.29
+    2       66.28          1.93       127.87         0.13       0.10       0.04              1.31             131.38
+    3       59.31          3.42       128.82         0.14       0.11       0.05              1.26             133.80
+    4       52.43          1.79       130.12         0.13       0.12       0.05              1.20             133.41
+    5       56.13          2.99       127.43         0.13       0.11       0.04              1.26             131.96
+  columns: fork->state = fork+exec until worker main starts; exec+cuda_init = cudaFree(0) context creation;
+  register = cudaHostRegister of the ring segment; weights = mmap + chunked H2D; handshake->ready = heartbeat thread + state publish.
+  bad manifest digest: ready=0 state=3 reject_reason=2, worker gone after 2.26 ms (before any CUDA init)
+exit=0

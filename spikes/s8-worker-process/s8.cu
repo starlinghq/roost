@@ -145,7 +145,7 @@ static cudaError_t gpu_step(Gpu& g, PlanSlot* p, ResSlot* r, u64* event_ns) {
   cudaError_t e;
   if ((e = cudaEventRecord(g.e0, g.s)) != cudaSuccess) return e;
   if ((e = cudaMemcpyAsync(g.d_plan, p, sizeof(PlanSlot), cudaMemcpyHostToDevice, g.s)) != cudaSuccess) return e;
-  u32 threads = p->kind == kRecoverable ? 2048 : 32;  // 2048 threads/block: invalid configuration, not sticky
+  u32 threads = p->kind == kRecoverable ? 2048 : 32;  // 2048 threads/block exceeds the 1024 limit: the launch fails and is recoverable, not sticky; observed as cudaErrorInvalidValue (1, "invalid argument") on this driver, see results/fault_*_recoverable.txt
   step_kernel<<<1, threads, 0, g.s>>>(g.d_plan, g.d_res, g.d_never);
   if ((e = cudaGetLastError()) != cudaSuccess) return e;
   if ((e = cudaMemcpyAsync(r->body, g.d_res->body, sizeof(r->body), cudaMemcpyDeviceToHost, g.s)) != cudaSuccess) return e;
