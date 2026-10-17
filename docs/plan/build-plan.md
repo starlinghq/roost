@@ -126,6 +126,8 @@ starlinghq/roost
     Starlings.Roost.*.Tests.Cuda/     # local only, not in Roost.slnx (as in ai-dotnet)
     Starlings.Roost.Conformance/      # kernel conformance runner (CPU half runs in CI)
   benchmarks/                         # scorecard harness (R-047) and workloads (section 14.3)
+  spikes/<spike-id>/                  # spike code: throwaway evidence, never in Roost.slnx; build-time Python allowed
+  docs/m0/                            # spike reports (roost-<spike-id>-<topic>.md) and M0 reports
   tools/
     gpu-lease                         # device lock, free-memory check, GPU-hour ledger (section 8)
     generate-cuda-bindings.py         # same pattern as starling's tools/generate-ffmpeg-bindings.py
@@ -177,6 +179,8 @@ Each stream owns its paths and its backlog items (section 10). Paths are in `sta
 | **J. Operations** (from M2) | AOT image, `roost doctor`, cold-start staging, RSS, soak, fault and co-tenant tests, sleep and wake, Kubernetes | `deploy/`, `tests/Starlings.Roost.Soak/` | Yes | Agents |
 | **K. Distributed** (from C0 spike, M4 build) | Device mesh, NCCL bindings use, rank bootstrap, multi-node launcher, TP/PP/DP/EP, custom collectives, KV transfer, disaggregated serving | `src/Starlings.Roost.Distributed/`, `kernels/src/collectives/`, `native/roost-kvx/` | Yes (multi) | Distributed-systems engineer (decision 19) plus agents |
 | **L. Acceleration** (from M1) | Op graph passes, fused kernels, persistent decode kernels, variant autotuning, the section 14 bets | `src/Starlings.Roost.Graph/`, `kernels/src/fused/`, `kernels/src/persistent/` | Yes | CUDA engineer (second CUDA role, decision 19) plus agents |
+
+Spike code lives in `spikes/<spike-id>/` and spike reports in `docs/m0/`, both owned by the stream that runs the spike. Spike code is evidence, not product: it stays out of `Roost.slnx`, may use build-time Python, commits its raw run logs as text under `spikes/<spike-id>/results/`, and is never imported by a `src/` project. A spike's findings reach the product only through the backlog item that adopts them.
 
 Streams C, F and L share the scarcest skill (CUDA). The plan keeps every other stream off those people: D, E, G and H are specified so they can be built and reviewed with .NET skills alone, against `CpuOps` and a recorded worker. K needs a different scarce skill and starts building only in M4, after its spike.
 
@@ -334,7 +338,7 @@ IDs `R-001` onwards, tracked as issues in `starlinghq/roost` with `stream:<lette
 | R-007 | C | C0 | Spike S3: Triton AOT for gated delta rule kernels. | — | Report per section 6 with matrix, build time and numeric diff against Python FLA. |
 | R-008 | E | C0 | Spike S4: source generator and static-abstract dispatch. | R-003 | Toy model under JIT and AOT on `CpuOps`; zero allocations; compile error naming a missing op. |
 | R-009 | B1 | P0 | Extract `Starlings.Generation` (backend contract and decode loop) and move the chat templates out of the ONNX-coupled packages. | — | `Generation.OnnxGenAI`, `Models.Qwen35` and `Models.QwenChat` build on it; the Qwen template renderers and chat profiles are in a package whose dependency closure has no `Microsoft.ML.OnnxRuntime*`; all existing tests pass; the Qwen3.5 CPU and CUDA fidelity evidence reproduces unchanged; the release drill passes; no public API removed without a recorded decision. |
-| R-010 | B2 | P0 | Add the generation task (stage-results format v3). | — | Implements the `docs/evidence/p016-qwen35` section 10 spec: template, prefill and decode stages, cached-vs-uncached and concurrency sections, near-tie divergences listed with step and margin read from the fixture; built over `evaluate_generation.py`, with a converter from its `starlings.generation-fixture` v1 format and the existing runner output; the Qwen3.5 protected evidence passes unchanged. |
+| R-010 | B2 | P0 | Add the generation task (stage-results format v3). | — | Implements the `docs/evidence/p016-qwen35` section 10 spec: the stages that spec names (template and `dotnet`; corrected 2026-10-17 from "template, prefill and decode"), cached-vs-uncached and concurrency sections, near-tie divergences listed with step and margin read from the fixture; built over `evaluate_generation.py`, with a converter from its `starlings.generation-fixture` v1 format and the existing runner output; the Qwen3.5 protected evidence passes unchanged. |
 | R-011 | B2 | P0 | Add the per-layer hidden-state stage and hook capture. | R-010 | The reference runner captures transformers fp32 CPU hooks into run artifacts (safetensors, not in Git); the evaluator compares per row per layer and attributes the first divergent layer. |
 | R-012 | B3 | P0 | Extend the manifest schema with Roost profile fields. | — | `execution.backend.name: roost`, kernel manifest revision, TF32 policy, KV dtype, attention backend, SM, minimum driver and toolkit; registry validation passes; existing manifests unchanged. |
 | R-013 | B3 | P0 | Admit Qwen3-1.7B and lock its assets. | R-012 | Admission record; lock with full SHA, sizes and SHA-256 including safetensors; `tokenizer.json` and template digests compared with the Qwen3-0.6B profile, with any difference routed to the tokenizers repository. |
