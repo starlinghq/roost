@@ -7,11 +7,15 @@ ENV=${ENV:-/home/mark/Projects/roost-wave1/envs/R-007}
 source "$ENV/venv/bin/activate"
 LEASE=../../tools/gpu-lease
 mkdir -p out
+# pins.json is the committed, frozen set of configs that the committed results were built with. Autotune is not
+# reproducible (see the report), so step 1 writes its winners to out/pins_autotuned.json and never overwrites pins.json;
+# later steps use pins.json. To adopt new pins, copy that file over pins.json by hand and rerun everything.
 # 1. autotuned capture on a cold Triton cache (the on-device build step), then pick one config per kernel
 export TRITON_CACHE_DIR=$ENV/triton-cache-jit; rm -rf "$TRITON_CACHE_DIR"
 $LEASE run --device 3090 --need-mib 8000 --wait 3600 --stream C -- python capture.py out/specs_sm86.json
-python make_pins.py out/specs_sm86.json pins.json
-# 2. capture again with the pins forced: these are the specialisations that are compiled ahead of time
+python make_pins.py out/specs_sm86.json out/pins_autotuned.json
+diff -q out/pins_autotuned.json pins.json || echo "autotune picked different pins than the committed pins.json (expected); continuing with pins.json"
+# 2. capture again with the committed pins forced: these are the specialisations that are compiled ahead of time
 $LEASE run --device 3090 --need-mib 8000 --wait 3600 --stream C -- python capture.py out/specs_pinned.json pins.json
 # 3. AOT compile per SM (cold cache each; needs a visible device, see the report)
 for sm in 80 86 89 90 100 120; do

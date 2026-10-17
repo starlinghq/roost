@@ -1,0 +1,4 @@
+gpu-lease: NVIDIA GeForce RTX 4060 Ti has 374 MiB free, the job needs 1500 MiB
+exit=75
+0  NVIDIA GeForce RTX 3090  23842/24576 MiB free  GPU-9e21a72e-3a6f-e082-3d74-4b8d361de70c  free
+1  NVIDIA GeForce RTX 4060 Ti  374/16380 MiB free  GPU-29a0f21a-bfe7-f44b-1c3a-f8983fdf8b23  free

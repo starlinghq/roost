@@ -59,7 +59,8 @@ int gdn_chunk_prefill(CUstream st, int varlen, int n, int t, int nt,
     CUresult r;
     /* The fused kkt+solve kernel writes only the lower-triangular blocks of A and relies on FLA's torch.zeros
      * allocation for the rest; skipping this memset gives NaN from uninitialised memory. */
-    if ((r = cuMemsetD8Async(A, 0, (size_t)t * NH * BTC * 2, st))) return r;
+    /* GDN_SKIP_A_MEMSET is a spike-only switch that reproduces the NaN case for results/test_aot_no_memset_sm86.log. */
+    if (!getenv("GDN_SKIP_A_MEMSET") && (r = cuMemsetD8Async(A, 0, (size_t)t * NH * BTC * 2, st))) return r;
     const float scale = 0.08838834764831845f;      /* K^-0.5 */
     const float rcp_ln2 = 1.4426950216f;
     unsigned rows = (unsigned)t * NH;

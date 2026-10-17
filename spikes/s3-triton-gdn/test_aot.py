@@ -47,7 +47,7 @@ def cmp(name, a, b):
     a, b = a.float(), b.float()
     d = (a - b).abs()
     print(
-        f"  {name:28s} max|diff|={d.max().item():.3e}  mismatched={int((d > 0).sum())}/{d.numel()}  "
+        f"  {name:28s} max|diff|={d.max().item():.3e}  mismatched={int((a != b).sum())}/{d.numel()}  "
         f"ref max|x|={b.abs().max().item():.3e}"
     )
     return d.max().item()

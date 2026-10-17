@@ -29,3 +29,4 @@ prefill lens=[256] varlen=True h0=True NT=4 status=0
   chunk path, Python FLA vs naive:
   o                            max|diff|=5.018e-04  mismatched=524279/524288  ref max|x|=8.874e-02
   final state                  max|diff|=3.280e-03  mismatched=262142/262144  ref max|x|=9.391e-01
+exit=0
