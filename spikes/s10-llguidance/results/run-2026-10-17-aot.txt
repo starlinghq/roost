@@ -1,0 +1,12 @@
+abi_version=1 reps=200 n_vocab=151936
+tokenizer_new_ms=1895.2
+mask_words=4748 mask_bytes=18992 eos=151643
+s1-flat: instance_bytes=59 tokens=24 steps=25 samples=5000 violations=0 mask_us p50=52.0 p90=158.4 p99=358.8 p99.9=941.0 max=1741.8 mean=70.9 cold_rep0_max_us=309.2 consume_us p50=3.3 p99=13.3 matcher_new_ms first=1.27 p50=1.05 max=4.72
+s2-nested: instance_bytes=346 tokens=119 steps=120 samples=24000 violations=0 mask_us p50=37.8 p90=123.5 p99=801.8 p99.9=1643.8 max=9855.5 mean=66.6 cold_rep0_max_us=946.9 consume_us p50=2.4 p99=16.2 matcher_new_ms first=2.34 p50=1.70 max=4.66
+s3-complex: instance_bytes=605 tokens=197 steps=198 samples=39600 violations=0 mask_us p50=43.7 p90=237.1 p99=841.1 p99.9=1495.0 max=12371.0 mean=100.9 cold_rep0_max_us=1167.7 consume_us p50=3.2 p99=19.8 matcher_new_ms first=2.46 p50=2.31 max=12.67
+abi_version=1 reps=200 n_vocab=151936
+tokenizer_new_ms=1619.5
+mask_words=4748 mask_bytes=18992 eos=151643
+s1-flat: instance_bytes=59 tokens=24 steps=25 samples=5000 violations=0 mask_us p50=53.3 p90=153.4 p99=364.6 p99.9=447.1 max=2179.9 mean=70.7 cold_rep0_max_us=333.7 consume_us p50=3.3 p99=12.3 matcher_new_ms first=1.18 p50=1.06 max=1.89
+s2-nested: instance_bytes=346 tokens=119 steps=120 samples=24000 violations=0 mask_us p50=35.4 p90=111.4 p99=387.0 p99.9=1023.1 max=3530.2 mean=57.0 cold_rep0_max_us=974.7 consume_us p50=2.2 p99=12.3 matcher_new_ms first=1.72 p50=1.67 max=6.81
+s3-complex: instance_bytes=605 tokens=197 steps=198 samples=39600 violations=0 mask_us p50=37.7 p90=197.2 p99=739.6 p99.9=1260.0 max=2720.3 mean=88.4 cold_rep0_max_us=1143.6 consume_us p50=2.7 p99=15.9 matcher_new_ms first=2.21 p50=2.14 max=3.52

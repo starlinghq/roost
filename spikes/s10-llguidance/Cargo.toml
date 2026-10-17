@@ -1,0 +1,23 @@
+[package]
+name = "roost-grammar-spike"
+version = "0.0.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Spike S10: llguidance token masks behind a C ABI (throwaway evidence)"
+
+[lib]
+name = "roost_grammar"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+# Pinned by full commit SHA (guidance-ai/llguidance, v1.9.1 line).
+llguidance = { git = "https://github.com/guidance-ai/llguidance", rev = "6cef6ed9c973c2a155a85f2bb1996320af28b289", default-features = false, features = ["lark", "rayon", "referencing", "ahash"] }
+toktrie_hf_tokenizers = { git = "https://github.com/guidance-ai/llguidance", rev = "6cef6ed9c973c2a155a85f2bb1996320af28b289" }
+anyhow = "1"
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+panic = "unwind"

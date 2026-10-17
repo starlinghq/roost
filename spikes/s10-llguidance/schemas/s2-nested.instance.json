@@ -1,0 +1,1 @@
+{"order_id":"ORD-004217","status":"shipped","customer":{"name":"Grace Hopper","email":"grace@example.com","address":{"street":"1 Navy Way","city":"Arlington","zip":"22202"}},"items":[{"sku":"WIDGET-A","quantity":3,"unit_price":19.99},{"sku":"GADGET-B","quantity":12,"unit_price":4.5},{"sku":"GIZMO-C","quantity":1,"unit_price":249}],"notes":null}
