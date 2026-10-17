@@ -1,6 +1,6 @@
 # S1 (R-005): Native AOT with CUDA interop and an AOT ASP.NET host
 
-Status: measured on the RTX 3090 only. Verdict: **go, provisional** until the SM 89 re-run on the RTX 4060 Ti (plan section 6 names that card; it has about 278 MiB free and was not attempted). Go for Native AOT on linux-x64 with CUDA interop and an AOT ASP.NET host. The JIT fallback is not needed on the evidence below.
+Status: measured on the RTX 3090 only. Verdict: **go, provisional** until the SM 89 re-run on the RTX 4060 Ti (plan section 6 names that card; it had about 300 MiB free (`gpu-lease list` at run time) and was not attempted). Go for Native AOT on linux-x64 with CUDA interop and an AOT ASP.NET host. The JIT fallback is not needed on the evidence below.
 
 Every number below comes from a raw log committed under `spikes/s1-aot-cuda/results/` (see Raw logs). The logs are from a re-run on 2026-10-17, taken because the first run's output was not saved; tables are the re-run's figures.
 
@@ -55,7 +55,7 @@ Tiny kernels (256 elements, so launch cost dominates):
 | 32 | 66 us | 32.1 / 35.6 us | 1.6 / 3.9 us | 64.2 / 81.4 us |
 | 128 | 267 us | 117.3 / 124.3 us | 1.7 / 18.9 us | 257.4 / 496.9 us |
 
-Larger kernels (1,048,576 elements, so the GPU is the bottleneck): replay is 12 to 14 percent faster than eager (k=32: 132.5 us vs 151.6 us p50; k=128: 520.7 us vs 595.0 us), as expected when kernel time dominates.
+Larger kernels (1,048,576 elements, so the GPU is the bottleneck): eager is about 14 percent slower than replay (k=32: 132.5 us vs 151.6 us p50; k=128: 520.7 us vs 595.0 us), as expected when kernel time dominates.
 
 Correctness: in both runs the buffer element equalled the number of executed kernel launches (2,568,800 expected, `OK`), so replay executed every node and capture executed none.
 
@@ -81,7 +81,7 @@ Split: managed heap is 0.2 to 0.3 MiB in this binary. The runtime and AOT image 
 
 ### AOT ASP.NET host (`serve`, `WebApplication.CreateSlimBuilder`, Kestrel, SSE)
 
-Logs: `results/serve-stderr.txt` (server stderr with RSS checkpoints and request log) and `results/serve-curl.txt` (curl output), produced by `serve-harness.sh`.
+Logs: `results/serve-stderr.txt` (server stderr: the RSS checkpoints) and `results/serve-curl.txt` (curl output), produced by `serve-harness.sh`.
 
 - Published `s1app` is 10.1 MB (symbols are in a separate 24.6 MB `.dbg` file). `results/ldd-s1app.txt` shows it links only libc and libm; all CUDA libraries are loaded at run time.
 - `GET /sse?n=8` returned `Content-Type: text/event-stream` and eight events, each produced by a real GPU step (launch, sync, copy back; the value counted 1 to 8). The endpoint uses `TypedResults.ServerSentEvents` over an `IAsyncEnumerable<string>`.
@@ -105,7 +105,7 @@ Log: `results/publish.txt`. `dotnet publish -c Release -r linux-x64` with `Publi
 
 ## Limits and open items
 
-- **Provisional on the 4060 Ti (SM 89) re-run**, which section 6 names and which was not done: the card had about 278 MiB free. Re-run `graph`, `rss`, `pinvoke` and the serve harness there when it has free memory. The harness is not unchanged: `build-native.sh` hard-codes `-arch=sm_86`, so the re-run must add an `sm_89` target (`-gencode`) or say it runs the sm_86 cubin, and label the kernel figures accordingly. Change the device to `--device 4060` in each lease command and in `serve-harness.sh`.
+- **Provisional on the 4060 Ti (SM 89) re-run**, which section 6 names and which was not done: the card had about 300 MiB free. Re-run `graph`, `rss`, `pinvoke` and the serve harness there when it has free memory. The harness is not unchanged: `build-native.sh` hard-codes `-arch=sm_86`, so the re-run must add an `sm_89` target (`-gencode`) or say it runs the sm_86 cubin, and label the kernel figures accordingly. Change the device to `--device 4060` in each lease command and in `serve-harness.sh`.
 - Generated bindings (section 6) are not met; deferred to R-023.
 - Path ownership: `spikes/s1-aot-cuda/` is not a path in plan sections 3 or 4 for streams F and H. The maintainer should confirm it or move it.
 - No JIT baseline RSS or startup was measured, so the "JIT versus AOT" delta is not quantified here.
