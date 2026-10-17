@@ -1,0 +1,46 @@
+device NVIDIA GeForce RTX 3090 sm_86; shapes H=2048 I=768 E=128 K=8; case=random
+T=1 workspace=0.1 MiB; top-k expert set equals reference for 1/1 tokens
+  router logits (bf16 ulp)   n=128       max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  top-k weights (f32, 1e-5)  n=8         max_abs=2.699e-08  max_abs/max_ref=5.001e-08  rms_rel=5.089e-08  outside_tol=0
+  grouped gemm1 (stage)      n=12288     max_abs=7.812e-03  max_abs/max_ref=2.075e-03  rms_rel=7.962e-05  outside_tol=0
+  silu*up (stage)            n=6144      max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  grouped gemm2 (stage)      n=16384     max_abs=7.812e-03  max_abs/max_ref=2.717e-03  rms_rel=1.265e-04  outside_tol=0
+  combine (stage)            n=2048      max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  layer out vs pure f64      n=2048      max_abs=5.664e-03  max_abs/max_ref=4.857e-03  rms_rel=3.885e-03  outside_tol=2048
+  pure-f64 end-to-end rms_rel=3.885e-03 (bf16 pipeline floor is ~2^-9 per rounding)
+  RESULT T=1: PASS
+  layer time 0.251 ms (mean of 20, no debug copies)
+T=16 workspace=1.6 MiB; top-k expert set equals reference for 16/16 tokens
+  router logits (bf16 ulp)   n=2048      max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  top-k weights (f32, 1e-5)  n=128       max_abs=4.882e-08  max_abs/max_ref=6.156e-08  rms_rel=5.819e-08  outside_tol=0
+  grouped gemm1 (stage)      n=196608    max_abs=1.562e-02  max_abs/max_ref=3.425e-03  rms_rel=9.556e-05  outside_tol=0
+  silu*up (stage)            n=98304     max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  grouped gemm2 (stage)      n=262144    max_abs=7.812e-03  max_abs/max_ref=2.674e-03  rms_rel=8.263e-05  outside_tol=0
+  combine (stage)            n=32768     max_abs=6.104e-05  max_abs/max_ref=3.052e-05  rms_rel=1.035e-06  outside_tol=0
+  layer out vs pure f64      n=32768     max_abs=1.077e-02  max_abs/max_ref=5.362e-03  rms_rel=3.861e-03  outside_tol=32768
+  pure-f64 end-to-end rms_rel=3.861e-03 (bf16 pipeline floor is ~2^-9 per rounding)
+  RESULT T=16: PASS
+  layer time 1.375 ms (mean of 20, no debug copies)
+T=128 workspace=12.6 MiB; top-k expert set equals reference for 128/128 tokens
+  router logits (bf16 ulp)   n=16384     max_abs=1.953e-03  max_abs/max_ref=1.671e-04  rms_rel=5.092e-06  outside_tol=0
+  top-k weights (f32, 1e-5)  n=1024      max_abs=1.199e-07  max_abs/max_ref=1.235e-07  rms_rel=7.074e-08  outside_tol=0
+  grouped gemm1 (stage)      n=1572864   max_abs=1.562e-02  max_abs/max_ref=3.049e-03  rms_rel=1.007e-04  outside_tol=0
+  silu*up (stage)            n=786432    max_abs=3.052e-05  max_abs/max_ref=2.556e-06  rms_rel=5.710e-08  outside_tol=0
+  grouped gemm2 (stage)      n=2097152   max_abs=7.812e-03  max_abs/max_ref=2.358e-03  rms_rel=7.159e-05  outside_tol=0
+  combine (stage)            n=262144    max_abs=3.906e-03  max_abs/max_ref=1.613e-03  rms_rel=3.462e-05  outside_tol=0
+  layer out vs pure f64      n=262144    max_abs=1.077e-02  max_abs/max_ref=4.458e-03  rms_rel=3.859e-03  outside_tol=262144
+  pure-f64 end-to-end rms_rel=3.859e-03 (bf16 pipeline floor is ~2^-9 per rounding)
+  RESULT T=128: PASS
+  layer time 2.231 ms (mean of 20, no debug copies)
+T=512 workspace=50.5 MiB; top-k expert set equals reference for 512/512 tokens
+  router logits (bf16 ulp)   n=65536     max_abs=1.953e-03  max_abs/max_ref=1.603e-04  rms_rel=2.553e-06  outside_tol=0
+  top-k weights (f32, 1e-5)  n=4096      max_abs=1.199e-07  max_abs/max_ref=1.220e-07  rms_rel=6.685e-08  outside_tol=0
+  grouped gemm1 (stage)      n=6291456   max_abs=1.562e-02  max_abs/max_ref=3.030e-03  rms_rel=1.086e-04  outside_tol=0
+  silu*up (stage)            n=3145728   max_abs=3.052e-05  max_abs/max_ref=2.491e-06  rms_rel=2.872e-08  outside_tol=0
+  grouped gemm2 (stage)      n=8388608   max_abs=1.562e-02  max_abs/max_ref=4.673e-03  rms_rel=7.505e-05  outside_tol=0
+  combine (stage)            n=1048576   max_abs=7.812e-03  max_abs/max_ref=3.165e-03  rms_rel=2.856e-05  outside_tol=0
+  layer out vs pure f64      n=1048576   max_abs=1.419e-02  max_abs/max_ref=5.729e-03  rms_rel=3.875e-03  outside_tol=1048576
+  pure-f64 end-to-end rms_rel=3.875e-03 (bf16 pipeline floor is ~2^-9 per rounding)
+  RESULT T=512: PASS
+  layer time 2.628 ms (mean of 20, no debug copies)
+exit=0

@@ -18,7 +18,7 @@ All code is under `spikes/s6-moe-kernels/`. It is throwaway evidence outside `Ro
 | GPU | RTX 3090 (SM 86), via `tools/gpu-lease run --device 3090 --stream C` |
 | Toolkit / host compiler | CUDA 13.3 (nvcc 13.3.73), gcc 16.2.1; nvcc accepted this pairing with no flags (checked with a trivial kernel at `-arch=sm_86`) |
 | Build | nvcc directly, `-arch=sm_86`, `-O2`, one translation unit at a time (at most two jobs); no CMake needed for the spike |
-| Host load during GEMV runs | load average 6.7 to 7.3 on 12 CPUs (shared box). Treat GEMV numbers as noisy |
+| Host load during GEMV runs | load average 3.7 to 4.3 on 12 CPUs (shared box), recorded in the header and footer of each GEMV log. Treat GEMV numbers as noisy |
 
 ## Per op: upstream, SHA, patch size, status
 
@@ -26,12 +26,12 @@ Patch size is lines added and removed against the pinned upstream file, counted 
 
 | Op | Upstream and SHA | Patch (+/-) | Status on SM 86 |
 | --- | --- | --- | --- |
-| Top-k routing (softmax, top-k, renormalise) | vLLM `csrc/moe/topk_softmax_kernels.cu`, `7879f3687b5b6a4be4754242e70b9c21cf7b4183` (derived from TensorRT-LLM) | +13 / -141 of 901 lines (`vllm-topk-softmax.patch`). Drops torch includes and the torch launcher, adds a 12-line `extern "C"` entry. Kernel bodies untouched | Built, ran, matched reference in the layer test |
+| Top-k routing (softmax, top-k, renormalise) | vLLM `csrc/moe/topk_softmax_kernels.cu`, `7879f3687b5b6a4be4754242e70b9c21cf7b4183` (derived from TensorRT-LLM) | +13 / -141 of 901 lines (`vllm-topk-softmax.patch`). Drops torch includes and the torch launcher, adds a 12-line `extern "C"` entry. Kernel bodies untouched | Built, ran, matched reference in the layer test. Compiles in 16 s with 0.61 GiB peak RSS (`results/build-smokes.log`) |
 | Permute / unpermute | Roost's own kernels in `src/roost_moe.cu` (count, scan, scatter, gather, weighted combine) | n/a (about 70 lines of device code) | Built, ran, matched reference |
-| Permute / unpermute (alternative) | vLLM `csrc/moe/permute_unpermute_kernels/` at the same SHA | +3 / -64 (`vllm-permute-unpermute.patch`; 59 of the removed lines are `dispatch.h`, which only holds torch dtype dispatch). Kernel bodies untouched | Compile-only (`src/vllm_permute_smoke.cu`, bf16). Not run. It also needs CUTLASS headers (`cutlass/array.h`) and CUB |
-| Grouped GEMM, bf16 | NVIDIA CUTLASS v4.8.0, `098de2a652cf8f00fd70b2df54051c7eccbb855a`, header-only; `cutlass::gemm::device::GemmGrouped` with `DefaultGemmGrouped` (SM80 tensor-op kernel, runs on SM 86), tile 128x128x32, warp 64x64x32, 4 stages, `kDeviceOnly` scheduling | 0 (no patch) | Built, ran, matched reference. One translation unit compiles in 15 s with 0.77 GiB peak RSS |
+| Permute / unpermute (alternative) | vLLM `csrc/moe/permute_unpermute_kernels/` at the same SHA | +3 / -64 (`vllm-permute-unpermute.patch`; 59 of the removed lines are `dispatch.h`, which only holds torch dtype dispatch). Kernel bodies untouched | Compile-only (`src/vllm_permute_smoke.cu`, bf16; command in `build-smokes.sh`). Not run. It also needs CUTLASS headers (`cutlass/array.h`) and CUB |
+| Grouped GEMM, bf16 | NVIDIA CUTLASS v4.8.0, `098de2a652cf8f00fd70b2df54051c7eccbb855a`, header-only; `cutlass::gemm::device::GemmGrouped` with `DefaultGemmGrouped` (SM80 tensor-op kernel, runs on SM 86), tile 128x128x32, warp 64x64x32, 4 stages, `kDeviceOnly` scheduling | 0 (no patch) | Built, ran, matched reference. One translation unit compiles in 17 s with 0.75 GiB peak RSS (`results/build-smokes.log`) |
 | Grouped GEMM, FP8 | CUTLASS v4.8.0 has `examples/64_ada_fp8_gemm_grouped` (SM 89 target) and Hopper/Blackwell grouped examples (57, 68, 69, 75, 92) | not attempted | `untested` on SM 86: no FP8 tensor-core path. Weight-only FP8 with bf16 math (W8A16) via vLLM Marlin compiles (below) |
-| Grouped GEMM, INT4 (weight-only, bf16 activations) | vLLM Marlin MoE, `csrc/moe/marlin_moe_wna16/marlin_template.h` and `csrc/quantization/marlin/*`, same vLLM SHA | +3 / -2 (`vllm-scalar-type.patch`, one include replaced by a check-macro shim in `core/scalar_type.hpp`). Kernel body untouched | One instantiation (bf16 activations, U4B8, group 128, 256 threads) compiles to an SM 86 cubin with tensor-core instructions (`src/marlin_moe_int4_smoke.cu`). Not run. A second instantiation with FP8 e4m3 weights also compiles (`src/marlin_moe_fp8w_smoke.cu`) |
+| Grouped GEMM, INT4 (weight-only, bf16 activations) | vLLM Marlin MoE, `csrc/moe/marlin_moe_wna16/marlin_template.h` and `csrc/quantization/marlin/*`, same vLLM SHA | +3 / -2 (`vllm-scalar-type.patch`, one include replaced by a check-macro shim in `core/scalar_type.hpp`). Kernel body untouched | One instantiation (bf16 activations, U4B8, group 128, 256 threads) compiles to an SM 86 cubin with tensor-core instructions (`src/marlin_moe_int4_smoke.cu`; 64 HMMA instructions in the object, `results/build-smokes.log`). Not run. A second instantiation with FP8 e4m3 weights also compiles (`src/marlin_moe_fp8w_smoke.cu`, command in `build-smokes.sh`) |
 | Marlin launcher and repack | vLLM `marlin_moe_wna16/ops.cu` (706 lines, about 108 lines touching torch types or checks) and `gptq_marlin_repack.cu` / `awq_marlin_repack.cu` | not done | Needs a rewrite as a C entry point plus an offline repack. Estimate: a few hundred lines of mostly mechanical code, with the repack the larger unknown. This is the work for R-077 / R-080 |
 | Not examined | `grouped_topk_kernels.cu` (1512 lines, DeepSeek-style grouped top-k), `moe_align_block_size` in `moe_align_sum_kernels.cu` (1161 lines), `moe_wna16.cu` | not attempted | Qwen3 needs neither: CUTLASS grouped GEMM takes problem sizes from device memory, so block alignment is unnecessary |
 
@@ -54,6 +54,8 @@ History of this gate: the first run compared each stage against a reference that
 
 The top-k expert set must match the independent reference for every token. Stage comparisons run on every token, because every token matched.
 
+Raw logs of the runs below are committed in `spikes/s6-moe-kernels/results/`: `layer-random.log` (1, 16, 128, 512 tokens), `layer-dup.log`, `sanitizer-memcheck.log`. The compile-only checks and build times are in `build-smokes.log`; the GEMV runs are in `gemv-dotnet.log` and `gemv-rust.log`.
+
 Commands (each GPU run is a separate lease):
 
 ```sh
@@ -71,39 +73,41 @@ Results (all PASS):
 | 16 | 16/16 | exact | 0 / 0 / 0 / 0 | 3.86e-3 / 1.08e-2 / 5.4e-3 |
 | 128 | 128/128 | max diff 1.95e-3 (one bf16 ulp), 0 outside tolerance | 0 / 0 / 0 / 0 | 3.86e-3 / 1.08e-2 / 4.5e-3 |
 | 512 | 512/512 | max diff 1.95e-3, 0 outside tolerance | 0 / 0 / 0 / 0 | 3.88e-3 / 1.42e-2 / 5.7e-3 |
-| 128, all tokens identical (8 experts get 128 rows, 120 get none) | 128/128 | n/a | pass | pass |
+| 128, all tokens identical (8 experts get 128 rows, 120 get none) | 128/128 | exact | 0 / 0 / 0 / 0 | rms rel 3.89e-3, max 5.7e-3, max-ref 4.9e-3 |
 
-Top-k weights agree with the reference to 1.2e-7 at most. The end-to-end rms error of about 3.9e-3 is the floor of a bf16 pipeline with three roundings (about 2^-8 each); it does not grow with token count. `compute-sanitizer --tool memcheck` on the 16-token case reports 0 errors. The empty-expert groups (m = 0) work with the CUTLASS grouped kernel.
+Top-k weights agree with the reference to 1.2e-7 at most. The end-to-end rms error of about 3.9e-3 is the floor of a bf16 pipeline with three roundings (about 2^-8 each); it does not grow with token count. `compute-sanitizer --tool memcheck` on the 16-token case reports 0 errors (`results/sanitizer-memcheck.log`; that run's 39 ms layer time is sanitizer overhead, not a timing). The empty-expert groups (m = 0) work with the CUTLASS grouped kernel.
 
 Not covered: `racecheck` and `synccheck`, CUDA-graph capture of the layer (the argument tables are built on the device, so it should be capturable; untested), batch invariance, and a deterministic permute (the scatter uses atomics, so row order within an expert varies between runs; per-row results do not depend on it, but this was not tested).
 
-Smoke timing, 3090 shared with other agents, mean of 20 launches, no debug copies: 0.25 ms (1 token), 1.38 ms (16), 2.23 ms (128), 2.63 ms (512). These are not throughput claims. No starling fidelity gate has been run on a model, and the GPU was not exclusive.
+Smoke timing, 3090 shared with other agents, mean of 20 launches, no debug copies: 0.25 ms (1 token), 1.38 ms (16), 2.23 ms (128), 2.63 ms (512). (`results/layer-random.log`). These are not throughput claims. No starling fidelity gate has been run on a model, and the GPU was not exclusive.
 
 ## Host expert GEMV for bet X6
 
-Kernel: one Qwen3 expert, batch 1, bf16 weights times f32 activation, f32 output. Shapes: gate+up 1536x2048 (6.3 MB) and down 2048x768 (3.1 MB). "rot=128" rotates over 128 experts (1.2 GB) so every call streams from DRAM; "rot=1" re-reads one expert and mostly hits L2/L3. Four rows share each activation load; bf16 widens by a 16-bit shift. Best of 7 repetitions of 60 to 400 calls. Accuracy against a scalar f64 loop: max abs error 9e-8 to 3e-7.
+Kernel: one Qwen3 expert, batch 1, bf16 weights times f32 activation, f32 output. Shapes: gate+up 1536x2048 (6.3 MB) and down 2048x768 (3.1 MB). "rot=128" rotates over 128 experts (1.2 GB) so every call streams from DRAM; "rot=1" re-reads one expert and mostly hits L2/L3. Four rows share each activation load; bf16 widens by a 16-bit shift. Best of 7 repetitions of 60 to 400 calls (the programs default to 5; `run-gemv.sh` passes 7). Accuracy against a scalar f64 loop: max abs error 9e-8 to 3e-7.
 
-Implementations: .NET 10.0.12 `Vector256` (AVX2+FMA), .NET `Vector512` (portable API; software path here), and Rust 1.98.1 AVX2+FMA intrinsics built with `-C target-cpu=native`, LTO, one codegen unit. Native option chosen: Rust, because decision 22 names it for host kernels.
+Implementations: .NET 10.0.12 `Vector256` (AVX2+FMA), .NET `Vector512` (portable API; software path here), and Rust 1.98.1 AVX2+FMA intrinsics built with `RUSTFLAGS="-C target-cpu=native"` (set in `run-gemv.sh`), LTO, one codegen unit (`Cargo.toml`). Native option chosen: Rust, because decision 22 names it for host kernels.
+
+Invocation: `spikes/s6-moe-kernels/run-gemv.sh 7` builds both programs with at most two jobs and runs each with `1 7` and `4 7` (threads, reps). The table below is that run; logs record rustc 1.98.1, RUSTFLAGS and load average. An earlier run at load 6.7 to 7.3 with undocumented repetitions gave different 4-thread Rust numbers (for example gate+up DRAM 232 us instead of 257 us) and a 42.1 GB/s read ceiling instead of 29.6; it was replaced because its invocation was not recorded.
 
 GB/s counts weight bytes only; GFLOP/s equals GB/s here (2 flops per 2-byte weight).
 
 | Shape | rot | Threads | .NET Vector256 | .NET Vector512 (sw) | Rust AVX2 |
 | --- | --- | --- | --- | --- | --- |
-| gate+up | 128 (DRAM) | 1 | 16.6 GB/s, 379 us | 17.3, 363 us | 16.9, 373 us |
-| gate+up | 128 (DRAM) | 4 | 31.3, 201 us | 33.7, 187 us | 27.1, 232 us |
-| down | 128 (DRAM) | 1 | 9.7, 323 us | 10.2, 309 us | 10.6, 297 us |
-| down | 128 (DRAM) | 4 | 22.9, 138 us | 21.5, 146 us | 17.3, 182 us |
-| gate+up | 1 (cached) | 1 | 26.3, 239 us | 24.6, 255 us | 28.9, 218 us |
-| gate+up | 1 (cached) | 4 | 58.3, 108 us | 51.1, 123 us | 48.5, 130 us |
-| down | 1 (cached) | 1 | 25.8, 122 us | 21.9, 144 us | 27.2, 116 us |
-| down | 1 (cached) | 4 | 51.7, 61 us | 51.3, 61 us | 31.6, 100 us |
+| gate+up | 128 (DRAM) | 1 | 16.3 GB/s, 386 us | 16.0, 395 us | 16.3, 387 us |
+| gate+up | 128 (DRAM) | 4 | 32.3, 195 us | 30.5, 206 us | 24.5, 257 us |
+| down | 128 (DRAM) | 1 | 9.3, 340 us | 9.5, 333 us | 9.6, 327 us |
+| down | 128 (DRAM) | 4 | 23.4, 135 us | 21.8, 144 us | 15.5, 204 us |
+| gate+up | 1 (cached) | 1 | 25.7, 244 us | 23.9, 263 us | 26.6, 236 us |
+| gate+up | 1 (cached) | 4 | 58.8, 107 us | 54.7, 115 us | 31.5, 200 us |
+| down | 1 (cached) | 1 | 25.7, 123 us | 22.8, 138 us | 26.7, 118 us |
+| down | 1 (cached) | 4 | 55.6, 57 us | 47.8, 66 us | 25.1, 126 us |
 
-Memory reference (Rust, xor-fold over 1 GiB): 14.7 GB/s on 1 thread, 42.1 GB/s on 4 threads. The simple fold underestimates single-thread bandwidth (the GEMV exceeds it), so use the 4-thread figure as the rough DRAM ceiling: the 4-thread DRAM-bound GEMVs reach about 40% to 80% of it.
+Memory reference (Rust, xor-fold over 1 GiB): 14.6 GB/s on 1 thread, 29.6 GB/s on 4 threads. This simple fold is not a trustworthy ceiling: the 4-thread .NET gate+up GEMV (32.3 GB/s) exceeds it, and the earlier run measured 42.1 GB/s for the same code. Treat it only as a rough order of magnitude for DRAM bandwidth on this shared box.
 
 Reading the numbers:
 
-- Single-threaded, .NET `Vector256` and Rust AVX2 are within about 5% of each other on every DRAM-bound row. Multi-threaded and cached rows differ by up to 1.6x in either direction. The box ran at load 6.7 to 7.3 while these ran, and the two benchmarks ran back to back, not interleaved, so these differences are within run-to-run variance. This data does not show a performance gap between .NET and Rust for this kernel on AVX2.
-- The batch-1 expert GEMV is bandwidth-bound. Moving a cold Qwen3-30B-A3B expert (9.4 MB bf16) costs about 340 us at 4 threads from DRAM (201 + 138). Eight cold experts in all 48 layers is 3.6 GB per token, which is about 0.1 s per token on this machine. Bet X6 therefore rests on the hot-expert hit rate, and quantised host kernels would cut the bytes.
+- Single-threaded, .NET `Vector256` and Rust AVX2 are within about 4% of each other on every DRAM-bound row. Multi-threaded rows differ more, and in this run .NET is faster (up to 2.2x on cached down at 4 threads); the earlier run showed the gap in other places and at other sizes. The box ran at load 3.7 to 4.3 and the two benchmarks ran back to back, not interleaved, and the Rust program's threading is its own simple split rather than .NET's, so the 4-thread gap may reflect the threading harness and not the language. The data shows no single-thread gap for this kernel on AVX2 and does not settle the multi-thread comparison.
+- The batch-1 expert GEMV is bandwidth-bound. Moving a cold Qwen3-30B-A3B expert (9.4 MB bf16) costs about 330 us at 4 threads from DRAM with .NET (195 + 135). Eight cold experts in all 48 layers is 3.6 GB per token, which is about 0.13 s per token on this machine. Bet X6 therefore rests on the hot-expert hit rate, and quantised host kernels would cut the bytes.
 - **Vector512 is not measured as hardware.** `Vector512.IsHardwareAccelerated` is false; the portable `Vector512` code ran, at about the same speed as `Vector256`. I did not inspect the generated code to say why. This says nothing about an AVX-512 CPU. Whether `Vector512` code matches a native Rust or C++ build there is open.
 - Not measured: quantised (INT4/INT8) host GEMV, bf16-dot instructions (AVX512_BF16, AMX), larger batches, NUMA, and a C++ native option.
 
@@ -112,7 +116,7 @@ Reading the numbers:
 - **Device side (R-080):** adopt CUTLASS v4.8.0 `GemmGrouped` (SM80 bf16 kernel, zero patches) for bf16 grouped GEMM, vLLM's top-k softmax kernel with the 154-line launcher patch, and Roost's own small permute/unpermute. The vLLM permute kernels are an option with a 67-line patch. Record CUTLASS and vLLM in `PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` when they are adopted into `kernels/`; this spike adopts nothing.
 - **INT4 (R-077):** vLLM Marlin MoE kernels compile torch-free with a 5-line patch. The remaining work is the launcher rewrite and the weight repack. Expect that, not the kernel body, to be the cost.
 - **FP8:** mark `untested` for SM 86. Needs an SM 89 or newer device to evaluate CUTLASS FP8 grouped GEMM.
-- **Host kernels (R-082):** .NET `Vector256` is competitive with Rust AVX2 on this CPU, so no evidence yet requires leaving .NET for the bf16 GEMV. Decision 22 should keep Rust available, because the quantised-weight and AVX-512/AMX questions are open. Re-run `host-gemv/` on an AVX-512 machine before deciding on Vector512.
+- **Host kernels (R-082):** .NET `Vector256` is competitive with Rust AVX2 on this CPU, so no evidence yet requires leaving .NET for the bf16 GEMV; at 4 threads .NET was faster in this run, with the harness caveat above. Decision 22 should keep Rust available, because the quantised-weight and AVX-512/AMX questions are open. Re-run `host-gemv/` on an AVX-512 machine before deciding on Vector512.
 
 ## What is not done
 
@@ -125,4 +129,4 @@ Reading the numbers:
 
 ## Files
 
-`spikes/s6-moe-kernels/`: `fetch-upstream.sh`, `build.sh`, `patches/`, `src/roost_moe.{h,cu}`, `src/*_smoke.cu`, `test/moe_layer_test.cpp`, `host-gemv/dotnet/`, `host-gemv/rust/` (source and `Cargo.lock` only). Build outputs go to `/home/mark/Projects/roost-wave1/envs/R-063/`, outside the repository.
+`spikes/s6-moe-kernels/`: `fetch-upstream.sh`, `build.sh`, `patches/`, `src/roost_moe.{h,cu}`, `src/*_smoke.cu`, `test/moe_layer_test.cpp`, `host-gemv/dotnet/`, `host-gemv/rust/` (source and `Cargo.lock` only). `measure.py`, `build-smokes.sh` and `run-gemv.sh` reproduce the compile-only checks, build times and GEMV runs; `results/` holds the raw logs. Build outputs go to `/home/mark/Projects/roost-wave1/envs/R-063/`, outside the repository.

@@ -1,6 +1,7 @@
 // Spike S6 conformance driver: random Qwen3-30B-A3B-shaped weights (never written to disk), the C ABI layer on the GPU,
-// and a double-precision CPU reference. Reports per-stage errors against (a) a reference that rounds to bf16 at the same
-// points as the GPU pipeline and (b) a pure double reference with no intermediate rounding.
+// and a double-precision CPU reference. Reports per-stage errors against (a) a stage-isolated reference: each stage's
+// reference takes the GPU's previous stage output as exact input and is compared within one bf16 ulp plus an absolute
+// term, and (b) a pure double reference with no intermediate rounding (end-to-end).
 #include <cuda_runtime.h>
 #include <omp.h>
 
