@@ -46,6 +46,7 @@ Roost's own:
 - **Rust crates in `native/` commit source and `Cargo.lock` only.** Built libraries are release assets, like kernels. No Rust GPU device code.
 - **Kernel binaries are release assets, never committed.** Upstream kernel source is fetched by full SHA at build time; only patch sets live in `kernels/upstream/<name>.patches/`. A SHA bump changes `PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` in the same PR.
 - **Every GPU run goes through `tools/gpu-lease`**, with the stream it is charged to. Both GPUs are shared: never kill another process, and treat a memory refusal as "try later", not a failure to work around.
+- **Spike code lives in `spikes/<spike-id>/`, reports in `docs/m0/`** (build plan section 4). Spike code stays out of `Roost.slnx`, commits its raw run logs as text under `spikes/<spike-id>/results/`, and is never referenced from `src/`.
 - **CUDA projects stay out of `Roost.slnx`.** `*.Cuda` and `*.Tests.Cuda` projects are local-only, as in starling's ai-dotnet.
 - **No throughput claim without fidelity evidence.** A profile passes starling's fidelity gates before any number for it is published.
 - **Starling changes are starling PRs.** Items in streams B1–B3 (and R-001, R-002, R-059, R-061) are pull requests to starlinghq/starling under its `CLAUDE.md`. Raise `external/starling` in its own PR, with every Roost gate rerun.
