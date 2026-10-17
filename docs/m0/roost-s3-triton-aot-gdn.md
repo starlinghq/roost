@@ -63,7 +63,7 @@ Findings on the build step:
 
 ## Numeric diff
 
-Basis: Python FLA with the same pinned configs (`capture.py`/`test_aot.py` reduce each FLA autotuner to the single pinned config), same inputs, same process, RTX 3090. The AOT side runs through the C ABI library (`gdn_api.c`, built with `gcc -O2 -shared -fPIC ... -lcuda`), called by ctypes with torch device pointers. The workspace is filled with 0xFF and the outputs `o` and `ht` with NaN before every call, so an unwritten element would show as NaN.
+Basis: Python FLA with the same pinned configs (`capture.py`/`test_aot.py` reduce each FLA autotuner to the single pinned config), same inputs, same process, RTX 3090. The AOT side runs through the C ABI library (`gdn_api.c`, built with `gcc -O2 -shared -fPIC ... -lcuda`), called by ctypes with torch device pointers. The workspace is filled with 0xFF and the outputs `o` and `ht` with NaN before every call, so an unwritten element would show as NaN. The mismatch count is `a != b`, so a NaN counts as a mismatch.
 
 | Case | Tokens | Elements compared (o, state) | Max abs diff | Mismatched |
 | --- | --- | --- | --- | --- |
