@@ -8,7 +8,7 @@ import time
 
 t = time.time()
 rc = subprocess.call(sys.argv[1:])
-print(
-    f"MEASURE wall_s={time.time() - t:.1f} peak_rss_gib={resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1048576:.2f} exit={rc} cmd={' '.join(sys.argv[1:3])} ..."
-)
+wall = time.time() - t
+rss_gib = resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1048576
+print(f"MEASURE wall_s={wall:.1f} peak_rss_gib={rss_gib:.2f} exit={rc} cmd={' '.join(sys.argv[1:3])} ...")
 sys.exit(rc)
