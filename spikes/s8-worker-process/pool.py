@@ -11,7 +11,8 @@ depth = sys.argv[3] if len(sys.argv) > 3 else "1"
 runs = defaultdict(list)
 for f in sorted(glob.glob(f"{out}/lat_*_{us}us_d{depth}_r*.csv")):
     mode = re.search(r"lat_(\w+?)_", f.split("/")[-1]).group(1)
-    runs[mode].append([int(x) for x in open(f)])
+    with open(f) as fh:
+        runs[mode].append([int(x) for x in fh])
 
 
 def q(v, p):
