@@ -1,6 +1,6 @@
 # Agent instructions
 
-Roost is the serving engine of the Starling project: a single-process C# engine for NVIDIA GPUs. Vendored kernels sit behind a C ABI; everything else is .NET. The plan is [docs/plan/build-plan.md](docs/plan/build-plan.md). Find your backlog item (section 10) and your stream's owned paths (section 4) before starting, and read the contract (section 5) you build against.
+Roost is the serving engine of the Starling project: a C# engine for NVIDIA GPUs, built to replace vLLM, with one worker process per GPU (contract C8). Kernels are CUDA C++ behind a C ABI; a few host-side native libraries are Rust behind the same style of ABI (`native/`, decision 22); everything else is .NET. The plan is [docs/plan/build-plan.md](docs/plan/build-plan.md). Find your backlog item (section 10) and your stream's owned paths (section 4) before starting, and read the contract (section 5) you build against.
 
 ## Commands
 
@@ -42,7 +42,8 @@ Roost's own:
 
 - **Stay in your stream's paths** (build plan section 4). A change another stream owns goes through a stream A contract-change PR, never a side edit.
 - **Contracts change only through stream A.** After R-004, a change to C1–C6 bumps `ContractVersion.Current` (and the C1 ABI minor, where it applies) and updates every consumer in the same PR.
-- **No Python or libtorch under `src/`**, and no `Microsoft.ML.OnnxRuntime*` in an engine package's closure (`Abstractions`, `Ops`, `Engine`, `Worker`, `Kernels`, `Cuda`, `Models.*`, `Generation.Roost`). Python is build time (`kernels/aot/`) and test time (`external/starling/model-pipeline`) only. `tools/check-roost-boundaries.py` enforces both.
+- **No Python or libtorch under `src/`**, and no `Microsoft.ML.OnnxRuntime*` in an engine package's closure (`Abstractions`, `Ops`, `Graph`, `Engine`, `Worker`, `WorkerHost`, `Kernels`, `Cuda`, `Native`, `Distributed`, `Models.*`, `Generation.Roost`). Python is build time (`kernels/aot/`) and test time (`external/starling/model-pipeline`) only. `tools/check-roost-boundaries.py` enforces both.
+- **Rust crates in `native/` commit source and `Cargo.lock` only.** Built libraries are release assets, like kernels. No Rust GPU device code.
 - **Kernel binaries are release assets, never committed.** Upstream kernel source is fetched by full SHA at build time; only patch sets live in `kernels/upstream/<name>.patches/`. A SHA bump changes `PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` in the same PR.
 - **Every GPU run goes through `tools/gpu-lease`**, with the stream it is charged to. Both GPUs are shared: never kill another process, and treat a memory refusal as "try later", not a failure to work around.
 - **CUDA projects stay out of `Roost.slnx`.** `*.Cuda` and `*.Tests.Cuda` projects are local-only, as in starling's ai-dotnet.

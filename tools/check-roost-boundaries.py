@@ -26,7 +26,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 # Engine packages (build plan R-003). Starlings.Roost.Models.* matches every model package.
-ENGINE = re.compile(r"^Starlings\.(Roost\.(Abstractions|Ops|Engine|Worker|Kernels|Cuda|Models\..+)|Generation\.Roost)$")
+ENGINE = re.compile(
+    r"^Starlings\.(Roost\.(Abstractions|Ops|Graph|Engine|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)"
+    r"|Generation\.Roost)$"
+)
 ONNX = re.compile(r"^microsoft\.ml\.onnxruntime", re.IGNORECASE)
 
 PYTHON_SUFFIXES = {".py", ".pyi", ".pyx", ".pxd", ".ipynb"}
