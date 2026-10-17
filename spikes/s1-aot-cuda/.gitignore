@@ -1,0 +1,10 @@
+bin/
+obj/
+build/
+publish/
+out/
+*.so
+*.o
+*.cubin
+*.fatbin
+*.a
