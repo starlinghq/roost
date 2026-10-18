@@ -1,0 +1,7 @@
+decode b=1   gate_up     M=1     N=12288  K=2048  | cublasLt     61.3 us    0.8 TF | cutlass128x128x32    140.5 us (st 0, diff 0.00e+00) | cutlass32x64x64     71.8 us (st 0, diff 0.00e+00) | max|c|=2.25
+decode b=16  gate_up     M=16    N=12288  K=2048  | cublasLt     79.4 us   10.1 TF | cutlass128x128x32    161.9 us (st 0, diff 7.81e-03) | cutlass32x64x64     75.4 us (st 0, diff 7.81e-03) | max|c|=2.78
+decode b=16  down        M=16    N=2048   K=6144  | cublasLt     49.4 us    8.1 TF | cutlass128x128x32    237.5 us (st 0, diff 3.12e-02) | cutlass32x64x64     66.2 us (st 0, diff 3.12e-02) | max|c|=4.06
+decode b=16  qkv(q)      M=16    N=2048   K=2048  | cublasLt     19.0 us    7.1 TF | cutlass128x128x32     82.5 us (st 0, diff 0.00e+00) | cutlass32x64x64     25.1 us (st 0, diff 0.00e+00) | max|c|=2.23
+prefill 512  gate_up     M=512   N=12288  K=2048  | cublasLt    398.7 us   64.6 TF | cutlass128x128x32    396.1 us (st 0, diff 0.00e+00) | cutlass32x64x64    542.6 us (st 0, diff 0.00e+00) | max|c|=2.92
+prefill 512  down        M=512   N=2048   K=6144  | cublasLt    210.7 us   61.2 TF | cutlass128x128x32    213.5 us (st 0, diff 3.12e-02) | cutlass32x64x64    281.7 us (st 0, diff 3.12e-02) | max|c|=4.88
+prefill 2048 N=8192      M=2048  N=8192   K=2048  | cublasLt   1000.6 us   68.7 TF | cutlass128x128x32    932.6 us (st 0, diff 0.00e+00) | cutlass32x64x64   1444.2 us (st 0, diff 0.00e+00) | max|c|=2.91
