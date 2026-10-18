@@ -17,6 +17,9 @@
  *     on entry: a kernel that needs zeroed scratch zeroes it itself on the stream.
  *   - Errors return a status; roost_last_error() gives the message for the calling thread.
  *   - Reserved fields are zero. A library may reject a non-zero reserved field with ROOST_STATUS_INVALID_ARGUMENT.
+ *   - Libraries link the shared CUDA runtime (S1): the host process and every kernel library share one runtime, so
+ *     streams and graphs pass between them.
+ *   - Batch invariance and determinism are registration flags and context options, never environment variables (S2).
  *
  * Only M0 ops have params structs here. Op ids for later phases are reserved below so their numbering never moves;
  * their params structs are added, never changed, when their items land.
