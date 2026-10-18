@@ -39,7 +39,7 @@ Carried from starlinghq/starling:
 
 Roost's own:
 
-- **Stay in your stream's paths** (build plan section 4). A change another stream owns goes through a stream A contract-change PR, never a side edit.
+- **Stay in your stream's paths** (build plan section 4). A project's `tests/<Project>.Tests[.Cuda]/` belongs to the project's stream; add only your own projects to `Roost.slnx` and only your own versions to `Directory.Packages.props`. A change another stream owns goes through a stream A contract-change PR, never a side edit.
 - **Contracts change only through stream A.** After R-004, a change to C1–C9 bumps `ContractVersion.Current` (and the C1 ABI minor, where it applies) and updates every consumer in the same PR.
 - **No Python or libtorch under `src/`**, and no `Microsoft.ML.OnnxRuntime*` in a worker-side package's closure (`Abstractions`, `Ops`, `Graph`, `Worker`, `WorkerHost`, `Kernels`, `Cuda`, `Native`, `Distributed`, `Models.*`), because the GPU worker pins its own CUDA runtime and allocator (decision 30). Host-process packages (`Engine`, `Generation`, `Generation.Roost`, `Server`) may use ONNX Runtime. Python is build time (`kernels/aot/`) and test time only. `tools/check-roost-boundaries.py` enforces both.
 - **Rust crates in `native/` commit source and `Cargo.lock` only.** Built libraries are release assets, like kernels. No Rust GPU device code.
