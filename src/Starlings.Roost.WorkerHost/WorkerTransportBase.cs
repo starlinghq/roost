@@ -267,8 +267,19 @@ public abstract class WorkerTransportBase : IWorkerTransport
         }
 
         var heartbeat = _access.ReadHeartbeat();
-        var advanced = heartbeat.Counter != _heartbeatBase && now - heartbeat.WorkerNs <= _livenessNs;
-        return FaultRules.ClassifyMissedDeadline(advanced);
+        return FaultRules.ClassifyMissedDeadline(HeartbeatAdvanced(heartbeat, _heartbeatBase, now, _livenessNs));
+    }
+
+    /// <summary>
+    /// Whether a heartbeat shows a live worker: its counter moved since <paramref name="baseCounter"/> and its last beat is no
+    /// older than <paramref name="livenessNs"/> at <paramref name="nowNs"/>. The beat time can be newer than
+    /// <paramref name="nowNs"/> (the worker beat between the host taking the time and reading the record), in which case the
+    /// age is zero; an unsigned subtraction there wraps to a huge age and reports a live worker as stalled.
+    /// </summary>
+    internal static bool HeartbeatAdvanced(in Heartbeat heartbeat, ulong baseCounter, ulong nowNs, ulong livenessNs)
+    {
+        var age = nowNs >= heartbeat.WorkerNs ? nowNs - heartbeat.WorkerNs : 0UL;
+        return heartbeat.Counter != baseCounter && age <= livenessNs;
     }
 
     /// <inheritdoc />

@@ -272,6 +272,33 @@ public abstract class TransportSuite
         }
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    [InlineData(4)]
+    public async Task MissedDeadlineWithALiveHeartbeatIsAHangAtTheDefaultLivenessWindow(int round)
+    {
+        try
+        {
+            // The default HeartbeatLiveness (50 ms), as shipped: the hang path must not depend on a widened window on a quiet machine.
+            await using var rig = NewRig();
+            _ = await rig.StartAsync(Rig.DefaultLaunch(deadline: TimeSpan.FromMilliseconds(200)));
+            _ = rig.Publish(FakeOp.Hang);
+
+            var (fault, _) = rig.WaitForPollFault(TimeSpan.FromSeconds(10));
+
+            Assert.True(fault == FaultClass.Hang, $"round {round}: classified {fault}; heartbeat counter {rig.Transport.ReadHeartbeat().Counter}");
+            ReleaseHang();
+            await rig.Transport.KillAsync(CancellationToken.None);
+        }
+        finally
+        {
+            ReleaseHang();
+        }
+    }
+
     [Fact]
     public async Task MissedDeadlineWithAFrozenHeartbeatIsStalled()
     {
