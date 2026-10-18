@@ -213,4 +213,11 @@ public sealed class BlockPoolTests
         Assert.Throws<ArgumentException>(() => new BlockPool(TestGroups.Full(bytesPerBlock: 0), 1));
         Assert.Throws<ArgumentException>(() => new BlockPool(TestGroups.Full(), 1, BlockPoolRole.Snapshot));
     }
+
+    [Fact]
+    public void MakingANullEntryExclusiveIsRejectedClearly()
+    {
+        var pool = new BlockPool(TestGroups.Full(), 4);
+        Assert.Throws<ArgumentOutOfRangeException>(() => pool.TryMakeExclusive(BlockPool.NullBlock, out _, out _));
+    }
 }

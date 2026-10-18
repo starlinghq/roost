@@ -223,6 +223,11 @@ public sealed class BlockPool : IBlockPool
     /// <returns>What happened.</returns>
     public ExclusiveResult TryMakeExclusive(int block, out int writable, out PlanCacheOp copy)
     {
+        if (block == NullBlock)
+        {
+            throw new ArgumentOutOfRangeException(nameof(block), block, "A null block entry has nothing to write; skip it.");
+        }
+
         RequireLive([block]);
         copy = default;
         writable = block;
