@@ -1,0 +1,13 @@
+# FIRST RUN, superseded by gemv-rust.log. Invocation (threads, reps, RUSTFLAGS) and load were not recorded; load average was noted by hand as 6.7 to 7.3.
+rust 0.0.0; avx2=true fma=true avx512f=false; threads=1
+RESULT impl=rust-avx2 shape="gate_up 1536x2048" experts_rotated=1 threads=1 time_us=217.8 GB/s=28.89 GFLOP/s=28.89 max_abs_err_vs_f64=2.13e-7
+RESULT impl=rust-avx2 shape="gate_up 1536x2048" experts_rotated=128 threads=1 time_us=372.9 GB/s=16.87 GFLOP/s=16.87 max_abs_err_vs_f64=2.24e-7
+RESULT impl=rust-avx2 shape="down 2048x768" experts_rotated=1 threads=1 time_us=115.6 GB/s=27.21 GFLOP/s=27.21 max_abs_err_vs_f64=7.82e-8
+RESULT impl=rust-avx2 shape="down 2048x768" experts_rotated=128 threads=1 time_us=297.1 GB/s=10.59 GFLOP/s=10.59 max_abs_err_vs_f64=7.45e-8
+RESULT impl=rust-stream-read-ceiling threads=1 GB/s=14.66 (sink 0)
+rust 0.0.0; avx2=true fma=true avx512f=false; threads=4
+RESULT impl=rust-avx2 shape="gate_up 1536x2048" experts_rotated=1 threads=4 time_us=129.7 GB/s=48.52 GFLOP/s=48.52 max_abs_err_vs_f64=2.13e-7
+RESULT impl=rust-avx2 shape="gate_up 1536x2048" experts_rotated=128 threads=4 time_us=232.2 GB/s=27.09 GFLOP/s=27.09 max_abs_err_vs_f64=2.24e-7
+RESULT impl=rust-avx2 shape="down 2048x768" experts_rotated=1 threads=4 time_us=99.6 GB/s=31.59 GFLOP/s=31.59 max_abs_err_vs_f64=7.82e-8
+RESULT impl=rust-avx2 shape="down 2048x768" experts_rotated=128 threads=4 time_us=182.2 GB/s=17.27 GFLOP/s=17.27 max_abs_err_vs_f64=7.45e-8
+RESULT impl=rust-stream-read-ceiling threads=4 GB/s=42.06 (sink 0)

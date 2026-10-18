@@ -1,0 +1,15 @@
+diff -ruN ma/csrc/core/scalar_type.hpp mb/csrc/core/scalar_type.hpp
+--- ma/csrc/core/scalar_type.hpp	2026-10-17 16:05:22.013407776 -0700
++++ mb/csrc/core/scalar_type.hpp	2026-10-17 16:05:30.030179256 -0700
+@@ -6,8 +6,9 @@
+ #include <utility>
+ #include <variant>
+ 
+-// For STD_TORCH_CHECK
+-#include <torch/headeronly/util/Exception.h>
++// roost-s6: torch-free shim for STD_TORCH_CHECK.
++#include <cassert>
++#define STD_TORCH_CHECK(cond, ...) assert(cond)
+ 
+ namespace vllm {
+ 

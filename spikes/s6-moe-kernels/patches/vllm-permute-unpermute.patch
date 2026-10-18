@@ -1,0 +1,106 @@
+diff -ruN pa/csrc/moe/permute_unpermute_kernels/dispatch.h pb/csrc/moe/permute_unpermute_kernels/dispatch.h
+--- pa/csrc/moe/permute_unpermute_kernels/dispatch.h	2026-10-17 16:04:10.220686911 -0700
++++ pb/csrc/moe/permute_unpermute_kernels/dispatch.h	1969-12-31 16:00:00.000000000 -0800
+@@ -1,60 +0,0 @@
+-#pragma once
+-
+-#include <cuda_fp8.h>
+-#include <torch/headeronly/core/ScalarType.h>
+-#include <torch/headeronly/util/Exception.h>
+-
+-#define MOE_SWITCH(TYPE, ...)                                         \
+-  const auto _st = (TYPE);                                            \
+-  switch (_st) {                                                      \
+-    __VA_ARGS__                                                       \
+-    default:                                                          \
+-      STD_TORCH_CHECK(false, "[moe permute]data type dispatch fail!") \
+-  }
+-
+-#define MOE_DISPATCH_CASE(enum_type, ...)                  \
+-  case enum_type: {                                        \
+-    using scalar_t = ScalarType2CudaType<enum_type>::type; \
+-    __VA_ARGS__();                                         \
+-    break;                                                 \
+-  }
+-
+-#define MOE_DISPATCH_FLOAT_CASE(...)                                           \
+-  MOE_DISPATCH_CASE(torch::headeronly::ScalarType::Float, __VA_ARGS__)         \
+-  MOE_DISPATCH_CASE(torch::headeronly::ScalarType::Half, __VA_ARGS__)          \
+-  MOE_DISPATCH_CASE(torch::headeronly::ScalarType::BFloat16, __VA_ARGS__)      \
+-  MOE_DISPATCH_CASE(torch::headeronly::ScalarType::Float8_e5m2, __VA_ARGS__)   \
+-  MOE_DISPATCH_CASE(torch::headeronly::ScalarType::Float8_e4m3fn, __VA_ARGS__) \
+-  MOE_DISPATCH_CASE(torch::headeronly::ScalarType::Byte, __VA_ARGS__)
+-
+-#define MOE_DISPATCH(TYPE, ...) \
+-  MOE_SWITCH(TYPE, MOE_DISPATCH_FLOAT_CASE(__VA_ARGS__))
+-
+-template <torch::headeronly::ScalarType type>
+-struct ScalarType2CudaType;
+-
+-template <>
+-struct ScalarType2CudaType<torch::headeronly::ScalarType::Float> {
+-  using type = float;
+-};
+-template <>
+-struct ScalarType2CudaType<torch::headeronly::ScalarType::Half> {
+-  using type = half;
+-};
+-template <>
+-struct ScalarType2CudaType<torch::headeronly::ScalarType::BFloat16> {
+-  using type = __nv_bfloat16;
+-};
+-// uint8 for packed fp4
+-template <>
+-struct ScalarType2CudaType<torch::headeronly::ScalarType::Byte> {
+-  using type = uint8_t;
+-};
+-template <>
+-struct ScalarType2CudaType<torch::headeronly::ScalarType::Float8_e5m2> {
+-  using type = __nv_fp8_e5m2;
+-};
+-template <>
+-struct ScalarType2CudaType<torch::headeronly::ScalarType::Float8_e4m3fn> {
+-  using type = __nv_fp8_e4m3;
+-};
+\ No newline at end of file
+diff -ruN pa/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.cu pb/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.cu
+--- pa/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.cu	2026-10-17 16:04:10.225867732 -0700
++++ pb/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.cu	2026-10-17 16:04:10.254009501 -0700
+@@ -1,5 +1,7 @@
+ #include <cuda.h>
+-#include <torch/headeronly/util/Exception.h>
++#include <cassert>
++// roost-s6: torch-free shim for the one check macro used here.
++#define STD_TORCH_CHECK(cond, ...) assert(cond)
+ 
+ #include "moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.h"
+ 
+diff -ruN pa/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.h pb/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.h
+--- pa/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.h	2026-10-17 16:04:10.223127080 -0700
++++ pb/csrc/moe/permute_unpermute_kernels/moe_permute_unpermute_kernel.h	2026-10-17 16:04:10.253919772 -0700
+@@ -2,25 +2,12 @@
+ // reference from tensorrt_llm moe kernel implementation archive in
+ // https://github.com/BBuf/tensorrt-llm-moe/tree/master
+ 
+-#include <torch/csrc/stable/tensor.h>
+-
+ #include <cub/cub.cuh>
+ #include <cub/device/device_radix_sort.cuh>
+ #include <cub/util_type.cuh>
+ 
+ #include "cutlass/array.h"
+ #include "cutlass/numeric_size.h"
+-#include "moe/permute_unpermute_kernels/dispatch.h"
+-
+-template <typename T>
+-inline T* get_ptr(torch::stable::Tensor& t) {
+-  return reinterpret_cast<T*>(t.mutable_data_ptr());
+-}
+-
+-template <typename T>
+-inline const T* get_ptr(const torch::stable::Tensor& t) {
+-  return reinterpret_cast<const T*>(t.const_data_ptr());
+-}
+ 
+ class CubKeyValueSorter {
+  public:

@@ -1,0 +1,15 @@
+========= COMPUTE-SANITIZER
+device NVIDIA GeForce RTX 3090 sm_86; shapes H=2048 I=768 E=128 K=8; case=random
+T=16 workspace=1.6 MiB; top-k expert set equals reference for 16/16 tokens
+  router logits (bf16 ulp)   n=2048      max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  top-k weights (f32, 1e-5)  n=128       max_abs=4.882e-08  max_abs/max_ref=6.156e-08  rms_rel=5.819e-08  outside_tol=0
+  grouped gemm1 (stage)      n=196608    max_abs=1.562e-02  max_abs/max_ref=3.425e-03  rms_rel=9.556e-05  outside_tol=0
+  silu*up (stage)            n=98304     max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  grouped gemm2 (stage)      n=262144    max_abs=7.812e-03  max_abs/max_ref=2.674e-03  rms_rel=8.263e-05  outside_tol=0
+  combine (stage)            n=32768     max_abs=6.104e-05  max_abs/max_ref=3.052e-05  rms_rel=1.035e-06  outside_tol=0
+  layer out vs pure f64      n=32768     max_abs=1.077e-02  max_abs/max_ref=5.362e-03  rms_rel=3.861e-03  outside_tol=32768
+  pure-f64 end-to-end rms_rel=3.861e-03 (bf16 pipeline floor is ~2^-9 per rounding)
+  RESULT T=16: PASS
+  layer time 39.271 ms (mean of 20, no debug copies)
+========= ERROR SUMMARY: 0 errors
+exit=0
