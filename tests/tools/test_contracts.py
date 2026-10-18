@@ -116,6 +116,34 @@ def test_no_pointer_types_in_the_shared_memory_header():
     assert "void" not in text
 
 
+def test_golden_records_a_type_class_per_field():
+    golden = layout_tool.GOLDEN.read_text(encoding="utf-8")
+    rows = [line.split() for line in golden.splitlines() if line.startswith("  ")]
+    assert rows and all(len(row) == 4 for row in rows)
+    typed = {name: dict(fields) for _, name, fields in layout_tool.all_typed_structs()}
+    assert typed["RoostRingSlot"]["published_ns"] == "u64"
+    assert typed["RoostPlanSampling"]["temperature"] == "f32"
+    assert typed["RoostOpEntry"]["run"] == "ptr"
+
+
+def test_no_shared_memory_struct_has_a_pointer_field_in_the_golden_file():
+    for header, name, fields in layout_tool.all_typed_structs():
+        if header == "roost_worker_shm.h":
+            assert all(kind != "ptr" for _, kind in fields), name
+
+
+def test_type_class_separates_same_size_types_and_rejects_unknown_ones():
+    classify = layout_tool.type_class
+    assert classify("uint64_t ", set(), set()) == "u64"
+    assert classify("void* ", set(), set()) == "ptr"
+    assert classify("const int32_t* ", set(), set()) == "ptr"
+    assert classify("RoostRunFn ", {"RoostRunFn"}, set()) == "ptr"
+    assert classify("float ", set(), set()) == "f32"
+    assert classify("uint32_t ", set(), set()) == "u32"
+    with pytest.raises(ValueError):
+        classify("size_t ", set(), set())
+
+
 def test_padding_errors_detects_gaps():
     layout = "struct S size=16 align=8\n  a 0 4\n  b 8 8\n"
     assert layout_tool.padding_errors(layout) == ["S.b: 4 bytes of padding before it"]
@@ -125,10 +153,10 @@ def test_padding_errors_detects_gaps():
 
 def test_program_mentions_every_struct_and_field():
     program = layout_tool.program()
-    for _, name, fields in layout_tool.all_structs():
+    for _, name, fields in layout_tool.all_typed_structs():
         assert f"S({name});" in program
-        for field in fields:
-            assert f"F({name}, {field});" in program
+        for field, kind in fields:
+            assert f'F({name}, {field}, "{kind}");' in program
 
 
 @pytest.mark.skipif(shutil.which("gcc") is None, reason="gcc not installed")

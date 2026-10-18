@@ -7,6 +7,9 @@
     python3 -I tools/abi-layout.py headers            # compile the headers: gcc -std=c11 -pedantic, g++ -std=c++17
     python3 -I tools/abi-layout.py msvc-asserts       # compile the golden layout as static asserts with clang in
                                                       # MSVC mode (x86_64-pc-windows-msvc); not MSVC itself
+    python -I tools/abi-layout.py msvc                # MSVC itself (cl.exe on PATH, a VS developer shell): compile
+                                                      # the headers as C11 and C++17 with /W4 /WX and the golden
+                                                      # layout as static asserts; CI's abi-msvc job on windows-latest
 
 The golden file is read by the C# layout test (tests/Starlings.Roost.Abstractions.Tests), which compares it with
 Marshal.OffsetOf and Unsafe.SizeOf on every OS, so the C# test never needs a C compiler. Build output goes to a
@@ -31,15 +34,47 @@ HEADERS = ("roost_kernels.h", "roost_worker_shm.h")
 GOLDEN = ROOT / "tests" / "Starlings.Roost.Abstractions.Tests" / "Layout" / "abi-layout.golden.txt"
 
 STRUCT = re.compile(r"typedef struct (\w+) \{(.*?)\} \1;", re.DOTALL)
-FIELD = re.compile(r"^\s*(?:const\s+)?[A-Za-z_][\w ]*?[\s\*]+(\w+);")
+FIELD = re.compile(r"^\s*(?P<type>(?:const\s+)?[A-Za-z_][\w ]*?[\s\*]+)(?P<name>\w+);")
+FN_TYPEDEF = re.compile(r"typedef [^;]*?\(\*(\w+)\)\(")
+
+# Field type classes recorded in the golden file, so that a change of type that keeps the size (uint64_t to void*,
+# float to uint32_t) still changes the golden file and fails the C# layout test. Struct-typed fields record the
+# struct name; everything with a '*' and every function-pointer typedef is "ptr".
+SCALARS = {
+    "uint8_t": "u8",
+    "int8_t": "i8",
+    "uint16_t": "u16",
+    "int16_t": "i16",
+    "uint32_t": "u32",
+    "int32_t": "i32",
+    "uint64_t": "u64",
+    "int64_t": "i64",
+    "float": "f32",
+    "double": "f64",
+}
 COMMENT = re.compile(r"/\*.*?\*/", re.DOTALL)
 
 GCC_FLAGS = ("-std=c11", "-Wall", "-Wextra", "-Werror", "-pedantic")
 GXX_FLAGS = ("-std=c++17", "-Wall", "-Wextra", "-Werror", "-pedantic")
 
 
-def parse_structs(text: str) -> list[tuple[str, list[str]]]:
-    """Struct names and field names, in declaration order, from a header written in this repository's style."""
+def type_class(ctype: str, fn_typedefs: set[str], struct_names: set[str]) -> str:
+    """The golden type class of a C field type: u32, f32, ptr, a struct name and so on."""
+    spelled = " ".join(ctype.replace("*", " * ").split())
+    if "*" in spelled:
+        return "ptr"
+    base = spelled.removeprefix("const ")
+    if base in fn_typedefs:
+        return "ptr"
+    if base in SCALARS:
+        return SCALARS[base]
+    if base in struct_names:
+        return base
+    raise ValueError(f"field type {ctype.strip()!r} has no golden type class; use a fixed-width type")
+
+
+def parse_typed_structs(text: str) -> list[tuple[str, list[tuple[str, str]]]]:
+    """Struct names and (field, C type) pairs, in declaration order, from a header in this repository's style."""
     text = COMMENT.sub("", text)
     structs = []
     for match in STRUCT.finditer(text):
@@ -50,17 +85,31 @@ def parse_structs(text: str) -> list[tuple[str, list[str]]]:
             field = FIELD.match(line)
             if field is None:
                 raise ValueError(f"{match.group(1)}: cannot parse field line {line.strip()!r}")
-            fields.append(field.group(1))
+            fields.append((field.group("name"), field.group("type")))
         structs.append((match.group(1), fields))
     return structs
 
 
+def parse_structs(text: str) -> list[tuple[str, list[str]]]:
+    """Struct names and field names, in declaration order."""
+    return [(name, [field for field, _ in fields]) for name, fields in parse_typed_structs(text)]
+
+
+def all_typed_structs(include: Path = INCLUDE) -> list[tuple[str, str, list[tuple[str, str]]]]:
+    """(header, struct, [(field, type class)]) for every contract struct, in header order."""
+    texts = {header: (include / header).read_text(encoding="utf-8") for header in HEADERS}
+    fn_typedefs = {m for text in texts.values() for m in FN_TYPEDEF.findall(COMMENT.sub("", text))}
+    parsed = [(header, parse_typed_structs(text)) for header, text in texts.items()]
+    struct_names = {name for _, structs in parsed for name, _ in structs}
+    return [
+        (header, name, [(field, type_class(ctype, fn_typedefs, struct_names)) for field, ctype in fields])
+        for header, structs in parsed
+        for name, fields in structs
+    ]
+
+
 def all_structs(include: Path = INCLUDE) -> list[tuple[str, str, list[str]]]:
-    result = []
-    for header in HEADERS:
-        for name, fields in parse_structs((include / header).read_text(encoding="utf-8")):
-            result.append((header, name, fields))
-    return result
+    return [(header, name, [field for field, _ in fields]) for header, name, fields in all_typed_structs(include)]
 
 
 def program(include: Path = INCLUDE) -> str:
@@ -71,15 +120,25 @@ def program(include: Path = INCLUDE) -> str:
         *(f'#include "{header}"' for header in HEADERS),
         "",
         '#define S(T) printf("struct %s size=%zu align=%zu\\n", #T, sizeof(T), _Alignof(T))',
-        '#define F(T, f) printf("  %s %zu %zu\\n", #f, offsetof(T, f), sizeof(((T*)0)->f))',
+        '#define F(T, f, k) printf("  %s %zu %zu %s\\n", #f, offsetof(T, f), sizeof(((T*)0)->f), k)',
+        "/* The compiler confirms each scalar type class the parser read from the header. */",
+        "#define K(T, f, ctype) \\",
+        '  _Static_assert(_Generic(((T*)0)->f, ctype: 1, default: 0), #T "." #f " is " #ctype)',
         "",
         "int main(void) {",
         '  printf("# Generated by tools/abi-layout.py from kernels/include; do not edit by hand.\\n");',
-        '  printf("# struct <name> size=<bytes> align=<bytes>, then <field> <offset> <size>, x86-64 LP64.\\n");',
+        '  printf("# struct <name> size=<bytes> align=<bytes>, then <field> <offset> <size> <type>, x86-64 LP64.\\n");',
+        '  printf("# <type> is u8..u64, i8..i64, f32, f64, ptr (any pointer) or the name of a contract struct.\\n");',
     ]
-    for _, name, fields in all_structs(include):
+    ctypes = {v: k for k, v in SCALARS.items()}
+    for _, name, fields in all_typed_structs(include):
         lines.append(f"  S({name});")
-        lines.extend(f"  F({name}, {field});" for field in fields)
+        for field, kind in fields:
+            if kind in ctypes:
+                lines.append(f"  K({name}, {field}, {ctypes[kind]});")
+            elif kind != "ptr":
+                lines.append(f"  K({name}, {field}, {kind});")
+            lines.append(f'  F({name}, {field}, "{kind}");')
     lines += ["  return 0;", "}", ""]
     return "\n".join(lines)
 
@@ -160,8 +219,8 @@ def headers() -> int:
     return 0
 
 
-def msvc_asserts() -> int:
-    """Static-assert the golden layout under clang's MSVC target (LLP64 and MSVC struct layout rules)."""
+def golden_asserts() -> str:
+    """The golden layout as C11 static asserts on sizeof and offsetof."""
     golden = GOLDEN.read_text(encoding="utf-8").replace("\r\n", "\n")
     lines = ["#include <stddef.h>", *(f'#include "{h}"' for h in HEADERS)]
     current = None
@@ -176,10 +235,15 @@ def msvc_asserts() -> int:
         else:
             field, offset = parts[0], parts[1]
             lines.append(f'_Static_assert(offsetof({current}, {field}) == {offset}, "{current}.{field}");')
+    return "\n".join(lines) + "\n"
+
+
+def msvc_asserts() -> int:
+    """Static-assert the golden layout under clang's MSVC target (LLP64 and MSVC struct layout rules)."""
     clang = os.environ.get("CLANG", "clang")
     with tempfile.TemporaryDirectory(prefix="roost-abi-msvc-") as tmp:
         source = Path(tmp) / "msvc_asserts.c"
-        source.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        source.write_text(golden_asserts(), encoding="utf-8")
         cmd = [
             compiler(clang),
             "--target=x86_64-pc-windows-msvc",
@@ -197,6 +261,30 @@ def msvc_asserts() -> int:
     return 0
 
 
+MSVC_C_FLAGS = ("/nologo", "/W4", "/WX", "/std:c11", "/TC")
+MSVC_CXX_FLAGS = ("/nologo", "/W4", "/WX", "/std:c++17", "/TP", "/EHsc")
+
+
+def msvc() -> int:
+    """MSVC itself: both headers as C11 and C++17 with warnings as errors, and the golden layout as static asserts."""
+    cl = compiler("cl")
+    with tempfile.TemporaryDirectory(prefix="roost-abi-cl-") as tmp:
+        jobs = []
+        for header in HEADERS:
+            for flags, suffix in ((MSVC_C_FLAGS, ".c"), (MSVC_CXX_FLAGS, ".cpp")):
+                source = Path(tmp) / f"use_{Path(header).stem}{suffix}"
+                source.write_text(f'#include "{header}"\nint main(void) {{ return 0; }}\n', encoding="utf-8")
+                jobs.append((flags, source, f"{header} ({suffix[1:]})"))
+        asserts = Path(tmp) / "msvc_asserts.c"
+        asserts.write_text(golden_asserts(), encoding="utf-8")
+        jobs.append((MSVC_C_FLAGS, asserts, "golden layout static asserts"))
+        for flags, source, label in jobs:
+            cmd = [cl, *flags, f"/I{INCLUDE}", "/c", str(source), f"/Fo{source}.obj"]
+            subprocess.run(cmd, check=True)
+            print(f"cl {' '.join(flags)}: {label} ok")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -205,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
     check_parser.add_argument("--update", action="store_true")
     sub.add_parser("headers")
     sub.add_parser("msvc-asserts")
+    sub.add_parser("msvc")
     args = parser.parse_args(argv)
     if args.command == "program":
         sys.stdout.write(program())
@@ -213,6 +302,8 @@ def main(argv: list[str] | None = None) -> int:
         return check(args.update)
     if args.command == "headers":
         return headers()
+    if args.command == "msvc":
+        return msvc()
     return msvc_asserts()
 
 
