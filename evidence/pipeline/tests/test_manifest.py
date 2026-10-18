@@ -298,3 +298,12 @@ def test_cli_exit_codes_and_output(valid: dict, tmp_path: Path, capsys: pytest.C
 def test_cli_with_an_empty_directory_passes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert cli.main(["validate-manifest", str(tmp_path)]) == 0
     assert "no manifest files" in capsys.readouterr().err
+
+
+def test_yaml_unhashable_key_is_a_reported_problem(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    with pytest.raises(ValueError, match="unhashable mapping key"):
+        manifest.load_text("? [a, b]\n: 1\n", ".yaml")
+    bad = tmp_path / "bad.yaml"
+    bad.write_text("? [a, b]\n: 1\n", encoding="utf-8")
+    assert cli.main(["validate-manifest", str(bad)]) == 1
+    assert "unhashable mapping key" in capsys.readouterr().out

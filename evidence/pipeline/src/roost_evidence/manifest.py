@@ -34,6 +34,10 @@ class _Loader(yaml.SafeLoader):
         seen: set[Any] = set()
         for key_node, _ in node.value:
             key = self.construct_object(key_node, deep=True)
+            try:
+                hash(key)
+            except TypeError:
+                raise DuplicateKeyError(f"unhashable mapping key (line {key_node.start_mark.line + 1})") from None
             if key in seen:
                 raise DuplicateKeyError(f"duplicate key {key!r} (line {key_node.start_mark.line + 1})")
             seen.add(key)
