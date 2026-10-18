@@ -6,8 +6,8 @@ public sealed class SamplingTests
 {
     private static int[] Run(float[] logits, int vocab, float temp, int topK, float topP, float minP, ulong seed, ulong offset, uint[]? mask = null, float[]? logprobOut = null, int stride = 0)
     {
-        stride = stride == 0 ? vocab : stride;
-        int rows = logits.Length / stride;
+        int rowLen = stride == 0 ? vocab : stride;
+        int rows = logits.Length / rowLen;
         using var l = Mem.F32(logits);
         using var t = Mem.F32(Enumerable.Repeat(temp, rows).ToArray());
         using var k = Mem.I32(Enumerable.Repeat(topK, rows).ToArray());
@@ -29,6 +29,14 @@ public sealed class SamplingTests
         }
 
         return ids.ReadI32();
+    }
+
+    [Fact]
+    public void StrideZeroMeansVocabAndAStrideBelowVocabThrows()
+    {
+        // Two rows, greedy: row 0 -> 0, row 1 -> 1 (matches Argmax with Stride 0).
+        Assert.Equal([0, 1], Run([9, 0, 0, 9], 2, 0f, 0, 1f, 0f, 1, 0, stride: 0));
+        Assert.Throws<ArgumentException>(() => Run([9, 0, 0, 9], 2, 0f, 0, 1f, 0f, 1, 0, stride: 1));
     }
 
     [Fact]

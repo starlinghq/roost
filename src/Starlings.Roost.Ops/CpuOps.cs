@@ -223,6 +223,11 @@ public readonly partial struct CpuOps : IRoostOps
             }
 
             long last = LoadInt(a.KvLastPageLength.Address, a.KvLastPageLength.Dtype, b);
+            if (pages > 0 && (last < 1 || last > a.BlockSize))
+            {
+                throw new ArgumentException($"Sequence {b} has KvLastPageLength {last} outside [1, {a.BlockSize}].", nameof(a));
+            }
+
             long kvLen = pages == 0 ? 0 : ((pages - 1) * a.BlockSize) + last;
             if (kvLen < n && a.Causal)
             {

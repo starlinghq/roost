@@ -203,4 +203,27 @@ public sealed class AttentionTests
         });
         Assert.Equal(0.0, o.ReadF64()[0]);
     }
+
+    [Theory]
+    [InlineData(3)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void AnOutOfRangeKvLastPageLengthThrows(int lastLen)
+    {
+        using var q = Mem.F64(1);
+        using var kc = Mem.F64(1, 1);
+        using var vc = Mem.F64(5, 5);
+        using var o = Mem.F64(99);
+        using var qi = Mem.I32(0, 1);
+        using var ki = Mem.I32(0, 1);
+        using var idx = Mem.I32(0);
+        using var last = Mem.I32(lastLen);
+        Assert.Throws<ArgumentException>(() => CpuOps.PagedAttention(new PagedAttentionArgs
+        {
+            Q = q.Span, Output = o.Span, KCache = kc.Span, VCache = vc.Span, QIndptr = qi.Span, KvIndptr = ki.Span, KvIndices = idx.Span, KvLastPageLength = last.Span,
+            Mode = AttentionMode.Decode, Batch = 1, Tokens = 1, QHeads = 1, KvHeads = 1, HeadDim = 1, BlockSize = 2, KvLayout = TensorLayout.PagedNhd,
+            WindowLeft = -1, Causal = true, KvDType = DType.F64, DType = DType.F64,
+        }));
+        Assert.Equal(99.0, o.ReadF64()[0]);
+    }
 }
