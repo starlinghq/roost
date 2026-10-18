@@ -14,11 +14,11 @@ namespace Starlings.Roost.Engine.Tests.Blocks;
 /// </summary>
 public sealed class BlockStressTests
 {
-    private const int Steps = 600;
+    private const int _steps = 600;
 
-    private static readonly int[] Seeds = [.. Enumerable.Range(1, 150)];
+    private static readonly int[] _seeds = [.. Enumerable.Range(1, 150)];
 
-    public static TheoryData<int> SeedData() => [.. Seeds];
+    public static TheoryData<int> SeedData() => [.. _seeds];
 
     [Theory]
     [MemberData(nameof(SeedData))]
@@ -66,7 +66,7 @@ public sealed class BlockStressTests
 
         public async Task ExecuteAsync()
         {
-            for (_step = 0; _step < Steps; _step++)
+            for (_step = 0; _step < _steps; _step++)
             {
                 switch (_rng.Next(14))
                 {

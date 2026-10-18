@@ -36,8 +36,10 @@ public enum ExclusiveResult
 /// and cache ops in a step plan. Cross-thread use is a bug, not a supported mode.</para>
 /// <para><b>State.</b> <c>_refs[b]</c> is the number of holders of block <c>b</c> (a sequence's block table, a
 /// snapshot owner, an export pin). <c>_free[0.._freeTop)</c> is the stack of free ids.</para>
-/// <para><b>Invariants</b>, true between any two public calls (checked by <see cref="CheckInvariants"/>; every
-/// failing call restores them before it throws):</para>
+/// <para><b>Invariants</b>, true between any two public calls (checked by <see cref="CheckInvariants"/>; a
+/// call that throws leaves them holding: <see cref="Release"/>, <see cref="Retain"/> and <see cref="Fork"/> are all or
+/// none, while <see cref="ReleaseOutOfWindow"/> keeps the releases it made before the bad entry, each already nulled in
+/// the table):</para>
 /// <list type="number">
 /// <item><description><c>_refs[b] &gt;= 0</c> for every <c>b</c>.</description></item>
 /// <item><description><c>_refs[b] == 0</c> if and only if <c>b</c> is on the free stack, exactly once. A referenced
