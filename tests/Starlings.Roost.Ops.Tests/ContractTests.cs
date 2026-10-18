@@ -63,6 +63,13 @@ public sealed class ContractTests
         var cin = f.Add(Mem.F32(1, 2, 3, 4));
         var cout = f.Add(Mem.Zeros(DType.F32, 4));
         var pairs = f.Add(Mem.I32(0, 1));
+        var aq = f.Add(Mem.F32(Enumerable.Range(0, 8).Select(i => (float)Math.Sin(i)).ToArray()));
+        var ak = f.Add(Mem.F32(Enumerable.Range(0, 32).Select(i => (float)Math.Cos(i)).ToArray()));
+        var ao = f.Add(Mem.Zeros(DType.F32, 8));
+        var aIndptrQ = f.Add(Mem.I32(0, 1));
+        var aIndptrKv = f.Add(Mem.I32(0, 2));
+        var aIdx = f.Add(Mem.I32(0, 1));
+        var aLast = f.Add(Mem.I32(2));
 
         void Everything()
         {
@@ -80,6 +87,12 @@ public sealed class ContractTests
             {
                 Input = cin.Span, Weight = cw.Span, Output = cout.Span, ConvState = cstate.Span, StateSlots = one.Span, CuSeqlens = cu.Span,
                 Batch = 1, Tokens = 4, Channels = 1, Width = 4, Silu = true, DType = DType.F32,
+            });
+            CpuOps.PagedAttention(new PagedAttentionArgs
+            {
+                Q = aq.Span, Output = ao.Span, KCache = ak.Span, VCache = ak.Span, QIndptr = aIndptrQ.Span, KvIndptr = aIndptrKv.Span, KvIndices = aIdx.Span,
+                KvLastPageLength = aLast.Span, Mode = AttentionMode.Decode, Batch = 1, Tokens = 1, QHeads = 2, KvHeads = 1, HeadDim = 4, BlockSize = 4,
+                KvLayout = TensorLayout.PagedNhd, WindowLeft = -1, Causal = true, KvDType = DType.F32, DType = DType.F32,
             });
             CpuOps.CacheCopy(new CacheCopyArgs { Source = x.Span, Destination = x.Span, Pairs = pairs.Span, BlockBytes = 8, Count = 1 });
         }
