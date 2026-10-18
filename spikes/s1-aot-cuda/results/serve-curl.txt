@@ -1,0 +1,62 @@
+# 2026-10-17T23:45:04Z serve harness, server pid 3949155
+## GET /health
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+Date: Sat, 17 Oct 2026 23:45:04 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{"status":"ok","rssKb":0,"steps":0}
+## GET /sse?n=8
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+Date: Sat, 17 Oct 2026 23:45:04 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Content-Encoding: identity
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+data: {"i":0,"gpu":1}
+
+data: {"i":1,"gpu":2}
+
+data: {"i":2,"gpu":3}
+
+data: {"i":3,"gpu":4}
+
+data: {"i":4,"gpu":5}
+
+data: {"i":5,"gpu":6}
+
+data: {"i":6,"gpu":7}
+
+data: {"i":7,"gpu":8}
+
+
+## 200 x GET /sse?n=8 (body discarded; status codes counted)
+    200 200
+## GET /sse?n=64 timing (loopback)
+time_starttransfer=0.000800s time_total=0.334514s http=200
+## GET /rss
+VmRSS=151.5 MiB (anon 29.5, file 114.0) gc_heap=3.4 MiB gc_committed=5.2 MiB
+        61.3 MiB  other files (nvidiactl)
+        20.9 MiB  nvidia libs: libnvidia-gpucomp.so.610.57.04
+        13.2 MiB  [anon]
+        10.5 MiB  libcuda (driver)
+         9.7 MiB  [heap]
+         9.1 MiB  s1app (AOT image)
+         8.0 MiB  other files (zero (deleted))
+         7.6 MiB  nvidia libs: libnvidia-nvvm70.so.4
+         4.3 MiB  other shared libs
+         4.3 MiB  nvidia libs: libnvidia-ptxjitcompiler.so.610.57.04
+         2.0 MiB  other files (nvidia-uvm)
+         0.6 MiB  libcudart
+         0.0 MiB  [stack]
+         0.0 MiB  libs1kernels (kernel images)
+         0.0 MiB  [vdso]
+         0.0 MiB  [vvar]
+         0.0 MiB  [vsyscall]
+         0.0 MiB  [vvar_vclock]
+         0.0 MiB  other files (memfd:dotnet_ipc_created (deleted))
+         0.0 MiB  other files (nvidia0)

@@ -1,0 +1,13 @@
+# 2026-10-17T16:38:04-07:00 uptime:  16:38:04 up 3 days, 10:14,  1 user,  load average: 3.18, 1.57, 2.58
+respawn weights=/home/mark/Projects/roost-wave1/envs/R-065/weights-3p44GB.bin (3440377856 bytes) rounds=6
+  round  kill->reaped  fork->state  exec+cuda_init  register  weights   handshake->ready  ready->first_step  spawn->first_step (ms)
+    0       62.85          2.49       164.68         0.13     643.01       0.05              1.34             811.70
+    1       59.56          1.88       143.79         0.14     638.68       0.05              1.34             785.87
+    2       59.97          2.21       145.12         0.14     645.31       0.05              1.29             794.12
+    3       66.50          1.85       156.25         0.19     682.53       0.08              1.33             842.23
+    4       67.53          1.88       146.43         0.19     650.65       0.06              1.25             800.47
+    5       66.78          2.40       170.47         0.22     653.01       0.07              1.38             827.55
+  columns: fork->state = fork+exec until worker main starts; exec+cuda_init = cudaFree(0) context creation;
+  register = cudaHostRegister of the ring segment; weights = mmap + chunked H2D; handshake->ready = heartbeat thread + state publish.
+  bad manifest digest: ready=0 state=3 reject_reason=2, worker gone after 3.07 ms (before any CUDA init)
+exit=0

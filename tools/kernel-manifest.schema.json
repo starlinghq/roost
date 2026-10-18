@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/starlinghq/roost/blob/main/tools/kernel-manifest.schema.json",
+  "title": "Roost kernel manifest (contract C5)",
+  "description": "Schema of kernels/manifest.toml, frozen as contract v0 by R-004 (README.md, Contracts). Stream C writes the manifest; stream D (what to test), stream F (startup check), the release workflow and the provenance check read it. The model compiler never reads it. Validated by tools/validate-kernel-manifest.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "contract_version", "abi", "toolkit", "sm", "upstreams", "ops"],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "contract_version": { "type": "integer", "minimum": 1 },
+    "abi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["major", "minor"],
+      "properties": {
+        "major": { "type": "integer", "minimum": 1 },
+        "minor": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "toolkit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cuda", "min_driver"],
+      "properties": {
+        "cuda": { "$ref": "#/$defs/version" },
+        "min_driver": { "$ref": "#/$defs/version" },
+        "host_compiler": { "type": "string" },
+        "msvc": { "type": "string" }
+      }
+    },
+    "sm": {
+      "description": "The SM build list with a validation status per SM. An SM without hardware evidence is untested.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/sm_entry" }
+    },
+    "upstreams": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/upstream" }
+    },
+    "external_libraries": {
+      "description": "Redistributed vendor libraries called by wrappers, such as cuBLASLt (S2), pinned by digest.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/external_library" }
+    },
+    "ops": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/op" }
+    },
+    "triton_aot": { "$ref": "#/$defs/triton_aot" },
+    "crates": {
+      "description": "Rust crates in native/ (decision 22), with their Cargo.lock digest.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/crate" }
+    }
+  },
+  "$defs": {
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "version": { "type": "string", "pattern": "^[0-9]+(\\.[0-9]+)*$" },
+    "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "op_name": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" },
+    "arch": { "type": "integer", "enum": [80, 86, 89, 90, 100, 120] },
+    "status": { "type": "string", "enum": ["supported", "unsupported", "experimental", "untested"] },
+    "sm_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["arch", "status"],
+      "properties": {
+        "arch": { "$ref": "#/$defs/arch" },
+        "status": { "$ref": "#/$defs/status" },
+        "evidence": { "type": "string" }
+      }
+    },
+    "license_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "spdx"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "spdx": { "type": "string", "minLength": 1 }
+      }
+    },
+    "patch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^kernels/upstream/[^/]+\\.patches/.+\\.patch$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "lines": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "repo", "sha", "license", "files"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "repo": { "type": "string", "pattern": "^https://" },
+        "sha": { "$ref": "#/$defs/sha1" },
+        "license": { "type": "string", "minLength": 1 },
+        "files": {
+          "description": "Licence per file or glob actually taken.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/license_entry" }
+        },
+        "patches": { "type": "array", "items": { "$ref": "#/$defs/patch" } },
+        "ops": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/op_name" } }
+      }
+    },
+    "external_library": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "sha256", "license"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "version": { "$ref": "#/$defs/version" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "license": { "type": "string", "minLength": 1 }
+      }
+    },
+    "flag": {
+      "type": "string",
+      "enum": ["graph_capturable", "deterministic", "batch_invariant", "needs_plan", "plan_per_shape"]
+    },
+    "dtype": {
+      "type": "string",
+      "enum": ["f32", "f16", "bf16", "f64", "f8e4m3", "f8e5m2", "i8", "u8", "i16", "i32", "u32", "i64", "u64", "i4", "u4", "f4e2m1"]
+    },
+    "constraints": {
+      "description": "Mirrors RoostConstraints in roost_kernels.h.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sm_min": { "$ref": "#/$defs/arch" },
+        "sm_max": { "$ref": "#/$defs/arch" },
+        "act_dtypes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/dtype" } },
+        "weight_dtypes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/dtype" } },
+        "kv_dtypes": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/dtype" } },
+        "head_dims": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 16, "maximum": 1024 } },
+        "page_sizes": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1 } },
+        "layouts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "enum": ["row_major", "col_major", "paged_nhd", "paged_hnd"] }
+        },
+        "group_sizes": { "type": "array", "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 32 } },
+        "min_alignment": { "type": "integer", "enum": [1, 2, 4, 8, 16, 32, 64, 128, 256] },
+        "max_batch": { "type": "integer", "minimum": 0 },
+        "max_tokens": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "binary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["arch", "sha256"],
+      "properties": {
+        "arch": { "$ref": "#/$defs/arch" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "bytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "gemm_algo": {
+      "description": "A cuBLASLt algorithm pinned per (n, k, dtype) bucket for batch invariance (S2), valid for the named library digest.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "k", "dtype", "algo_id", "library_sha256"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 1 },
+        "k": { "type": "integer", "minimum": 1 },
+        "dtype": { "$ref": "#/$defs/dtype" },
+        "arch": { "$ref": "#/$defs/arch" },
+        "algo_id": { "type": "integer", "minimum": 0 },
+        "split_k": { "type": "integer", "minimum": 1 },
+        "tile": { "type": "integer", "minimum": 0 },
+        "stages": { "type": "integer", "minimum": 0 },
+        "library_sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "flags", "constraints"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+        "source": {
+          "description": "An upstream name, an external library name, or \"roost\" for Roost's own kernels.",
+          "$ref": "#/$defs/name"
+        },
+        "flags": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/flag" } },
+        "constraints": { "$ref": "#/$defs/constraints" },
+        "binaries": { "type": "array", "items": { "$ref": "#/$defs/binary" } },
+        "gemm_algos": { "type": "array", "items": { "$ref": "#/$defs/gemm_algo" } },
+        "triton_kernels": {
+          "description": "Names of triton_aot kernels this variant launches.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "op": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "variants"],
+      "properties": {
+        "op": { "$ref": "#/$defs/op_name" },
+        "variants": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/variant" } }
+      }
+    },
+    "triton_config": {
+      "description": "A pinned Triton config: autotune winners are not reproducible (S3), so AOT builds pin, never autotune.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["num_warps", "num_stages"],
+      "properties": {
+        "num_warps": { "type": "integer", "minimum": 1 },
+        "num_stages": { "type": "integer", "minimum": 1 },
+        "constexprs": {
+          "type": "object",
+          "additionalProperties": { "type": ["integer", "boolean", "string", "null"] }
+        }
+      }
+    },
+    "triton_kernel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "upstream", "config"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "upstream": { "$ref": "#/$defs/name" },
+        "config": { "$ref": "#/$defs/triton_config" },
+        "specializations": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "triton_aot": {
+      "description": "Build-time Python closure for Triton AOT kernels (decision 23, S3). Python is never a runtime dependency.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["python", "packages", "requires_gpu_build_host", "kernels"],
+      "properties": {
+        "python": { "$ref": "#/$defs/version" },
+        "packages": {
+          "description": "Exact versions, for example triton, torch, transformers, einops, numpy, fla.",
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 }
+        },
+        "requires_gpu_build_host": {
+          "description": "True while the AOT build needs a visible CUDA device (S3: triton.compile fails with no active driver).",
+          "type": "boolean"
+        },
+        "kernels": { "type": "array", "items": { "$ref": "#/$defs/triton_kernel" } }
+      }
+    },
+    "crate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "cargo_lock_sha256"],
+      "properties": {
+        "name": { "$ref": "#/$defs/name" },
+        "path": { "type": "string", "pattern": "^native/[a-z0-9-]+$" },
+        "cargo_lock_sha256": { "$ref": "#/$defs/sha256" },
+        "rust_toolchain": { "$ref": "#/$defs/version" }
+      }
+    }
+  }
+}

@@ -8,10 +8,15 @@ Checks:
   python     No Python or libtorch under src/: no Python source files, and no project, C# or native file that
              references Python bindings or libtorch (pythonnet, TorchSharp, libtorch, torch extension headers).
   closure    No Microsoft.ML.OnnxRuntime* package in the restored dependency closure (obj/project.assets.json)
-             of an engine package. Server is exempt (it hosts the ONNX pooling models from R-052).
+             of a worker-side package: one that runs in or is compiled into the GPU worker process, which pins
+             its own CUDA runtime and allocator (build plan decision 30). Host-process packages (Engine,
+             Generation, Generation.Roost, Server) may use ONNX Runtime.
   binaries   No kernel or native binaries tracked in Git (by extension and by ELF, PE, Mach-O or fatbin magic).
              Kernel binaries are release assets only.
   solution   No *.Cuda project in Roost.slnx. CUDA test projects are local-only.
+  starling   Starling is consumed only as exact NuGet pins (build plan section 2.2): no submodule or .gitmodules,
+             no external/ project reference, and every Starlings.* package version in Directory.Packages.props
+             an exact `[x.y.z]` pin. Roost's own Starlings.Roost.* projects are not Starling packages.
 """
 
 from __future__ import annotations
@@ -25,10 +30,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Engine packages (build plan R-003). Starlings.Roost.Models.* matches every model package.
-ENGINE = re.compile(
-    r"^Starlings\.(Roost\.(Abstractions|Ops|Graph|Engine|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)"
-    r"|Generation\.Roost)$"
+# Worker-side packages (build plan decision 30). Starlings.Roost.Models.* matches every model package.
+WORKER_SIDE = re.compile(
+    r"^Starlings\.Roost\.(Abstractions|Ops|Graph|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)$"
 )
 ONNX = re.compile(r"^microsoft\.ml\.onnxruntime", re.IGNORECASE)
 
@@ -95,7 +99,7 @@ def check_python(root: Path, files: list[Path]) -> list[str]:
 def check_closure(root: Path) -> list[str]:
     errors = []
     for project in sorted((root / "src").glob("*/*.csproj")):
-        if not ENGINE.match(project.stem):
+        if not WORKER_SIDE.match(project.stem):
             continue
         assets = project.parent / "obj" / "project.assets.json"
         rel = project.relative_to(root).as_posix()
@@ -106,7 +110,7 @@ def check_closure(root: Path) -> list[str]:
         for key in sorted(libraries):
             name = key.split("/", 1)[0]
             if ONNX.match(name):
-                errors.append(f"closure: {rel}: engine package reaches {key}")
+                errors.append(f"closure: {rel}: worker-side package reaches {key}")
     return errors
 
 
@@ -136,6 +140,46 @@ def check_solution(root: Path) -> list[str]:
     ]
 
 
+def check_starling(root: Path) -> list[str]:
+    errors = []
+    listing = subprocess.run(["git", "ls-files", "-s", "-z"], cwd=root, capture_output=True, check=True).stdout
+    for entry in listing.decode().split("\0"):
+        mode, _, rest = entry.partition(" ")
+        if mode == "160000":
+            errors.append(f"starling: {rest.split(chr(9), 1)[-1]}: submodule (gitlink) tracked; use an exact NuGet pin")
+    if (root / ".gitmodules").exists():
+        errors.append("starling: .gitmodules present; Roost has no submodules")
+    for path in sorted(root.rglob("*")):
+        if path.suffix not in {".csproj", ".props", ".targets"} or ".git" in path.relative_to(root).parts:
+            continue
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for match in re.finditer(r'<ProjectReference\b[^>]*?\bInclude="([^"]+)"', text):
+            target = match.group(1).replace("\\", "/")
+            resolved = (path.parent / target).resolve() if "$(" not in target else None
+            outside = resolved is not None and not resolved.is_relative_to(root.resolve())
+            if "external/" in target or outside:
+                errors.append(
+                    f"starling: {rel}: project reference {target} leaves the repository or points into external/; "
+                    "consume the NuGet package instead"
+                )
+        for tag in re.finditer(r"<(PackageVersion|PackageReference|PackageDownload)\b([^>]*)>", text):
+            attrs = dict(re.findall(r'(\w+)\s*=\s*"([^"]*)"', tag.group(2)))
+            name = attrs.get("Include") or attrs.get("Update") or ""
+            if not re.match(r"Starlings\.(?!Roost\.)", name):
+                continue
+            for key in ("Version", "VersionOverride"):
+                if key in attrs and not re.fullmatch(r"\[[^\[\],()]+\]", attrs[key]):
+                    errors.append(f"starling: {rel}: {name} {key} {attrs[key]!r} is not an exact [x] pin")
+    build_props = root / "Directory.Build.props"
+    if build_props.exists() and not re.search(
+        r"<CentralPackageVersionOverrideEnabled>\s*false\s*</CentralPackageVersionOverrideEnabled>",
+        build_props.read_text(encoding="utf-8"),
+    ):
+        errors.append("starling: Directory.Build.props must set CentralPackageVersionOverrideEnabled=false")
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=ROOT)
@@ -144,7 +188,7 @@ def main(argv: list[str] | None = None) -> int:
     root = args.root.resolve()
 
     files = tracked(root)
-    errors = check_python(root, files) + check_binaries(root, files) + check_solution(root)
+    errors = check_python(root, files) + check_binaries(root, files) + check_solution(root) + check_starling(root)
     if not args.no_closure:
         errors += check_closure(root)
     for error in errors:

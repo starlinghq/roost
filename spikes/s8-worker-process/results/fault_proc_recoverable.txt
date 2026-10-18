@@ -1,0 +1,7 @@
+# 2026-10-17T16:39:52-07:00 uptime:  16:39:52 up 3 days, 10:16,  1 user,  load average: 4.74, 2.64, 2.85
+fault mode=proc kind=recoverable deadline=300ms
+  warm steps ok (last status=ok)
+  detected via result ring after 0.04 ms: status=recoverable cuda_err=1 (invalid argument)
+  worker state after fault = 1 (1 ready, 2 faulted)
+  follow-up normal step in the same worker: result status=ok
+exit=0

@@ -1,0 +1,21 @@
+# 2026-10-17T23:37:18Z graph S1_ELEMS=256
+cudart=13030 driver=13030 visible_devices=1
+kernel elements per launch: 256
+capture+instantiate k=1            n=      20 p50=      3886 ns p99=    368703 ns max=      368703 ns
+graph replay+sync k=1              n=    5000 p50=      4325 ns p99=      5562 ns max=       10418 ns
+graph launch call only k=1         n=    5000 p50=      1551 ns p99=      2776 ns max=        8652 ns
+eager 1 launches+sync k=1          n=    5000 p50=      4933 ns p99=      6895 ns max=       28930 ns
+capture+instantiate k=8            n=      20 p50=     17256 ns p99=     61800 ns max=       61800 ns
+graph replay+sync k=8              n=    5000 p50=     10814 ns p99=     12566 ns max=       18182 ns
+graph launch call only k=8         n=    5000 p50=      1548 ns p99=      2925 ns max=       18502 ns
+eager 8 launches+sync k=8          n=    5000 p50=     18084 ns p99=     29935 ns max=       58180 ns
+capture+instantiate k=32           n=      20 p50=     65732 ns p99=    123398 ns max=      123398 ns
+graph replay+sync k=32             n=    5000 p50=     32100 ns p99=     35556 ns max=       43725 ns
+graph launch call only k=32        n=    5000 p50=      1556 ns p99=      3908 ns max=       16782 ns
+eager 32 launches+sync k=32        n=    5000 p50=     64155 ns p99=     81392 ns max=      200344 ns
+capture+instantiate k=128          n=      20 p50=    267040 ns p99=    710403 ns max=      710403 ns
+graph replay+sync k=128            n=    5000 p50=    117321 ns p99=    124265 ns max=      162276 ns
+graph launch call only k=128       n=    5000 p50=      1699 ns p99=     18933 ns max=       80181 ns
+eager 128 launches+sync k=128      n=    5000 p50=    257420 ns p99=    496899 ns max=     2836664 ns
+correctness: element[0]=2568800 expected=2568800 -> OK
+exit=0

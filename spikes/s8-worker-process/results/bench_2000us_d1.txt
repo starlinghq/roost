@@ -1,0 +1,36 @@
+bench mode=direct steps=5000 gpu_us=2000 depth=1 loadavg=17.51
+  step latency           n=5000 min=2041.7 p50=2100.3 p90=2259.6 p99=5677.4 p99.9=16317.6 max=35410.0 mean=2248.8 (us)
+  gpu event (H2D..D2H)   n=5000 min=2026.0 p50=2063.5 p90=2093.1 p99=2478.9 p99.9=3846.4 max=6443.3 mean=2082.4 (us)
+  wall per step (throughput) = 2249.8 us
+bench mode=inproc steps=5000 gpu_us=2000 depth=1 loadavg=18.45
+  step latency           n=5000 min=2042.3 p50=2111.7 p90=2969.7 p99=5397.5 p99.9=13669.5 max=28518.5 mean=2384.4 (us)
+  publish->worker seen   n=5000 min=0.0 p50=0.1 p90=0.5 p99=416.1 p99.9=1691.2 max=6025.4 mean=14.0 (us)
+  worker done->host seen n=5000 min=0.0 p50=0.2 p90=277.1 p99=2196.4 p99.9=8616.4 max=13552.9 mean=129.4 (us)
+  worker busy            n=5000 min=2041.9 p50=2099.7 p90=2511.1 p99=3901.9 p99.9=8562.0 max=27938.5 mean=2241.0 (us)
+  gpu event (H2D..D2H)   n=5000 min=2026.8 p50=2060.4 p90=2092.4 p99=2536.2 p99.9=3691.2 max=6037.2 mean=2079.5 (us)
+  wall per step (throughput) = 2387.8 us
+bench mode=proc steps=5000 gpu_us=2000 depth=1 loadavg=18.55
+  step latency           n=5000 min=2028.8 p50=2402.0 p90=4389.7 p99=8323.8 p99.9=13883.6 max=19002.4 mean=2941.2 (us)
+  publish->worker seen   n=5000 min=0.0 p50=0.1 p90=1.7 p99=1673.4 p99.9=4906.0 max=8324.7 mean=85.4 (us)
+  worker done->host seen n=5000 min=0.1 p50=0.4 p90=1188.3 p99=3692.8 p99.9=10032.0 max=15151.4 mean=341.4 (us)
+  worker busy            n=5000 min=2028.1 p50=2101.0 p90=3372.9 p99=5439.6 p99.9=9591.4 max=13560.2 mean=2514.4 (us)
+  gpu event (H2D..D2H)   n=5000 min=2018.4 p50=2055.8 p90=2079.4 p99=2497.4 p99.9=3754.8 max=6063.0 mean=2072.6 (us)
+  wall per step (throughput) = 2944.0 us
+bench mode=direct steps=5000 gpu_us=2000 depth=1 loadavg=20.14
+  step latency           n=5000 min=2022.5 p50=2078.2 p90=3269.2 p99=6113.1 p99.9=15915.3 max=50895.4 mean=2414.4 (us)
+  gpu event (H2D..D2H)   n=5000 min=2016.4 p50=2050.8 p90=2060.4 p99=2150.2 p99.9=3781.4 max=11395.5 mean=2062.2 (us)
+  wall per step (throughput) = 2414.9 us
+bench mode=inproc steps=5000 gpu_us=2000 depth=1 loadavg=20.54
+  step latency           n=5000 min=2020.4 p50=2067.5 p90=2321.9 p99=4369.2 p99.9=7344.9 max=21630.5 mean=2197.1 (us)
+  publish->worker seen   n=5000 min=0.0 p50=0.1 p90=0.2 p99=0.7 p99.9=1512.2 max=3062.1 mean=5.0 (us)
+  worker done->host seen n=5000 min=0.1 p50=0.2 p90=0.3 p99=1222.4 p99.9=2985.1 max=18586.4 mean=46.7 (us)
+  worker busy            n=5000 min=2020.2 p50=2066.8 p90=2093.5 p99=3729.2 p99.9=5799.0 max=8345.6 mean=2145.4 (us)
+  gpu event (H2D..D2H)   n=5000 min=2013.1 p50=2045.8 p90=2056.2 p99=2096.2 p99.9=3701.4 max=6737.7 mean=2048.9 (us)
+  wall per step (throughput) = 2198.7 us
+bench mode=proc steps=5000 gpu_us=2000 depth=1 loadavg=19.25
+  step latency           n=5000 min=2022.9 p50=2057.4 p90=2113.1 p99=2234.6 p99.9=3607.0 max=4246.5 mean=2073.9 (us)
+  publish->worker seen   n=5000 min=0.0 p50=0.1 p90=0.2 p99=0.5 p99.9=1.8 max=106.1 mean=0.2 (us)
+  worker done->host seen n=5000 min=0.0 p50=0.2 p90=0.7 p99=55.2 p99.9=1040.1 max=1724.4 mean=4.4 (us)
+  worker busy            n=5000 min=2022.3 p50=2056.7 p90=2111.5 p99=2146.6 p99.9=3407.1 max=4245.7 mean=2069.3 (us)
+  gpu event (H2D..D2H)   n=5000 min=2014.7 p50=2040.2 p90=2075.6 p99=2094.0 p99.9=2138.3 max=2283.1 mean=2045.4 (us)
+  wall per step (throughput) = 2075.5 us
