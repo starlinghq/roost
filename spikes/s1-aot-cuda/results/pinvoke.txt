@@ -1,0 +1,12 @@
+# 2026-10-17T23:37:16Z pinvoke
+timer: Stopwatch.Frequency=1000000000 Hz; AOT=True
+timer baseline                     n= 1000000 p50=        17 ns p99=        19 ns max=       17978 ns
+LibraryImport noop                 n= 1000000 p50=        22 ns p99=        37 ns max=       16828 ns | minus timer baseline 17 ns: p50=5 p99=20
+LibraryImport+SuppressGCTransition n= 1000000 p50=        19 ns p99=        20 ns max=       17833 ns | minus timer baseline 17 ns: p50=2 p99=3
+delegate* unmanaged noop           n= 1000000 p50=        21 ns p99=        27 ns max=       32173 ns | minus timer baseline 17 ns: p50=4 p99=10
+delegate* unmanaged+SuppressGC     n= 1000000 p50=        19 ns p99=        25 ns max=       11492 ns | minus timer baseline 17 ns: p50=2 p99=8
+amortized (10M calls, loop total/N): LibraryImport=6.60 ns, SuppressGC=3.00 ns, fnptr=4.42 ns, fnptr+SuppressGC=1.82 ns
+cudaGetDevice (runtime call)       n= 1000000 p50=        76 ns p99=        86 ns max=       33540 ns | minus timer baseline 17 ns: p50=59 p99=69
+eager kernel launch (host side)    n=  100000 p50=      1956 ns p99=      3403 ns max=       23170 ns | minus timer baseline 17 ns: p50=1939 p99=3386
+gen0 collections during run: 2 (sink=0)
+exit=0

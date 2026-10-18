@@ -1,0 +1,4 @@
+[serve start] VmRSS=11.1 MiB (anon 3.8, file 7.3) gc_heap=0.2 MiB gc_committed=0.0 MiB
+[cuda ready] VmRSS=141.3 MiB (anon 23.5, file 109.8) gc_heap=0.2 MiB gc_committed=0.0 MiB
+[host built] VmRSS=148.1 MiB (anon 27.2, file 113.0) gc_heap=1.9 MiB gc_committed=3.4 MiB
+[listening] VmRSS=149.6 MiB (anon 28.1, file 113.5) gc_heap=2.1 MiB gc_committed=4.0 MiB

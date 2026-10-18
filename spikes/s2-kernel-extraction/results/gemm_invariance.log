@@ -1,0 +1,11 @@
+heuristic M=64  algo id=6 splitk=5
+heuristic M=17  algo id=6 splitk=3
+heuristic M=5   algo id=6 splitk=3
+heuristic M=1   algo id=6 splitk=2
+pinned: algo id=6 splitk=5
+pinned algo, M=17  vs M=64: 0 of 34816 elements differ bitwise
+pinned algo, M=5   vs M=64: 0 of 10240 elements differ bitwise
+pinned algo, M=1   vs M=64: 0 of 2048 elements differ bitwise
+heuristic algo, M=17  vs M=64: 16588 of 34816 elements differ bitwise
+heuristic algo, M=5   vs M=64: 4944 of 10240 elements differ bitwise
+heuristic algo, M=1   vs M=64: 886 of 2048 elements differ bitwise

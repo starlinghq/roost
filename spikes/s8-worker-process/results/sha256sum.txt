@@ -1,0 +1,3 @@
+# 2026-10-17T16:37:50-07:00 sha256sum of weights-3p44GB.bin, file read into page cache first
+fb899e09e1dac760740d504ceb9899046d17cf0556ab6ff6b5730eb08bba2818  /home/mark/Projects/roost-wave1/envs/R-065/weights-3p44GB.bin
+elapsed 9446 ms

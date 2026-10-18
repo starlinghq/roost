@@ -1,0 +1,131 @@
+# Example C5 manifest for the validator tests. Upstream SHAs, versions and the Triton config are the ones the spikes
+# pinned (S2, S3, S6, S10 reports); every sha256 here is a placeholder, not a real digest. The real
+# kernels/manifest.toml lands with R-016.
+schema_version = 1
+contract_version = 1
+
+[abi]
+major = 1
+minor = 0
+
+[toolkit]
+cuda = "13.3"
+min_driver = "610.57"
+host_compiler = "gcc 15"
+
+[[sm]]
+arch = 80
+status = "untested"
+
+[[sm]]
+arch = 86
+status = "experimental"
+evidence = "docs/m0/roost-s2-kernel-extraction.md (RTX 3090)"
+
+[[sm]]
+arch = 89
+status = "untested"
+
+[[sm]]
+arch = 90
+status = "untested"
+
+[[sm]]
+arch = 100
+status = "untested"
+
+[[sm]]
+arch = 120
+status = "untested"
+
+[[upstreams]]
+name = "flashinfer"
+repo = "https://github.com/flashinfer-ai/flashinfer"
+sha = "d84335d8c54e0c8f9f7e22faa15c7e34a58abf94"
+license = "Apache-2.0"
+files = [{ path = "include/flashinfer/**", spdx = "Apache-2.0" }]
+ops = ["PagedAttention"]
+
+[[upstreams]]
+name = "cutlass"
+repo = "https://github.com/NVIDIA/cutlass"
+sha = "098de2a652cf8f00fd70b2df54051c7eccbb855a"
+license = "BSD-3-Clause"
+files = [{ path = "include/cutlass/**", spdx = "BSD-3-Clause" }]
+
+[[upstreams]]
+name = "flash-linear-attention"
+repo = "https://github.com/fla-org/flash-linear-attention"
+sha = "329b534245d3d7bb27cc03a99e87bdc51fb28d06"
+license = "MIT"
+files = [{ path = "fla/ops/gated_delta_rule/**", spdx = "MIT" }]
+ops = ["GatedDeltaRule"]
+
+[[external_libraries]]
+name = "cublaslt"
+version = "13.6.0.2"
+sha256 = "0000000000000000000000000000000000000000000000000000000000000001"
+bytes = 516598272
+license = "CUDA EULA"
+
+[[ops]]
+op = "PagedAttention"
+
+[[ops.variants]]
+id = "flashinfer.decode.bf16.h128.nhd"
+source = "flashinfer"
+flags = ["needs_plan", "deterministic"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16"]
+kv_dtypes = ["bf16"]
+head_dims = [128]
+page_sizes = [16]
+layouts = ["paged_nhd"]
+group_sizes = [2, 4]
+min_alignment = 16
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "0000000000000000000000000000000000000000000000000000000000000002"
+bytes = 2000000
+
+[[ops]]
+op = "Gemm"
+
+[[ops.variants]]
+id = "cublaslt.bf16.pinned"
+source = "cublaslt"
+flags = ["graph_capturable", "deterministic", "batch_invariant"]
+constraints = { sm_min = 80, act_dtypes = ["bf16"], weight_dtypes = ["bf16"] }
+gemm_algos = [
+  { n = 2048, k = 6144, dtype = "bf16", arch = 86, algo_id = 6, split_k = 5, library_sha256 = "0000000000000000000000000000000000000000000000000000000000000001" },
+]
+
+[[ops]]
+op = "GatedDeltaRule"
+
+[[ops.variants]]
+id = "fla.gdn.varlen.bf16"
+source = "flash-linear-attention"
+flags = ["graph_capturable"]
+constraints = { sm_min = 80, act_dtypes = ["bf16"], min_alignment = 16 }
+triton_kernels = ["chunk_gated_delta_rule_fwd_kernel_h_blockdim64"]
+
+[triton_aot]
+python = "3.12.14"
+requires_gpu_build_host = true
+packages = { torch = "2.14.1+cu130", triton = "3.8.0", transformers = "5.20.1", einops = "0.8.2", numpy = "2.5.4", fla = "0.6.0" }
+
+[[triton_aot.kernels]]
+name = "chunk_gated_delta_rule_fwd_kernel_h_blockdim64"
+upstream = "flash-linear-attention"
+specializations = 4
+config = { num_warps = 2, num_stages = 2, constexprs = { BV = 32, IS_VARLEN = true } }
+
+[[crates]]
+name = "roost-grammar"
+path = "native/roost-grammar"
+cargo_lock_sha256 = "0000000000000000000000000000000000000000000000000000000000000003"
+rust_toolchain = "1.95.0"
