@@ -5,7 +5,8 @@ Each line is one case of a reference run:
     id, rendered, prompt_ids, output_ids (with the stop token when finish_reason is eos), finish_reason (eos or
     length), step_margin (reference top-1 minus top-2 log-probability at every generated step), step0_top (the best
     [token, log-probability] pairs of the first generated step, best first), step0_vocab, and optionally step0_sha256,
-    the digest of the full step-0 vector stored beside the file as `step0/<id>.f32`.
+    the digest of the full step-0 vector stored beside the file as `step0/<id>.f32`, and `layers_sha256`, the digest of
+    the per-layer capture `layers/<id>.safetensors` (R-011, see layer_captures).
 
 Roost defines this format itself; the evaluator reads it as the protected fixture once the maintainer admits one.
 """
@@ -74,6 +75,9 @@ def _case_problems(case: Any) -> list[str]:
     digest = case.get("step0_sha256")
     if digest is not None and not (isinstance(digest, str) and len(digest) == 64):
         problems.append("step0_sha256 must be a sha256 hex digest")
+    layers = case.get("layers_sha256")
+    if layers is not None and not (isinstance(layers, str) and len(layers) == 64):
+        problems.append("layers_sha256 must be a sha256 hex digest")
     return problems
 
 
