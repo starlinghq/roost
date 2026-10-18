@@ -66,3 +66,18 @@ jobs:
       - run: pipx run --spec pytest==8.4.2 pytest -q tests/tools
       - name: Backlog parses (dry run)
         run: python3 -I tools/create_backlog_issues.py > /dev/null
+
+  # Contract layout (R-004): regenerate the golden layout of the C1, C2 and C8 structs with gcc and fail if it differs
+  # from the committed file that the C# layout test reads on every OS; compile the headers as C11 and C++17; check the
+  # golden layout under clang's MSVC target (clang in MSVC mode, not MSVC itself).
+  abi:
+    name: abi (C headers, golden layout)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Golden layout matches gcc
+        run: python3 -I tools/abi-layout.py check
+      - name: Headers compile (gcc -std=c11 -pedantic, g++ -std=c++17)
+        run: python3 -I tools/abi-layout.py headers
+      - name: Golden layout holds under clang --target=x86_64-pc-windows-msvc
+        run: python3 -I tools/abi-layout.py msvc-asserts
