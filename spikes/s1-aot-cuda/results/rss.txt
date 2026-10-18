@@ -1,0 +1,30 @@
+# 2026-10-17T23:37:34Z rss
+[process start (AOT, pre-CUDA)] VmRSS=10.9 MiB (anon 3.8, file 7.1) gc_heap=0.2 MiB gc_committed=0.0 MiB
+[after cuInit (driver loaded)] VmRSS=17.9 MiB (anon 5.8, file 12.1) gc_heap=0.2 MiB gc_committed=0.0 MiB
+[after cudaFree(0) (primary context created)] VmRSS=141.0 MiB (anon 23.5, file 109.5) gc_heap=0.2 MiB gc_committed=0.0 MiB
+[after 64 MiB device alloc + stream] VmRSS=141.1 MiB (anon 23.5, file 109.6) gc_heap=0.3 MiB gc_committed=0.0 MiB
+[after first kernel launch (module load of kernel image)] VmRSS=141.4 MiB (anon 23.6, file 109.9) gc_heap=0.3 MiB gc_committed=0.0 MiB
+[after graph capture + 100 replays] VmRSS=142.0 MiB (anon 23.9, file 110.1) gc_heap=0.3 MiB gc_committed=0.0 MiB
+[after GC.Collect] VmRSS=143.1 MiB (anon 24.5, file 110.6) gc_heap=0.2 MiB gc_committed=0.5 MiB
+smaps (RSS by mapping):
+        61.3 MiB  other files (nvidiactl)
+        20.9 MiB  nvidia libs: libnvidia-gpucomp.so.610.57.04
+        10.6 MiB  libcuda (driver)
+         9.6 MiB  [heap]
+         8.7 MiB  [anon]
+         8.0 MiB  other files (zero (deleted))
+         7.6 MiB  nvidia libs: libnvidia-nvvm70.so.4
+         5.9 MiB  s1app (AOT image)
+         4.3 MiB  nvidia libs: libnvidia-ptxjitcompiler.so.610.57.04
+         4.1 MiB  other shared libs
+         2.0 MiB  other files (nvidia-uvm)
+         0.6 MiB  libcudart
+         0.0 MiB  [stack]
+         0.0 MiB  libs1kernels (kernel images)
+         0.0 MiB  [vdso]
+         0.0 MiB  [vvar]
+         0.0 MiB  [vsyscall]
+         0.0 MiB  [vvar_vclock]
+         0.0 MiB  other files (memfd:dotnet_ipc_created (deleted))
+         0.0 MiB  other files (nvidia0)
+exit=0

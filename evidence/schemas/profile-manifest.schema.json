@@ -1,0 +1,551 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/starlinghq/roost/evidence/schemas/profile-manifest.schema.json",
+  "title": "Roost profile manifest",
+  "description": "One Roost serving profile: the model bundle, the kernel build and hardware it was qualified on, and the numeric policy its evidence was produced under (build plan R-012, contract owned by stream B3). A change to this file follows the contract-version rule: bump schema_version and update every manifest in evidence/registry/ in the same PR. Rules JSON Schema cannot express are checked by evidence/pipeline (roost-evidence validate-manifest).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "maturity",
+    "model",
+    "capabilities",
+    "profile"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "description": "<family>/<profile>, lowercase.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*/[a-z0-9][a-z0-9.-]*$"
+    },
+    "synthetic": {
+      "description": "True for test fixtures that describe no real model. The registry validator rejects synthetic manifests under evidence/registry/.",
+      "type": "boolean"
+    },
+    "maturity": {
+      "description": "proposed: admitted but not yet qualified. experimental and above need hardware evidence for at least one SM.",
+      "enum": [
+        "proposed",
+        "experimental",
+        "preview",
+        "stable",
+        "deprecated"
+      ]
+    },
+    "model": {
+      "$ref": "#/$defs/model"
+    },
+    "capabilities": {
+      "description": "Every capability the profile claims or disclaims, each with an explicit status. Missing never means supported.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_.-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/capability"
+      }
+    },
+    "profile": {
+      "$ref": "#/$defs/profile"
+    }
+  },
+  "allOf": [
+    {
+      "description": "Experimental and above need hardware evidence: at least one SM entry with status supported or experimental.",
+      "if": {
+        "properties": {
+          "maturity": {
+            "enum": [
+              "experimental",
+              "preview",
+              "stable"
+            ]
+          }
+        },
+        "required": [
+          "maturity"
+        ]
+      },
+      "then": {
+        "properties": {
+          "profile": {
+            "properties": {
+              "sm": {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "enum": [
+                        "supported",
+                        "experimental"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "A preview or stable profile needs at least one supported SM and at least one selected kernel variant.",
+      "if": {
+        "properties": {
+          "maturity": {
+            "enum": [
+              "preview",
+              "stable"
+            ]
+          }
+        },
+        "required": [
+          "maturity"
+        ]
+      },
+      "then": {
+        "properties": {
+          "profile": {
+            "properties": {
+              "sm": {
+                "contains": {
+                  "properties": {
+                    "status": {
+                      "const": "supported"
+                    }
+                  },
+                  "required": [
+                    "status"
+                  ]
+                }
+              },
+              "selected_variants": {
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "description": "Stable allows no untested capability.",
+      "if": {
+        "properties": {
+          "maturity": {
+            "const": "stable"
+          }
+        },
+        "required": [
+          "maturity"
+        ]
+      },
+      "then": {
+        "properties": {
+          "capabilities": {
+            "additionalProperties": {
+              "properties": {
+                "status": {
+                  "not": {
+                    "const": "untested"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "gitSha": {
+      "description": "Full 40-character commit SHA. Branch and tag names are mutable and not accepted.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "status": {
+      "description": "Explicit capability status. An SM or capability without evidence is untested.",
+      "enum": [
+        "supported",
+        "unsupported",
+        "experimental",
+        "untested"
+      ]
+    },
+    "dtype": {
+      "description": "Storage or compute dtype. Adding a value is a contract change.",
+      "enum": [
+        "fp32",
+        "fp16",
+        "bf16",
+        "fp8_e4m3",
+        "fp8_e5m2",
+        "int8",
+        "int4"
+      ]
+    },
+    "evidencePath": {
+      "description": "Repository-relative path of an evidence record, forward slashes, no parent segments.",
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(^|/)\\.\\.(/|$))[A-Za-z0-9._/-]+$"
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "family",
+        "source"
+      ],
+      "properties": {
+        "family": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "description": "Upstream model repository, pinned by full commit SHA.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "repo",
+            "revision"
+          ],
+          "properties": {
+            "repo": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$"
+            },
+            "revision": {
+              "$ref": "#/$defs/gitSha"
+            }
+          }
+        },
+        "num_layers": {
+          "description": "Decoder layer count; bounds layer_precision indices.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "lock": {
+          "description": "Asset lock record in evidence/registry/ (R-013): file sizes and SHA-256 including safetensors.",
+          "$ref": "#/$defs/evidencePath"
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/evidencePath"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "if": {
+        "properties": {
+          "status": {
+            "const": "supported"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "required": [
+          "evidence"
+        ],
+        "properties": {
+          "evidence": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "profile": {
+      "description": "What the evidence was produced on and under. A comparison across two manifests is valid only where these fields match.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kernel_manifest",
+        "selected_variants",
+        "tf32_policy",
+        "weight_dtype",
+        "compute_dtype",
+        "kv_dtype",
+        "attention_backend",
+        "sm",
+        "min_driver",
+        "min_toolkit",
+        "mesh"
+      ],
+      "properties": {
+        "kernel_manifest": {
+          "description": "kernels/manifest.toml (contract C5) the profile was qualified against.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "revision",
+            "sha256"
+          ],
+          "properties": {
+            "revision": {
+              "$ref": "#/$defs/gitSha"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "selected_variants": {
+          "description": "Kernel variants the selector actually chose for this profile, by binary digest. May be empty only below preview.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "op",
+              "variant",
+              "sm",
+              "digest"
+            ],
+            "properties": {
+              "op": {
+                "type": "string",
+                "minLength": 1
+              },
+              "variant": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sm": {
+                "$ref": "#/$defs/smArch"
+              },
+              "digest": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        },
+        "tf32_policy": {
+          "description": "Whether TF32 tensor-core math is allowed in Gemm and attention. Pinned so a comparison uses one policy.",
+          "enum": [
+            "disabled",
+            "enabled"
+          ]
+        },
+        "weight_dtype": {
+          "description": "Default weight dtype; layer_precision overrides it per layer.",
+          "$ref": "#/$defs/dtype"
+        },
+        "compute_dtype": {
+          "description": "Default activation dtype.",
+          "$ref": "#/$defs/dtype"
+        },
+        "kv_dtype": {
+          "description": "KV or state dtype per state group (contract C4). Group names are unique.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "group",
+              "kind",
+              "dtype"
+            ],
+            "properties": {
+              "group": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_.-]*$"
+              },
+              "kind": {
+                "enum": [
+                  "full",
+                  "sliding",
+                  "recurrent",
+                  "cross",
+                  "draft",
+                  "mla_latent",
+                  "adapter",
+                  "expert",
+                  "encoder_output"
+                ]
+              },
+              "dtype": {
+                "$ref": "#/$defs/dtype"
+              }
+            }
+          }
+        },
+        "attention_backend": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]*$"
+        },
+        "sm": {
+          "description": "SMs the profile makes a statement about, each with an explicit status. An SM without hardware evidence is untested; a SM left out is not claimed.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "arch",
+              "status"
+            ],
+            "properties": {
+              "arch": {
+                "$ref": "#/$defs/smArch"
+              },
+              "status": {
+                "$ref": "#/$defs/status"
+              },
+              "gpus": {
+                "description": "GPU models the evidence was produced on; required for supported and experimental.",
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/$defs/evidencePath"
+                }
+              }
+            },
+            "if": {
+              "properties": {
+                "status": {
+                  "enum": [
+                    "supported",
+                    "experimental"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "then": {
+              "required": [
+                "gpus",
+                "evidence"
+              ],
+              "properties": {
+                "gpus": {
+                  "minItems": 1
+                },
+                "evidence": {
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        },
+        "min_driver": {
+          "description": "Minimum NVIDIA driver version. A quoted string in YAML.",
+          "type": "string",
+          "pattern": "^\\d+(\\.\\d+){1,2}$"
+        },
+        "min_toolkit": {
+          "description": "Minimum CUDA toolkit version. A quoted string in YAML (13.0 unquoted parses as a float).",
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+        },
+        "mesh": {
+          "description": "Device mesh descriptor (contract C9). ranks is the worker-process count; a single GPU is ranks 1.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ranks"
+          ],
+          "properties": {
+            "ranks": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "tp": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "pp": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "dp": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ep": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "layer_precision": {
+          "description": "Per-layer overrides chosen from calibration evidence (R-079). Each entry names its evidence. Layer indices are unique.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "layer",
+              "weight_dtype",
+              "evidence"
+            ],
+            "properties": {
+              "layer": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "weight_dtype": {
+                "$ref": "#/$defs/dtype"
+              },
+              "compute_dtype": {
+                "$ref": "#/$defs/dtype"
+              },
+              "evidence": {
+                "$ref": "#/$defs/evidencePath"
+              }
+            }
+          }
+        }
+      }
+    },
+    "smArch": {
+      "description": "Compute capability from the kernel build list (contract C5).",
+      "enum": [
+        "sm_80",
+        "sm_86",
+        "sm_89",
+        "sm_90",
+        "sm_100",
+        "sm_120"
+      ]
+    }
+  }
+}

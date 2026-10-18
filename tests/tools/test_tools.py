@@ -90,11 +90,59 @@ def test_cuda_project_in_solution_fails(tmp_path, capsys):
     assert "CudaLike" not in out
 
 
+def test_starling_submodule_reference_and_loose_pin_fail(tmp_path, capsys):
+    root = git_repo(tmp_path)
+    write(root / ".gitmodules", '[submodule "external/starling"]\n')
+    write(
+        root / "src/A/A.csproj",
+        '<Project><ItemGroup><ProjectReference Include="..\\..\\external\\starling\\x.csproj" />',
+    )
+    write(
+        root / "Directory.Packages.props",
+        '<Project><ItemGroup><PackageVersion Include="Starlings.Tokenizers" Version="0.3.0-preview.1" />'
+        '<PackageVersion Include="Starlings.Acquisition" Version="[0.1.0]" />'
+        '<PackageVersion Include="Starlings.Roost.Thing" Version="1.0.0" /></ItemGroup></Project>',
+    )
+    assert boundaries.main(["--root", str(root), "--no-closure"]) == 1
+    out = capsys.readouterr().out
+    assert ".gitmodules present" in out
+    assert "project reference" in out
+    assert "Starlings.Tokenizers Version '0.3.0-preview.1' is not an exact" in out
+    assert "Acquisition" not in out and "Roost.Thing" not in out
+
+
+def test_starling_gitlink_override_and_outside_reference_fail(tmp_path, capsys):
+    root = git_repo(tmp_path)
+    sha = "1" * 40
+    subprocess.run(
+        ["git", "update-index", "--add", "--cacheinfo", f"160000,{sha},external/starling"], cwd=root, check=True
+    )
+    write(root / "Directory.Build.props", "<Project />")
+    write(
+        root / "src/A/A.csproj",
+        '<Project><ItemGroup><PackageReference Include="Starlings.Tokenizers" VersionOverride="0.3.0" />'
+        '<PackageReference Version="[0.2.0]" Include="Starlings.Acquisition" />'
+        '<ProjectReference Include="..\\..\\..\\starling\\ai-dotnet\\X.csproj" /></ItemGroup></Project>',
+    )
+    write(
+        root / "Directory.Packages.props",
+        '<Project><ItemGroup><PackageVersion Version="0.3.0" Include="Starlings.Tokenizers" /></ItemGroup></Project>',
+    )
+    assert boundaries.main(["--root", str(root), "--no-closure"]) == 1
+    out = capsys.readouterr().out
+    assert "external/starling: submodule (gitlink) tracked" in out
+    assert "Starlings.Tokenizers VersionOverride '0.3.0'" in out
+    assert "Starlings.Tokenizers Version '0.3.0'" in out
+    assert "leaves the repository" in out
+    assert "CentralPackageVersionOverrideEnabled" in out
+    assert "Acquisition" not in out
+
+
 def assets(names: list[str]) -> str:
     return json.dumps({"libraries": {f"{n}/1.0.0": {} for n in names}})
 
 
-def test_onnx_runtime_in_engine_closure_fails(tmp_path, capsys):
+def test_onnx_runtime_in_worker_side_closure_fails(tmp_path, capsys):
     root = git_repo(tmp_path)
     write(root / "src/Starlings.Roost.Models.Qwen3/Starlings.Roost.Models.Qwen3.csproj", "<Project />")
     write(
@@ -103,15 +151,21 @@ def test_onnx_runtime_in_engine_closure_fails(tmp_path, capsys):
     )
     write(root / "src/Starlings.Roost.Server/Starlings.Roost.Server.csproj", "<Project />")
     write(root / "src/Starlings.Roost.Server/obj/project.assets.json", assets(["Microsoft.ML.OnnxRuntime"]))
+    write(root / "src/Starlings.Roost.Generation/Starlings.Roost.Generation.csproj", "<Project />")
+    write(
+        root / "src/Starlings.Roost.Generation/obj/project.assets.json",
+        assets(["Starlings.Generation.OnnxGenAI", "Microsoft.ML.OnnxRuntimeGenAI.Managed"]),
+    )
     assert boundaries.main(["--root", str(root)]) == 1
     out = capsys.readouterr().out
-    assert "Models.Qwen3.csproj: engine package reaches Microsoft.ML.OnnxRuntimeGenAI.Managed/1.0.0" in out
-    assert "Server" not in out  # exempt (R-052)
+    assert "Models.Qwen3.csproj: worker-side package reaches Microsoft.ML.OnnxRuntimeGenAI.Managed/1.0.0" in out
+    assert "Server" not in out  # host process (decision 30)
+    assert "Roost.Generation" not in out  # host process (decision 30)
 
 
-def test_unrestored_engine_project_fails(tmp_path, capsys):
+def test_unrestored_worker_side_project_fails(tmp_path, capsys):
     root = git_repo(tmp_path)
-    write(root / "src/Starlings.Generation.Roost/Starlings.Generation.Roost.csproj", "<Project />")
+    write(root / "src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj", "<Project />")
     assert boundaries.main(["--root", str(root)]) == 1
     assert "not restored" in capsys.readouterr().out
 
@@ -231,6 +285,4 @@ def test_backlog_parses_every_item_with_labels():
     assert len(items) == backlog.EXPECTED
     by_id = {item["id"]: item for item in items}
     assert backlog.labels_for(by_id["R-060"]) == ["backlog", "stream:A", "phase:M0", "phase:M2"]
-    assert "starling-pr" in backlog.labels_for(by_id["R-009"])
-    assert "starling-pr" in backlog.labels_for(by_id["R-001"])
-    assert "starling-pr" not in backlog.labels_for(by_id["R-003"])
+    assert not any("starling-pr" in backlog.labels_for(item) for item in items)
