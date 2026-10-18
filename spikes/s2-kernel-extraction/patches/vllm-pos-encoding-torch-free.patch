@@ -1,0 +1,28 @@
+diff --git i/csrc/pos_encoding_kernels.cu w/csrc/pos_encoding_kernels.cu
+index bad616f..170e735 100644
+--- i/csrc/pos_encoding_kernels.cu
++++ w/csrc/pos_encoding_kernels.cu
+@@ -1,7 +1,7 @@
+-#include "torch_utils.h"
++#include "roost_vllm_shim.h"  // Roost: replaces torch_utils.h
+ 
+ #include "core/cuda_compat.h"
+-#include "dispatch_utils.h"
++// Roost: dispatch_utils.h is torch dispatch only
+ 
+ namespace vllm {
+ 
+@@ -100,6 +100,7 @@ __global__ void rotary_embedding_kernel(
+ 
+ }  // namespace vllm
+ 
++#ifdef ROOST_VLLM_WITH_TORCH_HOST  // Roost: torch launchers, not built
+ void rotary_embedding(
+     torch::stable::Tensor& positions,  // [batch_size, seq_len] or [num_tokens]
+     torch::stable::Tensor&
+@@ -199,3 +200,5 @@ void rotary_embedding(
+             });
+       });
+ }
++
++#endif  // ROOST_VLLM_WITH_TORCH_HOST
