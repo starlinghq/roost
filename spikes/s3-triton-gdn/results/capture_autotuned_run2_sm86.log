@@ -1,0 +1,32 @@
+2026-10-17T23:41:37Z
+In file included from /home/mark/.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/include/python3.12/Python.h:12,
+                 from /home/mark/Projects/roost-wave1/envs/R-007/venv/lib/python3.12/site-packages/triton/backends/nvidia/driver.c:9:
+/home/mark/.local/share/uv/python/cpython-3.12.14-linux-x86_64-gnu/include/python3.12/pyconfig.h:1877:9: warning: ‘_POSIX_C_SOURCE’ redefined
+ 1877 | #define _POSIX_C_SOURCE 200809L
+      |         ^~~~~~~~~~~~~~~
+In file included from /usr/include/bits/libc-header-start.h:33,
+                 from /usr/include/stdlib.h:26,
+                 from /home/mark/Projects/roost-wave1/envs/R-007/venv/lib/python3.12/site-packages/triton/backends/nvidia/include/cuda.h:56,
+                 from /home/mark/Projects/roost-wave1/envs/R-007/venv/lib/python3.12/site-packages/triton/backends/nvidia/driver.c:1:
+/usr/include/features.h:319:10: note: this is the location of the previous definition
+  319 | # define _POSIX_C_SOURCE        202405L
+      |          ^~~~~~~~~~~~~~~
+15 distinct production specialisations; autotune benchmark rounds: {'l2norm_fwd_kernel': 25, 'chunk_local_cumsum_scalar_kernel': 8, 'chunk_gated_delta_rule_fwd_kkt_solve_kernel': 12, 'recompute_w_u_fwd_kernel': 18, 'chunk_gated_delta_rule_fwd_kernel_h_blockdim64': 32, 'chunk_fwd_kernel_o': 6}
+l2norm_fwd_kernel {'D': 128, 'BD': 128, 'NB': 1, 'BT': 16} w 2 s 3 smem 64 cubin 22144
+chunk_local_cumsum_scalar_kernel {'B': 1, 'H': 16, 'BT': 64, 'REVERSE': False, 'HAS_SCALE': True, 'IS_VARLEN': False, 'USE_GRAPH': False} w 1 s 3 smem 0 cubin 9896
+chunk_gated_delta_rule_fwd_kkt_solve_kernel {'H': 16, 'HV': 16, 'K': 128, 'BT': 64, 'BC': 16, 'BK': 64, 'USE_G': True, 'IS_VARLEN': False} w 1 s 3 smem 9216 cubin 193520
+recompute_w_u_fwd_kernel {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BK': 64, 'BV': 64, 'USE_G': True, 'IS_VARLEN': False} w 2 s 2 smem 20480 cubin 93424
+chunk_gated_delta_rule_fwd_kernel_h_blockdim64 {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BV': 32, 'USE_G': True, 'USE_GK': False, 'USE_INITIAL_STATE': False, 'STORE_FINAL_STATE': True, 'SAVE_NEW_VALUE': True, 'STATE_V_FIRST': False, 'IS_VARLEN': False} w 4 s 2 smem 49412 cubin 68208
+chunk_fwd_kernel_o {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BK': 32, 'BV': 32, 'USE_G': True, 'USE_G_GAMMA': False, 'STATE_V_FIRST': False, 'IS_VARLEN': False} w 2 s 3 smem 20480 cubin 85616
+chunk_gated_delta_rule_fwd_kernel_h_blockdim64 {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BV': 32, 'USE_G': True, 'USE_GK': False, 'USE_INITIAL_STATE': True, 'STORE_FINAL_STATE': True, 'SAVE_NEW_VALUE': True, 'STATE_V_FIRST': False, 'IS_VARLEN': False} w 4 s 2 smem 49412 cubin 73456
+chunk_local_cumsum_scalar_kernel {'B': 1, 'H': 16, 'BT': 64, 'REVERSE': False, 'HAS_SCALE': True, 'IS_VARLEN': True, 'USE_GRAPH': False} w 1 s 3 smem 0 cubin 11048
+chunk_gated_delta_rule_fwd_kkt_solve_kernel {'H': 16, 'HV': 16, 'K': 128, 'BT': 64, 'BC': 16, 'BK': 64, 'USE_G': True, 'IS_VARLEN': True} w 1 s 3 smem 9216 cubin 194672
+recompute_w_u_fwd_kernel {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BK': 64, 'BV': 64, 'USE_G': True, 'IS_VARLEN': True} w 2 s 2 smem 20480 cubin 94064
+chunk_gated_delta_rule_fwd_kernel_h_blockdim64 {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BV': 32, 'USE_G': True, 'USE_GK': False, 'USE_INITIAL_STATE': True, 'STORE_FINAL_STATE': True, 'SAVE_NEW_VALUE': True, 'STATE_V_FIRST': False, 'IS_VARLEN': True} w 4 s 2 smem 49412 cubin 74992
+chunk_fwd_kernel_o {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BK': 32, 'BV': 32, 'USE_G': True, 'USE_G_GAMMA': False, 'STATE_V_FIRST': False, 'IS_VARLEN': True} w 2 s 3 smem 20480 cubin 85232
+chunk_gated_delta_rule_fwd_kernel_h_blockdim64 {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BT': 64, 'BV': 32, 'USE_G': True, 'USE_GK': False, 'USE_INITIAL_STATE': False, 'STORE_FINAL_STATE': True, 'SAVE_NEW_VALUE': True, 'STATE_V_FIRST': False, 'IS_VARLEN': True} w 4 s 2 smem 49412 cubin 69744
+fused_recurrent_gated_delta_rule_fwd_kernel {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BK': 128, 'BV': 8, 'USE_G': True, 'USE_GK': False, 'USE_GV': False, 'USE_QK_L2NORM_IN_KERNEL': True, 'IS_BETA_HEADWISE': True, 'USE_INITIAL_STATE': True, 'STORE_FINAL_STATE': True, 'STATE_V_FIRST': False, 'IS_VARLEN': False, 'USE_GATE_IN_KERNEL': False, 'HAS_DT_BIAS': False, 'APPLY_BETA_SIGMOID': False, 'ALLOW_NEG_EIGVAL': False} w 1 s 3 smem 512 cubin 39680
+fused_recurrent_gated_delta_rule_fwd_kernel {'H': 16, 'HV': 16, 'K': 128, 'V': 128, 'BK': 128, 'BV': 8, 'USE_G': True, 'USE_GK': False, 'USE_GV': False, 'USE_QK_L2NORM_IN_KERNEL': True, 'IS_BETA_HEADWISE': True, 'USE_INITIAL_STATE': True, 'STORE_FINAL_STATE': True, 'STATE_V_FIRST': False, 'IS_VARLEN': True, 'USE_GATE_IN_KERNEL': False, 'HAS_DT_BIAS': False, 'APPLY_BETA_SIGMOID': False, 'ALLOW_NEG_EIGVAL': False} w 1 s 3 smem 512 cubin 40448
+exit=0
+wall_seconds_including_python_start=104.2
+2026-10-17T23:43:21Z

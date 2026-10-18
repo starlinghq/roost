@@ -1,0 +1,20 @@
+# Captured 2026-10-17T23:39:16Z on the S3 host
+## nvcc --version
+nvcc: NVIDIA (R) Cuda compiler driver
+Copyright (c) 2005-2026 NVIDIA Corporation
+Built on Tue_Jun_09_02:43:40_PM_PDT_2026
+Cuda compilation tools, release 13.3, V13.3.73
+Build cuda_13.3.r13.3/compiler.38244171_0
+## nvidia-smi
+index, name, driver_version
+0, NVIDIA GeForce RTX 3090, 610.57.04
+1, NVIDIA GeForce RTX 4060 Ti, 610.57.04
+## python and packages (venv envs/R-007/venv)
+python 3.12.14
+torch 2.14.1+cu130 cuda 13.0
+triton 3.8.0
+transformers 5.20.1
+einops 0.8.2
+numpy 2.5.4
+## flash-linear-attention checkout
+329b534245d3d7bb27cc03a99e87bdc51fb28d06

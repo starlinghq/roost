@@ -1,0 +1,9 @@
+build/
+out/
+*.cubin
+*.so
+*.o
+*.bin
+*.npy
+*.npz
+__pycache__/
