@@ -31,6 +31,7 @@ hub_sha256 = "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80"
 starling_published_sha256 = "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80"
 starling_source = "Starlings.Models.Qwen35 0.2.0 assembly (Qwen35ChatTemplate: owned C# renderer of chat_template.jinja)"
 result = "match"
+binding = "The package's shipped XML docs state that Qwen35ChatTemplate renders chat_template.jinja at SHA-256 Qwen35ChatTemplate.TemplateSha256; the same string is in the assembly."
 
 [comparison.tokenizer_json]
 file = "tokenizer.json"
@@ -40,8 +41,13 @@ starling_profile = "qwen35-bpe-chat (Starlings.Tokenizers 0.3.0)"
 starling_asset_sha256 = "a5cd9732badce41de57e6efce8302930ded1c1188c5f81feb2bd6c24c4a1941f"
 starling_asset_size = 19989339
 result = "differs"
-detail = "Starling's tokenizer asset is not the Hub file. It is the transformers 5.18.0 backend tokenizer serialization (33 added tokens, including audio and TTS markers); the Hub file has 26 added tokens. Starling's profile states this itself and records the Hub digest 5f9e4d49 and size. To be raised with Starling; not patched in Roost."
+detail = "Starling's tokenizer asset is not the Hub file. It is the transformers 5.18.0 backend tokenizer serialization (33 added tokens, including audio and TTS markers, as stated in the Starlings.Tokenizers profile text); the Hub file has 26 added tokens (counted from the downloaded tokenizer.json). Starling's profile states this itself and records the Hub digest 5f9e4d49 and size. Not patched in Roost. NOT YET REPORTED to Starling: see report_to_starling."
 roost_consequence = "Roost's fp32 CPU reference runner loads the checkpoint through transformers, so its prompt ids follow the transformers pipeline. Fixtures (R-014) must record which tokenizer artifact produced the ids."
+
+[report_to_starling]
+status = "pending"               # needs the maintainer to file it; no reference exists yet
+reference = ""                   # fill with the issue or PR-comment URL once filed
+text = "Starlings.Tokenizers 0.3.0 profile qwen35-bpe-chat ships a derived tokenizer asset (sha256 a5cd9732..., 19989339 bytes) that is not the Hub tokenizer.json at Qwen/Qwen3.5-0.8B 2fc06364 (sha256 5f9e4d49..., 12807982 bytes, 26 added tokens). Roost records the difference and does not patch it. Please confirm it is intended and whether the Hub file should be an accepted alternative."
 
 [manifest_blockers]
 # evidence/schemas/profile-manifest.schema.json (schema_version 1) requires profile fields that cannot exist yet.
