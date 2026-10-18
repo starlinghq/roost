@@ -1,0 +1,10 @@
+# build and run outputs (never commit binaries or data)
+build/
+out/
+*.o
+*.so
+*.cubin
+*.fatbin
+*.csv
+*.bin
+*.log

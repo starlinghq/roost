@@ -1,0 +1,11 @@
+rms_norm (flashinfer)              status=0 max_err(abs/(1+|ref|))=3.004e-03 tol=2e-02 PASS
+rms_norm (vllm, patched)           status=0 max_err(abs/(1+|ref|))=3.004e-03 tol=2e-02 PASS
+fused_add_rms_norm (flashinfer)    status=0 max_err(abs/(1+|ref|))=2.979e-03 tol=2e-02 PASS
+  residual output                  status=0 max_err(abs/(1+|ref|))=3.115e-03 tol=2e-02 PASS
+qk_rms_norm (flashinfer)           status=0 max_err(abs/(1+|ref|))=3.031e-03 tol=2e-02 PASS
+silu_and_mul (flashinfer)          status=0 max_err(abs/(1+|ref|))=2.867e-03 tol=2e-02 PASS
+rope_neox q (flashinfer)           status=0 max_err(abs/(1+|ref|))=2.568e-03 tol=2e-02 PASS
+rope_neox k (flashinfer)           status=0 max_err(abs/(1+|ref|))=2.544e-03 tol=2e-02 PASS
+append_paged_kv K (flashinfer)     status=0 max_err(abs/(1+|ref|))=0.000e+00 tol=0e+00 PASS
+append_paged_kv V (flashinfer)     status=0 max_err(abs/(1+|ref|))=0.000e+00 tol=0e+00 PASS
+S2 OPS TEST PASSED

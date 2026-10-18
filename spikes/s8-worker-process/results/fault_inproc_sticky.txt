@@ -1,0 +1,10 @@
+# 2026-10-17T16:39:55-07:00 uptime:  16:39:55 up 3 days, 10:16,  1 user,  load average: 4.74, 2.64, 2.85
+fault mode=inproc kind=sticky deadline=300ms
+  warm steps ok (last status=ok)
+  detected via result ring after 7.83 ms: status=sticky cuda_err=700 (an illegal memory access was encountered)
+  worker state after fault = 1 (1 ready, 2 faulted)
+  follow-up normal step 0 in the same process: result status=sticky cuda_err=700 (an illegal memory access was encountered)
+  follow-up normal step 1 in the same process: result status=sticky cuda_err=700 (an illegal memory access was encountered)
+  follow-up normal step 2 in the same process: result status=sticky cuda_err=700 (an illegal memory access was encountered)
+  => context is poisoned for the lifetime of the process; only a process restart recovers
+exit=0
