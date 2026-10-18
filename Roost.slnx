@@ -2,6 +2,8 @@
   <!-- CPU projects only. *.Cuda and *.Tests.Cuda projects are local-only and never listed here (tools/check-roost-boundaries.py). -->
   <Folder Name="/src/">
     <Project Path="src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <Project Path="src/Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" />
+    <Project Path="src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Starlings.Roost.Abstractions.Tests/Starlings.Roost.Abstractions.Tests.csproj" />
