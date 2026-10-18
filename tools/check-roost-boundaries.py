@@ -14,6 +14,9 @@ Checks:
   binaries   No kernel or native binaries tracked in Git (by extension and by ELF, PE, Mach-O or fatbin magic).
              Kernel binaries are release assets only.
   solution   No *.Cuda project in Roost.slnx. CUDA test projects are local-only.
+  starling   Starling is consumed only as exact NuGet pins (build plan section 2.2): no submodule or .gitmodules,
+             no external/ project reference, and every Starlings.* package version in Directory.Packages.props
+             an exact `[x.y.z]` pin. Roost's own Starlings.Roost.* projects are not Starling packages.
 """
 
 from __future__ import annotations
@@ -137,6 +140,35 @@ def check_solution(root: Path) -> list[str]:
     ]
 
 
+def check_starling(root: Path) -> list[str]:
+    errors = []
+    listing = subprocess.run(["git", "ls-files", "-s", "-z"], cwd=root, capture_output=True, check=True).stdout
+    for entry in listing.decode().split("\0"):
+        mode, _, rest = entry.partition(" ")
+        if mode == "160000":
+            errors.append(f"starling: {rest.split(chr(9), 1)[-1]}: submodule (gitlink) tracked; use an exact NuGet pin")
+    if (root / ".gitmodules").exists():
+        errors.append("starling: .gitmodules present; Roost has no submodules")
+    for path in sorted(root.rglob("*")):
+        if path.suffix not in {".csproj", ".props", ".targets"} or ".git" in path.relative_to(root).parts:
+            continue
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for match in re.finditer(r'<ProjectReference\s+Include="([^"]+)"', text):
+            target = match.group(1).replace("\\", "/")
+            if "external/" in target:
+                errors.append(f"starling: {rel}: project reference {target}; consume the NuGet package instead")
+        if path.name == "Directory.Packages.props":
+            for match in re.finditer(
+                r'<PackageVersion\s+Include="(Starlings\.(?!Roost\.)[^"]*)"\s+Version="([^"]*)"', text
+            ):
+                if not re.fullmatch(r"\[[^\[\],()]+\]", match.group(2)):
+                    errors.append(
+                        f"starling: {rel}: {match.group(1)} version {match.group(2)!r} is not an exact [x] pin"
+                    )
+    return errors
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, default=ROOT)
@@ -145,7 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     root = args.root.resolve()
 
     files = tracked(root)
-    errors = check_python(root, files) + check_binaries(root, files) + check_solution(root)
+    errors = check_python(root, files) + check_binaries(root, files) + check_solution(root) + check_starling(root)
     if not args.no_closure:
         errors += check_closure(root)
     for error in errors:

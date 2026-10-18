@@ -90,6 +90,27 @@ def test_cuda_project_in_solution_fails(tmp_path, capsys):
     assert "CudaLike" not in out
 
 
+def test_starling_submodule_reference_and_loose_pin_fail(tmp_path, capsys):
+    root = git_repo(tmp_path)
+    write(root / ".gitmodules", '[submodule "external/starling"]\n')
+    write(
+        root / "src/A/A.csproj",
+        '<Project><ItemGroup><ProjectReference Include="..\\..\\external\\starling\\x.csproj" />',
+    )
+    write(
+        root / "Directory.Packages.props",
+        '<Project><ItemGroup><PackageVersion Include="Starlings.Tokenizers" Version="0.3.0-preview.1" />'
+        '<PackageVersion Include="Starlings.Acquisition" Version="[0.1.0]" />'
+        '<PackageVersion Include="Starlings.Roost.Thing" Version="1.0.0" /></ItemGroup></Project>',
+    )
+    assert boundaries.main(["--root", str(root), "--no-closure"]) == 1
+    out = capsys.readouterr().out
+    assert ".gitmodules present" in out
+    assert "project reference" in out
+    assert "Starlings.Tokenizers version '0.3.0-preview.1' is not an exact" in out
+    assert "Acquisition" not in out and "Roost.Thing" not in out
+
+
 def assets(names: list[str]) -> str:
     return json.dumps({"libraries": {f"{n}/1.0.0": {} for n in names}})
 
