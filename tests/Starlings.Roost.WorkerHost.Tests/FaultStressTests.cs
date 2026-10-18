@@ -91,7 +91,11 @@ public sealed class FaultStressTests
 
     private sealed class Run : IAsyncDisposable
     {
-        private static readonly TimeSpan Deadline = TimeSpan.FromMilliseconds(400);
+        // Only the two episodes that end by letting the deadline lapse (a hang, a frozen worker) use a short deadline. Every
+        // other episode needs the deadline NOT to lapse before the host sees the event (a crashing worker takes a while to
+        // die and be reaped, and a hosted two-core runner took longer than 400 ms: the live heartbeat made it a Hang).
+        private static readonly TimeSpan ShortDeadline = TimeSpan.FromMilliseconds(400);
+        private static readonly TimeSpan LongDeadline = TimeSpan.FromSeconds(15);
         private static readonly TimeSpan Wait = TimeSpan.FromSeconds(20);
 
         private readonly Random _random;
@@ -173,12 +177,15 @@ public sealed class FaultStressTests
         private string HeartbeatNote()
         {
             var beat = _rig.Transport.ReadHeartbeat();
-            return $"heartbeat counter={beat.Counter} state={beat.State} ageMs={(MonotonicClock.NowNs() - beat.WorkerNs) / 1e6:0.0} loadavg={File.ReadAllText("/proc/loadavg").Split(' ')[0]}";
+            return $"heartbeat counter={beat.Counter} state={beat.State} ageMs={(MonotonicClock.NowNs() - beat.WorkerNs) / 1e6:0.0} loadavg={OsProcess.LoadAverage()}";
         }
 
         private Rig NewRig() => new(new ProcessWorkerTransport(WorkerProcessEntry.Command(), _options));
 
-        private static WorkerLaunch Launch() => Rig.DefaultLaunch(deadline: Deadline);
+        private static WorkerLaunch Launch(TimeSpan? deadline = null) => Rig.DefaultLaunch(deadline: deadline ?? LongDeadline);
+
+        private static TimeSpan DeadlineFor(Terminal terminal) =>
+            terminal is Terminal.Hang or Terminal.FrozenWorker ? ShortDeadline : LongDeadline;
 
         private void Log(string text) => _trace.Add(text);
 
@@ -192,10 +199,10 @@ public sealed class FaultStressTests
             }
         }
 
-        private async Task<int> StartAsync(WorkerLaunch? launch = null)
+        private async Task<int> StartAsync(TimeSpan deadline)
         {
             _rig.NextStepId = 1;
-            var result = await _rig.StartAsync(launch ?? Launch());
+            var result = await _rig.StartAsync(Launch(deadline));
             Check(result.State == HandshakeState.Ready, $"handshake {result.State}/{result.Reject}");
             Check(Process.ProcessId == result.WorkerProcessId && result.WorkerProcessId > 0, "worker pid");
             _ = _pids.Add(Process.ProcessId);
@@ -216,7 +223,7 @@ public sealed class FaultStressTests
                 return;
             }
 
-            var pid = await StartAsync();
+            var pid = await StartAsync(DeadlineFor(terminal));
             var segment = Process.SegmentPath!;
             Check(File.Exists(segment), "segment file missing while running");
             Burst();
@@ -237,7 +244,7 @@ public sealed class FaultStressTests
 
         private async Task RestartAndProveItWorksAsync()
         {
-            var pid = await StartAsync();
+            var pid = await StartAsync(LongDeadline);
             _ = _rig.Publish();
             var seen = _rig.Wait(Wait);
             Check(seen.HasResult && seen.StepId == 1 && seen.EchoOk && seen.ChecksumOk, $"first step after restart: {seen}");
@@ -316,10 +323,10 @@ public sealed class FaultStressTests
         /// <summary>A stop shorter than the deadline is not a fault: the step finishes after the continue.</summary>
         private void BriefFreeze()
         {
-            Check(Libc.Signal(Process.ProcessId, Libc.SigStop), "SIGSTOP");
+            Check(OsProcess.Freeze(Process.ProcessId), "freeze");
             var id = _rig.Publish();
             Thread.Sleep(_random.Next(1, 25));
-            _ = Libc.Signal(Process.ProcessId, Libc.SigCont);
+            _ = OsProcess.Thaw(Process.ProcessId);
             var seen = _rig.Wait(Wait);
             Check(seen.HasResult && seen.StepId == id && seen.Fault == FaultClass.None && seen.EchoOk, $"step after a brief freeze: {seen}");
             _goodSteps++;
@@ -357,7 +364,7 @@ public sealed class FaultStressTests
                         _ = _rig.Publish(FakeOp.Hang);
                         var polled = _rig.WaitForPollFault(Wait);
                         Check(polled.Fault == FaultClass.Hang, $"hang was classified {polled.Fault}; {HeartbeatNote()}");
-                        Check(polled.After >= Deadline - TimeSpan.FromMilliseconds(50), $"hang concluded after {polled.After}, before the deadline");
+                        Check(polled.After >= ShortDeadline - TimeSpan.FromMilliseconds(50), $"hang concluded after {polled.After}, before the deadline");
                         Check(FaultRules.ActionFor(polled.Fault) == RecoveryAction.Respawn, "hang action");
                         break;
                     }
@@ -369,7 +376,7 @@ public sealed class FaultStressTests
                             _ = _rig.Publish(FakeOp.Slow, 50); // killed mid-step
                         }
 
-                        Check(Libc.Signal(pid, Libc.SigKill), "SIGKILL");
+                        Check(OsProcess.Kill(pid), "kill");
                         var seen = DrainUntilFault();
                         Check(seen == FaultClass.Exited, $"external kill classified {seen}");
                         break;
@@ -377,7 +384,7 @@ public sealed class FaultStressTests
 
                 case Terminal.FrozenWorker:
                     {
-                        Check(Libc.Signal(pid, Libc.SigStop), "SIGSTOP");
+                        Check(OsProcess.Freeze(pid), "freeze");
                         Thread.Sleep(_random.Next(5, 30));
                         _ = _rig.Publish();
                         var polled = _rig.WaitForPollFault(Wait);
