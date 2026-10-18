@@ -11,4 +11,9 @@
   <ItemGroup>
     <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- The C contract headers and their gcc layout, read as text by the layout and constant tests (no C compiler). -->
+    <None Include="Layout/abi-layout.golden.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../kernels/include/*.h" Link="Layout/include/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
