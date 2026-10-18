@@ -40,14 +40,13 @@ hub_size = 12807982
 starling_profile = "qwen35-bpe-chat (Starlings.Tokenizers 0.3.0)"
 starling_asset_sha256 = "a5cd9732badce41de57e6efce8302930ded1c1188c5f81feb2bd6c24c4a1941f"
 starling_asset_size = 19989339
-result = "differs"
-detail = "Starling's tokenizer asset is not the Hub file. It is the transformers 5.18.0 backend tokenizer serialization (33 added tokens, including audio and TTS markers, as stated in the Starlings.Tokenizers profile text); the Hub file has 26 added tokens (counted from the downloaded tokenizer.json). Starling's profile states this itself and records the Hub digest 5f9e4d49 and size. Not patched in Roost. NOT YET REPORTED to Starling: see report_to_starling."
-roost_consequence = "Expected, not yet shown in this repo (inferred from Starling's profile text; R-014 does not exist yet): the fp32 CPU reference runner would load the checkpoint through transformers, so its prompt ids would follow the transformers pipeline. Fixtures (R-014) must record which tokenizer artifact produced the ids."
+result = "equivalent for token ids"
+detail = "The files differ but encode the same. Starling's asset is the transformers 5.18.0 backend serialization: it adds 7 special tokens (ids 248070-248076: <|audio_start|>, <|audio_end|>, <tts_pad>, <tts_text_bos>, <tts_text_eod>, <tts_text_bos_single>, <|audio_pad|>) that the Hub checkpoint defines in its own tokenizer_config.json added_tokens_decoder, which transformers merges in when it loads the tokenizer; it also sets trim_offsets and the decoder's offset flags to true, which affect offsets only. Vocabulary, merges and every other added token are identical. A 12-string corpus (ASCII, whitespace, CJK, Arabic, Cyrillic, emoji, combining marks, code, chat markup with <|im_start|> and <think>) gives identical ids and identical decodes with tokenizers 0.22.1 (orchestrator check, 2026-10-18)."
+roost_consequence = "None for M0 text: Roost (Starlings.Tokenizers) and the transformers reference produce the same ids. Only literal audio or TTS marker strings in user text would tokenize differently with the raw Hub file, which nothing in Roost loads. Fixtures (R-014) record the tokenizer artifact digest they used."
 
 [report_to_starling]
-status = "pending"               # needs the maintainer to file it; no reference exists yet
-reference = ""                   # fill with the issue or PR-comment URL once filed
-text = "Starlings.Tokenizers 0.3.0 profile qwen35-bpe-chat ships a derived tokenizer asset (sha256 a5cd9732..., 19989339 bytes) that is not the Hub tokenizer.json at Qwen/Qwen3.5-0.8B 2fc06364 (sha256 5f9e4d49..., 12807982 bytes, 26 added tokens). Roost records the difference and does not patch it. Please confirm it is intended and whether the Hub file should be an accepted alternative."
+status = "not needed"
+reason = "Starling's asset is what transformers itself loads for this checkpoint (the Hub tokenizer.json plus the tokenizer_config.json added tokens), so there is nothing to raise."
 
 [manifest_blockers]
 # evidence/schemas/profile-manifest.schema.json (schema_version 1) requires profile fields that cannot exist yet.
