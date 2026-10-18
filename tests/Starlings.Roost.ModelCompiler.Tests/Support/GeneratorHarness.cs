@@ -27,16 +27,16 @@ public static class GeneratorHarness
         return refs;
     }
 
-    public static CSharpCompilation Compile(string source, bool withOps = true, string path = "Model.cs") =>
+    public static CSharpCompilation Compile(string source, bool withOps = true, string path = "Model.cs", string? extra = null) =>
         CSharpCompilation.Create(
             "T",
-            [CSharpSyntaxTree.ParseText(source, path: path)],
+            extra is null ? [CSharpSyntaxTree.ParseText(source, path: path)] : [CSharpSyntaxTree.ParseText(source, path: path), CSharpSyntaxTree.ParseText(extra, path: "Extra.cs")],
             References(withOps),
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: false, nullableContextOptions: NullableContextOptions.Enable));
 
-    public static Result Run(string source, bool withOps = true)
+    public static Result Run(string source, bool withOps = true, string? extra = null)
     {
-        var compilation = Compile(source, withOps);
+        var compilation = Compile(source, withOps, extra: extra);
         GeneratorDriver driver = CSharpGeneratorDriver.Create(new ModelGenerator());
         driver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var output, out var diagnostics);
         var run = driver.GetRunResult();

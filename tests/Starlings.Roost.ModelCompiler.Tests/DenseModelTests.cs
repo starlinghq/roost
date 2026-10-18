@@ -214,8 +214,7 @@ public sealed unsafe class DenseModelTests : IDisposable
             DenseModel.Forward<StubCpuOps>(in ctx);
         }
 
-        long[] rounds = AllocationProbe.Rounds(Step);
-        Assert.Equal(0, rounds.Min());
+        AllocationProbe.AssertSteady(Step);
     }
 
     [Fact]
@@ -225,6 +224,7 @@ public sealed unsafe class DenseModelTests : IDisposable
         void Allocating() => sink = new float[16];
 
         Assert.True(AllocationProbe.Rounds(Allocating).Min() >= 2000 * 64);
+        Assert.ThrowsAny<Exception>(() => AllocationProbe.AssertSteady(Allocating));
         GC.KeepAlive(sink);
     }
 

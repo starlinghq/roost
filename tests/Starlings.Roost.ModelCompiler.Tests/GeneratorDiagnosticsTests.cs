@@ -188,6 +188,16 @@ public class GeneratorDiagnosticsTests
     }
 
     [Fact]
+    public void StateGroupsWithoutTheStateContractTypesAreReported()
+    {
+        // A compilation that has an IRoostOps but not Starlings.Roost.Abstractions' state types.
+        string source = Model("[StateGroup(\"g\", \"Full\", Layers = \"0:1\", KvHeads = \"1\", HeadSize = \"8\", BlockSize = \"16\")]");
+        var d = Single(Run(source, withOps: false, extra: "namespace Starlings.Roost.Ops { public interface IRoostOps { } }"), "ROOST013");
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        Assert.Contains("StateGroupDescriptor", d.Msg(), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void ACompilationWithoutIRoostOpsIsReportedOnce()
     {
         var r = Run(Model(), withOps: false);
