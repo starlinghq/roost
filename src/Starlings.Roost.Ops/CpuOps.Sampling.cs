@@ -24,7 +24,13 @@ public readonly partial struct CpuOps
     /// </remarks>
     public static unsafe void Sample(in SampleArgs a)
     {
-        Need(a.Logits, ((a.Rows - 1L) * a.Stride) + a.Vocab, nameof(a.Logits));
+        long stride = a.Stride == 0 ? a.Vocab : a.Stride;
+        if (stride < a.Vocab)
+        {
+            throw new ArgumentException($"Stride {a.Stride} is smaller than Vocab {a.Vocab}.", nameof(a));
+        }
+
+        Need(a.Logits, ((a.Rows - 1L) * stride) + a.Vocab, nameof(a.Logits));
         Need(a.Temperature, a.Rows, nameof(a.Temperature));
         Need(a.TopK, a.Rows, nameof(a.TopK));
         Need(a.TopP, a.Rows, nameof(a.TopP));
@@ -52,7 +58,7 @@ public readonly partial struct CpuOps
         {
             for (int r = 0; r < a.Rows; r++)
             {
-                float* logit = (float*)a.Logits.Address + ((long)r * a.Stride);
+                float* logit = (float*)a.Logits.Address + ((long)r * stride);
                 uint* bits = mask ? (uint*)a.Mask.Address + (r * words) : null;
                 float temp = (float)Load(a.Temperature.Address, DType.F32, r);
                 int topK = (int)LoadInt(a.TopK.Address, DType.I32, r);
