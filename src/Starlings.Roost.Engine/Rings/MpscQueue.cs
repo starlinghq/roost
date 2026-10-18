@@ -22,7 +22,7 @@ namespace Starlings.Roost.Engine.Rings;
 /// <item><description><c>Volatile.Read(ref _tail)</c> (producer): an initial hint only. A stale value costs a
 /// retry, never correctness, because the claim below is validated by the compare-exchange.</description></item>
 /// <item><description><c>Volatile.Read(ref cell.Sequence)</c> (producer, acquire): pairs with the consumer's release
-/// store of <c>p + capacity</c> (item 6). Seeing <c>Sequence == pos</c> therefore also shows the consumer's earlier
+/// store of <c>p + capacity</c> (item 7). Seeing <c>Sequence == pos</c> therefore also shows the consumer's earlier
 /// <c>cell.Value = default</c>, so the producer's write of the new value is ordered after the consumer is done
 /// with the cell. Without the acquire a producer could overwrite a value the consumer is still reading.</description></item>
 /// <item><description><c>Interlocked.CompareExchange(ref _tail, pos + 1, pos)</c> (producer): claims position
@@ -32,7 +32,7 @@ namespace Starlings.Roost.Engine.Rings;
 /// exclusive ownership of the cell for this lap (the consumer will not touch it until the sequence says full) and
 /// no other producer can claim the same position.</description></item>
 /// <item><description><c>Volatile.Write(ref cell.Sequence, pos + 1)</c> (producer, release): publishes the value.
-/// The plain store of <c>Value</c> cannot move after it. Pairs with item 5.</description></item>
+/// The plain store of <c>Value</c> cannot move after it. Pairs with item 6.</description></item>
 /// <item><description><c>Volatile.Read(ref cell.Sequence)</c> (consumer, acquire): sees <c>head + 1</c> only after
 /// item 5, and then the read of <c>Value</c> sees the producer's store. If the sequence is not yet <c>head + 1</c>
 /// the queue is empty from the consumer's point of view, even if a producer has claimed the position (it has not
@@ -41,8 +41,9 @@ namespace Starlings.Roost.Engine.Rings;
 /// is published (head-of-line blocking).</description></item>
 /// <item><description><c>Volatile.Write(ref cell.Sequence, head + capacity)</c> (consumer, release): returns the cell
 /// to the producers after the consumer has read and cleared <c>Value</c>. Pairs with item 2.</description></item>
+/// <item><description><c>Volatile.Write(ref _head.Value, head + 1)</c> (consumer): see below; nothing is ordered through it.</description></item>
 /// </list>
-/// <para>Item 8, <c>Volatile.Write(ref _head.Value, ...)</c>, and the <c>Volatile.Read</c> of both cursors in
+/// <para>Item 8, and the <c>Volatile.Read</c> of both cursors in
 /// <see cref="Count"/>: the head is written by the consumer thread only and read by others only for
 /// <see cref="Count"/>, an estimate for metrics; nothing is synchronised through it. The consumer's own plain read of
 /// <c>_head</c> is safe because no other thread writes it.</para>
@@ -144,7 +145,7 @@ public sealed class MpscQueue<T>
         item = cell.Value;
         cell.Value = default!;
         Volatile.Write(ref cell.Sequence, head + _cells.Length); // item 7 (release, pairs with item 2)
-        Volatile.Write(ref _head.Value, head + 1); // publishes the head for Count only
+        Volatile.Write(ref _head.Value, head + 1); // item 8: publishes the head for Count only
         return true;
     }
 

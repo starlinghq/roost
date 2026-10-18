@@ -24,6 +24,11 @@ internal static class StressHost
         using var segment = RingSegment.Create(path, StressProtocol.Options);
         var host = segment.OpenHost();
         using var process = StartWorker(path, seed ^ 0x5DEECE66DUL, steps);
+        // Process.HasExited allocates on Windows (and is called on every empty poll), which would show up as host
+        // allocation in the measured loop. The Exited event runs on a pool thread and sets a flag instead.
+        var workerExited = 0;
+        process.EnableRaisingEvents = true;
+        process.Exited += (_, _) => Volatile.Write(ref workerExited, 1);
         var stdout = process.StandardOutput.ReadToEndAsync();
         var stderr = process.StandardError.ReadToEndAsync();
 
@@ -91,9 +96,9 @@ internal static class StressHost
             {
                 resultEmpty++;
                 wait.SpinOnce(-1);
-                if (Stopwatch.GetTimestamp() > deadline || process.HasExited)
+                if (Stopwatch.GetTimestamp() > deadline || Volatile.Read(ref workerExited) != 0)
                 {
-                    failure = $"stalled or worker exited with {sent} sent and {got} received (exited={process.HasExited})";
+                    failure = $"stalled or worker exited with {sent} sent and {got} received (exited={Volatile.Read(ref workerExited) != 0})";
                 }
             }
         }
