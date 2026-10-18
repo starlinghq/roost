@@ -1,0 +1,16 @@
+<Project>
+  <!-- Spike code: deliberately not part of Roost.slnx and not bound by the repository build settings. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <RestorePackagesWithLockFile>false</RestorePackagesWithLockFile>
+    <Optimize>true</Optimize>
+    <TieredPGO>false</TieredPGO>
+    <S6Envs Condition="'$(S6Envs)' == ''">/home/mark/Projects/roost-wave1/envs/R-063</S6Envs>
+    <BaseOutputPath>$(S6Envs)/build/dotnet/bin/</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(S6Envs)/build/dotnet/obj/</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>

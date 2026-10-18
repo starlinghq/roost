@@ -1,0 +1,13 @@
+device NVIDIA GeForce RTX 3090 sm_86; shapes H=2048 I=768 E=128 K=8; case=all-tokens-identical
+T=128 workspace=12.6 MiB; top-k expert set equals reference for 128/128 tokens
+  router logits (bf16 ulp)   n=16384     max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  top-k weights (f32, 1e-5)  n=1024      max_abs=2.699e-08  max_abs/max_ref=5.001e-08  rms_rel=5.089e-08  outside_tol=0
+  grouped gemm1 (stage)      n=1572864   max_abs=7.812e-03  max_abs/max_ref=2.075e-03  rms_rel=7.962e-05  outside_tol=0
+  silu*up (stage)            n=786432    max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  grouped gemm2 (stage)      n=2097152   max_abs=7.812e-03  max_abs/max_ref=2.717e-03  rms_rel=1.265e-04  outside_tol=0
+  combine (stage)            n=262144    max_abs=0.000e+00  max_abs/max_ref=0.000e+00  rms_rel=0.000e+00  outside_tol=0
+  layer out vs pure f64      n=262144    max_abs=5.664e-03  max_abs/max_ref=4.857e-03  rms_rel=3.885e-03  outside_tol=262144
+  pure-f64 end-to-end rms_rel=3.885e-03 (bf16 pipeline floor is ~2^-9 per rounding)
+  RESULT T=128: PASS
+  layer time 0.288 ms (mean of 20, no debug copies)
+exit=0

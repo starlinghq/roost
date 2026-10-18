@@ -1,0 +1,27 @@
+# FIRST RUN, superseded by gemv-dotnet.log. Invocation (threads, reps, RUSTFLAGS) and load were not recorded; load average was noted by hand as 6.7 to 7.3.
+dotnet 10.0.12; Avx2=True Fma=True Avx512F=False; Vector256.IsHardwareAccelerated=True Vector512.IsHardwareAccelerated=False; threads=1
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=1 threads=1 time_us=3291.8 GB/s=1.91 GFLOP/s=1.91 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=1 threads=1 time_us=239.2 GB/s=26.30 GFLOP/s=26.30 max_abs_err_vs_f64=2.68E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=1 threads=1 time_us=255.4 GB/s=24.64 GFLOP/s=24.64 max_abs_err_vs_f64=1.79E-007
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=128 threads=1 time_us=3410.4 GB/s=1.84 GFLOP/s=1.84 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=128 threads=1 time_us=378.7 GB/s=16.61 GFLOP/s=16.61 max_abs_err_vs_f64=1.94E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=128 threads=1 time_us=362.8 GB/s=17.34 GFLOP/s=17.34 max_abs_err_vs_f64=1.34E-007
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=1 threads=1 time_us=1633.8 GB/s=1.93 GFLOP/s=1.93 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=1 threads=1 time_us=121.8 GB/s=25.82 GFLOP/s=25.82 max_abs_err_vs_f64=1.19E-007
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=1 threads=1 time_us=143.7 GB/s=21.90 GFLOP/s=21.90 max_abs_err_vs_f64=6.71E-008
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=128 threads=1 time_us=1685.8 GB/s=1.87 GFLOP/s=1.87 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=128 threads=1 time_us=323.4 GB/s=9.73 GFLOP/s=9.73 max_abs_err_vs_f64=8.94E-008
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=128 threads=1 time_us=309.0 GB/s=10.18 GFLOP/s=10.18 max_abs_err_vs_f64=5.96E-008
+dotnet 10.0.12; Avx2=True Fma=True Avx512F=False; Vector256.IsHardwareAccelerated=True Vector512.IsHardwareAccelerated=False; threads=4
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=1 threads=4 time_us=1560.8 GB/s=4.03 GFLOP/s=4.03 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=1 threads=4 time_us=107.8 GB/s=58.34 GFLOP/s=58.34 max_abs_err_vs_f64=2.68E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=1 threads=4 time_us=123.1 GB/s=51.13 GFLOP/s=51.13 max_abs_err_vs_f64=1.79E-007
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=128 threads=4 time_us=1584.1 GB/s=3.97 GFLOP/s=3.97 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=128 threads=4 time_us=200.7 GB/s=31.34 GFLOP/s=31.34 max_abs_err_vs_f64=1.94E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=128 threads=4 time_us=186.8 GB/s=33.68 GFLOP/s=33.68 max_abs_err_vs_f64=1.34E-007
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=1 threads=4 time_us=772.1 GB/s=4.07 GFLOP/s=4.07 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=1 threads=4 time_us=60.8 GB/s=51.71 GFLOP/s=51.71 max_abs_err_vs_f64=1.19E-007
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=1 threads=4 time_us=61.3 GB/s=51.34 GFLOP/s=51.34 max_abs_err_vs_f64=6.71E-008
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=128 threads=4 time_us=970.4 GB/s=3.24 GFLOP/s=3.24 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=128 threads=4 time_us=137.5 GB/s=22.87 GFLOP/s=22.87 max_abs_err_vs_f64=8.94E-008
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=128 threads=4 time_us=146.3 GB/s=21.50 GFLOP/s=21.50 max_abs_err_vs_f64=5.96E-008

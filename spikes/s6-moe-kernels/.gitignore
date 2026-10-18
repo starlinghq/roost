@@ -1,0 +1,12 @@
+build/
+bin/
+obj/
+target/
+*.so
+*.o
+*.a
+*.cubin
+*.fatbin
+*.ptx
+*.dll
+*.pdb

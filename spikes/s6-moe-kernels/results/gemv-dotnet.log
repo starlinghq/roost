@@ -1,0 +1,33 @@
+# 2026-10-17T16:38:40-07:00 host=omarchy cpu=Intel(R) Core(TM) i7-5820K CPU @ 3.30GHz nproc=12
+# rustc: rustc 1.98.1 (48a229cea 2026-09-01); RUSTFLAGS='-C target-cpu=native'; dotnet sdk: 10.0.401
+# reps=7; load average at start: 3.70 1.90 2.65
+# cmd: dotnet GemvBench.dll 1 7
+dotnet 10.0.12; Avx2=True Fma=True Avx512F=False; Vector256.IsHardwareAccelerated=True Vector512.IsHardwareAccelerated=False; threads=1
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=1 threads=1 time_us=3320.7 GB/s=1.89 GFLOP/s=1.89 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=1 threads=1 time_us=244.4 GB/s=25.74 GFLOP/s=25.74 max_abs_err_vs_f64=2.68E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=1 threads=1 time_us=263.4 GB/s=23.89 GFLOP/s=23.89 max_abs_err_vs_f64=1.79E-007
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=128 threads=1 time_us=3411.9 GB/s=1.84 GFLOP/s=1.84 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=128 threads=1 time_us=386.3 GB/s=16.29 GFLOP/s=16.29 max_abs_err_vs_f64=1.94E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=128 threads=1 time_us=394.5 GB/s=15.95 GFLOP/s=15.95 max_abs_err_vs_f64=1.34E-007
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=1 threads=1 time_us=1674.9 GB/s=1.88 GFLOP/s=1.88 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=1 threads=1 time_us=122.5 GB/s=25.67 GFLOP/s=25.67 max_abs_err_vs_f64=1.19E-007
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=1 threads=1 time_us=138.1 GB/s=22.77 GFLOP/s=22.77 max_abs_err_vs_f64=6.71E-008
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=128 threads=1 time_us=1688.8 GB/s=1.86 GFLOP/s=1.86 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=128 threads=1 time_us=339.7 GB/s=9.26 GFLOP/s=9.26 max_abs_err_vs_f64=8.94E-008
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=128 threads=1 time_us=333.1 GB/s=9.45 GFLOP/s=9.45 max_abs_err_vs_f64=5.96E-008
+# load average after: 3.98 2.02 2.68
+# cmd: dotnet GemvBench.dll 4 7
+dotnet 10.0.12; Avx2=True Fma=True Avx512F=False; Vector256.IsHardwareAccelerated=True Vector512.IsHardwareAccelerated=False; threads=4
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=1 threads=4 time_us=1139.9 GB/s=5.52 GFLOP/s=5.52 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=1 threads=4 time_us=107.0 GB/s=58.81 GFLOP/s=58.81 max_abs_err_vs_f64=2.68E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=1 threads=4 time_us=115.0 GB/s=54.72 GFLOP/s=54.72 max_abs_err_vs_f64=1.79E-007
+RESULT impl=dotnet-scalar-f64 shape="gate_up 1536x2048" experts_rotated=128 threads=4 time_us=1563.9 GB/s=4.02 GFLOP/s=4.02 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="gate_up 1536x2048" experts_rotated=128 threads=4 time_us=194.9 GB/s=32.28 GFLOP/s=32.28 max_abs_err_vs_f64=1.94E-007
+RESULT impl=dotnet-Vector512(sw) shape="gate_up 1536x2048" experts_rotated=128 threads=4 time_us=206.1 GB/s=30.52 GFLOP/s=30.52 max_abs_err_vs_f64=1.34E-007
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=1 threads=4 time_us=701.4 GB/s=4.48 GFLOP/s=4.48 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=1 threads=4 time_us=56.5 GB/s=55.63 GFLOP/s=55.63 max_abs_err_vs_f64=1.19E-007
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=1 threads=4 time_us=65.8 GB/s=47.78 GFLOP/s=47.78 max_abs_err_vs_f64=6.71E-008
+RESULT impl=dotnet-scalar-f64 shape="down 2048x768" experts_rotated=128 threads=4 time_us=676.4 GB/s=4.65 GFLOP/s=4.65 max_abs_err_vs_f64=0.00E+000
+RESULT impl=dotnet-Vector256 shape="down 2048x768" experts_rotated=128 threads=4 time_us=134.7 GB/s=23.35 GFLOP/s=23.35 max_abs_err_vs_f64=8.94E-008
+RESULT impl=dotnet-Vector512(sw) shape="down 2048x768" experts_rotated=128 threads=4 time_us=144.3 GB/s=21.80 GFLOP/s=21.80 max_abs_err_vs_f64=5.96E-008
+# load average after: 3.99 2.09 2.70
