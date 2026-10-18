@@ -212,6 +212,21 @@ def test_nan_in_the_sidecar_fails(setup: Setup) -> None:
     assert "case-1" in check["detail"]
 
 
+def test_non_finite_case_is_not_skipped_when_the_nan_rule_is_not_applicable(setup: Setup) -> None:
+    vectors = setup.run["vectors"]
+    vectors["case-1"] = [float("nan")] * len(vectors["case-1"])
+    setup.run["dotnet"]["tensors"]["step0_logprobs"] = stage_results.write_sidecar(setup.results, "step0.f32", vectors)
+    setup.rewrite("dotnet")
+    setup.tolerances = write_tolerances(setup.tmp / "limits.json", {"float.nan_or_inf": "not_applicable"})
+    report = setup.evaluate()
+    checks = {c["id"]: c for c in report["checks"]}
+    assert checks["generation.nan_or_inf"]["status"] == "not_applicable"
+    for key in ("step0_argmax", "step0_top5_logprob", "step0_logprob"):
+        assert checks[f"generation.{key}"]["status"] == "failed"
+        assert "case-1" in checks[f"generation.{key}"]["detail"]
+    assert report["status"] != "passed"
+
+
 def test_without_a_sidecar_the_candidates_best_pairs_are_checked(tmp_path: Path) -> None:
     cases = reference_cases()
     reference = write_reference(tmp_path / "reference", cases)
