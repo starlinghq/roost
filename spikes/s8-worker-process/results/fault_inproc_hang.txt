@@ -1,0 +1,6 @@
+# 2026-10-17T16:39:55-07:00 uptime:  16:39:55 up 3 days, 10:16,  1 user,  load average: 4.74, 2.64, 2.85
+fault mode=inproc kind=hang deadline=300ms
+  warm steps ok (last status=ok)
+  detected via step deadline after 300.00 ms; heartbeat advanced by 281 in that time => worker alive but step not completing: HANG
+  => in-process: the stepping thread is stuck in the driver and cannot be cancelled or killed; the host application must exit
+exit=0
