@@ -7,8 +7,9 @@ public readonly record struct StopMatchResult(string Emit, string? Matched);
 
 /// <summary>
 /// The seam the engine calls for stop sequences. Text that could still become a stop sequence is held back until it completes a
-/// match or cannot. Mirrors the shape of Starling's internal <c>StopSequenceMatcher</c>, which Roost does not copy; the
-/// Starling-backed implementation arrives with starling#124.
+/// match or cannot. This shape is Roost's own design. It is not verified against Starling's internal <c>StopSequenceMatcher</c>
+/// (hold-back and truncation behaviour are unchecked, and only the empty-list pass-through is tested); the Starling-backed
+/// implementation and its equivalence tests arrive with starling#124.
 /// </summary>
 public interface IStopMatcher
 {

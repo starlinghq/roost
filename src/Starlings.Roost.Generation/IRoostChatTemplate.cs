@@ -10,6 +10,7 @@ public interface IRoostChatTemplate
     /// <param name="tools">Tool definitions, or default for none.</param>
     /// <param name="enableThinking">Whether the generation prompt leaves the think block open.</param>
     /// <returns>The prompt text.</returns>
-    /// <exception cref="Starlings.Models.Qwen35.Qwen35TemplateException">The template rejects the conversation.</exception>
+    /// <remarks>An implementation throws its model's template exception when the template rejects the conversation; the Qwen3.5
+    /// implementation throws <c>Qwen35TemplateException</c>.</remarks>
     string Render(IReadOnlyList<RoostChatMessage> messages, ImmutableArray<RoostToolDefinition> tools = default, bool enableThinking = false);
 }
