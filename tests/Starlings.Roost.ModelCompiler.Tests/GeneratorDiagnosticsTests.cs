@@ -143,6 +143,34 @@ public class GeneratorDiagnosticsTests
     }
 
     [Fact]
+    public void SlidingAndFullGroupsDescribeThemselves()
+    {
+        var r = Run(Model(
+            "[StateGroup(\"swa\", \"Sliding\", Layers = \"0:3\", KvHeads = \"2\", HeadSize = \"8\", BlockSize = \"16\", Window = \"128\", Dtype = \"F16\")]\n" +
+            "[StateGroup(\"full\", \"Full\", Layers = \"3\", KvHeads = \"2\", HeadSize = \"8\", BlockSize = \"32\")]"));
+        Assert.Empty(r.Generator);
+        Assert.Empty(r.Compile.Where(d => d.Severity >= DiagnosticSeverity.Warning));
+        string text = Assert.Single(r.Sources, s => s.Contains("CreateStateGroups", StringComparison.Ordinal));
+        Assert.Contains("StateGroupKind.Sliding", text, StringComparison.Ordinal);
+        Assert.Contains("Window = 128", text, StringComparison.Ordinal);
+        Assert.Contains("DType = global::Starlings.Roost.Abi.DType.F16", text, StringComparison.Ordinal);
+        // 3 layers x (K and V) x 16 tokens x 2 heads x 8 dims x 2 bytes.
+        Assert.Contains("BytesPerBlock = " + (3 * 2 * 16 * 2 * 8 * 2) + "L", text, StringComparison.Ordinal);
+        Assert.Contains("new global::Starlings.Roost.State.LayerKvShape(2, 2, 8)", text, StringComparison.Ordinal);
+        Assert.Contains("\"swa.l0.k\"", text, StringComparison.Ordinal);
+        Assert.Contains("\"full.l3.v\"", text, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Output=>n[tokens,d]:Q9")]
+    [InlineData("Output=>n[tokens,d]:4")]
+    public void AnOutputDtypeThatIsNotAnElementTypeNameIsReported(string output)
+    {
+        var r = Run(Model("[Node(\"b\", \"RmsNorm\", \"Input=h; Weight=w; " + output + "; Rows=tokens; Dim=d\")]"));
+        Assert.Contains(r.Generator, d => d.Id == "ROOST006");
+    }
+
+    [Fact]
     public void AFusedOpWithoutAKnownUnfusedFormIsReported()
     {
         var d = Single(Run(Model("[Node(\"b\", \"SiluMulQuant\", \"Input=h; Output=>q[tokens,d]; Rows=tokens; Dim=d\")]")), "ROOST012");

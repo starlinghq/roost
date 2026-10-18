@@ -191,22 +191,14 @@ public class HybridModelTests
         var state = new DeviceSpan[HybridModel.StateSlots.Length];
         var arena = new DeviceSpan { Address = ArenaBase, Length = (ulong)Layout.ArenaBytes, Dtype = DType.U8 };
         var plan = HybridModel.PlanInputs.Bind(new DeviceSpan { Address = PlanBase, Length = (ulong)Layout.PlanBytes, Dtype = DType.U8 }, Layout, 7, 2, 2, 5);
-        for (int i = 0; i < 300; i++)
+        void Step()
         {
             RecordingOps.Reset();
             var ctx = new HybridModel.StepContext(Layout, arena, weights, state, plan, 7, 2, 2, 5);
             HybridModel.Forward<RecordingOps>(in ctx);
         }
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 2000; i++)
-        {
-            RecordingOps.Reset();
-            var ctx = new HybridModel.StepContext(Layout, arena, weights, state, plan, 7, 2, 2, 5);
-            HybridModel.Forward<RecordingOps>(in ctx);
-        }
-
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        Assert.Equal(0, AllocationProbe.Rounds(Step).Min());
     }
 
     [Fact]

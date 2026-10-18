@@ -13,6 +13,40 @@ namespace Starlings.Roost.ModelCompiler.Checking;
 /// </summary>
 public sealed class GraphChecker : IGraphChecker
 {
+    /// <summary>Runs <paramref name="pass"/> over the unfused <paramref name="reference"/> graph and checks its output (the C7 rule for every pass).</summary>
+    /// <param name="pass">The pass under test.</param>
+    /// <param name="reference">The unfused graph (<see cref="OpGraph.IsReference"/> is true).</param>
+    /// <param name="target">What the pass may assume about the target.</param>
+    /// <param name="evaluator">Runs a graph; on <c>CpuOps</c> for the real check.</param>
+    /// <param name="inputs">Values of the weight, input and state values, by value id.</param>
+    /// <param name="tolerances">Per-op and per-dtype tolerances.</param>
+    /// <returns>The comparison of the pass output with the reference.</returns>
+    public GraphCheckResult CheckPass(
+        IGraphPass pass,
+        OpGraph reference,
+        GraphTarget target,
+        IGraphEvaluator evaluator,
+        IReadOnlyDictionary<int, double[]> inputs,
+        IToleranceSource tolerances)
+    {
+        if (pass is null)
+        {
+            throw new ArgumentNullException(nameof(pass));
+        }
+
+        if (reference is null)
+        {
+            throw new ArgumentNullException(nameof(reference));
+        }
+
+        if (!reference.IsReference)
+        {
+            throw new ArgumentException("The reference must be the unfused graph (OpGraph.IsReference).", nameof(reference));
+        }
+
+        return Check(reference, pass.Run(reference, target), evaluator, inputs, tolerances);
+    }
+
     /// <inheritdoc/>
     public GraphCheckResult Check(
         OpGraph reference,
@@ -52,6 +86,17 @@ public sealed class GraphChecker : IGraphChecker
             checkedNodes++;
             double maxAbs = 0, maxRel = 0;
             bool failed = false;
+            foreach (int origin in node.Origin)
+            {
+                if (origin < 0 || origin >= reference.Nodes.Count)
+                {
+                    // A node that claims to replace a reference node that does not exist cannot be checked op by op.
+                    failed = true;
+                    maxAbs = double.PositiveInfinity;
+                    maxRel = double.PositiveInfinity;
+                }
+            }
+
             foreach (int id in node.Outputs)
             {
                 produced.Add(id);
