@@ -1,0 +1,13 @@
+FaultStressTests, long local runs (Debug build, the real ProcessWorkerTransport and a real worker process, fake executor; no GPU).
+Test: tests/Starlings.Roost.WorkerHost.Tests/FaultStressTests.cs. Env: ROOST_WORKER_STRESS_SECONDS, ROOST_WORKER_STRESS_SEED, ROOST_WORKER_STRESS_LOG.
+
+Run 1, 2026-10-18 14:35, seed=20261018, 600 s requested, shared box at load 9 to 15:
+  FAILED after 351 s, episode 1353 of a Hang episode (1352 episodes had passed): the host concluded Stalled, not Hang.
+  Summary at the failure: episodes=1353 goodSteps=20567 recoverable=2668 twoInFlight=2125 CancelledStart=137 CleanShutdown=141 Crash=150 ExternalKill=127 FrozenWorker=138 Hang=136 KillWhileHealthy=134 RejectedHandshake=138 Sticky=128 Throw=124
+  Stalled means the worker's heartbeat counter did not advance between the publish and the 400 ms deadline. The run had no
+  heartbeat diagnostics in the message (added afterwards), so whether the worker's heartbeat thread was starved on the loaded
+  box or the counter logic is wrong is not established. One occurrence in 136 hang episodes. Both classes map to Respawn.
+
+Run 2, 2026-10-18 14:59, seed=20261019, 900 s, load 1 to 4 (heartbeat diagnostics in the failure message):
+  seed=20261019 seconds=900 episodes=3702 goodSteps=56745 recoverable=7106 twoInFlight=5843 CancelledStart=341 CleanShutdown=371 Crash=359 ExternalKill=386 FrozenWorker=386 Hang=379 KillWhileHealthy=401 RejectedHandshake=350 Sticky=350 Throw=379
+  PASSED: no segment file and no worker process left behind (the test asserts both), every terminal event ran 341 to 401 times.

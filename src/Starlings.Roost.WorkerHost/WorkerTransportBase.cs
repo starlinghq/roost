@@ -330,8 +330,25 @@ public abstract class WorkerTransportBase : IWorkerTransport
     {
     }
 
-    /// <summary>Records that a worker could not be stopped and still runs over the segment.</summary>
-    protected void MarkAbandoned() => Volatile.Write(ref _state, (int)TransportState.Abandoned);
+    /// <summary>
+    /// Records that a worker could not be stopped and still runs over the segment. The mapping stays (the worker thread
+    /// uses it); the file is unlinked now, so that nothing is left in the segment directory when the process exits.
+    /// </summary>
+    protected void MarkAbandoned()
+    {
+        Volatile.Write(ref _state, (int)TransportState.Abandoned);
+        if (_segment is { } segment)
+        {
+            try
+            {
+                File.Delete(segment.Path);
+            }
+            catch (IOException)
+            {
+                // Best effort: the file is only a name.
+            }
+        }
+    }
 
     /// <summary>The options.</summary>
     protected WorkerTransportOptions Options => _options;
