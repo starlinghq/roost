@@ -389,4 +389,39 @@ public sealed class HybridTests
 
         public int GetHashCode(float obj) => BitConverter.SingleToInt32Bits(obj);
     }
+
+    [Fact]
+    public void Qwen35SmokeShapesRun()
+    {
+        // Qwen3.5-0.8B linear layer: 16 key and 16 value heads of width 128; conv width 4; two tokens, one sequence.
+        const int heads = 16;
+        const int dim = 128;
+        const int tokens = 2;
+        var rng = new Random(1);
+        float[] Rand(int n) => Enumerable.Range(0, n).Select(_ => (float)((rng.NextDouble() * 2) - 1)).ToArray();
+        using var q = Mem.F32(Rand(tokens * heads * dim));
+        using var k = Mem.F32(Rand(tokens * heads * dim));
+        using var v = Mem.F32(Rand(tokens * heads * dim));
+        using var g = Mem.F32(Enumerable.Repeat(-0.1f, tokens * heads).ToArray());
+        using var b = Mem.F32(Enumerable.Repeat(0.5f, tokens * heads).ToArray());
+        using var o = Mem.Zeros(DType.F32, tokens * heads * dim);
+        using var st = Mem.Zeros(DType.F32, heads * dim * dim);
+        using var slots = Mem.I32(0);
+        using var cu = Mem.I32(0, tokens);
+        var a = Args(q, k, v, g, b, o, st, slots, cu, 1, tokens, heads, heads, dim, dim, 0f, false, true);
+        a.DType = DType.F32;
+        CpuOps.GatedDeltaRule(a);
+        Assert.All(o.ReadF32(), x => Assert.True(float.IsFinite(x)));
+        Assert.Contains(o.ReadF32(), x => x != 0f);
+
+        const int ch = 3 * heads * dim;
+        using var cx = Mem.F32(Rand(tokens * ch));
+        using var cw = Mem.F32(Rand(ch * 4));
+        using var cy = Mem.Zeros(DType.F32, tokens * ch);
+        using var cs = Mem.Zeros(DType.F32, ch * 3);
+        var c = ConvArgs(cx, cw, null, cy, cs, slots, cu, 1, tokens, ch, 4, true);
+        c.DType = DType.F32;
+        CpuOps.CausalConv1d(c);
+        Assert.All(cy.ReadF32(), x => Assert.True(float.IsFinite(x)));
+    }
 }
