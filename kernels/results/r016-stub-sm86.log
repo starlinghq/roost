@@ -1,0 +1,8 @@
+# R-016 stub run: kernels/build -> libroost_kernels_sm86.so registered Residual stub, RTX 3090 (SM 86)
+# 2026-10-18T18:51:02Z host: nvcc 13.3.73 ; gcc 16.2.1 ; driver 610.57.04
+# tools/gpu-lease run --device 3090 --need-mib 500 --stream C --wait 3600 -- roost_stub_check libroost_kernels_sm86.so
+library roost-kernels-sm86, abi 1.0, 1 entries
+  op 10 variant residual-stub flags 0x7 sm_min 80
+device NVIDIA GeForce RTX 3090, sm_86
+Residual bf16, 100003 elements, output aliasing a: 0 mismatches
+OK

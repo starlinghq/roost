@@ -94,3 +94,45 @@ jobs:
           if (-not $vs) { throw 'no Visual Studio with the x64 C++ tools on this runner' }
           cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && python -I tools/abi-layout.py msvc"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  # Kernel library (R-016): the manifest validates, a pin change carries its provenance files, and the library compiles
+  # for every SM in kernels/manifest.toml (80, 86, 89, 90, 100, 120) inside a CUDA container pinned by digest. Build
+  # only: the runners have no GPU, so every SM but the one that ran locally stays untested. The container is CUDA
+  # 13.3.0 on Ubuntu 24.04; its digest is the multi-architecture index digest. MSVC: GitHub-hosted Windows runners
+  # ship no CUDA toolkit, so the MSVC kernel build is not done (kernels/README.md).
+  kernels:
+    name: kernels (build every SM, provenance)
+    runs-on: ubuntu-latest
+    container:
+      image: nvidia/cuda:13.3.0-devel-ubuntu24.04@sha256:ef2203909e80b8b976cfc672f7e2ae2b00bc0e25c404ee86d89e10a3802f1c52
+    steps:
+      - name: Tools
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates cmake git ninja-build python3 python3-pytest
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - name: Manifest validates (C5)
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          python3 -I tools/validate-kernel-manifest.py
+      - name: Provenance (a SHA bump needs PROVENANCE.md and THIRD-PARTY-NOTICES.md)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [ -n "$BASE" ] && [ "$BASE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BASE^{commit}"; then
+            python3 -I kernels/tools/check_provenance.py --base "$BASE"
+          else
+            python3 -I kernels/tools/check_provenance.py
+          fi
+      - name: Kernel tool tests
+        run: python3 -I -m pytest -q kernels/tests
+      - name: Build every SM twice, compare, check the registration tables
+        env:
+          ROOST_DIGESTS_OUT: ${{ runner.temp }}/kernel-digests.json
+        run: kernels/ci/build-all-sm.sh "$RUNNER_TEMP/kernels"
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: kernel-digests
+          path: ${{ runner.temp }}/kernel-digests.json
