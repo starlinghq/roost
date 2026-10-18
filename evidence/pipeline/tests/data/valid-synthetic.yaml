@@ -1,0 +1,44 @@
+# Synthetic manifest: describes no real model. Digests and SHAs are repeated hex digits.
+schema_version: 1
+id: synthetic/tiny-dense
+synthetic: true
+maturity: experimental
+model:
+  family: synthetic
+  source:
+    repo: synthetic/tiny-dense
+    revision: "1111111111111111111111111111111111111111"
+  num_layers: 4
+capabilities:
+  text-generation:
+    status: supported
+    evidence:
+      - evidence/registry/synthetic/stage-results.json
+  chunked-prefill:
+    status: untested
+profile:
+  kernel_manifest:
+    revision: "2222222222222222222222222222222222222222"
+    sha256: "3333333333333333333333333333333333333333333333333333333333333333"
+  selected_variants:
+    - op: gemm
+      variant: cublaslt-bf16
+      sm: sm_86
+      digest: "4444444444444444444444444444444444444444444444444444444444444444"
+  tf32_policy: disabled
+  weight_dtype: bf16
+  compute_dtype: bf16
+  kv_dtype:
+    - { group: attn, kind: full, dtype: bf16 }
+  attention_backend: flash-attn-paged
+  sm:
+    - arch: sm_86
+      status: supported
+      gpus: ["synthetic-gpu-a"]
+      evidence: [evidence/registry/synthetic/stage-results.json]
+    - { arch: sm_89, status: untested }
+  min_driver: "580.65"
+  min_toolkit: "13.0"
+  mesh: { ranks: 1 }
+  layer_precision:
+    - { layer: 0, weight_dtype: fp32, evidence: evidence/registry/synthetic/calibration.json }
