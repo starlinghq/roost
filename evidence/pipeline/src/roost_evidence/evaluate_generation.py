@@ -272,6 +272,11 @@ class _Evaluation:
             values = vector if vector is not None else [lp for _, lp in pairs]
             if not all(math.isfinite(v) for v in values):
                 nan_fail.append(name)
+                # The case cannot be measured, so the checks that need its values fail whatever the nan rule says.
+                note = f"{name}: non-finite step-0 values"
+                argmax_fail.append(note)
+                top5_fail.append(note)
+                full_fail.append(note)
                 continue
             ref_top = [(int(t), float(lp)) for t, lp in ref["step0_top"]]
             if vector is not None:
