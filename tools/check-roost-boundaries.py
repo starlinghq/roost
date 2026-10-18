@@ -154,18 +154,29 @@ def check_starling(root: Path) -> list[str]:
             continue
         rel = path.relative_to(root).as_posix()
         text = path.read_text(encoding="utf-8", errors="replace")
-        for match in re.finditer(r'<ProjectReference\s+Include="([^"]+)"', text):
+        for match in re.finditer(r'<ProjectReference\b[^>]*?\bInclude="([^"]+)"', text):
             target = match.group(1).replace("\\", "/")
-            if "external/" in target:
-                errors.append(f"starling: {rel}: project reference {target}; consume the NuGet package instead")
-        if path.name == "Directory.Packages.props":
-            for match in re.finditer(
-                r'<PackageVersion\s+Include="(Starlings\.(?!Roost\.)[^"]*)"\s+Version="([^"]*)"', text
-            ):
-                if not re.fullmatch(r"\[[^\[\],()]+\]", match.group(2)):
-                    errors.append(
-                        f"starling: {rel}: {match.group(1)} version {match.group(2)!r} is not an exact [x] pin"
-                    )
+            resolved = (path.parent / target).resolve() if "$(" not in target else None
+            outside = resolved is not None and not resolved.is_relative_to(root.resolve())
+            if "external/" in target or outside:
+                errors.append(
+                    f"starling: {rel}: project reference {target} leaves the repository or points into external/; "
+                    "consume the NuGet package instead"
+                )
+        for tag in re.finditer(r"<(PackageVersion|PackageReference|PackageDownload)\b([^>]*)>", text):
+            attrs = dict(re.findall(r'(\w+)\s*=\s*"([^"]*)"', tag.group(2)))
+            name = attrs.get("Include") or attrs.get("Update") or ""
+            if not re.match(r"Starlings\.(?!Roost\.)", name):
+                continue
+            for key in ("Version", "VersionOverride"):
+                if key in attrs and not re.fullmatch(r"\[[^\[\],()]+\]", attrs[key]):
+                    errors.append(f"starling: {rel}: {name} {key} {attrs[key]!r} is not an exact [x] pin")
+    build_props = root / "Directory.Build.props"
+    if build_props.exists() and not re.search(
+        r"<CentralPackageVersionOverrideEnabled>\s*false\s*</CentralPackageVersionOverrideEnabled>",
+        build_props.read_text(encoding="utf-8"),
+    ):
+        errors.append("starling: Directory.Build.props must set CentralPackageVersionOverrideEnabled=false")
     return errors
 
 
