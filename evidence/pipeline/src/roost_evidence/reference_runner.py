@@ -18,12 +18,14 @@ import re
 from pathlib import Path
 from typing import Any
 
-from roost_evidence import stage_results
+from roost_evidence import layer_captures, stage_results
 from roost_evidence.generation_reference import CASE_ID_CHARS
+from roost_evidence.layer_recorder import LayerRecorder
 
 FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
 STEP0_DIR = "step0"
 TOP_PAIRS = 64
+DEFAULT_STATE_FORWARDS = 2
 
 
 class ExtraMissingError(RuntimeError):
@@ -71,8 +73,15 @@ def run_reference(
     revision: str | None = None,
     max_new_tokens: int = 128,
     stop_ids: list[int] | None = None,
+    capture_layers: bool = False,
+    state_forwards: int = DEFAULT_STATE_FORWARDS,
 ) -> Path:
-    """Write `reference.jsonl`, `step0/<id>.f32` and `environment.json` into `out_dir`; return the jsonl path."""
+    """Write `reference.jsonl`, `step0/<id>.f32` and `environment.json` into `out_dir`; return the jsonl path.
+
+    With `capture_layers` it also writes `layers/<id>.safetensors` per case (hidden state of every stage at every
+    forward, recurrent and convolution state of Gated DeltaNet layers for the first `state_forwards` forwards) and
+    records each file's digest as `layers_sha256`; see layer_captures and layer_recorder.
+    """
     local = Path(model).is_dir()
     if not local and not (revision and FULL_SHA.match(revision)):
         raise ValueError("a hub model needs --revision, the full 40-character commit SHA; a local directory does not")
@@ -91,6 +100,7 @@ def run_reference(
     network.eval()
     stops = _stop_ids(network, tokenizer, stop_ids or [])
     (out_dir / STEP0_DIR).mkdir(parents=True, exist_ok=True)
+    recorder = LayerRecorder(network, state_forwards=state_forwards) if capture_layers else None
 
     lines = []
     with torch.inference_mode():
@@ -107,11 +117,18 @@ def run_reference(
                 prompt_ids = [int(i) for i in record["prompt_ids"]]
                 rendered = tokenizer.decode(prompt_ids)
             budget = int(record.get("max_new_tokens", max_new_tokens))
-            outputs, margins, finish, step0 = _greedy(network, torch, prompt_ids, budget, stops)
+            if recorder:
+                recorder.start_case()
+            outputs, margins, finish, step0 = _greedy(network, torch, prompt_ids, budget, stops, recorder)
             vector = step0.tolist()
             path = out_dir / STEP0_DIR / f"{record['id']}.f32"
             stage_results.write_float32(path, vector)
             order = sorted(range(len(vector)), key=lambda i: (-vector[i], i))[:TOP_PAIRS]
+            layers_digest = None
+            if recorder:
+                layers_digest = recorder.save(
+                    layer_captures.capture_path(out_dir, record["id"]), prompt_ids, outputs[:-1]
+                )
             lines.append(
                 {
                     "id": record["id"],
@@ -123,6 +140,7 @@ def run_reference(
                     "step0_top": [[i, vector[i]] for i in order],
                     "step0_vocab": len(vector),
                     "step0_sha256": stage_results.sha256_file(path),
+                    **({"layers_sha256": layers_digest} if layers_digest else {}),
                 }
             )
     reference = out_dir / "reference.jsonl"
@@ -136,14 +154,37 @@ def run_reference(
         "transformers": transformers.__version__,
         "stop_ids": sorted(stops),
     }
+    if recorder:
+        import safetensors
+
+        environment["layer_capture"] = {
+            "safetensors": safetensors.__version__,
+            "layer_types": recorder.layer_types,
+            "stages": recorder.stages,
+            "state_forwards": state_forwards,
+        }
+        recorder.close()
     (out_dir / "environment.json").write_text(json.dumps(environment, indent=1) + "\n", encoding="utf-8")
     return reference
 
 
-def _greedy(network: Any, torch: Any, prompt_ids: list[int], budget: int, stops: set[int]) -> tuple:
-    """Greedy decode with a KV cache. Returns ids (stop token included), margins, finish reason, step-0 vector."""
-    ids = torch.tensor([prompt_ids], dtype=torch.long)
-    out = network(input_ids=ids, use_cache=True)
+def _forward(network: Any, torch: Any, ids: list[int], cache: Any, recorder: LayerRecorder | None) -> Any:
+    if recorder:
+        recorder.begin_forward()
+    out = network(input_ids=torch.tensor([ids], dtype=torch.long), past_key_values=cache, use_cache=True)
+    if recorder:
+        recorder.end_forward(out.past_key_values)
+    return out
+
+
+def _greedy(
+    network: Any, torch: Any, prompt_ids: list[int], budget: int, stops: set[int], recorder: LayerRecorder | None
+) -> tuple:
+    """Greedy decode with a KV cache. Returns ids (stop token included), margins, finish reason, step-0 vector.
+
+    The last generated token is never fed back, so a run of n tokens makes n forwards: the prefill and n - 1 decodes.
+    """
+    out = _forward(network, torch, prompt_ids, None, recorder)
     outputs: list[int] = []
     margins: list[float] = []
     step0 = None
@@ -159,9 +200,9 @@ def _greedy(network: Any, torch: Any, prompt_ids: list[int], budget: int, stops:
         if token in stops:
             finish = "eos"
             break
-        out = network(
-            input_ids=torch.tensor([[token]], dtype=torch.long), past_key_values=out.past_key_values, use_cache=True
-        )
+        if len(outputs) == budget:
+            break
+        out = _forward(network, torch, [token], out.past_key_values, recorder)
     if step0 is None:
         raise ValueError("max_new_tokens must be at least 1")
     return outputs, margins, finish, step0
