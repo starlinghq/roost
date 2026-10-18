@@ -1,0 +1,14 @@
+cold build (Ops + Generator + Toy, clean out/, N=1): wall 3.046 s | cpu 3.90 s
+no-op rebuild                                        wall min  2468 ms  median  2526 ms | cpu median  3381 ms
+edit unrelated Toy file (Program.cs)                 wall min  2667 ms  median  2740 ms | cpu median  3533 ms
+edit model definition (rename one graph node)        wall min  2639 ms  median  2807 ms | cpu median  3529 ms
+edit generator source (rebuild Generator + Toy)      wall min  5236 ms  median  5437 ms | cpu median 10078 ms
+
+generator time inside csc (-p:ReportAnalyzer=true, one forced Toy compile):
+           ModelGenerator.cs
+         Total analyzer execution time: 0.490 seconds.
+         Total generator execution time: 0.017 seconds.
+         0.009   53      Spike.Generator.ModelGenerator
+
+CoreCompile check (-v:n), counting skipped CoreCompile targets of 3 projects (3 means a true no-op):
+  after script-style restore, no-op build: 3 of 3 skipped

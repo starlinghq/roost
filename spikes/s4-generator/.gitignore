@@ -1,0 +1,10 @@
+bin/
+obj/
+publish/
+out/
+*.binlog
+*.dll
+*.so
+*.o
+*.cubin
+*.pdb

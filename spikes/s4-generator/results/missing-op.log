@@ -1,0 +1,15 @@
+  Determining projects to restore...
+  Restored <repo>/spikes/s4-generator/MissingOp/MissingOp.csproj (in 130 ms).
+  Restored <repo>/spikes/s4-generator/Ops/Ops.csproj (in 235 ms).
+  Restored <repo>/spikes/s4-generator/Generator/Generator.csproj (in 249 ms).
+  Ops -> <repo>/spikes/s4-generator/out/Ops/bin/Debug/net10.0/Ops.dll
+  Generator -> <repo>/spikes/s4-generator/out/Generator/bin/Debug/netstandard2.0/Generator.dll
+<repo>/spikes/s4-generator/MissingOp/Model.cs(8,2): error ROOST001: Op 'FlashDecode' used by node 'a0' is not a member of IRoostOps (known ops: AddRmsNorm, Embedding, Gemm, LmHead, Residual, RmsNorm, SiluAndMul) [<repo>/spikes/s4-generator/MissingOp/MissingOp.csproj]
+
+Build FAILED.
+
+<repo>/spikes/s4-generator/MissingOp/Model.cs(8,2): error ROOST001: Op 'FlashDecode' used by node 'a0' is not a member of IRoostOps (known ops: AddRmsNorm, Embedding, Gemm, LmHead, Residual, RmsNorm, SiluAndMul) [<repo>/spikes/s4-generator/MissingOp/MissingOp.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:03.37

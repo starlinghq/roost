@@ -1,0 +1,13 @@
+  Determining projects to restore...
+  Restored <repo>/spikes/s4-generator/MissingMember/MissingMember.csproj (in 141 ms).
+  1 of 2 projects are up-to-date for restore.
+  Ops -> <repo>/spikes/s4-generator/out/Ops/bin/Debug/net10.0/Ops.dll
+<repo>/spikes/s4-generator/MissingMember/BrokenOps.cs(6,27): error CS0535: 'BrokenOps' does not implement interface member 'IRoostOps.Gemm(in GemmArgs)' [<repo>/spikes/s4-generator/MissingMember/MissingMember.csproj]
+
+Build FAILED.
+
+<repo>/spikes/s4-generator/MissingMember/BrokenOps.cs(6,27): error CS0535: 'BrokenOps' does not implement interface member 'IRoostOps.Gemm(in GemmArgs)' [<repo>/spikes/s4-generator/MissingMember/MissingMember.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.80

@@ -1,0 +1,9 @@
+mode=JIT weights=embed,l0.norm1,l0.gate_up,l0.down,l1.norm1,l1.gate_up,l1.down,final.norm,lm_head passes=identity,fuse-add-rmsnorm
+measure Forward<CpuOps> (unfused identity): calls=20000 allocatedBytes=0 gen0GCs=0 usPerCall=57.26
+measure ForwardFused<CpuOps> (fallback to unfused parts): calls=20000 allocatedBytes=0 gen0GCs=0 usPerCall=57.24
+check fused-fallback vs unfused: max|diff|=0.000E+000 finite=True logits[0]=-0.360562
+measure ForwardFused<FusedCpuOps> (fused op): calls=20000 allocatedBytes=0 gen0GCs=0 usPerCall=57.22
+check fused-op vs unfused: max|diff|=0.000E+000 finite=True logits[0]=-0.360562
+check generated forward vs managed double reference: max relative diff=1.972E-005 (tolerance 1e-3)
+control allocating loop: allocatedBytes=8800 (must be > 0)
+RESULT PASS
