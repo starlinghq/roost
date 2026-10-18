@@ -42,6 +42,11 @@ public readonly partial struct CpuOps
         Need(a.Output, (long)a.Tokens * a.VHeads * vd, nameof(a.Output));
         Need(a.StateSlots, a.Batch, nameof(a.StateSlots));
         Need(a.CuSeqlens, a.Batch + 1L, nameof(a.CuSeqlens));
+        if (a.State.Dtype is not (DType.Undefined or DType.F32))
+        {
+            throw new ArgumentException("The recurrent state pool is float32 (C4).", nameof(a));
+        }
+
         DType gt = a.G.Dtype == DType.Undefined ? a.DType : a.G.Dtype;
         DType bt = a.Beta.Dtype == DType.Undefined ? a.DType : a.Beta.Dtype;
         double scale = a.Scale == 0f ? 1.0 / Math.Sqrt(kd) : a.Scale;

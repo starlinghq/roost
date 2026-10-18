@@ -129,6 +129,30 @@ public sealed class SamplingTests
     }
 
     [Fact]
+    public void TopKTopPAndMinPComposeInOrderWithRenormalisedTopP()
+    {
+        // Probabilities by token: 0.06, 0.40, 0.10, 0.25, 0.04, 0.15 (descending order is tokens 1, 3, 5, 2, 0, 4).
+        double[] want = [0.06, 0.40, 0.10, 0.25, 0.04, 0.15];
+        float[] logits = want.Select(p => (float)Math.Log(p)).ToArray();
+        double z = logits.Sum(l => Math.Exp(l));
+        double[] p = logits.Select(l => Math.Exp(l) / z).ToArray();
+        // top_k 4 keeps tokens 1, 3, 5, 2 (mass 0.90). top_p 0.85 on the renormalised mass: 0.444, 0.722, 0.889 reaches it, so token 2 goes
+        // (on the raw mass the cut would sit at 0.90 and keep token 2). min_p 0.5 then drops token 5 (0.15 < 0.5 * 0.40). Tokens 1 and 3 remain.
+        double mass = p[1] + p[3];
+        var seen = new HashSet<int>();
+        for (ulong offset = 0; offset < 200; offset++)
+        {
+            double u = CpuPhilox.Uniform(31, offset);
+            int expected = (u * mass) < p[1] ? 1 : 3;
+            int got = Run(logits, 6, 1f, 4, 0.85f, 0.5f, 31, offset)[0];
+            Assert.Equal(expected, got);
+            seen.Add(got);
+        }
+
+        Assert.Equal([1, 3], seen.OrderBy(x => x));
+    }
+
+    [Fact]
     public void MinPDropsTokensBelowAFractionOfTheLargest()
     {
         float[] logits = [(float)Math.Log(0.6), (float)Math.Log(0.3), (float)Math.Log(0.1)];
