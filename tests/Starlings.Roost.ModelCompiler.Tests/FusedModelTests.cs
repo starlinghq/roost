@@ -61,8 +61,8 @@ public sealed unsafe class FusedModelTests : IDisposable
     [Fact]
     public void FusedAndFallbackLoweringsGiveTheSameLogits()
     {
-        float[] fallback = Run<StubCpuOps>();
-        float[] fused = Run<StubFusedOps>();
+        float[] fallback = Run<CpuOps>();
+        float[] fused = Run<CpuFusedOps>();
         Assert.Equal(64, fallback.Length);
         Assert.Contains(fallback, x => Math.Abs(x) > 1e-3f);
         for (int i = 0; i < fused.Length; i++)
@@ -77,13 +77,13 @@ public sealed unsafe class FusedModelTests : IDisposable
         void Fallback()
         {
             var ctx = new FusedModel.StepContext(_layout, _arena, _weights, default, _plan, Tokens, Rows.Length, 1, 0);
-            FusedModel.Forward<StubCpuOps>(in ctx);
+            FusedModel.Forward<CpuOps>(in ctx);
         }
 
         void Fused()
         {
             var ctx = new FusedModel.StepContext(_layout, _arena, _weights, default, _plan, Tokens, Rows.Length, 1, 0);
-            FusedModel.Forward<StubFusedOps>(in ctx);
+            FusedModel.Forward<CpuFusedOps>(in ctx);
         }
 
         AllocationProbe.AssertSteady(Fallback);
@@ -104,7 +104,7 @@ public sealed unsafe class FusedModelTests : IDisposable
     [Fact]
     public void TheGraphRunOnTheFusedBackendEqualsTheGeneratedForward()
     {
-        float[] got = Run<StubFusedOps>();
+        float[] got = Run<CpuFusedOps>();
         var g = FusedModel.BuildGraph();
         var inputs = new Dictionary<int, double[]>();
         for (int i = 0; i < _weightData.Length; i++)
@@ -114,7 +114,7 @@ public sealed unsafe class FusedModelTests : IDisposable
 
         inputs[g.Values.Single(v => v.Name == "plan.Ids").Id] = Ids.Select(x => (double)x).ToArray();
         inputs[g.Values.Single(v => v.Name == "plan.Rows").Id] = Rows.Select(x => (double)x).ToArray();
-        var ev = new GraphEvaluator<StubFusedOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = 1, ["seqs"] = 1, ["kv_blocks"] = 0 });
+        var ev = new GraphEvaluator<CpuFusedOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = 1, ["seqs"] = 1, ["kv_blocks"] = 0 });
         Assert.Equal(got.Select(x => (double)x).ToArray(), ev.Evaluate(g, inputs)[g.Values.Single(v => v.Name == "logits").Id]);
     }
 
@@ -122,7 +122,7 @@ public sealed unsafe class FusedModelTests : IDisposable
     public void TheGraphEvaluatorRefusesAFusedOpTheBackendLacks()
     {
         var g = FusedModel.BuildGraph();
-        var ev = new GraphEvaluator<StubCpuOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = 1, ["seqs"] = 1, ["kv_blocks"] = 0 });
+        var ev = new GraphEvaluator<CpuOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = 1, ["seqs"] = 1, ["kv_blocks"] = 0 });
         var inputs = new Dictionary<int, double[]>();
         for (int i = 0; i < _weightData.Length; i++)
         {

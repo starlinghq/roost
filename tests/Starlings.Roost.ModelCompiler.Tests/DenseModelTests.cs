@@ -1,6 +1,7 @@
 using Starlings.Roost.Abi;
 using Starlings.Roost.Graph;
 using Starlings.Roost.ModelCompiler.Tests.Models;
+using Starlings.Roost.Ops;
 
 namespace Starlings.Roost.ModelCompiler.Tests;
 
@@ -171,7 +172,7 @@ public sealed unsafe class DenseModelTests : IDisposable
     [Fact]
     public void ForwardMatchesAnIndependentDoubleTranscription()
     {
-        float[] got = RunForward<StubCpuOps>();
+        float[] got = RunForward<CpuOps>();
         double[] want = Reference();
         Assert.Equal(Rows.Length * 64, got.Length);
         Assert.Equal(want.Length, got.Length);
@@ -188,7 +189,7 @@ public sealed unsafe class DenseModelTests : IDisposable
     [Fact]
     public void ForwardEqualsTheGraphRunOnTheSameBackend()
     {
-        float[] got = RunForward<StubCpuOps>();
+        float[] got = RunForward<CpuOps>();
         var g = DenseModel.BuildGraph();
         var inputs = new Dictionary<int, double[]>();
         for (int i = 0; i < _weightData.Length; i++)
@@ -198,7 +199,7 @@ public sealed unsafe class DenseModelTests : IDisposable
 
         inputs[g.Values.Single(v => v.Name == "plan.Ids").Id] = Ids.Select(x => (double)x).ToArray();
         inputs[g.Values.Single(v => v.Name == "plan.Rows").Id] = Rows.Select(x => (double)x).ToArray();
-        var evaluator = new GraphEvaluator<StubCpuOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = Rows.Length, ["seqs"] = 1, ["kv_blocks"] = 0 });
+        var evaluator = new GraphEvaluator<CpuOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = Rows.Length, ["seqs"] = 1, ["kv_blocks"] = 0 });
         var values = evaluator.Evaluate(g, inputs);
         double[] graphLogits = values[g.Values.Single(v => v.Name == "logits").Id];
         Assert.Equal(got.Select(x => (double)x).ToArray(), graphLogits);
@@ -211,7 +212,7 @@ public sealed unsafe class DenseModelTests : IDisposable
         void Step()
         {
             var ctx = new DenseModel.StepContext(_layout, _arena, _weights, default, plan, Tokens, Rows.Length, 1, 0);
-            DenseModel.Forward<StubCpuOps>(in ctx);
+            DenseModel.Forward<CpuOps>(in ctx);
         }
 
         AllocationProbe.AssertSteady(Step);
