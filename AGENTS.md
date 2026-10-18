@@ -14,7 +14,6 @@ tools/gpu-lease list                                    # local GPUs, free memor
 tools/gpu-lease run --device 3090 --need-mib 8000 --stream F -- <command>
 tools/gpu-lease ledger                                  # GPU-hours this month
 python3 -I tools/create_backlog_issues.py               # dry run of the section 10 backlog
-git submodule update --init                             # external/starling at the pinned SHA
 ```
 
 - After adding or changing a package reference, run `dotnet restore Roost.slnx` and commit the updated `packages.lock.json`. CI restores in locked mode (`CI=true`).
@@ -22,7 +21,7 @@ git submodule update --init                             # external/starling at t
 
 ## Layout
 
-See the build plan, section 3. Today the repository holds `src/Starlings.Roost.Abstractions/` (contracts, frozen in R-004), its tests, `tools/` and `external/starling/` (a submodule pinned by full SHA; section 3.1). Create a project only for a backlog item that needs one, in the path the plan gives it.
+See the build plan, section 3. Today the repository holds `src/Starlings.Roost.Abstractions/` (contracts, frozen in R-004), its tests, and `tools/`. Starling is consumed only as exact NuGet pins (section 2.2); there is no submodule. Create a project only for a backlog item that needs one, in the path the plan gives it.
 
 ## Bounded authority
 
@@ -42,14 +41,14 @@ Roost's own:
 
 - **Stay in your stream's paths** (build plan section 4). A change another stream owns goes through a stream A contract-change PR, never a side edit.
 - **Contracts change only through stream A.** After R-004, a change to C1–C6 bumps `ContractVersion.Current` (and the C1 ABI minor, where it applies) and updates every consumer in the same PR.
-- **No Python or libtorch under `src/`**, and no `Microsoft.ML.OnnxRuntime*` in a worker-side package's closure (`Abstractions`, `Ops`, `Graph`, `Worker`, `WorkerHost`, `Kernels`, `Cuda`, `Native`, `Distributed`, `Models.*`), because the GPU worker pins its own CUDA runtime and allocator (decision 30). Host-process packages (`Engine`, `Generation`, `Generation.Roost`, `Server`) may use ONNX Runtime. Python is build time (`kernels/aot/`) and test time (`external/starling/model-pipeline`) only. `tools/check-roost-boundaries.py` enforces both.
+- **No Python or libtorch under `src/`**, and no `Microsoft.ML.OnnxRuntime*` in a worker-side package's closure (`Abstractions`, `Ops`, `Graph`, `Worker`, `WorkerHost`, `Kernels`, `Cuda`, `Native`, `Distributed`, `Models.*`), because the GPU worker pins its own CUDA runtime and allocator (decision 30). Host-process packages (`Engine`, `Generation`, `Generation.Roost`, `Server`) may use ONNX Runtime. Python is build time (`kernels/aot/`) and test time only. `tools/check-roost-boundaries.py` enforces both.
 - **Rust crates in `native/` commit source and `Cargo.lock` only.** Built libraries are release assets, like kernels. No Rust GPU device code.
 - **Kernel binaries are release assets, never committed.** Upstream kernel source is fetched by full SHA at build time; only patch sets live in `kernels/upstream/<name>.patches/`. A SHA bump changes `PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` in the same PR.
 - **Every GPU run goes through `tools/gpu-lease`**, with the stream it is charged to. Both GPUs are shared: never kill another process, and treat a memory refusal as "try later", not a failure to work around.
 - **Spike code lives in `spikes/<spike-id>/`, reports in `docs/m0/`** (build plan section 4). Spike code stays out of `Roost.slnx`, commits its raw run logs as text under `spikes/<spike-id>/results/`, and is never referenced from `src/`.
 - **CUDA projects stay out of `Roost.slnx`.** `*.Cuda` and `*.Tests.Cuda` projects are local-only, as in starling's ai-dotnet.
 - **No throughput claim without fidelity evidence.** A profile passes Roost's fidelity gates (`evidence/`) before any number for it is published.
-- **Roost never changes Starling.** It consumes Starling's published NuGet packages, pinned exactly; raise a pin in its own PR with every Roost gate rerun. If Roost needs something from Starling, report it to Starling rather than working around it. `external/starling` is removed by R-061.
+- **Roost never changes Starling.** It consumes Starling's published NuGet packages, pinned exactly; raise a pin in its own PR with every Roost gate rerun. If Roost needs something from Starling, report it to Starling rather than working around it. There is no `external/starling` submodule (removed in R-061).
 
 ## Style
 
