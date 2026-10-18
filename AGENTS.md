@@ -21,7 +21,7 @@ python3 -I tools/create_backlog_issues.py               # dry run of the section
 
 ## Layout
 
-See the build plan, section 3. Today the repository holds `src/Starlings.Roost.Abstractions/` (contracts, frozen in R-004), its tests, and `tools/`. Starling is consumed only as exact NuGet pins (section 2.2); there is no submodule. Create a project only for a backlog item that needs one, in the path the plan gives it.
+See the build plan, section 3. Today the repository holds the v0 contracts from R-004: `kernels/include/` (C1, and C2 and C8 in `roost_worker_shm.h`), `src/Starlings.Roost.Abstractions/` (C2, C4, C6, C8, C9), `src/Starlings.Roost.Ops/` (C3) and `src/Starlings.Roost.Graph/` (C7), with their tests, and `tools/`. Starling is consumed only as exact NuGet pins (section 2.2); there is no submodule. Create a project only for a backlog item that needs one, in the path the plan gives it.
 
 ## Bounded authority
 
@@ -40,7 +40,7 @@ Carried from starlinghq/starling:
 Roost's own:
 
 - **Stay in your stream's paths** (build plan section 4). A change another stream owns goes through a stream A contract-change PR, never a side edit.
-- **Contracts change only through stream A.** After R-004, a change to C1–C6 bumps `ContractVersion.Current` (and the C1 ABI minor, where it applies) and updates every consumer in the same PR.
+- **Contracts change only through stream A.** After R-004, a change to C1–C9 bumps `ContractVersion.Current` (and the C1 ABI minor, where it applies) and updates every consumer in the same PR.
 - **No Python or libtorch under `src/`**, and no `Microsoft.ML.OnnxRuntime*` in a worker-side package's closure (`Abstractions`, `Ops`, `Graph`, `Worker`, `WorkerHost`, `Kernels`, `Cuda`, `Native`, `Distributed`, `Models.*`), because the GPU worker pins its own CUDA runtime and allocator (decision 30). Host-process packages (`Engine`, `Generation`, `Generation.Roost`, `Server`) may use ONNX Runtime. Python is build time (`kernels/aot/`) and test time only. `tools/check-roost-boundaries.py` enforces both.
 - **Rust crates in `native/` commit source and `Cargo.lock` only.** Built libraries are release assets, like kernels. No Rust GPU device code.
 - **Kernel binaries are release assets, never committed.** Upstream kernel source is fetched by full SHA at build time; only patch sets live in `kernels/upstream/<name>.patches/`. A SHA bump changes `PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` in the same PR.
