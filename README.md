@@ -9,8 +9,8 @@ Status: repository skeleton (R-003). Nothing is usable yet. The build plan is [d
 ## Building
 
 ```sh
-git clone --recurse-submodules https://github.com/starlinghq/roost
+git clone https://github.com/starlinghq/roost
 dotnet test --solution Roost.slnx
 ```
 
-The SDK is pinned in `global.json`. `external/starling` is a submodule pinned by full SHA (build plan section 3.1).
+The SDK is pinned in `global.json`. Starling is consumed only as exact NuGet pins in `Directory.Packages.props`, restored in locked mode (build plan section 2.2); there are no submodules.
