@@ -106,6 +106,7 @@ starlinghq/roost
   .github/workflows/                  # ci.yml (hosted, CPU), release.yml (kernel assets, native libraries, packages, image)
   kernels/                            # CUDA C++, CMake; never in Roost.slnx
     include/roost_kernels.h           # the C ABI and registration table (contract C1)
+    include/roost_worker_shm.h        # C2 step plan and result, C8 shared-memory records; offsets and handles only (R-004)
     manifest.toml                     # upstreams, SHAs, patch sets, ops, variants, specialisations, digests (C5)
     upstream/<name>.patches/          # patch sets only; sources fetched by SHA at build time
     src/ops/                          # C ABI wrappers, one file per op family
@@ -203,11 +204,13 @@ Each stream owns its paths and its backlog items (section 10). Every path is in 
 
 Spike code lives in `spikes/<spike-id>/` and spike reports in `docs/m0/`, both owned by the stream that runs the spike. Spike code is evidence, not product: it stays out of `Roost.slnx`, may use build-time Python, commits its raw run logs as text under `spikes/<spike-id>/results/`, and is never imported by a `src/` project. A spike's findings reach the product only through the backlog item that adopts them.
 
+The contract files inside `src/Starlings.Roost.Ops/` (`IRoostOps` and its argument structs, C3) and `src/Starlings.Roost.Graph/` (the C7 graph, pass and checker types) belong to stream A, like everything else in C1–C9; the rest of each project belongs to streams D and L (R-004).
+
 Streams C, F and L share the scarcest skill (CUDA). The plan keeps every other stream off those people: D, E, G and H are specified so they can be built and reviewed with .NET skills alone, against `CpuOps` and a recorded worker. K needs a different scarce skill and starts building only in M4, after its spike.
 
 ## 5. Contract freeze (C0)
 
-Stream A writes these in weeks 1–3 as one ADR-style section in `README.md` plus compiling stubs and contract tests. They freeze as **v0** after the S1, S2 and S8 reports (R-004), and may change at the cost of a stream A PR until the M0 gate, where they are promoted to **v1** with whatever M0 taught. After v1, a field or signature changes only through a stream A PR that bumps the contract version and updates every consumer in the same change. Names reserved for later phases are declared in v0 so that adding them is never a layout change.
+Stream A writes these in weeks 1–3 as one ADR-style section in `README.md` plus compiling stubs and contract tests. They freeze as **v0** after the S1, S2 and S8 reports (R-004), and may change at the cost of a stream A PR until the M0 gate, where they are promoted to **v1** with whatever M0 taught. R-004 set `ContractVersion.Current` to 1 for v0 (`ContractVersion.Stage` is `"v0"`); the ADR in `README.md` records each difference from the table below. After v1, a field or signature changes only through a stream A PR that bumps the contract version and updates every consumer in the same change. Names reserved for later phases are declared in v0 so that adding them is never a layout change.
 
 | Id | Contract | Content | Consumers | Lands in M0 as |
 | --- | --- | --- | --- | --- |

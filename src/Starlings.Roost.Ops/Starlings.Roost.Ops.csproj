@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost op vocabulary (contract C3). The CPU reference backend (stream D, R-018) lands here.</Description>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+  </ItemGroup>
+</Project>
