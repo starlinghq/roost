@@ -153,3 +153,7 @@ $LEASE $S respawn --weights $WEIGHTS --rounds 6            # also prints the bad
 $LEASE $S respawn --rounds 6                               # no weights
 sha256sum $WEIGHTS                                         # about 9 s with the file in page cache
 ```
+
+## Addendum (R-069): repeat with the .NET host
+
+R-069 repeated the per-step measurement with the real .NET worker host on the RTX 3090 (lock-step, 4.5 ms synthetic step, 24,000 steps per mode): process minus in-process was -1.2 us at p50 and -1.3 us at p99 (S8, C++ host: +1.2 and +21 us); with two plans in flight the worst round was +17 us per step (0.38%). The host thread allocated nothing in the measured loops. The box was shared (load 1 to 9), the step is still synthetic, and the 2% gate must be re-applied to a measured step after R-025. Logs and pooled output: `tests/Starlings.Roost.WorkerHost.Tests.Cuda/results/` (README there states the limits).
