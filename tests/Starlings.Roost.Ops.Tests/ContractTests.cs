@@ -36,6 +36,23 @@ public sealed class ContractTests
     }
 
     [Fact]
+    public void GatedDeltaRuleRejectsANonFloat32StatePool()
+    {
+        using var q = Mem.F32(1, 1);
+        using var g = Mem.F32(0f);
+        using var o = Mem.Zeros(DType.F32, 1);
+        using var st = Mem.Zeros(DType.F64, 1);
+        using var slot = Mem.I32(0);
+        using var cu = Mem.I32(0, 1);
+        var args = new GatedDeltaRuleArgs
+        {
+            Q = q.Span, K = q.Span, V = q.Span, G = g.Span, Beta = g.Span, Output = o.Span, State = st.Span, StateSlots = slot.Span, CuSeqlens = cu.Span,
+            Batch = 1, Tokens = 1, KHeads = 1, VHeads = 1, KDim = 1, VDim = 1, DType = DType.F32,
+        };
+        Assert.Throws<ArgumentException>(() => CpuOps.GatedDeltaRule(args));
+    }
+
+    [Fact]
     public void CallsAllocateNoManagedMemory()
     {
         using var f = new Bag();
@@ -71,8 +88,38 @@ public sealed class ContractTests
         var aIdx = f.Add(Mem.I32(0, 1));
         var aLast = f.Add(Mem.I32(2));
 
+        var sx = f.Add(Mem.F32(1, 2, 3, 4));
+        var sy = f.Add(Mem.Zeros(DType.F32, 2));
+        var tbl = f.Add(Mem.F32(Enumerable.Range(0, 24).Select(i => (float)i).ToArray()));
+        var eout = f.Add(Mem.Zeros(DType.F32, 16));
+        var eids = f.Add(Mem.I32(0, 1, 2, 3));
+        var gA = f.Add(Mem.F32(1, 2, 3, 4, 5, 6));
+        var gB = f.Add(Mem.F32(1, 2, 3, 4, 5, 6));
+        var gD = f.Add(Mem.Zeros(DType.F32, 4));
+        var lmRows = f.Add(Mem.I32(0));
+        var lmW = f.Add(Mem.F32(1, 0, 0, 1, 1, 1));
+        var lmHid = f.Add(Mem.F32(1, 2));
+        var lmOut = f.Add(Mem.Zeros(DType.F32, 4));
+        var slotMap = f.Add(Mem.Zeros(DType.I64, 2));
+        var kvPool = f.Add(Mem.Zeros(DType.F32, 16));
+        var kvIn = f.Add(Mem.F32(1, 2, 3, 4));
+        var statePool = f.Add(Mem.Zeros(DType.F32, 8));
+        var snapPool = f.Add(Mem.Zeros(DType.F32, 8));
+        var snapPairs = f.Add(Mem.I32(0, 1));
+
         void Everything()
         {
+            CpuOps.SiluAndMul(new SiluAndMulArgs { Input = sx.Span, Output = sy.Span, Rows = 1, Dim = 2, DType = DType.F32 });
+            CpuOps.GeluAndMul(new GeluAndMulArgs { Input = sx.Span, Output = sy.Span, Rows = 1, Dim = 2, Approximation = GeluApproximation.Tanh, DType = DType.F32 });
+            CpuOps.GeluAndMul(new GeluAndMulArgs { Input = sx.Span, Output = sy.Span, Rows = 1, Dim = 2, Approximation = GeluApproximation.Exact, DType = DType.F32 });
+            CpuOps.Gemm(new GemmArgs { A = gA.Span, B = gB.Span, D = gD.Span, M = 2, N = 2, K = 3, Alpha = 1f, Beta = 0f, DType = DType.F32, WeightDType = DType.F32 });
+            CpuOps.Embedding(new EmbeddingArgs { Ids = eids.Span, Table = tbl.Span, Output = eout.Span, Tokens = 4, Dim = 4, Vocab = 6, DType = DType.F32 });
+            CpuOps.LmHead(new LmHeadArgs { Hidden = lmHid.Span, Rows = lmRows.Span, Weight = lmW.Span, Logits = lmOut.Span, Selected = 1, Dim = 2, Vocab = 3, VocabPadded = 4, DType = DType.F32 });
+            CpuOps.Residual(new ResidualArgs { A = x.Span, B = y.Span, Output = x.Span, Elements = 8, DType = DType.F32 });
+            CpuOps.CacheWrite(new CacheWriteArgs { K = kvIn.Span, V = kvIn.Span, KCache = kvPool.Span, VCache = kvPool.Span, SlotMapping = slotMap.Span, Tokens = 2, KvHeads = 1, HeadDim = 2, BlockSize = 2, KvLayout = TensorLayout.PagedNhd, KScale = 1f, VScale = 1f, KvDType = DType.F32 });
+            CpuOps.RecurrentStateCopy(new RecurrentStateCopyArgs { Pool = statePool.Span, Pairs = snapPairs.Span, SlotBytes = 16, Count = 1 });
+            CpuOps.RecurrentStateSnapshot(new RecurrentStateSnapshotArgs { Pool = statePool.Span, Snapshots = snapPool.Span, Pairs = snapPairs.Span, SlotBytes = 16, Count = 1, Restore = false });
+            CpuOps.RecurrentStateSnapshot(new RecurrentStateSnapshotArgs { Pool = statePool.Span, Snapshots = snapPool.Span, Pairs = snapPairs.Span, SlotBytes = 16, Count = 1, Restore = true });
             CpuOps.RmsNorm(new RmsNormArgs { Input = x.Span, Weight = w.Span, Output = y.Span, Rows = 8, Dim = 8, Eps = 1e-6f, DType = DType.F32 });
             CpuOps.QkNorm(new QkNormArgs { Q = x.Span, K = y.Span, QWeight = w.Span, KWeight = w.Span, Tokens = 4, QHeads = 1, KvHeads = 1, HeadDim = 8, Eps = 1e-6f, DType = DType.F32 });
             CpuOps.Rope(new RopeArgs { Q = x.Span, K = y.Span, Positions = pos.Span, Tokens = 8, QHeads = 1, KvHeads = 1, HeadDim = 8, Theta = 10000f, DType = DType.F32 });
