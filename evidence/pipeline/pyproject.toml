@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "roost-evidence"
 version = "0.1.0"
-description = "Roost evidence pipeline: profile manifest validation today, the evaluator (R-010) next."
+description = "Roost evidence pipeline: profile manifest validation (R-012) and the generation evaluator (R-010)."
 requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"
 dependencies = [
@@ -16,11 +16,27 @@ dependencies = [
     "pyyaml==6.0.3",
 ]
 
+[project.optional-dependencies]
+# Tool-time only: the transformers fp32 CPU reference runner (R-010). Not installed by the default gate.
+reference = [
+    "torch==2.9.1",
+    "transformers==4.57.3",
+]
+
 [project.scripts]
 roost-evidence = "roost_evidence.cli:main"
 
 [dependency-groups]
 dev = ["pytest==8.4.2"]
+
+# CPU wheels only: the default PyPI wheel on Linux pulls the CUDA runtime, which a CPU reference does not need.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
