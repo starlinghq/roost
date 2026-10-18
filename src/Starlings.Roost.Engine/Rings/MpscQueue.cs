@@ -36,8 +36,9 @@ namespace Starlings.Roost.Engine.Rings;
 /// <item><description><c>Volatile.Read(ref cell.Sequence)</c> (consumer, acquire): sees <c>head + 1</c> only after
 /// item 5, and then the read of <c>Value</c> sees the producer's store. If the sequence is not yet <c>head + 1</c>
 /// the queue is empty from the consumer's point of view, even if a producer has claimed the position (it has not
-/// published yet); the consumer returns false and retries later, it never waits on a claimed-but-unpublished
-/// cell.</description></item>
+/// published yet); the consumer returns false and retries later. It does not spin on that cell, but it is not
+/// independent of the producer either: later cells that are already published stay undelivered until this one
+/// is published (head-of-line blocking).</description></item>
 /// <item><description><c>Volatile.Write(ref cell.Sequence, head + capacity)</c> (consumer, release): returns the cell
 /// to the producers after the consumer has read and cleared <c>Value</c>. Pairs with item 2.</description></item>
 /// </list>
@@ -47,8 +48,10 @@ namespace Starlings.Roost.Engine.Rings;
 /// <c>_head</c> is safe because no other thread writes it.</para>
 /// <para>Producers are lock-free but not wait-free: a producer that is descheduled between items 3 and 5 holds its
 /// cell, and the consumer sees an empty queue at that position until it resumes (later cells are not delivered
-/// early, so order is the claim order). That is the usual trade for this queue and is acceptable for request
-/// admission.</para>
+/// early, so order is the claim order). That is the usual trade for this queue. Whether the planner tolerates the
+/// resulting delay (bounded by one producer's scheduling latency between its claim and its publish, with no
+/// upper bound if that thread is suspended) has not been decided here; it is an open question for the planner
+/// owner.</para>
 /// </remarks>
 /// <typeparam name="T">The item type. A reference type is cleared on dequeue so the queue does not keep it alive.</typeparam>
 [SuppressMessage("Naming", "CA1711:Identifiers should not have incorrect suffix", Justification = "It is a queue; the plan and the backlog call it the MPSC request queue.")]
