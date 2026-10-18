@@ -60,6 +60,8 @@ uv run --project evidence/pipeline --locked roost-evidence evaluate-layers <resu
     --reference <reference.jsonl> --reference-captures <reference run directory> --tolerances <tolerances file> [--report report.json]
 ```
 
+The model revision of a real capture is whatever `--revision` the operator passes; this branch records it in `environment.json` but does not decide which revision is admitted (that is R-013's). The R-011 development run used the hub's then-current main, 2fc06364, as a spike only.
+
 Exit codes and statuses are those of `evaluate`. Four checks, bound by the tolerance keys `float.layer_hidden_max_abs`, `float.recurrent_state_max_abs`, `float.conv_state_max_abs` and `float.nan_or_inf`. The report holds, per case and per stage, the maximum absolute difference, and `first_divergent`: the earliest forward in which a stage exceeds the hidden-state bound, the first stage in model order within it, and the first position. Recurrent and convolution state are attributed separately. A candidate capture for another token sequence, another layer count or other layer types is an input error (exit 2); a case with no candidate capture, or a candidate without state tensors, is `not_run`.
 
 ## Test the pipeline
