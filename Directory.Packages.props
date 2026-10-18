@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Versions are central and locked (packages.lock.json; CI restores in locked mode). Pin native and runtime
+    packages exactly ([x]) with a comment saying why. Engine packages (Abstractions, Ops, Engine, Worker, Kernels,
+    Cuda, Models.*, Generation.Roost) must never reach Microsoft.ML.OnnxRuntime*, directly or transitively:
+    tools/check-roost-boundaries.py enforces it in CI.
+  -->
+  <ItemGroup>
+    <PackageVersion Include="xunit.v3" Version="4.0.1" />
+  </ItemGroup>
+</Project>

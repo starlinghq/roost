@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost contracts: step plan and result, state-group descriptors, requests, token events and errors.</Description>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+</Project>

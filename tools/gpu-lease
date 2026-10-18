@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+"""Lease one local GPU for a command, and record the time used (build plan section 8).
+
+    tools/gpu-lease run --device 3090 --need-mib 8000 --stream F -- dotnet test tests/Starlings.Roost.Worker.Tests.Cuda
+    tools/gpu-lease list                      # devices, free memory, who holds each lease
+    tools/gpu-lease ledger [--month 2026-10]  # GPU-hours by device and stream
+
+`--device` is an nvidia-smi index, a GPU UUID, or a case-insensitive part of the name ("3090", "4060").
+The lease is an exclusive lock per device (flock), so parallel agents queue rather than collide. Before the
+command runs, free memory must be at least `--need-mib`: the GPUs are shared with other workloads, and a co-tenant
+is a refusal, never an out-of-memory crash halfway through a run. The command gets CUDA_VISIBLE_DEVICES set to the
+device UUID (so CUDA and nvidia-smi ordering cannot disagree) and ROOST_GPU_LEASE set to the lease id.
+
+Every lease appends one JSON line to the ledger: device, stream, start, end, wall seconds, exit code and the
+command name. The ledger lives outside Git, in $ROOST_GPU_LEASE_DIR (default ~/.local/state/roost/gpu-lease),
+next to the lock files. The monthly GPU-hour cap is read from the ledger, not estimated.
+
+Exit codes: the command's own code, or 75 when the device is busy past --wait or short of memory, 2 on usage error.
+"""
+
+from __future__ import annotations
+
+import argparse
+import fcntl
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+import uuid
+from collections import defaultdict
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+
+EX_TEMPFAIL = 75
+STREAMS = ("A", "B1", "B2", "B3", "C", "D", "E", "F", "G", "H", "I", "J", "spike")
+
+
+@dataclass(frozen=True)
+class Gpu:
+    index: int
+    uuid: str
+    name: str
+    total_mib: int
+    free_mib: int
+
+
+def state_dir() -> Path:
+    default = Path(os.environ.get("XDG_STATE_HOME", Path.home() / ".local" / "state")) / "roost" / "gpu-lease"
+    path = Path(os.environ.get("ROOST_GPU_LEASE_DIR", default))
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def query_gpus() -> list[Gpu]:
+    smi = os.environ.get("ROOST_NVIDIA_SMI") or shutil.which("nvidia-smi")
+    if not smi:
+        raise SystemExit("gpu-lease: nvidia-smi not found")
+    out = subprocess.run(
+        [smi, "--query-gpu=index,uuid,name,memory.total,memory.free", "--format=csv,noheader,nounits"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    gpus = []
+    for line in out.strip().splitlines():
+        index, gpu_uuid, name, total, free = (field.strip() for field in line.split(","))
+        gpus.append(Gpu(int(index), gpu_uuid, name, int(total), int(free)))
+    return gpus
+
+
+def select(gpus: list[Gpu], device: str) -> Gpu:
+    # Digits are an index only when a device has that index, so "3090" and "4060" still match names.
+    if device.isdigit() and any(g.index == int(device) for g in gpus):
+        matches = [g for g in gpus if g.index == int(device)]
+    elif device.upper().startswith("GPU-"):
+        matches = [g for g in gpus if g.uuid.lower() == device.lower()]
+    else:
+        matches = [g for g in gpus if device.lower() in g.name.lower()]
+    if len(matches) != 1:
+        names = ", ".join(f"{g.index}: {g.name}" for g in gpus)
+        raise SystemExit(f"gpu-lease: --device {device!r} matches {len(matches)} of [{names}]")
+    return matches[0]
+
+
+def acquire(lock_path: Path, wait: float, holder: dict) -> int | None:
+    fd = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o644)
+    deadline = time.monotonic() + wait
+    while True:
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            if time.monotonic() >= deadline:
+                os.close(fd)
+                return None
+            time.sleep(min(2.0, max(0.05, deadline - time.monotonic())))
+            continue
+        os.ftruncate(fd, 0)
+        os.write(fd, json.dumps(holder).encode())
+        return fd
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    if not args.command:
+        print("gpu-lease: no command after --", file=sys.stderr)
+        return 2
+    gpu = select(query_gpus(), args.device)
+    directory = state_dir()
+    lease_id = uuid.uuid4().hex[:12]
+    holder = {
+        "lease": lease_id,
+        "pid": os.getpid(),
+        "stream": args.stream,
+        "command": Path(args.command[0]).name,
+        "since": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+    fd = acquire(directory / f"{gpu.uuid}.lock", args.wait, holder)
+    if fd is None:
+        print(f"gpu-lease: {gpu.name} (index {gpu.index}) still leased after {args.wait:g}s", file=sys.stderr)
+        return EX_TEMPFAIL
+    try:
+        # Free memory is read under the lock, so only co-tenants outside Roost can change it.
+        free = select(query_gpus(), gpu.uuid).free_mib
+        if free < args.need_mib:
+            print(f"gpu-lease: {gpu.name} has {free} MiB free, the job needs {args.need_mib} MiB", file=sys.stderr)
+            return EX_TEMPFAIL
+        env = dict(os.environ, CUDA_DEVICE_ORDER="PCI_BUS_ID", CUDA_VISIBLE_DEVICES=gpu.uuid, ROOST_GPU_LEASE=lease_id)
+        start = datetime.now(UTC)
+        began = time.monotonic()
+        try:
+            code = subprocess.run(args.command, env=env, check=False).returncode
+        except KeyboardInterrupt:
+            code = 130
+        wall = time.monotonic() - began
+        entry = {
+            "lease": lease_id,
+            "device": gpu.name,
+            "uuid": gpu.uuid,
+            "stream": args.stream,
+            "start": start.isoformat(timespec="seconds"),
+            "end": datetime.now(UTC).isoformat(timespec="seconds"),
+            "wall_seconds": round(wall, 1),
+            "need_mib": args.need_mib,
+            "free_mib_at_start": free,
+            "exit_code": code,
+            "command": Path(args.command[0]).name,
+        }
+        with (directory / "ledger.jsonl").open("a", encoding="utf-8") as ledger:
+            ledger.write(json.dumps(entry) + "\n")
+        return code
+    finally:
+        os.ftruncate(fd, 0)
+        os.close(fd)
+
+
+def cmd_list(_: argparse.Namespace) -> int:
+    directory = state_dir()
+    for gpu in query_gpus():
+        lock = directory / f"{gpu.uuid}.lock"
+        state = "free"
+        if lock.is_file():
+            # The kernel lock is the truth: a holder killed with SIGKILL releases it but leaves its JSON behind.
+            fd = os.open(lock, os.O_RDONLY)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                fcntl.flock(fd, fcntl.LOCK_UN)
+            except BlockingIOError:
+                state = f"leased {lock.read_text(encoding='utf-8').strip()}"
+            finally:
+                os.close(fd)
+        print(f"{gpu.index}  {gpu.name}  {gpu.free_mib}/{gpu.total_mib} MiB free  {gpu.uuid}  {state}")
+    return 0
+
+
+def cmd_ledger(args: argparse.Namespace) -> int:
+    path = state_dir() / "ledger.jsonl"
+    month = args.month or datetime.now(UTC).strftime("%Y-%m")
+    hours: dict[tuple[str, str], float] = defaultdict(float)
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            entry = json.loads(line)
+            if entry["start"].startswith(month):
+                hours[(entry["device"], entry["stream"])] += entry["wall_seconds"] / 3600
+    total = sum(hours.values())
+    for (device, stream), value in sorted(hours.items()):
+        print(f"{device}  stream {stream}  {value:.2f} h")
+    print(f"total {month}: {total:.2f} GPU-hours")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        prog="gpu-lease", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    sub = parser.add_subparsers(dest="action", required=True)
+    run = sub.add_parser("run", help="lease a device and run a command on it")
+    run.add_argument("--device", required=True)
+    run.add_argument("--need-mib", type=int, required=True, help="free device memory the job needs")
+    run.add_argument("--stream", required=True, choices=STREAMS, help="the work stream charged in the ledger")
+    run.add_argument("--wait", type=float, default=600, help="seconds to wait for the lease (default 600)")
+    run.add_argument("command", nargs=argparse.REMAINDER)
+    run.set_defaults(func=cmd_run)
+    sub.add_parser("list", help="devices, free memory and lease holders").set_defaults(func=cmd_list)
+    ledger = sub.add_parser("ledger", help="GPU-hours by device and stream for a month")
+    ledger.add_argument("--month", help="YYYY-MM (default: this month, UTC)")
+    ledger.set_defaults(func=cmd_ledger)
+    args = parser.parse_args(argv)
+    if getattr(args, "command", None) and args.command[0] == "--":
+        args.command = args.command[1:]
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,68 @@
+name: ci
+
+# Every pull request and every push. Hosted runners, CPU only, no secrets; read-only token. GPU work is local and
+# leased through tools/gpu-lease (build plan section 8).
+on:
+  pull_request:
+  push:
+    branches: [main, "plan/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  CI: true
+
+jobs:
+  # Names of an unrelated older project must never enter this repository (tools/check-boundary.py, shared with
+  # starlinghq/starling): files, file names, embedded base64/hex data, commit authors and messages.
+  boundary:
+    name: boundary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+      - run: python3 -I tools/check-boundary.py
+
+  # Roost.slnx in locked mode, then the Roost boundaries on the restored closure: no Python or libtorch under src/,
+  # no Microsoft.ML.OnnxRuntime* in an engine package's closure, no kernel binaries in Git, no CUDA projects in the
+  # solution. Windows builds too, so nothing closes the Windows path (build plan section 3).
+  dotnet:
+    name: dotnet (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # external/starling, pinned by full SHA (build plan section 3.1). Public, so no token.
+          submodules: true
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: Test (locked restore)
+        run: dotnet test --solution Roost.slnx --configuration Release
+      - name: Roost boundaries
+        if: runner.os == 'Linux'
+        run: python3 -I tools/check-roost-boundaries.py
+
+  tools:
+    name: tools (pytest, ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - run: pipx run ruff==0.16.9 check .
+      - run: pipx run ruff==0.16.9 format --check .
+      - run: pipx run --spec pytest==8.4.2 pytest -q tests/tools
+      - name: Backlog parses (dry run)
+        run: python3 -I tools/create_backlog_issues.py > /dev/null
