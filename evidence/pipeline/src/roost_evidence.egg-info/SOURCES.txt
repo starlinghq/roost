@@ -1,0 +1,13 @@
+pyproject.toml
+src/roost_evidence/__init__.py
+src/roost_evidence/__main__.py
+src/roost_evidence/cli.py
+src/roost_evidence/manifest.py
+src/roost_evidence/py.typed
+src/roost_evidence.egg-info/PKG-INFO
+src/roost_evidence.egg-info/SOURCES.txt
+src/roost_evidence.egg-info/dependency_links.txt
+src/roost_evidence.egg-info/entry_points.txt
+src/roost_evidence.egg-info/requires.txt
+src/roost_evidence.egg-info/top_level.txt
+tests/test_manifest.py
