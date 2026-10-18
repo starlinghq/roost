@@ -7,6 +7,8 @@ namespace Starlings.Roost.Engine.Tests.Stress;
 /// check of every slot and every buffer word. Length: ROOST_RING_STRESS_STEPS (default 300000);
 /// ROOST_RING_STRESS_SEED fixes the seed; ROOST_RING_STRESS_LOG names a file that gets the result line. This exercises the ring code on this machine's memory model (x86-64 is
 /// stronger than the .NET model; a pass here does not show the ordering argument holds on ARM64).
+/// This is not compute-sanitizer racecheck, which only observes device code. The plan's racecheck criterion for R-027
+/// stays open until the maintainer accepts this test plus the written ordering argument in its place, or amends the plan.
 /// </summary>
 public sealed class TwoProcessStressTests
 {
