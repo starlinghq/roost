@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost worker process host (stream F, R-069): the C8 transport between the engine and one worker per GPU, spawn and handshake, heartbeat, per-step deadline and fault classes, with a process and an in-process transport behind one interface. Never loads ONNX Runtime.</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Starlings.Roost.WorkerHost.Tests" />
+    <InternalsVisibleTo Include="Starlings.Roost.WorkerHost.Tests.Cuda" />
+  </ItemGroup>
+</Project>
