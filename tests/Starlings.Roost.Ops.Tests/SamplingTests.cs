@@ -144,20 +144,27 @@ public sealed class SamplingTests
         float[] logits = want.Select(p => (float)Math.Log(p)).ToArray();
         double z = logits.Sum(l => Math.Exp(l));
         double[] p = logits.Select(l => Math.Exp(l) / z).ToArray();
-        // top_k 4 keeps tokens 1, 3, 5, 2 (mass 0.90). top_p 0.85 on the renormalised mass: 0.444, 0.722, 0.889 reaches it, so token 2 goes
-        // (on the raw mass the cut would sit at 0.90 and keep token 2). min_p 0.5 then drops token 5 (0.15 < 0.5 * 0.40). Tokens 1 and 3 remain.
-        double mass = p[1] + p[3];
+        // Hand-worked, descending order 1 (0.40), 3 (0.25), 5 (0.15), 2 (0.10), 0 (0.06), 4 (0.04); temperature 1, top_k 4, top_p 0.85, min_p 0.2.
+        // 1. top_k 4 keeps tokens 1, 3, 5, 2 (mass 0.90).
+        // 2. top_p 0.85 on the mass renormalised after top-k (divide by 0.90): cumulative 0.444, 0.722, 0.889. 0.889 >= 0.85 at the third token, so
+        //    tokens 1, 3, 5 are kept and token 2 is cut.
+        //    (If top-p wrongly used the original mass: cumulative 0.40, 0.65, 0.80, 0.90. 0.90 >= 0.85 only at the fourth token, so 1, 3, 5, 2 would be kept.)
+        // 3. min_p 0.2: floor = 0.2 * 0.40 = 0.08. Tokens 1, 3, 5 (0.40, 0.25, 0.15) all clear it, and so would token 2 (0.10), so min-p removes
+        //    nothing here and cannot mask a top-p error.
+        // Expected kept set {1, 3, 5}. With un-renormalised top-p it would be {1, 3, 5, 2}, which also passes min-p, so this test fails in that case.
+        double mass = p[1] + p[3] + p[5];
         var seen = new HashSet<int>();
         for (ulong offset = 0; offset < 200; offset++)
         {
             double u = CpuPhilox.Uniform(31, offset);
-            int expected = (u * mass) < p[1] ? 1 : 3;
-            int got = Run(logits, 6, 1f, 4, 0.85f, 0.5f, 31, offset)[0];
+            double target = u * mass;
+            int expected = target < p[1] ? 1 : target < p[1] + p[3] ? 3 : 5;
+            int got = Run(logits, 6, 1f, 4, 0.85f, 0.2f, 31, offset)[0];
             Assert.Equal(expected, got);
             seen.Add(got);
         }
 
-        Assert.Equal([1, 3], seen.OrderBy(x => x));
+        Assert.Equal([1, 3, 5], seen.OrderBy(x => x));
     }
 
     [Fact]
