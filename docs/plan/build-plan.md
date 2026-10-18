@@ -183,7 +183,7 @@ These design choices are fixed here because every stream depends on them.
 
 ## 4. Streams and ownership
 
-Each stream owns its paths and its backlog items (section 10). Every path is in `starlinghq/roost` (section 2.2). An agent works in its own worktree, on one item at a time, and opens a draft PR. "Needs GPU" means at least one acceptance criterion needs a GPU run with committed evidence; "multi" means a multi-GPU pod.
+Each stream owns its paths and its backlog items (section 10). Every path is in `starlinghq/roost` (section 2.2). A project's test projects, `tests/<Project>.Tests/` and `tests/<Project>.Tests.Cuda/`, belong to the stream that owns the project, and each stream may add its own projects' lines to `Roost.slnx` and its own package versions to `Directory.Packages.props` (clarified 2026-10-18). An agent works in its own worktree, on one item at a time, and opens a draft PR. "Needs GPU" means at least one acceptance criterion needs a GPU run with committed evidence; "multi" means a multi-GPU pod.
 
 | Stream | Scope | Owns | Needs GPU | Best owner |
 | --- | --- | --- | --- | --- |
@@ -393,7 +393,7 @@ IDs `R-001` onwards, tracked as issues in `starlinghq/roost` with `stream:<lette
 | R-033 | F | M1 | Capture decode CUDA graphs. | R-032 | Capture per shape bucket, piecewise around attention where needed; graph memory reserved and counted; host gap measured. |
 | R-034 | C | M0 | Add the hybrid GPU primitives. | R-007, R-016, R-018 | GatedDeltaRule (chunked and recurrent), CausalConv1d and the recurrent state ops from the S3 Triton AOT path behind the C ABI, specialised for Qwen3.5-0.8B; conformance against R-018's CPU references. |
 | R-035 | E | M0 | Write the Qwen3.5-0.8B definition. | R-020, R-018 | 6 full-attention plus 18 recurrent layers in two state groups and the weight map; generates and runs on `CpuOps`; GPU parity is R-026. |
-| R-036 | H | M0 | Build `Starlings.Generation.Roost`. | R-025, R-009, R-061 | An `IChatClient` (Microsoft.Extensions.AI) over the eager worker in M0 and the engine from M1, with no API change between them; built on R-009's generation layer; stream, cancellation and usage semantics tested. |
+| R-036 | H | M0 | Build `Starlings.Generation.Roost`. | R-025, R-009, R-061 | An `IChatClient` (Microsoft.Extensions.AI) over the eager worker in M0 and the engine from M1, with no API change between them; built on R-009's generation layer; stream, cancellation and usage semantics tested. OpenAI stop strings are matched on detokenized text in the host process, so they belong in the C6 `Request`, which has stop ids only today; R-036 carries that C6 addition as a stream A contract change (raised by R-009). |
 | R-037 | H | M1 | Build the server and OpenAI routes. | R-036, R-005 | The PRD's V1 routes; unsupported options are a 400 naming the option; loopback by default; one error body. |
 | R-038 | H | M1 | Add metrics, traces and log hygiene. | R-037 | Metrics from the PRD list on `/metrics`, with vLLM's Prometheus names provided as aliases so existing dashboards work; one Activity per request; no prompt text in logs by default. |
 | R-039 | I | M1 | Build the engine gate harnesses. | R-010, R-029, R-030 | Chunked vs one-call, cached vs uncached, concurrency, preemption, recurrent restore and streaming gates in format v3; CPU in CI, GPU with evidence. |
