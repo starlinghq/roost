@@ -1,0 +1,32 @@
+prefill lens=[300, 77, 1500, 64, 1] varlen=True h0=True NT=33 status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/3977216  ref max|x|=9.619e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/1310720  ref max|x|=1.134e+00
+prefill lens=[300, 77, 1500] varlen=True h0=False NT=31 status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/3844096  ref max|x|=9.619e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/786432  ref max|x|=1.118e+00
+prefill lens=[1024] varlen=False h0=True NT=16 status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/2097152  ref max|x|=9.619e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/262144  ref max|x|=1.041e+00
+prefill lens=[1000] varlen=False h0=False NT=16 status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/2048000  ref max|x|=9.619e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/262144  ref max|x|=9.509e-01
+decode lens=[1, 1, 1, 1] varlen=True status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/8192  ref max|x|=4.321e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/1048576  ref max|x|=1.064e+00
+decode lens=[5, 1, 1] varlen=True status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/14336  ref max|x|=4.639e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/786432  ref max|x|=8.620e-01
+decode lens=[3] varlen=False status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/6144  ref max|x|=4.639e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/262144  ref max|x|=8.662e-01
+accuracy against fp32 naive recurrent reference (one 256-token sequence, h0):
+prefill lens=[256] varlen=True h0=True NT=4 status=0
+  o (AOT vs Python FLA)        max|diff|=0.000e+00  mismatched=0/524288  ref max|x|=8.887e-02
+  final state                  max|diff|=0.000e+00  mismatched=0/262144  ref max|x|=9.393e-01
+  chunk path, AOT vs naive:
+  o                            max|diff|=5.018e-04  mismatched=524279/524288  ref max|x|=8.874e-02
+  final state                  max|diff|=3.280e-03  mismatched=262142/262144  ref max|x|=9.391e-01
+  chunk path, Python FLA vs naive:
+  o                            max|diff|=5.018e-04  mismatched=524279/524288  ref max|x|=8.874e-02
+  final state                  max|diff|=3.280e-03  mismatched=262142/262144  ref max|x|=9.391e-01
+exit=0

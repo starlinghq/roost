@@ -1,0 +1,46 @@
+# cuobjdump --dump-resource-usage on out/aot86/*.cubin (SM 86), 2026-10-17
+== gdn_00_l2norm_fwd_kernel.cubin
+Resource usage:
+  REG:64 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:400 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_01_chunk_local_cumsum_scalar_kernel.cubin
+Resource usage:
+  REG:18 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:392 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_02_chunk_gated_delta_rule_fwd_kkt_solve_kernel.cubin
+Resource usage:
+  REG:222 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:408 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_03_recompute_w_u_fwd_kernel.cubin
+Resource usage:
+  REG:208 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:432 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_04_chunk_gated_delta_rule_fwd_kernel_h_blockdim64.cubin
+Resource usage:
+  REG:252 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:432 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_05_chunk_fwd_kernel_o.cubin
+Resource usage:
+  REG:188 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:424 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_06_chunk_gated_delta_rule_fwd_kernel_h_blockdim64.cubin
+Resource usage:
+  REG:253 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:440 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_07_chunk_local_cumsum_scalar_kernel.cubin
+Resource usage:
+  REG:22 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:416 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_08_chunk_gated_delta_rule_fwd_kkt_solve_kernel.cubin
+Resource usage:
+  REG:222 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:424 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_09_recompute_w_u_fwd_kernel.cubin
+Resource usage:
+  REG:214 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:448 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_10_chunk_gated_delta_rule_fwd_kernel_h_blockdim64.cubin
+Resource usage:
+  REG:255 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:456 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_11_chunk_fwd_kernel_o.cubin
+Resource usage:
+  REG:188 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:440 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_12_chunk_gated_delta_rule_fwd_kernel_h_blockdim64.cubin
+Resource usage:
+  REG:255 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:448 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_13_fused_recurrent_gated_delta_rule_fwd_kernel.cubin
+Resource usage:
+  REG:99 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:440 TEXTURE:0 SURFACE:0 SAMPLER:0
+== gdn_14_fused_recurrent_gated_delta_rule_fwd_kernel.cubin
+Resource usage:
+  REG:105 STACK:0 SHARED:0 LOCAL:0 CONSTANT[0]:448 TEXTURE:0 SURFACE:0 SAMPLER:0
