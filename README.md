@@ -66,6 +66,7 @@ Merged reports are in `docs/m0/`; unmerged ones are cited as branch@commit.
 - **C5** lives in `tools/` (stream C owns the rest of `kernels/`), and adds `external_libraries`, `gemm_algos`, `triton_aot` and `crates` as the spikes required. `kernels/manifest.toml` itself lands with R-016.
 - **C6.** The HTTP body is the OpenAI error envelope with Roost's code names (`invalid_option`, `queue_full`, …) and a `param` field.
 - **C8.** Two fault classes beyond section 5's three: `stalled` (missed deadline, stopped heartbeat) and `exited` (S8).
+- **C8 ring convention (clarification, 2026-10-18, from R-027; no layout change).** Slot `n` of a ring uses plan or result buffer `n % buffer_count`; slots are released in order; a ring therefore holds at most `min(slot_count, buffer_count)` entries in flight.
 - **C9.** Expert parallelism reuses the TP x DP ranks; world size is TP x PP x DP.
 - **C1, Rust libraries.** Section 5 says the Rust libraries in `native/` follow C1's versioning and error rules with their own headers. v0 defines no Rust header; deferred to the first crate that becomes product code (`native/roost-grammar/`, R-051, stream H), which must adopt `struct_size`, `abi_minor` and the status and last-error convention of `roost_kernels.h`.
 - **C9, mesh in the profile manifest.** Section 5 puts the mesh descriptor in the profile manifest. v0 defines `MeshDescriptor` in C#; the manifest field belongs to stream B3's `evidence/schemas/profile-manifest.schema.json` (R-012, which carries a `mesh` object). Making the two agree is deferred to R-088.

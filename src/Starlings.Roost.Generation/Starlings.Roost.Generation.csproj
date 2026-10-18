@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost's host-side generation layer: chat templates and incremental detokenisation from Starling's published packages, and the stop-matching seam the engine calls. Host process only (decision 30).</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Starlings.Generation.OnnxGenAI" />
+    <PackageReference Include="Starlings.Models.Qwen35" />
+  </ItemGroup>
+</Project>
