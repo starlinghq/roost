@@ -1,10 +1,10 @@
 # Charter
 
-Status: proposed (R-001), for the maintainer. Nothing here is adopted until the maintainer approves the pull request that adds it. Entries marked *for the maintainer* are deliberately blank.
+Status: adopted 2026-10-18 (R-001), approved by the maintainer. Entries marked *for the maintainer* are still open; R-001 stays open until they are filled.
 
 ## Purpose
 
-Roost is a whole and complete replacement for vLLM, without compromises, and faster and better than vLLM in the categories listed under Targets (build plan decision 18, set by the maintainer on 2026-10-17 and confirmed on 2026-10-18). It is a serving engine for NVIDIA GPUs written in .NET, with kernels in CUDA C++ behind a C ABI and a few host-side native libraries in Rust. There is no Python at runtime.
+Roost is a whole and complete replacement for vLLM, without compromises, and faster and better than vLLM in the categories listed under Targets (build plan decision 18, set by the maintainer on 2026-10-17 and confirmed on 2026-10-18). It is a serving engine written in .NET for NVIDIA GPUs first and AMD GPUs (ROCm) next, with kernels in CUDA C++ (and HIP C++ for ROCm) behind a C ABI and a few host-side native libraries in Rust. There is no Python at runtime. ONNX Runtime may be used in the host process, never in the GPU worker process (plan decision 30).
 
 The plan is [docs/plan/build-plan.md](../docs/plan/build-plan.md).
 
@@ -14,7 +14,7 @@ The plan is [docs/plan/build-plan.md](../docs/plan/build-plan.md).
 - Distributed serving (tensor, pipeline, data and expert parallelism, multi-node, disaggregated prefill and decode) and bespoke GPU kernels (fused, persistent and collective kernels written by Roost, beside vendored upstream kernels pinned by full commit SHA).
 - vLLM's Python plugin and custom-op APIs are covered by Roost model definitions and kernel libraries, and Ray by Roost's .NET launcher, because Roost has no Python at runtime (plan section 13.2).
 - Training and fine-tuning are not vLLM capabilities and are out of scope. In-place weight update for reinforcement-learning loops is in scope.
-- Backends beyond NVIDIA (ROCm, TPU, Gaudi, Neuron, XPU, CPU serving) are open: plan decision 29, *for the maintainer*.
+- Backends beyond NVIDIA (plan decision 29, decided 2026-10-18): NVIDIA first; ROCm is a definite target, delivered after the replacement gate. TPU, Gaudi, Neuron, XPU and CPU serving are not planned.
 
 ## Targets
 
@@ -31,7 +31,7 @@ Where Roost aims to be faster or better than vLLM. These are targets, not claims
 
 ## Relationship to Starling
 
-[Starling](https://github.com/starlinghq/starling) works out the models; Roost runs on top of it. Roost consumes Starling's published NuGet packages, pinned exactly, and nothing else (plan section 2.2). Roost makes no changes to Starling's repository. It owns its own evidence pipeline, profiles, fixtures and tolerances in `evidence/`, and no throughput number is published for a Roost profile before it passes Roost's fidelity gates.
+[Starling](https://github.com/starlinghq/starling) works out the models; Roost runs on top of it. Roost consumes Starling's published NuGet packages, pinned exactly, and nothing else (plan section 2.2). Roost makes no changes to Starling's repository; what Roost needs from Starling is requested as an issue on Starling's roadmap. It owns its own evidence pipeline, profiles, fixtures and tolerances in `evidence/`, and no throughput number is published for a Roost profile before it passes Roost's fidelity gates.
 
 ## Roles
 
@@ -57,5 +57,6 @@ Roost uses the same states as Starling's charter (Experimental, Preview, Stable)
 | Local GPU hours per milestone | *For the maintainer.* Measured by `tools/gpu-lease`; the recorded cap is 40 GPU-hours a month. |
 | Rented single-GPU hours per milestone | *For the maintainer.* Plan decision 16. |
 | Rented multi-GPU hours per milestone (NVLink pods, and a multi-node rental) | *For the maintainer.* Plan decision 20. |
+| ROCm hardware (rented AMD Instinct pods; one consumer RDNA card) | *For the maintainer.* Plan decision 29, M7. |
 
 Amounts are recorded in [docs/kickoff.md](../docs/kickoff.md) when the maintainer sets them. This charter approves no spend.
