@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- netstandard2.0 so the model compiler (a Roslyn source generator) can bundle these types (S4 finding 3). -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Description>Roost op graph (contract C7): typed DAG of C3 ops, pass and checker interfaces. Passes land here in stream L.</Description>
+  </PropertyGroup>
+</Project>

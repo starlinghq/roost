@@ -1,0 +1,32 @@
+diff --git i/csrc/layernorm_kernels.cu w/csrc/layernorm_kernels.cu
+index 8d6741d..794b40f 100644
+--- i/csrc/layernorm_kernels.cu
++++ w/csrc/layernorm_kernels.cu
+@@ -1,11 +1,11 @@
+ #include <numeric>
+ 
+-#include "torch_utils.h"
++#include "roost_vllm_shim.h"  // Roost: replaces torch_utils.h
+ 
+ #include "cub_helpers.h"
+ #include "core/utils.hpp"
+ #include "type_convert.cuh"
+-#include "dispatch_utils.h"
++// Roost: dispatch_utils.h is torch dispatch only
+ #include "quantization/vectorization_utils.cuh"
+ 
+ namespace vllm {
+@@ -218,6 +218,7 @@ fused_add_rms_norm_kernel(
+ 
+ }  // namespace vllm
+ 
++#ifdef ROOST_VLLM_WITH_TORCH_HOST  // Roost: torch launchers, not built
+ void rms_norm(torch::stable::Tensor& out,    // [..., hidden_size]
+               torch::stable::Tensor& input,  // [..., hidden_size]
+               std::optional<torch::stable::Tensor> weight, double epsilon) {
+@@ -371,3 +372,5 @@ void fused_add_rms_norm(torch::stable::Tensor& input,     // [..., hidden_size]
+     }
+   }
+ }
++
++#endif  // ROOST_VLLM_WITH_TORCH_HOST

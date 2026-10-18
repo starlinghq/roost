@@ -1,0 +1,13 @@
+# Build outputs and fetched upstream sources never enter the repository.
+build/
+out/
+*.o
+*.obj
+*.so
+*.a
+*.cubin
+*.fatbin
+*.ptx
+*.ii
+*.cudafe1.*
+/test_paged_decode
