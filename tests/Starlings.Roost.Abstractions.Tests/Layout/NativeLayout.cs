@@ -49,7 +49,7 @@ internal static partial class NativeLayout
             }
             else
             {
-                current!.Fields.Add(new NativeField(parts[0], Int(parts[1]), Int(parts[2])));
+                current!.Fields.Add(new NativeField(parts[0], Int(parts[1]), Int(parts[2]), parts[3]));
             }
         }
 
@@ -87,4 +87,5 @@ internal static partial class NativeLayout
 
 internal sealed record NativeStruct(string Name, int Size, int Align, List<NativeField> Fields);
 
-internal sealed record NativeField(string Name, int Offset, int Size);
+/// <summary>A golden field. <see cref="Type"/> is the type class: u32, f32, ptr, a struct name and so on.</summary>
+internal sealed record NativeField(string Name, int Offset, int Size, string Type);
