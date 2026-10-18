@@ -36,7 +36,7 @@ internal static class Emitter
             w.Open();
         }
 
-        w.Line("public static unsafe partial class " + spec.ClassName);
+        w.Line("public static partial class " + spec.ClassName);
         w.Open();
 
         w.Line("/// <summary>The model name.</summary>");

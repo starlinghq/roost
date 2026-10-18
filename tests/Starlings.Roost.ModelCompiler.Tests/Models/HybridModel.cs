@@ -3,7 +3,7 @@ using Starlings.Roost.ModelCompiler;
 namespace Starlings.Roost.ModelCompiler.Tests.Models;
 
 // A Qwen3.5-shaped tiny hybrid: four layers, three Gated DeltaNet layers (0, 1, 2) and one full-attention layer (3),
-// the same pattern as Qwen3.5-0.8B (every fourth layer attends) with a sandbox-sized width. Two state groups: paged
+// a pattern that yields 6 attention and 18 recurrent layers when repeated to 24 (the counts Qwen3.5-0.8B has, decision 15), with a sandbox-sized width. Two state groups: paged
 // K and V for the attention layer, recurrent state and convolution state for the others. The recurrent block uses
 // separate q, k and v projections because the C3 GatedDeltaRule takes contiguous q, k and v (no strides); the real
 // Qwen3.5 definition is R-035.
