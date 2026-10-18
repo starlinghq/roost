@@ -94,7 +94,7 @@ def assets(names: list[str]) -> str:
     return json.dumps({"libraries": {f"{n}/1.0.0": {} for n in names}})
 
 
-def test_onnx_runtime_in_engine_closure_fails(tmp_path, capsys):
+def test_onnx_runtime_in_worker_side_closure_fails(tmp_path, capsys):
     root = git_repo(tmp_path)
     write(root / "src/Starlings.Roost.Models.Qwen3/Starlings.Roost.Models.Qwen3.csproj", "<Project />")
     write(
@@ -103,15 +103,21 @@ def test_onnx_runtime_in_engine_closure_fails(tmp_path, capsys):
     )
     write(root / "src/Starlings.Roost.Server/Starlings.Roost.Server.csproj", "<Project />")
     write(root / "src/Starlings.Roost.Server/obj/project.assets.json", assets(["Microsoft.ML.OnnxRuntime"]))
+    write(root / "src/Starlings.Roost.Generation/Starlings.Roost.Generation.csproj", "<Project />")
+    write(
+        root / "src/Starlings.Roost.Generation/obj/project.assets.json",
+        assets(["Starlings.Generation.OnnxGenAI", "Microsoft.ML.OnnxRuntimeGenAI.Managed"]),
+    )
     assert boundaries.main(["--root", str(root)]) == 1
     out = capsys.readouterr().out
-    assert "Models.Qwen3.csproj: engine package reaches Microsoft.ML.OnnxRuntimeGenAI.Managed/1.0.0" in out
-    assert "Server" not in out  # exempt (R-052)
+    assert "Models.Qwen3.csproj: worker-side package reaches Microsoft.ML.OnnxRuntimeGenAI.Managed/1.0.0" in out
+    assert "Server" not in out  # host process (decision 30)
+    assert "Roost.Generation" not in out  # host process (decision 30)
 
 
-def test_unrestored_engine_project_fails(tmp_path, capsys):
+def test_unrestored_worker_side_project_fails(tmp_path, capsys):
     root = git_repo(tmp_path)
-    write(root / "src/Starlings.Generation.Roost/Starlings.Generation.Roost.csproj", "<Project />")
+    write(root / "src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj", "<Project />")
     assert boundaries.main(["--root", str(root)]) == 1
     assert "not restored" in capsys.readouterr().out
 
