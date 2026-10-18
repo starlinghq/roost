@@ -231,6 +231,4 @@ def test_backlog_parses_every_item_with_labels():
     assert len(items) == backlog.EXPECTED
     by_id = {item["id"]: item for item in items}
     assert backlog.labels_for(by_id["R-060"]) == ["backlog", "stream:A", "phase:M0", "phase:M2"]
-    assert "starling-pr" in backlog.labels_for(by_id["R-009"])
-    assert "starling-pr" in backlog.labels_for(by_id["R-001"])
-    assert "starling-pr" not in backlog.labels_for(by_id["R-003"])
+    assert not any("starling-pr" in backlog.labels_for(item) for item in items)

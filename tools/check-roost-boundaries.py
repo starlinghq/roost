@@ -27,7 +27,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # Engine packages (build plan R-003). Starlings.Roost.Models.* matches every model package.
 ENGINE = re.compile(
-    r"^Starlings\.(Roost\.(Abstractions|Ops|Graph|Engine|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)"
+    r"^Starlings\.(Roost\.(Abstractions|Ops|Graph|Engine|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Generation|Models\..+)"
     r"|Generation\.Roost)$"
 )
 ONNX = re.compile(r"^microsoft\.ml\.onnxruntime", re.IGNORECASE)
