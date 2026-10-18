@@ -25,7 +25,7 @@ public sealed class TwoProcessStressTests
         Assert.True(outcome.ResultEmpty > 0, "the result ring never ran empty");
         Assert.Contains("OK steps=" + steps.ToString(CultureInfo.InvariantCulture), outcome.WorkerSummary, StringComparison.Ordinal);
         Assert.Contains("allocatedBytes=0", outcome.WorkerSummary, StringComparison.Ordinal);
-        Assert.Equal(0, outcome.HostAllocatedBytes);
+        Assert.True(outcome.HostAllocatedBytes == 0, $"host allocated {outcome.HostAllocatedBytes} bytes after warm-up. Worker stdout: {outcome.WorkerSummary}. Worker stderr: {outcome.WorkerErrors}");
         Assert.False(outcome.WorkerSummary.Contains("planEmpty=0 ", StringComparison.Ordinal), "the worker never found the plan ring empty");
         Assert.False(outcome.WorkerSummary.Contains("twoInFlight=0 ", StringComparison.Ordinal), "two plans were never in flight");
         var line = $"seed={seed} hostPublishFull={outcome.PublishFull} hostResultEmpty={outcome.ResultEmpty} hostAllocatedBytes={outcome.HostAllocatedBytes} worker: {outcome.WorkerSummary}";
