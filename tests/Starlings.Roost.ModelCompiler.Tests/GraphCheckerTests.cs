@@ -102,6 +102,28 @@ public sealed class GraphCheckerTests
     }
 
     [Fact]
+    public void CheckPassRunsThePassAndChecksItsOutput()
+    {
+        var checker = new GraphChecker();
+        var ev = new GraphEvaluator<StubFusedOps>(_symbols);
+        Assert.True(checker.CheckPass(new FuseAddRmsNormPass(), _reference, Target, ev, _inputs, Tolerances).Passed);
+        Assert.False(checker.CheckPass(new FuseAddRmsNormPass("0.5"), _reference, Target, ev, _inputs, Tolerances).Passed);
+        var notReference = new IdentityPass().Run(_reference, Target);
+        Assert.Throws<ArgumentException>(() => checker.CheckPass(new IdentityPass(), notReference, Target, ev, _inputs, Tolerances));
+        Assert.Throws<ArgumentNullException>(() => checker.CheckPass(null!, _reference, Target, ev, _inputs, Tolerances));
+    }
+
+    [Fact]
+    public void ANodeWhoseOriginIsNotInTheReferenceIsAMismatch()
+    {
+        var candidate = new IdentityPass().Run(_reference, Target);
+        var nodes = candidate.Nodes.Select((n, i) => i == 3 ? new OpNode(n.Id, n.Op, n.Inputs, n.Outputs, n.Attributes, [99], n.Variant) : n).ToList();
+        var result = Check(new OpGraph("bad-origin", candidate.Values, nodes, false));
+        Assert.False(result.Passed);
+        Assert.Equal(3, result.Mismatches.Single().CandidateNode);
+    }
+
+    [Fact]
     public void ToleranceDecidesWhetherASmallDifferencePasses()
     {
         var fused = new FuseAddRmsNormPass("1e-3").Run(_reference, Target);

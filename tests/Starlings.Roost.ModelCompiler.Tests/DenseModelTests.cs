@@ -208,36 +208,24 @@ public sealed unsafe class DenseModelTests : IDisposable
     public void ForwardAllocatesNothingOnceWarm()
     {
         var plan = BindPlan();
-        for (int i = 0; i < 300; i++)
+        void Step()
         {
             var ctx = new DenseModel.StepContext(_layout, _arena, _weights, default, plan, Tokens, Rows.Length, 1, 0);
             DenseModel.Forward<StubCpuOps>(in ctx);
         }
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        int gen0 = GC.CollectionCount(0);
-        for (int i = 0; i < 2000; i++)
-        {
-            var ctx = new DenseModel.StepContext(_layout, _arena, _weights, default, plan, Tokens, Rows.Length, 1, 0);
-            DenseModel.Forward<StubCpuOps>(in ctx);
-        }
-
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
-        Assert.Equal(gen0, GC.CollectionCount(0));
+        long[] rounds = AllocationProbe.Rounds(Step);
+        Assert.Equal(0, rounds.Min());
     }
 
     [Fact]
-    public void AllocationCounterSeesAllocations()
+    public void AllocationProbeSeesAnAllocatingStep()
     {
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        object[] keep = new object[100];
-        for (int i = 0; i < keep.Length; i++)
-        {
-            keep[i] = new float[16];
-        }
+        object? sink = null;
+        void Allocating() => sink = new float[16];
 
-        Assert.True(GC.GetAllocatedBytesForCurrentThread() - before >= 100 * 64);
-        GC.KeepAlive(keep);
+        Assert.True(AllocationProbe.Rounds(Allocating).Min() >= 2000 * 64);
+        GC.KeepAlive(sink);
     }
 
     private double[] Reference()

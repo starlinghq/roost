@@ -80,7 +80,7 @@ internal sealed class ModelBuilder
 
     private BuiltModel? Run(Vocabulary vocab)
     {
-        if (!Enum.TryParse(_spec.Dtype, out _dtype) || _dtype == GraphDType.Undefined || IsSubByte(_dtype))
+        if (!TryDType(_spec.Dtype, out _dtype) || IsSubByte(_dtype))
         {
             Fail(Diagnostics.BadDefinition, _spec.Location, "Model dtype '" + _spec.Dtype + "' is not a byte-sized element type name (for example F32, F16, BF16)");
             return null;
@@ -147,7 +147,7 @@ internal sealed class ModelBuilder
             }
 
             var dtype = _dtype;
-            if (w.Dtype != null && !Enum.TryParse(w.Dtype, out dtype))
+            if (w.Dtype != null && !TryDType(w.Dtype, out dtype))
             {
                 Fail(Diagnostics.BadDefinition, w.Location, "Weight '" + name + "': dtype '" + w.Dtype + "' is not an element type name");
                 continue;
@@ -202,7 +202,7 @@ internal sealed class ModelBuilder
 
             bool recurrent = g.Kind == "Recurrent";
             var dtype = recurrent ? GraphDType.F32 : _dtype;
-            if (g.Dtype != null && (!Enum.TryParse(g.Dtype, out dtype) || IsSubByte(dtype)))
+            if (g.Dtype != null && (!TryDType(g.Dtype, out dtype) || IsSubByte(dtype)))
             {
                 Fail(Diagnostics.BadStateGroup, g.Location, "State group '" + g.Name + "': dtype '" + g.Dtype + "' is not a byte-sized element type name");
                 continue;
@@ -212,7 +212,7 @@ internal sealed class ModelBuilder
             if (g.ConvDtype != null)
             {
                 var cd = _dtype;
-                if (!Enum.TryParse(g.ConvDtype, out cd) || IsSubByte(cd))
+                if (!TryDType(g.ConvDtype, out cd) || IsSubByte(cd))
                 {
                     Fail(Diagnostics.BadStateGroup, g.Location, "State group '" + g.Name + "': ConvDtype '" + g.ConvDtype + "' is not a byte-sized element type name");
                     continue;
@@ -541,10 +541,10 @@ internal sealed class ModelBuilder
         {
             var t = o.Target;
             List<ShapeDim> shape;
-            GraphDType dt = t.Dtype ?? (o.InPlaceOf.HasValue ? _values[o.InPlaceOf.Value].Dtype : _dtype);
-            if (t.Dtype != null && IsSubByte(dt))
+            GraphDType dt = o.InPlaceOf.HasValue ? _values[o.InPlaceOf.Value].Dtype : _dtype;
+            if (t.Dtype != null && (!TryDType(t.Dtype, out dt) || IsSubByte(dt)))
             {
-                Fail(Diagnostics.BadShape, loc, "Node '" + name + "': output '" + t.Name + "' dtype " + dt + " is sub-byte; activations are byte-sized");
+                Fail(Diagnostics.BadShape, loc, "Node '" + name + "': output '" + t.Name + "' dtype '" + t.Dtype + "' is not a byte-sized element type name");
                 _poisoned.Add(t.Name);
                 continue;
             }
@@ -608,7 +608,7 @@ internal sealed class ModelBuilder
 
     private sealed class TargetSpec
     {
-        public TargetSpec(string name, string? shape, GraphDType? dtype)
+        public TargetSpec(string name, string? shape, string? dtype)
         {
             Name = name;
             Shape = shape;
@@ -619,7 +619,7 @@ internal sealed class ModelBuilder
 
         public string? Shape { get; }
 
-        public GraphDType? Dtype { get; }
+        public string? Dtype { get; }
     }
 
     /// <summary>Parses <c>name[shape]:dtype</c>; the shape and dtype are optional.</summary>
@@ -627,20 +627,12 @@ internal sealed class ModelBuilder
     {
         text = text.Trim();
         string? shape = null;
-        GraphDType? dtype = null;
+        string? dtype = null;
         int colon = text.LastIndexOf(':');
         int close = text.LastIndexOf(']');
         if (colon > close && colon >= 0)
         {
-            if (Enum.TryParse(text.Substring(colon + 1).Trim(), out GraphDType dt))
-            {
-                dtype = dt;
-            }
-            else
-            {
-                dtype = GraphDType.Undefined;
-            }
-
+            dtype = text.Substring(colon + 1).Trim();
             text = text.Substring(0, colon).Trim();
         }
 
@@ -651,7 +643,7 @@ internal sealed class ModelBuilder
             text = text.Substring(0, open).Trim();
         }
 
-        return new TargetSpec(text, shape, dtype == GraphDType.Undefined ? null : dtype);
+        return new TargetSpec(text, shape, dtype);
     }
 
     private int PlanValue(PlanInputInfo plan)
@@ -983,6 +975,13 @@ internal sealed class ModelBuilder
         }
 
         return true;
+    }
+
+    /// <summary>Parses an element type name (F32, BF16, ...); numbers and unknown names are rejected.</summary>
+    internal static bool TryDType(string name, out GraphDType dtype)
+    {
+        dtype = GraphDType.Undefined;
+        return Enum.IsDefined(typeof(GraphDType), name) && name != nameof(GraphDType.Undefined) && Enum.TryParse(name, out dtype);
     }
 
     internal static bool IsSubByte(GraphDType t) => t == GraphDType.I4 || t == GraphDType.U4 || t == GraphDType.F4E2M1;

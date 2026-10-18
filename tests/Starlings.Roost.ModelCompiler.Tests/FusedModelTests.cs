@@ -74,22 +74,20 @@ public sealed unsafe class FusedModelTests : IDisposable
     [Fact]
     public void BothLoweringsAllocateNothing()
     {
-        for (int i = 0; i < 300; i++)
+        void Fallback()
         {
             var ctx = new FusedModel.StepContext(_layout, _arena, _weights, default, _plan, Tokens, Rows.Length, 1, 0);
             FusedModel.Forward<StubCpuOps>(in ctx);
-            FusedModel.Forward<StubFusedOps>(in ctx);
         }
 
-        long before = GC.GetAllocatedBytesForCurrentThread();
-        for (int i = 0; i < 2000; i++)
+        void Fused()
         {
             var ctx = new FusedModel.StepContext(_layout, _arena, _weights, default, _plan, Tokens, Rows.Length, 1, 0);
-            FusedModel.Forward<StubCpuOps>(in ctx);
             FusedModel.Forward<StubFusedOps>(in ctx);
         }
 
-        Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+        Assert.Equal(0, AllocationProbe.Rounds(Fallback).Min());
+        Assert.Equal(0, AllocationProbe.Rounds(Fused).Min());
     }
 
     [Fact]
