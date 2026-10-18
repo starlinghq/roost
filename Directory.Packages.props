@@ -6,8 +6,11 @@
     tools/check-roost-boundaries.py enforces it in CI.
   -->
   <ItemGroup>
+    <!-- Starling's published packages, exact pins (plan 2.2). They bring ONNX Runtime GenAI: host-process packages only (decision 30). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
+    <PackageVersion Include="Starlings.Generation.OnnxGenAI" Version="[0.2.0]" />
+    <PackageVersion Include="Starlings.Models.Qwen35" Version="[0.2.0]" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
 </Project>
