@@ -11,3 +11,16 @@ Run 1, 2026-10-18 14:35, seed=20261018, 600 s requested, shared box at load 9 to
 Run 2, 2026-10-18 14:59, seed=20261019, 900 s, load 1 to 4 (heartbeat diagnostics in the failure message):
   seed=20261019 seconds=900 episodes=3702 goodSteps=56745 recoverable=7106 twoInFlight=5843 CancelledStart=341 CleanShutdown=371 Crash=359 ExternalKill=386 FrozenWorker=386 Hang=379 KillWhileHealthy=401 RejectedHandshake=350 Sticky=350 Throw=379
   PASSED: no segment file and no worker process left behind (the test asserts both), every terminal event ran 341 to 401 times.
+
+Run 3 (reviewer, before the fix), seed=777001, 300 s requested, quiet box (load 1.41):
+  FAILED at 280 s, episode 1105 (Hang): "hang was classified Stalled; heartbeat counter=401 state=Stepping ageMs=0.0 loadavg=1.41".
+  Diagnosis: Poll() took `now`, then read the heartbeat; a beat in between made WorkerNs > now, and the unsigned
+  `now - WorkerNs` wrapped, so a live heartbeat looked old. Cause of runs 1 and 3. Fixed by WorkerTransportBase.HeartbeatAdvanced (age clamped at zero),
+  tested deterministically in HeartbeatClassificationTests. A same-seed replay fixes the episode sequence, not the interleaving.
+
+Runs 4 to 6 (after the fix, 2026-10-18, load average 1 to 3, 300 s each, all PASSED; the test asserts no segment file and no worker process left behind):
+  seed=777001 episodes=1200 goodSteps=17713 recoverable=2374 twoInFlight=1818 CancelledStart=129 CleanShutdown=113 Crash=121 ExternalKill=124 FrozenWorker=121 Hang=129 KillWhileHealthy=124 RejectedHandshake=125 Sticky=100 Throw=114
+  seed=20261020 episodes=1285 goodSteps=20003 recoverable=2579 twoInFlight=2112 CancelledStart=114 CleanShutdown=132 Crash=129 ExternalKill=128 FrozenWorker=131 Hang=114 KillWhileHealthy=142 RejectedHandshake=148 Sticky=132 Throw=115
+  seed=424242 episodes=1267 goodSteps=19241 recoverable=2390 twoInFlight=2017 CancelledStart=134 CleanShutdown=128 Crash=123 ExternalKill=111 FrozenWorker=120 Hang=120 KillWhileHealthy=140 RejectedHandshake=136 Sticky=129 Throw=126
+  Total 3752 episodes, 387 Hang episodes, all classified Hang. These runs use HeartbeatLiveness 5 s; the default 50 ms window is covered by
+  MissedDeadlineWithALiveHeartbeatIsAHangAtTheDefaultLivenessWindow (5 rounds per transport, passed in 3 consecutive full-suite runs).

@@ -14,9 +14,10 @@ segment and rings), `proc` (the real `WorkerRuntime` in a child process). Host l
 
 ## Verdict for decision 21
 
-With the .NET host, process minus in-process is -1.2 us at p50 and -1.3 us at p99 pooled (per-round p99 gaps -316, +15
-and -5 us), against S8's +1.2 us and +21 us with the C++ host. The 90 us kill criterion (2% of a 4.5 ms step) is not
-met, so S8's provisional recommendation (a), out-of-process by default, stands. It remains subject to a re-measurement
+With the .NET host, process minus in-process is -1.2 us at p50 (resolved) against S8's +1.2 us with the C++ host. The p99
+is not resolved: the pooled gap is -1.3 us but the per-round gaps are -316, +15 and -5 us and the direct baseline's p99
+swings by 1.5 ms, so the p99 figure is noise and is not a finding. The 90 us kill criterion (2% of a 4.5 ms step) is not
+shown to be met by p99; it rests on the p50 and on the largest positive per-round p99 gap (+15 us). So S8's provisional recommendation (a), out-of-process by default, stands. It remains subject to a re-measurement
 on a measured step once R-025 exists, and on a quieter machine (see the limits below).
 
 ## Result (depth 1, lock-step, `bench_4500us_d1.txt`, `pool_d1.txt`)
