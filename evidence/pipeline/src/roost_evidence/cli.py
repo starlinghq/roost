@@ -8,7 +8,7 @@ import sys
 from collections.abc import Sequence
 from pathlib import Path
 
-from roost_evidence import evaluate_generation, manifest, reference_runner
+from roost_evidence import evaluate_generation, evaluate_layers, layer_recorder, manifest, reference_runner
 
 
 def _validate_manifest(args: argparse.Namespace) -> int:
@@ -42,6 +42,31 @@ def _evaluate(args: argparse.Namespace) -> int:
     return 0 if report["status"] == evaluate_generation.PASSED else 1
 
 
+def _evaluate_layers(args: argparse.Namespace) -> int:
+    try:
+        report = evaluate_layers.evaluate(args.results, args.reference, args.tolerances, args.reference_captures)
+    except evaluate_generation.InputError as error:
+        print(f"error: {error}", file=sys.stderr)
+        return 2
+    text = json.dumps(report, indent=1, ensure_ascii=False) + "\n"
+    if args.report:
+        args.report.write_text(text, encoding="utf-8")
+    for check in report["checks"]:
+        suffix = f": {check['detail']}" if check["detail"] else ""
+        print(f"{check['status']:<14} {check['id']}{suffix}")
+    for name in report["missing_cases"]:
+        print(f"missing        {name}: no candidate capture")
+    for name, case in report["cases"].items():
+        first = case["first_divergent"]
+        if first:
+            print(
+                f"divergence     {name} first at forward {first['forward']} {first['stage']} "
+                f"position {first['position']} (max abs {first['max_abs']:.3g})"
+            )
+    print(f"{report['status']}: layers")
+    return 0 if report["status"] == evaluate_generation.PASSED else 1
+
+
 def _reference_run(args: argparse.Namespace) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     try:
@@ -52,8 +77,10 @@ def _reference_run(args: argparse.Namespace) -> int:
             revision=args.revision,
             max_new_tokens=args.max_new_tokens,
             stop_ids=args.stop_id,
+            capture_layers=args.capture_layers,
+            state_forwards=args.state_forwards,
         )
-    except (reference_runner.ExtraMissingError, ValueError, OSError) as error:
+    except (reference_runner.ExtraMissingError, layer_recorder.CaptureSetupError, ValueError, OSError) as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
     print(f"wrote {path}")
@@ -92,6 +119,23 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--report", type=Path, help="write the JSON report here")
     evaluate.set_defaults(handler=_evaluate)
 
+    layers = commands.add_parser(
+        "evaluate-layers",
+        help="compare per-layer captures with a reference run and attribute the first divergent layer",
+        description=(
+            "Exit 0 when every check passed, 1 when any failed or was not run, 2 when the inputs cannot be evaluated. "
+            "Tolerances are an input; Roost's protected file is maintainer-only."
+        ),
+    )
+    layers.add_argument("results", type=Path, help="candidate run directory holding layers/<id>.safetensors")
+    layers.add_argument("--reference", type=Path, required=True, help="reference.jsonl of a reference run")
+    layers.add_argument(
+        "--reference-captures", type=Path, required=True, help="reference run directory holding layers/<id>.safetensors"
+    )
+    layers.add_argument("--tolerances", type=Path, required=True, help="tolerance file (.yaml, .yml or .json)")
+    layers.add_argument("--report", type=Path, help="write the JSON report here")
+    layers.set_defaults(handler=_evaluate_layers)
+
     reference = commands.add_parser(
         "reference-run",
         help="run the transformers fp32 CPU reference (needs the `reference` extra)",
@@ -103,6 +147,17 @@ def build_parser() -> argparse.ArgumentParser:
     reference.add_argument("--revision", help="full 40-character commit SHA, required for a hub id")
     reference.add_argument("--max-new-tokens", type=int, default=128)
     reference.add_argument("--stop-id", type=int, action="append", help="extra stop token id (repeatable)")
+    reference.add_argument(
+        "--capture-layers",
+        action="store_true",
+        help="also write layers/<id>.safetensors: hidden states per layer, recurrent states of Gated DeltaNet layers",
+    )
+    reference.add_argument(
+        "--state-forwards",
+        type=int,
+        default=reference_runner.DEFAULT_STATE_FORWARDS,
+        help="capture recurrent and convolution state after the first N forwards (default %(default)s)",
+    )
     reference.set_defaults(handler=_reference_run)
     return parser
 
