@@ -22,7 +22,7 @@ from pathlib import Path
 
 PLAN = Path(__file__).resolve().parent.parent / "docs" / "plan" / "build-plan.md"
 ROW = re.compile(r"^\| (R-\d{3}) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \|$")
-EXPECTED = 106
+EXPECTED = 109
 
 # Work that lands in starlinghq/starling (build plan section 10, first paragraph).
 STARLING_STREAMS = {"B1", "B2", "B3"}
