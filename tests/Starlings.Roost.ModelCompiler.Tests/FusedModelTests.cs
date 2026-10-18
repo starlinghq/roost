@@ -86,8 +86,8 @@ public sealed unsafe class FusedModelTests : IDisposable
             FusedModel.Forward<StubFusedOps>(in ctx);
         }
 
-        Assert.Equal(0, AllocationProbe.Rounds(Fallback).Min());
-        Assert.Equal(0, AllocationProbe.Rounds(Fused).Min());
+        AllocationProbe.AssertSteady(Fallback);
+        AllocationProbe.AssertSteady(Fused);
     }
 
     [Fact]

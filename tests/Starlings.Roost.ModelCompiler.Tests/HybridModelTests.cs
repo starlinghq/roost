@@ -68,14 +68,14 @@ public class HybridModelTests
     public void WeightSlotsInterleaveLayersLayerByLayer()
     {
         var names = HybridModel.WeightSlots.Select(s => s.Name).ToArray();
-        Assert.Equal(1 + (3 * 10) + 9 + 2, names.Length);
+        Assert.Equal(1 + (3 * 11) + 9 + 2, names.Length);
         Assert.Equal("embed", names[0]);
         Assert.Equal(
-            ["l0.norm", "l0.q_proj", "l0.k_proj", "l0.lin_v_proj", "l0.lin_conv", "l0.lin_gb", "l0.lin_out", "l0.mlp_norm", "l0.gate_up", "l0.down"],
-            names.Skip(1).Take(10).ToArray());
+            ["l0.norm", "l0.lin_q_proj", "l0.lin_k_proj", "l0.lin_v_proj", "l0.lin_conv", "l0.lin_g_proj", "l0.lin_beta_proj", "l0.lin_out", "l0.mlp_norm", "l0.gate_up", "l0.down"],
+            names.Skip(1).Take(11).ToArray());
         Assert.Equal(
             ["l3.norm", "l3.q_proj", "l3.k_proj", "l3.v_proj", "l3.o_proj", "l3.qk_norm", "l3.mlp_norm", "l3.gate_up", "l3.down"],
-            names.Skip(31).Take(9).ToArray());
+            names.Skip(34).Take(9).ToArray());
         Assert.Equal(["final_norm", "lm_head"], names.TakeLast(2).ToArray());
         Assert.All(HybridModel.WeightSlots, s => Assert.Equal(DType.BF16, s.Dtype));
     }
@@ -114,7 +114,7 @@ public class HybridModelTests
     public void GraphHasTheHybridLayerPattern()
     {
         var g = HybridModel.BuildGraph();
-        string[] linear = ["RmsNorm", "Gemm", "Gemm", "Gemm", "CausalConv1d", "Gemm", "GatedDeltaRule", "Gemm", "Residual", "RmsNorm", "Gemm", "SiluAndMul", "Gemm", "Residual"];
+        string[] linear = ["RmsNorm", "Gemm", "Gemm", "Gemm", "CausalConv1d", "Gemm", "Gemm", "GatedDeltaRule", "Gemm", "Residual", "RmsNorm", "Gemm", "SiluAndMul", "Gemm", "Residual"];
         string[] attention = ["RmsNorm", "Gemm", "Gemm", "Gemm", "QkNorm", "Rope", "CacheWrite", "PagedAttention", "Gemm", "Residual", "RmsNorm", "Gemm", "SiluAndMul", "Gemm", "Residual"];
         var expected = new List<string> { "Embedding" };
         for (int l = 0; l < 3; l++)
@@ -198,7 +198,38 @@ public class HybridModelTests
             HybridModel.Forward<RecordingOps>(in ctx);
         }
 
-        Assert.Equal(0, AllocationProbe.Rounds(Step).Min());
+        AllocationProbe.AssertSteady(Step);
+    }
+
+    [Fact]
+    public void RecurrentOpBuffersMatchTheirScalarArguments()
+    {
+        // The generator does not check buffer extents against an op's scalar arguments, so the model definition is held to it here.
+        var g = HybridModel.BuildGraph();
+        var deltas = g.Nodes.Where(n => n.Op == "GatedDeltaRule").ToArray();
+        Assert.Equal(3, deltas.Length);
+        foreach (var n in deltas)
+        {
+            long Arg(string name) => long.Parse(n.Attributes["arg." + name].Trim('(', ')'), System.Globalization.CultureInfo.InvariantCulture);
+            long Cols(string field)
+            {
+                int at = Array.IndexOf(n.Attributes["in"].Split(','), field);
+                var shape = g.Values[n.Inputs[at]].Shape;
+                Assert.Equal(2, shape.Count);
+                Assert.Equal("tokens", shape[0].Symbol);
+                return shape[1].Size;
+            }
+
+            Assert.Equal(Arg("KHeads") * Arg("KDim"), Cols("Q"));
+            Assert.Equal(Arg("KHeads") * Arg("KDim"), Cols("K"));
+            Assert.Equal(Arg("VHeads") * Arg("VDim"), Cols("V"));
+            Assert.Equal(Arg("VHeads"), Cols("G"));
+            Assert.Equal(Arg("VHeads"), Cols("Beta"));
+            // G and Beta are separate buffers.
+            int gi = Array.IndexOf(n.Attributes["in"].Split(','), "G");
+            int bi = Array.IndexOf(n.Attributes["in"].Split(','), "Beta");
+            Assert.NotEqual(n.Inputs[gi], n.Inputs[bi]);
+        }
     }
 
     [Fact]
