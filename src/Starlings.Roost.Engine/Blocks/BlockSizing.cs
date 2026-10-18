@@ -16,8 +16,8 @@ public readonly record struct GroupCapacity(int Group, int Blocks, int SnapshotS
 /// <remarks>
 /// <para>Rule: recurrent groups first, at <c>maxSequences</c> live slots plus the descriptor's snapshot slots, each at
 /// <c>BytesPerBlock</c>. The rest of the budget goes to the paged groups so that every one of them can hold the same
-/// number of tokens <c>T</c>: with <c>bytes per token = BytesPerBlock / BlockSize</c>, <c>T</c> is the largest value
-/// with <c>sum(floor(T / BlockSize) * BytesPerBlock) &lt;= rest</c>, and a group holds <c>floor(T / BlockSize)</c>
+/// number of tokens <c>T</c>: with <c>bytes per token = BytesPerBlock / BlockSize</c>, <c>T</c> is a value found by
+/// an estimate and a downward correction, with <c>sum(floor(T / BlockSize) * BytesPerBlock) &lt;= rest</c>, and a group holds <c>floor(T / BlockSize)</c>
 /// blocks. A sliding group never needs more than <c>maxSequences * (ceil(window / BlockSize) + 1)</c> blocks (a window
 /// spans one more block than its length when it is not aligned); a group capped there frees its share for the others.
 /// The chunk being prefilled and a speculation tree are not in that cap: reserving them is admission control's job.</para>
