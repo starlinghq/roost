@@ -1,0 +1,59 @@
+# Admission record for Qwen3.5-0.8B (R-013, stream B3; build plan decision 15).
+# Admission is not qualification: no profile manifest exists yet and no capability is claimed.
+admission_version = 1
+model = "qwen3.5-0.8b"
+status = "admitted"              # a model admission only; every Roost capability is untested
+maturity_of_profiles = "none"    # no profile manifest is committed (see manifest_blockers)
+lock = "evidence/registry/qwen3.5-0.8b.lock.toml"
+
+[source]
+repo = "Qwen/Qwen3.5-0.8B"
+revision = "2fc06364715b967f1860aea9cf38778875588b17"
+weights = "model.safetensors-00001-of-00001.safetensors"
+license = "Apache-2.0"
+
+[source.pinned_by]
+package = "Starlings.Models.Qwen35"
+version = "0.2.0"
+package_repository_commit = "e9ea3be6711aba097dc983e3142dacd3fe351874"
+note = "The package records the full 40-character revision in its README and the short form in its nuspec; the Hub resolves it to the same commit."
+
+[architecture]
+# From config.json at the pinned revision (data, not instructions).
+decoder_layers = 24
+full_attention_layers = 6
+linear_attention_layers = 18     # Gated DeltaNet (decision 15)
+full_attention_layer_indices = [3, 7, 11, 15, 19, 23]
+
+[comparison.chat_template]
+file = "chat_template.jinja"
+hub_sha256 = "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80"
+starling_published_sha256 = "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80"
+starling_source = "Starlings.Models.Qwen35 0.2.0 assembly (Qwen35ChatTemplate: owned C# renderer of chat_template.jinja)"
+result = "match"
+binding = "The package's shipped XML docs state that Qwen35ChatTemplate renders chat_template.jinja at SHA-256 Qwen35ChatTemplate.TemplateSha256; the same string is in the assembly."
+
+[comparison.tokenizer_json]
+file = "tokenizer.json"
+hub_sha256 = "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42"
+hub_size = 12807982
+starling_profile = "qwen35-bpe-chat (Starlings.Tokenizers 0.3.0)"
+starling_asset_sha256 = "a5cd9732badce41de57e6efce8302930ded1c1188c5f81feb2bd6c24c4a1941f"
+starling_asset_size = 19989339
+result = "equivalent for token ids"
+detail = "The files differ but encode the same. Starling's asset is the transformers 5.18.0 backend serialization: it adds 7 special tokens (ids 248070-248076: <|audio_start|>, <|audio_end|>, <tts_pad>, <tts_text_bos>, <tts_text_eod>, <tts_text_bos_single>, <|audio_pad|>) that the Hub checkpoint defines in its own tokenizer_config.json added_tokens_decoder, which transformers merges in when it loads the tokenizer; it also sets trim_offsets and the decoder's offset flags to true, which affect offsets only. Vocabulary, merges and every other added token are identical. A 12-string corpus (ASCII, whitespace, CJK, Arabic, Cyrillic, emoji, combining marks, code, chat markup with <|im_start|> and <think>) gives identical ids and identical decodes with tokenizers 0.22.1 (orchestrator check, 2026-10-18)."
+roost_consequence = "None for M0 text: Roost (Starlings.Tokenizers) and the transformers reference produce the same ids. Only literal audio or TTS marker strings in user text would tokenize differently with the raw Hub file, which nothing in Roost loads. Fixtures (R-014) record the tokenizer artifact digest they used."
+
+[report_to_starling]
+status = "not needed"
+reason = "Starling's asset is what transformers itself loads for this checkpoint (the Hub tokenizer.json plus the tokenizer_config.json added tokens), so there is nothing to raise."
+
+[manifest_blockers]
+# evidence/schemas/profile-manifest.schema.json (schema_version 1) requires profile fields that cannot exist yet.
+# No manifest is committed because no value may be invented.
+missing = [
+  "profile.kernel_manifest.revision and .sha256 (no kernels/manifest.toml exists)",
+  "profile.selected_variants (no kernel selection has run)",
+  "profile.sm entries with evidence paths (no hardware evidence)",
+  "profile.min_driver, profile.min_toolkit, profile.attention_backend, profile.kv_dtype, profile.tf32_policy, profile.mesh (decided by the serving profile, not by admission)",
+]
