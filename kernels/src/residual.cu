@@ -10,7 +10,7 @@
 
 #include "roost_internal.h"
 
-namespace {
+namespace roost_residual {
 
 __device__ __forceinline__ float ToFloat(float v) { return v; }
 __device__ __forceinline__ float ToFloat(__half v) { return __half2float(v); }
@@ -50,7 +50,9 @@ RoostStatus Launch(const RoostResidualParams& p, cudaStream_t stream) {
   return ROOST_STATUS_OK;
 }
 
-}  // namespace
+}  // namespace roost_residual
+
+using roost_residual::Launch;
 
 extern "C" RoostStatus roost_residual_run(RoostContext* ctx, const void* params, const RoostWorkspace* /*ws*/,
                                           void* stream) {
