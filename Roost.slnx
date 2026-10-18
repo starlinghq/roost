@@ -3,9 +3,11 @@
   <Folder Name="/src/">
     <Project Path="src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <Project Path="src/Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" />
+    <Project Path="src/Starlings.Roost.ModelCompiler/Starlings.Roost.ModelCompiler.csproj" />
     <Project Path="src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Starlings.Roost.Abstractions.Tests/Starlings.Roost.Abstractions.Tests.csproj" />
+    <Project Path="tests/Starlings.Roost.ModelCompiler.Tests/Starlings.Roost.ModelCompiler.Tests.csproj" />
   </Folder>
 </Solution>
