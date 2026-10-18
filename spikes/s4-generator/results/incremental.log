@@ -1,0 +1,17 @@
+  Determining projects to restore...
+  Restored <repo>/spikes/s4-generator/IncrementalCheck/IncrementalCheck.csproj (in 452 ms).
+  2 of 3 projects are up-to-date for restore.
+  Generator -> <repo>/spikes/s4-generator/out/Generator/bin/Debug/netstandard2.0/Generator.dll
+  Ops -> <repo>/spikes/s4-generator/out/Ops/bin/Debug/net10.0/Ops.dll
+  IncrementalCheck -> <repo>/spikes/s4-generator/out/IncrementalCheck/bin/Debug/net10.0/IncrementalCheck.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.59
+baseline:              output step(s): [New] sources=1 diagnostics=0 generator=890.9 ms
+edit unrelated file:   output step(s): [Cached] sources=1 diagnostics=0 generator=31.8 ms
+edit def file (body):  output step(s): [Cached] sources=1 diagnostics=0 generator=8.8 ms
+edit a node (weight):  output step(s): [Modified] sources=1 diagnostics=0 generator=2.9 ms
+comment above attrs:   output step(s): [Modified] sources=1 diagnostics=0 generator=1.8 ms
