@@ -8,7 +8,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "roost-evidence"
 version = "0.1.0"
-description = "Roost evidence pipeline: profile manifest validation (R-012) and the generation evaluator (R-010)."
+description = "Roost evidence pipeline: manifest validation (R-012), the generation evaluator (R-010), per-layer capture (R-011)."
 requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"
 dependencies = [
@@ -17,10 +17,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-# Tool-time only: the transformers fp32 CPU reference runner (R-010). Not installed by the default gate.
+# Tool-time only: the transformers fp32 CPU reference runner (R-010) and its per-layer hook capture (R-011). Not installed
+# by the default gate. transformers 5.20.1 is the pin whose Qwen3.5 implementation (Gated DeltaNet layers, cache-held
+# recurrent state) runs on the CPU in float32 with its PyTorch fallbacks; 4.57.3 has no qwen3_5 model.
 reference = [
     "torch==2.9.1",
-    "transformers==4.57.3",
+    "transformers==5.20.1",
+    "safetensors==0.8.0",
 ]
 
 [project.scripts]
