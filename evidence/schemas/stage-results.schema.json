@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/starlinghq/roost/evidence/schemas/stage-results.schema.json",
+  "title": "Roost stage results",
+  "description": "Candidate outputs of one evaluator stage for one profile, format version 3, task generation (build plan R-010, contract owned by stream B2). Version 3 is the number Starling's published p016 section 10 gives this format; Roost has no versions 1 or 2. Two stages: template (rendered prompt and prompt ids, G1) and dotnet (generation, streaming, usage and the whole-run sections, G2/G4). Outputs only: tolerances come from the profile's protected tolerance file and are rejected here (the evaluator also rejects tolerance-like keys that this schema cannot reach). A change to this file follows the contract-version rule: bump format_version and update the evaluator, its tests and every producer in the same PR.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "format_version", "task", "profile", "stage", "candidate", "producer", "cases"],
+  "properties": {
+    "format": { "const": "roost.stage-results" },
+    "format_version": { "const": 3 },
+    "task": { "const": "generation" },
+    "profile": {
+      "description": "<family>/<profile>; must equal the manifest id of the profile under evaluation.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*/[a-z0-9][a-z0-9.-]*$"
+    },
+    "stage": { "enum": ["template", "dotnet"] },
+    "candidate": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "repository_commit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "machine": { "type": "string", "description": "Equal values mean the same machine." },
+        "provider": { "type": "string" },
+        "provider_options": { "type": "object" }
+      }
+    },
+    "assets": {
+      "description": "Digests of the files the stage loaded.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "cases": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "sections": {
+      "description": "Whole-run measurements that are not per case. Only the dotnet stage has them.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cached_vs_uncached": { "$ref": "#/$defs/cached_vs_uncached" },
+        "chunked_prefill": { "$ref": "#/$defs/chunked_prefill" },
+        "concurrency": { "$ref": "#/$defs/concurrency" }
+      }
+    },
+    "tensors": {
+      "description": "Float32 little-endian sidecars next to this file. step0_logprobs holds one log-softmax vector per case (step 0, after prefill).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "step0_logprobs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "dtype", "sha256", "cases"],
+          "properties": {
+            "file": { "type": "string", "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$" },
+            "dtype": { "const": "float32" },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "cases": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["id", "shape"],
+                "properties": {
+                  "id": { "type": "string", "minLength": 1 },
+                  "shape": { "type": "array", "minItems": 1, "maxItems": 1, "items": { "type": "integer", "minimum": 1 } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "stage": { "const": "template" } } },
+      "then": {
+        "properties": {
+          "cases": { "additionalProperties": { "$ref": "#/$defs/template_case" } }
+        },
+        "not": { "anyOf": [{ "required": ["sections"] }, { "required": ["tensors"] }] }
+      }
+    },
+    {
+      "if": { "properties": { "stage": { "const": "dotnet" } } },
+      "then": {
+        "required": ["sections"],
+        "properties": {
+          "cases": { "additionalProperties": { "$ref": "#/$defs/dotnet_case" } }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "token_ids": { "type": "array", "items": { "type": "integer", "minimum": 0 } },
+    "template_case": {
+      "description": "G1. rendered and prompt_ids are null when the renderer rejected the case, and then render_error says why.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rendered", "prompt_ids"],
+      "properties": {
+        "rendered": { "type": ["string", "null"] },
+        "render_error": { "type": ["string", "null"] },
+        "prompt_ids": { "oneOf": [{ "$ref": "#/$defs/token_ids" }, { "type": "null" }] }
+      }
+    },
+    "dotnet_case": {
+      "description": "G2/G4. output_ids include the stop token when finish_reason is eos. step0_top lists [token, log-probability] pairs, best first.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["prompt_ids", "output_ids", "finish_reason", "step0_top"],
+      "properties": {
+        "prompt_ids": { "$ref": "#/$defs/token_ids" },
+        "output_ids": { "$ref": "#/$defs/token_ids" },
+        "finish_reason": { "enum": ["eos", "length"] },
+        "step0_top": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [{ "type": "integer", "minimum": 0 }, { "type": "number" }]
+          }
+        },
+        "stream_text_equals_result": { "type": "boolean" },
+        "stream_ids_equal_result": { "type": "boolean" },
+        "stream_text_equals_decode": { "type": "boolean" },
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prompt_tokens", "completion_tokens"],
+          "properties": {
+            "prompt_tokens": { "type": "integer", "minimum": 0 },
+            "completion_tokens": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "cached_vs_uncached": {
+      "description": "Decode steps of one case: the logits that selected each token (KV cache or recurrent state in use) against a fresh prefill of the same prefix.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["case", "steps", "max_abs_logprob", "tokens_equal"],
+      "properties": {
+        "case": { "type": "string", "minLength": 1 },
+        "steps": { "type": "integer", "minimum": 1 },
+        "max_abs_logprob": { "type": "number", "minimum": 0 },
+        "tokens_equal": { "type": "boolean" }
+      }
+    },
+    "chunked_prefill": {
+      "description": "Keyed <case>/<chunk>. Recorded here; no evaluator check reads it before R-039.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "step0_max_abs_logprob_vs_whole": { "type": "number", "minimum": 0 },
+          "tokens_equal_whole": { "type": "boolean" },
+          "whole_prefill_error": { "type": "string" }
+        }
+      }
+    },
+    "concurrency": {
+      "description": "One flag per request: true when its tokens equal the sequential run.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["results"],
+      "properties": {
+        "results": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "minLength": 1 },
+          "additionalProperties": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

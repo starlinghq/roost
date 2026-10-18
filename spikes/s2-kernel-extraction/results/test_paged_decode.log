@@ -1,0 +1,13 @@
+roost_s2 abi=0x10000
+mixed lens, partial pages    B=4 qo=16 kv=8 page=16 split_kv=1 padded_batch=5 float_ws=41280 int_ws=101 max_abs=3.879e-03 mean_abs=3.805e-04 max_rel=1.517e-02 PASS
+mixed lens, partial pages    run() mean 11.1 us
+single long seq (split-kv)   B=1 qo=16 kv=8 page=16 split_kv=1 padded_batch=47 float_ws=388032 int_ws=639 max_abs=2.723e-04 mean_abs=4.736e-05 max_rel=1.491e-02 PASS
+single long seq (split-kv)   run() mean 37.7 us
+batch 8 mid lens             B=8 qo=16 kv=8 page=16 split_kv=1 padded_batch=45 float_ws=371520 int_ws=621 max_abs=2.367e-03 mean_abs=1.411e-04 max_rel=2.863e-02 PASS
+batch 8 mid lens             run() mean 33.2 us
+batch 256 (no split-kv)      B=256 qo=16 kv=8 page=16 split_kv=0 padded_batch=256 float_ws=0 int_ws=3080 max_abs=7.651e-03 mean_abs=1.830e-04 max_rel=3.810e-03 PASS
+batch 256 (no split-kv)      run() mean 191.2 us
+group 4 (32q/8kv)            B=2 qo=32 kv=8 page=16 split_kv=1 padded_batch=6 float_ws=99072 int_ws=102 max_abs=1.887e-03 mean_abs=1.567e-04 max_rel=4.736e-02 PASS
+group 4 (32q/8kv)            run() mean 13.2 us
+invalid params -> status 2 (only head_dim 128 is built)
+S2 TEST PASSED
