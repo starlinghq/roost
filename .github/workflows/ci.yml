@@ -81,3 +81,19 @@ jobs:
         run: python3 -I tools/abi-layout.py headers
       - name: Golden layout holds under clang --target=x86_64-pc-windows-msvc
         run: python3 -I tools/abi-layout.py msvc-asserts
+
+  # MSVC itself (R-004; C1 says the headers compile under MSVC): cl.exe from the runner's Visual Studio, found with
+  # vswhere, compiles both headers as C11 and C++17 with /W4 /WX and the golden layout as static asserts.
+  abi-msvc:
+    name: abi (MSVC cl.exe)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Headers compile and golden layout holds under cl.exe
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'no Visual Studio with the x64 C++ tools on this runner' }
+          cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && python -I tools/abi-layout.py msvc"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
