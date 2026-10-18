@@ -151,4 +151,40 @@ public sealed class BlockTransferTests
         Assert.Equal(0, transfer.Drain(ops, out var t3));
         Assert.Equal(0, t3);
     }
+
+    [Fact]
+    public async Task ATableWithReleasedWindowEntriesKeepsItsNullsAndCopiesOnlyRealBlocks()
+    {
+        var src = new BlockManager([TestGroups.Sliding(0, 2, 5)], [new GroupCapacity(0, 8, 0)]);
+        var dst = new BlockManager([TestGroups.Sliding(0, 2, 5)], [new GroupCapacity(0, 8, 0)]);
+        using var transfer = new InProcessBlockTransfer(src, dst);
+        var table = new int[4];
+        src.GetPool(0).TryAllocate(table);
+        Assert.True(src.GetPool(0).ReleaseOutOfWindow(table, tokens: 11) >= 1);
+        var nulls = table.Count(b => b == BlockPool.NullBlock);
+        Assert.True(nulls > 0);
+
+        var export = await transfer.ExportBlocksAsync(0, table, CancellationToken.None);
+        var imported = new int[table.Length];
+        await transfer.ImportBlocksAsync(export, imported, CancellationToken.None);
+
+        for (var i = 0; i < table.Length; i++)
+        {
+            Assert.Equal(table[i] == BlockPool.NullBlock, imported[i] == BlockPool.NullBlock);
+        }
+
+        Assert.Equal(8 - (table.Length - nulls), dst.GetPool(0).FreeCount);
+        var ops = new PlanCacheOp[4];
+        var n = transfer.Drain(ops, out var ticket);
+        Assert.True(n >= 1);
+        for (var i = 0; i < n; i++)
+        {
+            Assert.NotEqual(uint.MaxValue, ops[i].Src);
+            Assert.NotEqual(uint.MaxValue, ops[i].Dst);
+        }
+
+        transfer.Complete(ticket);
+        src.GetPool(0).Release(table);
+        Assert.Equal(8, src.GetPool(0).FreeCount);
+    }
 }

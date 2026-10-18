@@ -99,9 +99,27 @@ public sealed class InProcessBlockTransfer : IBlockTransfer, IDisposable
             throw new ArgumentException("The destination must hold one id per exported block.", nameof(destination));
         }
 
-        if (!target.TryAllocate(destination.Span))
+        // Null entries (released out of a sliding window) carry no data: they stay null in the destination and
+        // only the real blocks are allocated.
+        var real = 0;
+        for (var i = 0; i < export.Blocks.Length; i++)
+        {
+            if (export.Blocks[i] != BlockPool.NullBlock)
+            {
+                real++;
+            }
+        }
+
+        var allocated = new int[real];
+        if (!target.TryAllocate(allocated))
         {
             throw new InvalidOperationException($"Group {blockExport.Group} has too few free blocks for the import.");
+        }
+
+        var next = 0;
+        for (var i = 0; i < export.Blocks.Length; i++)
+        {
+            destination.Span[i] = export.Blocks[i] == BlockPool.NullBlock ? BlockPool.NullBlock : allocated[next++];
         }
 
         // From here nothing can fail: the entry moves from _exports to _queued, which keeps the pin held once.
@@ -110,6 +128,11 @@ public sealed class InProcessBlockTransfer : IBlockTransfer, IDisposable
         var n = 0;
         for (var i = 0; i < export.Blocks.Length; i++)
         {
+            if (export.Blocks[i] == BlockPool.NullBlock)
+            {
+                continue;
+            }
+
             var op = new PlanCacheOp
             {
                 Kind = kind,
