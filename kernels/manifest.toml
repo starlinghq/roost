@@ -90,17 +90,44 @@ layouts = ["row_major"]
 min_alignment = 4
 
 # Digests of the per-SM libraries (libroost_kernels_sm<N>.so). Written by kernels/tools/record_digests.py; do not
-# edit by hand. The SM 86 entry is from the development host (CUDA 13.3.73, gcc 16.2.1). The release workflow replaces
+# edit by hand. All six entries are from the development host (CUDA 13.3.73, gcc 16.2.1), one build each; only SM 86 has run on
+# hardware. They do not depend on the source checkout path (checked at two paths). The release workflow (R-060) replaces
 # these with the digests of the pinned CI container build and publishes the files as release assets.
 # BEGIN binaries residual-stub
 [[ops.variants.binaries]]
-arch = 86
-sha256 = "84bd38b1449da87f74e0bfa5a3667502f8fc79312f295cf38ac5c169938415b7"
+arch = 80
+sha256 = "a3a85531d773ffdc5b8bf909ba08b8f29e79dbb198e739d4587693ed604f495a"
 bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "bf2384c7951898deac68116209cba93989a39e82e84ecde22f07c5fb16bf1bf5"
+bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "a44d45016389ec7e5628a68100f53bdde6e81cbee6d9f7e1f0136e709d649d32"
+bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "1cf405dfed9843334e98a01ce9f8220e826168ab2374a2c85e2e6b5b9a49969e"
+bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "afeb0a7349befdeead945ea6b1a7791ea2e446301c551eaede9000dd9f6f6c58"
+bytes = 52184
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "c9db863fdb577500c8192065f91218a93cf48eb8f3c06e0a0e87f5d2e00cfa4a"
+bytes = 52184
 # END binaries residual-stub
 
 # Build-time Python closure for the Triton AOT kernels of the hybrid ops (decision 23, S3). Python is never a runtime
-# dependency. The AOT build itself is R-034; the pins below are S3's measured configs (spikes/s3-triton-gdn/pins.json),
+# dependency. The AOT build itself is R-034; the pins below are S3's measured configs: the first six from spikes/s3-triton-gdn/pins.json, the seventh
+# (fused_recurrent_gated_delta_rule_fwd_kernel, from S3's capture log and docs/m0/roost-s3-triton-aot-gdn.md, not in pins.json),
 # frozen because autotune winners are not reproducible.
 [triton_aot]
 python = "3.12.14"

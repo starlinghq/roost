@@ -34,17 +34,28 @@ an upstream yet, so the stub builds without it).
 
 ## Reproducibility and digests
 
-Two builds of the same sources in different build directories are byte-identical per SM (checked locally for SM 86 and by
-the CI job for every SM). That needs no line info (it records source mtimes), no build id and no local symbols (nvcc names
-them after the process id); the link options in `CMakeLists.txt` do this. The digest depends on the toolchain, so the
-manifest's SM 86 digest is the development host's (CUDA 13.3.73, gcc 16.2.1). The CI job reports, and does not fail on, a
-difference from it; the release workflow records the digests of the pinned container build and publishes the libraries.
+Builds of the same sources are byte-identical per SM, also from different checkout paths (checked for all six SMs at two
+paths with CUDA 13.3.73 and gcc 16.2.1; the CI job also compares two builds per SM). That needs no line info (it records
+source mtimes), no build id, no local symbols (nvcc names them after the process id) and no anonymous namespace in a `.cu`
+file: nvcc derives that namespace's symbol hash from the source path, so kernels live in a named namespace. This is
+verified on one toolchain only; the digest still depends on the toolchain, so another nvcc or gcc gives other digests.
+The manifest's six digests are the development host's, one build each, and only SM 86 has run on hardware. The CI job
+reports, and does not fail on, a difference from them; the release workflow (R-060) records the digests of the pinned
+container build and publishes the libraries.
 
 ## Not done
 
 - MSVC kernel build: GitHub-hosted Windows runners ship no CUDA toolkit, so it is not built. The sources use `ROOST_API`
   from the C1 header and no POSIX types, and `stub_check.cpp` has a `LoadLibrary` path, but none of it has been compiled with
   MSVC.
-- Triton AOT: the manifest pins the Python closure and the seven kernel configs from S3, and CMake fetches the
+- Triton AOT: the manifest pins the Python closure and the seven kernel configs from S3 (six in `pins.json`, the seventh from S3's capture log and report), and CMake fetches the
   flash-linear-attention source by SHA, but the AOT compile (which needs a visible CUDA device) is R-034's.
 - FlashInfer, CUTLASS and vLLM are fetched and verified by SHA; no op compiles against them yet (R-017).
+
+## Open before merge
+
+- MSVC build: an unmet R-016 criterion that needs a maintainer decision (self-hosted Windows runner with CUDA, a CUDA install step, or relaxing the criterion and amending the plan).
+- The `kernels` CI job has not run in GitHub Actions; its script passes locally for all six SMs outside the container.
+- The patch-set check has never run on a real patch (there are none yet).
+- `toolkit.min_driver = "580"` is unverified; only driver 610.57 was tested.
+- SM 80, 89, 90, 100 and 120 are built and registration-checked only; none ran on hardware.
