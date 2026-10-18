@@ -1,0 +1,9 @@
+# Repository tools (tools/) and their tests (tests/tools/). Kernel AOT scripts (kernels/aot/) join later.
+line-length = 120
+target-version = "py311"
+# The starling submodule is linted in its own repository. tools/check-boundary.py is a byte-identical copy of
+# starling's and is linted there; keep it unchanged so the two never drift.
+extend-exclude = ["external", "tools/check-boundary.py"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
