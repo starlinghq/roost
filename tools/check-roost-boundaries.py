@@ -8,7 +8,9 @@ Checks:
   python     No Python or libtorch under src/: no Python source files, and no project, C# or native file that
              references Python bindings or libtorch (pythonnet, TorchSharp, libtorch, torch extension headers).
   closure    No Microsoft.ML.OnnxRuntime* package in the restored dependency closure (obj/project.assets.json)
-             of an engine package. Server is exempt (it hosts the ONNX pooling models from R-052).
+             of a worker-side package: one that runs in or is compiled into the GPU worker process, which pins
+             its own CUDA runtime and allocator (build plan decision 30). Host-process packages (Engine,
+             Generation, Generation.Roost, Server) may use ONNX Runtime.
   binaries   No kernel or native binaries tracked in Git (by extension and by ELF, PE, Mach-O or fatbin magic).
              Kernel binaries are release assets only.
   solution   No *.Cuda project in Roost.slnx. CUDA test projects are local-only.
@@ -25,10 +27,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Engine packages (build plan R-003). Starlings.Roost.Models.* matches every model package.
-ENGINE = re.compile(
-    r"^Starlings\.(Roost\.(Abstractions|Ops|Graph|Engine|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)"
-    r"|Generation\.Roost)$"
+# Worker-side packages (build plan decision 30). Starlings.Roost.Models.* matches every model package.
+WORKER_SIDE = re.compile(
+    r"^Starlings\.Roost\.(Abstractions|Ops|Graph|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)$"
 )
 ONNX = re.compile(r"^microsoft\.ml\.onnxruntime", re.IGNORECASE)
 
@@ -95,7 +96,7 @@ def check_python(root: Path, files: list[Path]) -> list[str]:
 def check_closure(root: Path) -> list[str]:
     errors = []
     for project in sorted((root / "src").glob("*/*.csproj")):
-        if not ENGINE.match(project.stem):
+        if not WORKER_SIDE.match(project.stem):
             continue
         assets = project.parent / "obj" / "project.assets.json"
         rel = project.relative_to(root).as_posix()
@@ -106,7 +107,7 @@ def check_closure(root: Path) -> list[str]:
         for key in sorted(libraries):
             name = key.split("/", 1)[0]
             if ONNX.match(name):
-                errors.append(f"closure: {rel}: engine package reaches {key}")
+                errors.append(f"closure: {rel}: worker-side package reaches {key}")
     return errors
 
 
