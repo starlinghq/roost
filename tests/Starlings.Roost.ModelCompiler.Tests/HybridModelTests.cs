@@ -1,6 +1,7 @@
 using Starlings.Roost.Abi;
 using Starlings.Roost.Graph;
 using Starlings.Roost.ModelCompiler.Tests.Models;
+using Starlings.Roost.Ops;
 using Starlings.Roost.State;
 
 namespace Starlings.Roost.ModelCompiler.Tests;
@@ -8,7 +9,9 @@ namespace Starlings.Roost.ModelCompiler.Tests;
 /// <summary>
 /// The Qwen3.5-shaped tiny hybrid (three recurrent layers, one attention layer, two state groups): descriptors, state
 /// and weight slot order, the plan inputs the attention and recurrent ops add, the call order and wiring of the
-/// generated forward, and the load-time check for reserved ops.
+/// generated forward, and the load-time check for reserved ops. These are structure-only tests (op order, wiring,
+/// allocation) on fake addresses, so they run on <see cref="RecordingOps"/>, which does no math; CpuOps would read the
+/// fake addresses. The numeric hybrid checks live in the Ops tests (R-018).
 /// </summary>
 public class HybridModelTests
 {
@@ -247,6 +250,8 @@ public class HybridModelTests
     public void CheckBackendNamesTheReservedOpsABackendLacks()
     {
         HybridModel.CheckBackend<RecordingOps>();
+        HybridModel.CheckBackend<CpuOps>();
+        // StubCpuOps is used here on purpose: it implements neither GatedDeltaRule nor CausalConv1d, which CpuOps does.
         var e = Assert.Throws<NotSupportedException>(HybridModel.CheckBackend<StubCpuOps>);
         Assert.Contains("CausalConv1d", e.Message, StringComparison.Ordinal);
         Assert.Contains("GatedDeltaRule", e.Message, StringComparison.Ordinal);

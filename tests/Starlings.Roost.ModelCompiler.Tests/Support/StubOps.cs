@@ -4,9 +4,10 @@ using Starlings.Roost.Ops;
 namespace Starlings.Roost.ModelCompiler.Tests;
 
 /// <summary>
-/// A test stub backend: float32 math for the ops the dense test models use, host addresses in DeviceSpan, and
-/// NotSupportedException for everything else. It stands in for the CPU reference backend (R-018, stream D) until that
-/// is merged; it is not the reference and nothing in the repository should use it as one.
+/// A test stub backend: float32 math for a few ops, host addresses in DeviceSpan, and NotSupportedException for
+/// everything else. It is not the reference (that is <see cref="CpuOps"/>). The tests keep it only where a backend that
+/// lacks ops is the point: the hybrid <c>CheckBackend</c> test needs a backend without GatedDeltaRule and
+/// CausalConv1d. No numeric comparison runs on it.
 /// </summary>
 public readonly struct StubCpuOps : IRoostOps
 {
@@ -132,9 +133,16 @@ public readonly struct StubCpuOps : IRoostOps
     public static void Sample(in SampleArgs a) => throw new NotSupportedException(nameof(Sample));
 }
 
-/// <summary>The stub plus the fused AddRmsNorm, so the fused path and the generated fallback can be compared.</summary>
-public readonly struct StubFusedOps : IRoostOps
+/// <summary>
+/// <see cref="CpuOps"/> plus a fused AddRmsNorm, so the fused path and the generated Residual + RmsNorm fallback can be
+/// compared on the reference backend. CpuOps does not implement the fused ops (<c>SupportsAddRmsNorm</c> is false), so
+/// this test backend supplies one, written independently of CpuOps.RmsNorm and Residual: in double, one pass per row.
+/// Every other op is CpuOps itself.
+/// </summary>
+public readonly struct CpuFusedOps : IRoostOps
 {
+    public static bool Supports(OpId op) => CpuOps.Supports(op);
+
     public static bool SupportsAddRmsNorm => true;
 
     public static unsafe void AddRmsNorm(in AddRmsNormArgs a)
@@ -151,41 +159,41 @@ public readonly struct StubFusedOps : IRoostOps
                 ss += (double)sum * sum;
             }
 
-            float inv = (float)(1.0 / Math.Sqrt((ss / a.Dim) + a.Eps));
+            double inv = 1.0 / Math.Sqrt((ss / a.Dim) + a.Eps);
             for (int d = 0; d < a.Dim; d++)
             {
-                x[(row * a.Dim) + d] = r[(row * a.Dim) + d] * inv * w[d];
+                x[(row * a.Dim) + d] = (float)(r[(row * a.Dim) + d] * inv * w[d]);
             }
         }
     }
 
-    public static void RmsNorm(in RmsNormArgs a) => StubCpuOps.RmsNorm(a);
+    public static void RmsNorm(in RmsNormArgs a) => CpuOps.RmsNorm(a);
 
-    public static void QkNorm(in QkNormArgs a) => StubCpuOps.QkNorm(a);
+    public static void QkNorm(in QkNormArgs a) => CpuOps.QkNorm(a);
 
-    public static void Rope(in RopeArgs a) => StubCpuOps.Rope(a);
+    public static void Rope(in RopeArgs a) => CpuOps.Rope(a);
 
-    public static void PagedAttention(in PagedAttentionArgs a) => StubCpuOps.PagedAttention(a);
+    public static void PagedAttention(in PagedAttentionArgs a) => CpuOps.PagedAttention(a);
 
-    public static void SiluAndMul(in SiluAndMulArgs a) => StubCpuOps.SiluAndMul(a);
+    public static void SiluAndMul(in SiluAndMulArgs a) => CpuOps.SiluAndMul(a);
 
-    public static void GeluAndMul(in GeluAndMulArgs a) => StubCpuOps.GeluAndMul(a);
+    public static void GeluAndMul(in GeluAndMulArgs a) => CpuOps.GeluAndMul(a);
 
-    public static void Gemm(in GemmArgs a) => StubCpuOps.Gemm(a);
+    public static void Gemm(in GemmArgs a) => CpuOps.Gemm(a);
 
-    public static void Embedding(in EmbeddingArgs a) => StubCpuOps.Embedding(a);
+    public static void Embedding(in EmbeddingArgs a) => CpuOps.Embedding(a);
 
-    public static void LmHead(in LmHeadArgs a) => StubCpuOps.LmHead(a);
+    public static void LmHead(in LmHeadArgs a) => CpuOps.LmHead(a);
 
-    public static void Residual(in ResidualArgs a) => StubCpuOps.Residual(a);
+    public static void Residual(in ResidualArgs a) => CpuOps.Residual(a);
 
-    public static void CacheWrite(in CacheWriteArgs a) => StubCpuOps.CacheWrite(a);
+    public static void CacheWrite(in CacheWriteArgs a) => CpuOps.CacheWrite(a);
 
-    public static void CacheCopy(in CacheCopyArgs a) => StubCpuOps.CacheCopy(a);
+    public static void CacheCopy(in CacheCopyArgs a) => CpuOps.CacheCopy(a);
 
-    public static void Argmax(in ArgmaxArgs a) => StubCpuOps.Argmax(a);
+    public static void Argmax(in ArgmaxArgs a) => CpuOps.Argmax(a);
 
-    public static void Sample(in SampleArgs a) => StubCpuOps.Sample(a);
+    public static void Sample(in SampleArgs a) => CpuOps.Sample(a);
 }
 
 /// <summary>

@@ -1,12 +1,15 @@
 using Starlings.Roost.Graph;
 using Starlings.Roost.ModelCompiler.Checking;
 using Starlings.Roost.ModelCompiler.Tests.Models;
+using Starlings.Roost.Ops;
 
 namespace Starlings.Roost.ModelCompiler.Tests;
 
 /// <summary>
-/// The C7 rule: every pass output is checked op by op against the unfused graph on the CPU backend. The reference
-/// backend (R-018) is not merged yet, so the stub from this project stands in; the checker is backend-agnostic.
+/// The C7 rule: every pass output is checked op by op against the unfused graph on the CPU reference backend. Both the
+/// reference graph and the candidate run on <see cref="CpuOps"/> (through <see cref="CpuFusedOps"/> where the candidate
+/// holds the fused AddRmsNorm, which CpuOps does not implement) and every node's values are compared numerically. No
+/// stub backend is used here.
 /// </summary>
 public sealed class GraphCheckerTests
 {
@@ -35,7 +38,7 @@ public sealed class GraphCheckerTests
         new GraphChecker().Check(
             _reference,
             candidate,
-            fusedBackend ? new GraphEvaluator<StubFusedOps>(_symbols) : new GraphEvaluator<StubCpuOps>(_symbols),
+            fusedBackend ? new GraphEvaluator<CpuFusedOps>(_symbols) : new GraphEvaluator<CpuOps>(_symbols),
             _inputs,
             Tolerances);
 
@@ -95,7 +98,7 @@ public sealed class GraphCheckerTests
         var result = new GraphChecker().Check(
             _reference,
             new OpGraph("x", extra, nodes, false),
-            new PartialEvaluator(new GraphEvaluator<StubFusedOps>(_symbols)),
+            new PartialEvaluator(new GraphEvaluator<CpuFusedOps>(_symbols)),
             _inputs,
             Tolerances);
         Assert.False(result.Passed);
@@ -105,7 +108,7 @@ public sealed class GraphCheckerTests
     public void CheckPassRunsThePassAndChecksItsOutput()
     {
         var checker = new GraphChecker();
-        var ev = new GraphEvaluator<StubFusedOps>(_symbols);
+        var ev = new GraphEvaluator<CpuFusedOps>(_symbols);
         Assert.True(checker.CheckPass(new FuseAddRmsNormPass(), _reference, Target, ev, _inputs, Tolerances).Passed);
         Assert.False(checker.CheckPass(new FuseAddRmsNormPass("0.5"), _reference, Target, ev, _inputs, Tolerances).Passed);
         var notReference = new IdentityPass().Run(_reference, Target);
@@ -127,15 +130,15 @@ public sealed class GraphCheckerTests
     public void ToleranceDecidesWhetherASmallDifferencePasses()
     {
         var fused = new FuseAddRmsNormPass("1e-3").Run(_reference, Target);
-        Assert.False(new GraphChecker().Check(_reference, fused, new GraphEvaluator<StubFusedOps>(_symbols), _inputs, new TestTolerances(1e-9, 1e-9)).Passed);
-        Assert.True(new GraphChecker().Check(_reference, fused, new GraphEvaluator<StubFusedOps>(_symbols), _inputs, new TestTolerances(1e-1, 1e-1)).Passed);
+        Assert.False(new GraphChecker().Check(_reference, fused, new GraphEvaluator<CpuFusedOps>(_symbols), _inputs, new TestTolerances(1e-9, 1e-9)).Passed);
+        Assert.True(new GraphChecker().Check(_reference, fused, new GraphEvaluator<CpuFusedOps>(_symbols), _inputs, new TestTolerances(1e-1, 1e-1)).Passed);
     }
 
     [Fact]
     public void ArgumentsAreValidated()
     {
         var checker = new GraphChecker();
-        var ev = new GraphEvaluator<StubFusedOps>(_symbols);
+        var ev = new GraphEvaluator<CpuFusedOps>(_symbols);
         Assert.Throws<ArgumentNullException>(() => checker.Check(null!, _reference, ev, _inputs, Tolerances));
         Assert.Throws<ArgumentNullException>(() => checker.Check(_reference, null!, ev, _inputs, Tolerances));
         Assert.Throws<ArgumentNullException>(() => checker.Check(_reference, _reference, null!, _inputs, Tolerances));
