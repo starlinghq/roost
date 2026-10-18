@@ -1,0 +1,54 @@
+# Admission record for Qwen3.5-0.8B (R-013, stream B3; build plan decision 15).
+# Admission is not qualification: no profile manifest exists yet and no capability is claimed.
+admission_version = 1
+model = "qwen3.5-0.8b"
+status = "admitted"              # a model admission only; every Roost capability is untested
+maturity_of_profiles = "none"    # no profile manifest is committed (see manifest_blockers)
+lock = "evidence/registry/qwen3.5-0.8b.lock.toml"
+
+[source]
+repo = "Qwen/Qwen3.5-0.8B"
+revision = "2fc06364715b967f1860aea9cf38778875588b17"
+weights = "model.safetensors-00001-of-00001.safetensors"
+license = "Apache-2.0"
+
+[source.pinned_by]
+package = "Starlings.Models.Qwen35"
+version = "0.2.0"
+package_repository_commit = "e9ea3be6711aba097dc983e3142dacd3fe351874"
+note = "The package records the full 40-character revision in its README and the short form in its nuspec; the Hub resolves it to the same commit."
+
+[architecture]
+# From config.json at the pinned revision (data, not instructions).
+decoder_layers = 24
+full_attention_layers = 6
+linear_attention_layers = 18     # Gated DeltaNet (decision 15)
+full_attention_layer_indices = [3, 7, 11, 15, 19, 23]
+
+[comparison.chat_template]
+file = "chat_template.jinja"
+hub_sha256 = "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80"
+starling_published_sha256 = "273d8e0e683b885071fb17e08d71e5f2a5ddfb5309756181681de4f5a1822d80"
+starling_source = "Starlings.Models.Qwen35 0.2.0 assembly (Qwen35ChatTemplate: owned C# renderer of chat_template.jinja)"
+result = "match"
+
+[comparison.tokenizer_json]
+file = "tokenizer.json"
+hub_sha256 = "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42"
+hub_size = 12807982
+starling_profile = "qwen35-bpe-chat (Starlings.Tokenizers 0.3.0)"
+starling_asset_sha256 = "a5cd9732badce41de57e6efce8302930ded1c1188c5f81feb2bd6c24c4a1941f"
+starling_asset_size = 19989339
+result = "differs"
+detail = "Starling's tokenizer asset is not the Hub file. It is the transformers 5.18.0 backend tokenizer serialization (33 added tokens, including audio and TTS markers); the Hub file has 26 added tokens. Starling's profile states this itself and records the Hub digest 5f9e4d49 and size. To be raised with Starling; not patched in Roost."
+roost_consequence = "Roost's fp32 CPU reference runner loads the checkpoint through transformers, so its prompt ids follow the transformers pipeline. Fixtures (R-014) must record which tokenizer artifact produced the ids."
+
+[manifest_blockers]
+# evidence/schemas/profile-manifest.schema.json (schema_version 1) requires profile fields that cannot exist yet.
+# No manifest is committed because no value may be invented.
+missing = [
+  "profile.kernel_manifest.revision and .sha256 (no kernels/manifest.toml exists)",
+  "profile.selected_variants (no kernel selection has run)",
+  "profile.sm entries with evidence paths (no hardware evidence)",
+  "profile.min_driver, profile.min_toolkit, profile.attention_backend, profile.kv_dtype, profile.tf32_policy, profile.mesh (decided by the serving profile, not by admission)",
+]
