@@ -42,7 +42,7 @@ starling_asset_sha256 = "a5cd9732badce41de57e6efce8302930ded1c1188c5f81feb2bd6c2
 starling_asset_size = 19989339
 result = "differs"
 detail = "Starling's tokenizer asset is not the Hub file. It is the transformers 5.18.0 backend tokenizer serialization (33 added tokens, including audio and TTS markers, as stated in the Starlings.Tokenizers profile text); the Hub file has 26 added tokens (counted from the downloaded tokenizer.json). Starling's profile states this itself and records the Hub digest 5f9e4d49 and size. Not patched in Roost. NOT YET REPORTED to Starling: see report_to_starling."
-roost_consequence = "Roost's fp32 CPU reference runner loads the checkpoint through transformers, so its prompt ids follow the transformers pipeline. Fixtures (R-014) must record which tokenizer artifact produced the ids."
+roost_consequence = "Expected, not yet shown in this repo (inferred from Starling's profile text; R-014 does not exist yet): the fp32 CPU reference runner would load the checkpoint through transformers, so its prompt ids would follow the transformers pipeline. Fixtures (R-014) must record which tokenizer artifact produced the ids."
 
 [report_to_starling]
 status = "pending"               # needs the maintainer to file it; no reference exists yet

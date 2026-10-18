@@ -1,7 +1,8 @@
 # Asset lock for Qwen/Qwen3.5-0.8B (R-013, stream B3).
 # Every size and SHA-256 was computed from files downloaded at the pinned revision (the Hub's own LFS
 # digests for tokenizer.json and the safetensors file agree). Weights are never committed and CI never
-# downloads them. This lock covers the original checkpoint, not Starling's ONNX bundle.
+# downloads them. Independent check (reviewer, outside the repo): all 13 sizes match the Hub tree API at this revision,
+# and chat_template.jinja, config.json and merges.txt were re-downloaded with equal SHA-256. This lock covers the original checkpoint, not Starling's ONNX bundle.
 lock_version = 1
 
 [source]
