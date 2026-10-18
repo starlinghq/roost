@@ -8,8 +8,8 @@ This script parses its table and prints the issues it would create. Pass --creat
     python3 -I tools/create_backlog_issues.py                 # dry run
     python3 -I tools/create_backlog_issues.py --create --repo starlinghq/roost
 
-Labels: `backlog`, one `stream:<id>` per owning stream, `phase:<phase>`, and `starling-pr` for items whose work is a
-pull request to starlinghq/starling (the issue then links that pull request).
+Labels: `backlog`, one `stream:<id>` per owning stream, and `phase:<phase>`. Every item is Roost work: Roost consumes
+Starling's published NuGet packages only and never opens Starling PRs (build plan section 2.2).
 """
 
 from __future__ import annotations
@@ -24,9 +24,9 @@ PLAN = Path(__file__).resolve().parent.parent / "docs" / "plan" / "build-plan.md
 ROW = re.compile(r"^\| (R-\d{3}) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \|$")
 EXPECTED = 109
 
-# Work that lands in starlinghq/starling (build plan section 10, first paragraph).
-STARLING_STREAMS = {"B1", "B2", "B3"}
-STARLING_IDS = {"R-001", "R-002", "R-059", "R-061"}
+# Work that lands in starlinghq/starling: none since the NuGet-only boundary (build plan section 2.2). Kept empty.
+STARLING_STREAMS: set[str] = set()
+STARLING_IDS: set[str] = set()
 
 
 def parse_backlog(text: str) -> list[dict[str, str]]:
