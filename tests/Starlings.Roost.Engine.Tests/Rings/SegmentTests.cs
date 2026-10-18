@@ -9,9 +9,12 @@ public sealed unsafe class SegmentTests : IDisposable
 
     public void Dispose()
     {
-        if (File.Exists(_path))
+        foreach (var file in new[] { _path, _path + ".truncated" })
         {
-            File.Delete(_path);
+            if (File.Exists(file))
+            {
+                File.Delete(file);
+            }
         }
     }
 
@@ -100,12 +103,23 @@ public sealed unsafe class SegmentTests : IDisposable
     [Fact]
     public void OpenRejectsATruncatedFile()
     {
+        // Windows refuses to shorten a file while any mapped section of it is open, so the original is never
+        // truncated: its first 8192 bytes (header and the start of the tables) are copied to a shorter file, and
+        // Open must reject that copy. Reading a mapped file is allowed on both OSes.
+        var truncated = _path + ".truncated";
         using (RingSegment.Create(_path, new SegmentOptions()))
         {
-            using var raw = new FileStream(_path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
-            raw.SetLength(8192);
-            Assert.Throws<InvalidDataException>(() => RingSegment.Open(_path));
+            var head = new byte[8192];
+            using (var source = new FileStream(_path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+                source.ReadExactly(head);
+            }
+
+            File.WriteAllBytes(truncated, head);
         }
+
+        Assert.Equal(8192, new FileInfo(truncated).Length);
+        Assert.Throws<InvalidDataException>(() => RingSegment.Open(truncated));
     }
 
     [Theory]
