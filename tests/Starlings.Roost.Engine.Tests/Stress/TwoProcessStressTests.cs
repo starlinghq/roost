@@ -7,6 +7,8 @@ namespace Starlings.Roost.Engine.Tests.Stress;
 /// check of every slot and every buffer word. Length: ROOST_RING_STRESS_STEPS (default 300000);
 /// ROOST_RING_STRESS_SEED fixes the seed; ROOST_RING_STRESS_LOG names a file that gets the result line. This exercises the ring code on this machine's memory model (x86-64 is
 /// stronger than the .NET model; a pass here does not show the ordering argument holds on ARM64).
+/// This is not compute-sanitizer racecheck, which only observes device code. The plan's racecheck criterion for R-027
+/// stays open until the maintainer accepts this test plus the written ordering argument in its place, or amends the plan.
 /// </summary>
 public sealed class TwoProcessStressTests
 {
@@ -23,7 +25,7 @@ public sealed class TwoProcessStressTests
         Assert.True(outcome.ResultEmpty > 0, "the result ring never ran empty");
         Assert.Contains("OK steps=" + steps.ToString(CultureInfo.InvariantCulture), outcome.WorkerSummary, StringComparison.Ordinal);
         Assert.Contains("allocatedBytes=0", outcome.WorkerSummary, StringComparison.Ordinal);
-        Assert.Equal(0, outcome.HostAllocatedBytes);
+        Assert.True(outcome.HostAllocatedBytes == 0, $"host allocated {outcome.HostAllocatedBytes} bytes after warm-up. Worker stdout: {outcome.WorkerSummary}. Worker stderr: {outcome.WorkerErrors}");
         Assert.False(outcome.WorkerSummary.Contains("planEmpty=0 ", StringComparison.Ordinal), "the worker never found the plan ring empty");
         Assert.False(outcome.WorkerSummary.Contains("twoInFlight=0 ", StringComparison.Ordinal), "two plans were never in flight");
         var line = $"seed={seed} hostPublishFull={outcome.PublishFull} hostResultEmpty={outcome.ResultEmpty} hostAllocatedBytes={outcome.HostAllocatedBytes} worker: {outcome.WorkerSummary}";

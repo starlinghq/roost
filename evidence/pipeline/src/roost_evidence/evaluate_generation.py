@@ -46,6 +46,10 @@ TOLERANCE_KEYS: dict[str, str] = {
     "float.cached_vs_uncached_logprob_max_abs": "number",
     "float.chunked_vs_one_call_prefill_logprob_max_abs": "number; no check reads chunked_prefill before R-039",
     "float.nan_or_inf": "fail",
+    # Read by the per-layer evaluator (evaluate_layers, R-011); the generation evaluator ignores them.
+    "float.layer_hidden_max_abs": "number; max abs difference of any stage output, any position, any forward",
+    "float.recurrent_state_max_abs": "number; Gated DeltaNet recurrent state after each captured forward",
+    "float.conv_state_max_abs": "number; Gated DeltaNet convolution state after each captured forward",
 }
 _GREEDY_RULE = re.compile(
     r"^(?:exact_except_listed_margin_below_|equal_until_first_divergence_at_margin_below_)"
