@@ -115,4 +115,8 @@ A node whose op or arguments fail is reported once; nodes that read its outputs 
 * There are no views: C3 buffers are whole `DeviceSpan`s without strides, so a node cannot read a slice of a value. A
   definition needs separate projections where a checkpoint fuses them, or an op that produces the split.
 * Only `AddRmsNorm` has an unfused form in the lowering; other fused ops come from passes (stream L).
+* Plan-input auto-fill goes by field name, so an unbound `Ids` span is the token-id input for every op that has one. For
+  `Argmax` and `Sample`, `Ids` is an output; bind it explicitly if a definition ever includes them (the forward ends at
+  the logits and the worker launches the sampler).
+* The generated class has no `unsafe` code and needs no `AllowUnsafeBlocks` in the consumer.
 * The generator adds source locations to its pipeline model, so inserting a line above the attributes re-emits.

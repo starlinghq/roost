@@ -32,7 +32,7 @@ public static class GeneratorHarness
             "T",
             [CSharpSyntaxTree.ParseText(source, path: path)],
             References(withOps),
-            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: true, nullableContextOptions: NullableContextOptions.Enable));
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary, allowUnsafe: false, nullableContextOptions: NullableContextOptions.Enable));
 
     public static Result Run(string source, bool withOps = true)
     {
