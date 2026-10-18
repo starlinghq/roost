@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Starlings.Roost.WorkerHost;
 
-/// <summary>The few POSIX calls the worker and the tests need. Linux only; callers guard with <see cref="OperatingSystem.IsLinux"/>.</summary>
+/// <summary>The few POSIX calls the worker and the tests need. Linux only; callers guard with <see cref="OperatingSystem.IsLinux"/>. <see cref="Win32"/> is the Windows counterpart.</summary>
 internal static partial class Libc
 {
     internal const int RlimitCore = 4;

@@ -19,14 +19,14 @@ public sealed class ProcessTransportTests : TransportSuite
     internal override FakeOp Freeze(Rig rig)
     {
         var process = (ProcessWorkerTransport)rig.Transport;
-        Assert.True(Libc.Signal(process.ProcessId, Libc.SigStop));
+        Assert.True(OsProcess.Freeze(process.ProcessId));
         return FakeOp.Normal; // a stopped process cannot finish any step
     }
 
     internal override void Thaw(Rig rig)
     {
         var process = (ProcessWorkerTransport)rig.Transport;
-        _ = Libc.Signal(process.ProcessId, Libc.SigCont);
+        _ = OsProcess.Thaw(process.ProcessId);
     }
 
     [Fact]
@@ -133,23 +133,11 @@ public sealed class ProcessTransportTests : TransportSuite
         _ = await rig.StartAsync();
         var pid = ((ProcessWorkerTransport)rig.Transport).ProcessId;
 
-        Assert.True(Libc.Signal(pid, Libc.SigKill));
+        Assert.True(OsProcess.Kill(pid));
         var (fault, _) = rig.WaitForPollFault(TimeSpan.FromSeconds(10));
 
         Assert.Equal(FaultClass.Exited, fault);
     }
 
-    internal static bool ProcessExists(int pid)
-    {
-        try
-        {
-            var stat = File.ReadAllText($"/proc/{pid}/stat");
-            var state = stat[(stat.LastIndexOf(')') + 2)..][0];
-            return state != 'Z' && state != 'X'; // a zombie is dead; its parent has not reaped it yet
-        }
-        catch (IOException)
-        {
-            return false;
-        }
-    }
+    internal static bool ProcessExists(int pid) => OsProcess.Exists(pid);
 }

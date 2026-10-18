@@ -436,6 +436,59 @@ public sealed unsafe class WorkerRuntime : IDisposable
     {
         var periodNs = _access.HandshakeRecord->HeartbeatPeriodNs;
         var period = periodNs == 0 ? 1 : (int)Math.Max(1, periodNs / 1_000_000);
+        var fineTimer = OperatingSystem.IsWindows() && period < 16;
+        if (fineTimer && OperatingSystem.IsWindows())
+        {
+            Win32.BeginFineTimer(); // else Thread.Sleep(1) sleeps a 15.6 ms tick and the beat is later than the liveness window allows
+        }
+
+        // On Windows the handle pins the host's process object, so a reused process id cannot pass for the host.
+        var hostProcess = _options.IsolatedProcess && _hostPid != 0 && OperatingSystem.IsWindows()
+            ? Win32.OpenProcess((int)_hostPid)
+            : null;
+        try
+        {
+            BeatUntilStopped(period, hostProcess);
+        }
+        finally
+        {
+            hostProcess?.Dispose();
+            if (fineTimer && OperatingSystem.IsWindows())
+            {
+                Win32.EndFineTimer();
+            }
+        }
+    }
+
+    private bool HostIsGone(System.Diagnostics.Process? hostProcess)
+    {
+        if (_hostPid == 0)
+        {
+            return false;
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            return hostProcess is null || Win32.HasEnded(hostProcess);
+        }
+
+        return OperatingSystem.IsLinux() && (ulong)Libc.ParentPid() != _hostPid;
+    }
+
+    private static void ExitProcessNow(int code)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Win32.ExitNow(code);
+        }
+        else
+        {
+            Libc.Exit(code);
+        }
+    }
+
+    private void BeatUntilStopped(int period, System.Diagnostics.Process? hostProcess)
+    {
         var sinceParentCheck = 0;
         while (Volatile.Read(ref _stopHeartbeat) == 0)
         {
@@ -444,24 +497,24 @@ public sealed unsafe class WorkerRuntime : IDisposable
                 _access.Beat();
             }
 
-            if (_options.IsolatedProcess && OperatingSystem.IsLinux() && ++sinceParentCheck >= Math.Max(1, 10 / period))
+            if (_options.IsolatedProcess && ++sinceParentCheck >= Math.Max(1, 10 / period))
             {
                 sinceParentCheck = 0;
-                if (_hostPid != 0 && (ulong)Libc.ParentPid() != _hostPid)
+                if (HostIsGone(hostProcess))
                 {
-                    // The host is gone (or is not this process's parent: the worker must be started directly by the
-                    // host, not through a wrapper). Remove the segment file it can no longer remove, and leave without
-                    // running managed shutdown (the main thread may be inside a driver call that never returns).
+                    // The host is gone (on Linux also: it is not this process's parent, so the worker must be started
+                    // directly by the host, not through a wrapper). Remove the segment file it can no longer remove, and
+                    // leave without running managed shutdown (the main thread may be inside a driver call that never returns).
                     try
                     {
                         File.Delete(_access.Segment.Path);
                     }
-                    catch (IOException)
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                     {
                         // Best effort.
                     }
 
-                    Libc.Exit(ExitCodeFor(WorkerExit.HostGone));
+                    ExitProcessNow(ExitCodeFor(WorkerExit.HostGone));
                 }
             }
 

@@ -24,3 +24,8 @@ Runs 4 to 6 (after the fix, 2026-10-18, load average 1 to 3, 300 s each, all PAS
   seed=424242 episodes=1267 goodSteps=19241 recoverable=2390 twoInFlight=2017 CancelledStart=134 CleanShutdown=128 Crash=123 ExternalKill=111 FrozenWorker=120 Hang=120 KillWhileHealthy=140 RejectedHandshake=136 Sticky=129 Throw=126
   Total 3752 episodes, 387 Hang episodes, all classified Hang. These runs use HeartbeatLiveness 5 s; the default 50 ms window is covered by
   MissedDeadlineWithALiveHeartbeatIsAHangAtTheDefaultLivenessWindow (5 rounds per transport, passed in 3 consecutive full-suite runs).
+
+Note on the runs above (added after the first hosted-runner CI run): runs 1 to 6 used a 400 ms step deadline in every episode. On GitHub's
+two-core ubuntu-latest runner a Crash episode took longer than 400 ms to be seen as an exit; the worker's heartbeat was still beating, so
+the host concluded Hang. The test now uses the 400 ms deadline only in the Hang and FrozenWorker episodes, which end by the deadline
+lapsing, and 15 s in all others. Runs 1 to 6 were not repeated with that change.
