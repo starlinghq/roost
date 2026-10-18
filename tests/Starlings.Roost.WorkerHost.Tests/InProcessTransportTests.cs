@@ -37,12 +37,14 @@ public sealed class InProcessTransportTests : TransportSuite, IDisposable
         {
             await using var rig = NewRig(new WorkerTransportOptions { KillTimeout = TimeSpan.FromMilliseconds(300) });
             _ = await rig.StartAsync(Rig.DefaultLaunch(deadline: TimeSpan.FromMilliseconds(100)));
+            var path = rig.Transport.SegmentPath!;
             _ = rig.Publish(FakeOp.Hang);
             Assert.Equal(FaultClass.Hang, rig.WaitForPollFault(TimeSpan.FromSeconds(10)).Fault);
 
             await rig.Transport.KillAsync(CancellationToken.None);
 
             Assert.Equal(TransportState.Abandoned, rig.Transport.State);
+            Assert.False(File.Exists(path), "the segment file of an abandoned worker was left in the segment directory");
             _ = await Assert.ThrowsAsync<InvalidOperationException>(async () => await rig.StartAsync());
         }
         finally
@@ -52,7 +54,7 @@ public sealed class InProcessTransportTests : TransportSuite, IDisposable
     }
 
     [Fact]
-    public async Task WorkerThreadFailureInTheHandshakeIsReportedAsAStartFailure()
+    public async Task OpenDeviceThrowingInProcessIsReportedAsAStartFailure()
     {
         await using var transport = new InProcessWorkerTransport(() => new FakeExecutor(failOpen: true));
 
