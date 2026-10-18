@@ -1,2 +1,0 @@
-[console_scripts]
-roost-evidence = roost_evidence.cli:main
