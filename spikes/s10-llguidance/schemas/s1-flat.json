@@ -1,0 +1,1 @@
+{"type":"object","properties":{"name":{"type":"string"},"age":{"type":"integer"},"active":{"type":"boolean"},"score":{"type":"number"}},"required":["name","age","active","score"],"additionalProperties":false}

@@ -1,0 +1,9 @@
+target/
+aot/bin/
+aot/obj/
+aot/publish/
+*.so
+*.a
+*.o
+*.cubin
+results/*.raw
