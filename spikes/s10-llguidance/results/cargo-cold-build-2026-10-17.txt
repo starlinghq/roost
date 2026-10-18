@@ -1,0 +1,11 @@
+# cold cargo build --release --locked -j2, fresh target dir, 2026-10-17
+# uptime at start:  16:46:41 up 3 days, 10:23,  1 user,  load average: 1.20, 2.23, 2.70
+   Compiling tokenizers v0.21.4
+   Compiling derivre v0.3.13
+   Compiling toktrie_hf_tokenizers v1.9.1 (https://github.com/guidance-ai/llguidance?rev=6cef6ed9c973c2a155a85f2bb1996320af28b289#6cef6ed9)
+   Compiling roost-grammar-spike v0.0.0 (/home/mark/Projects/roost-wave1/R-067/spikes/s10-llguidance)
+    Finished `release` profile [optimized] target(s) in 1m 48s
+wall_seconds=108
+-rw-r--r-- 2 mark mark 30412218 Oct 17 16:48 /home/mark/Projects/roost-wave1/envs/R-067/target-cold/release/libroost_grammar.a
+-rwxr-xr-x 2 mark mark  8807944 Oct 17 16:48 /home/mark/Projects/roost-wave1/envs/R-067/target-cold/release/libroost_grammar.so
+# uptime at end:  16:48:29 up 3 days, 10:25,  1 user,  load average: 2.29, 2.37, 2.70

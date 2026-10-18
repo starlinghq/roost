@@ -1,0 +1,12 @@
+# run 2, unfiltered stdout of MaskBench, 2026-10-17, via tools/gpu-lease --device 3090 (CPU-only work)
+# uptime at start:  16:39:46 up 3 days, 10:16,  1 user,  load average: 4.87, 2.59, 2.84
+# uptime at end:    16:43:56 up 3 days, 10:20,  1 user,  load average: 2.90, 3.07, 3.01
+abi_version=1 reps=200 n_vocab=151936
+tokenizer_new_ms=826.5
+mask_words=4748 mask_bytes=18992 eos=151643
+s1-flat: accepting=1 stopped=1
+s1-flat: instance_bytes=59 tokens=24 steps=25 samples=5000 violations=0 mask_us p50=22.6 p90=48.5 p99=181.4 p99.9=219.7 max=286.1 mean=28.7 cold_rep0_max_us=198.5 consume_us p50=1.4 p99=3.6 matcher_new_ms first=0.65 p50=0.47 max=0.74
+s2-nested: accepting=1 stopped=1
+s2-nested: instance_bytes=346 tokens=119 steps=120 samples=24000 violations=0 mask_us p50=17.6 p90=57.1 p99=188.3 p99.9=498.2 max=834.4 mean=28.1 cold_rep0_max_us=486.6 consume_us p50=1.1 p99=3.9 matcher_new_ms first=0.85 p50=0.83 max=1.38
+s3-complex: accepting=1 stopped=1
+s3-complex: instance_bytes=605 tokens=197 steps=198 samples=39600 violations=0 mask_us p50=16.8 p90=101.2 p99=435.1 p99.9=585.4 max=1015.8 mean=44.9 cold_rep0_max_us=542.0 consume_us p50=1.2 p99=4.0 matcher_new_ms first=1.05 p50=1.04 max=1.71
