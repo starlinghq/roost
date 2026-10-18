@@ -107,8 +107,35 @@ def test_starling_submodule_reference_and_loose_pin_fail(tmp_path, capsys):
     out = capsys.readouterr().out
     assert ".gitmodules present" in out
     assert "project reference" in out
-    assert "Starlings.Tokenizers version '0.3.0-preview.1' is not an exact" in out
+    assert "Starlings.Tokenizers Version '0.3.0-preview.1' is not an exact" in out
     assert "Acquisition" not in out and "Roost.Thing" not in out
+
+
+def test_starling_gitlink_override_and_outside_reference_fail(tmp_path, capsys):
+    root = git_repo(tmp_path)
+    sha = "1" * 40
+    subprocess.run(
+        ["git", "update-index", "--add", "--cacheinfo", f"160000,{sha},external/starling"], cwd=root, check=True
+    )
+    write(root / "Directory.Build.props", "<Project />")
+    write(
+        root / "src/A/A.csproj",
+        '<Project><ItemGroup><PackageReference Include="Starlings.Tokenizers" VersionOverride="0.3.0" />'
+        '<PackageReference Version="[0.2.0]" Include="Starlings.Acquisition" />'
+        '<ProjectReference Include="..\\..\\..\\starling\\ai-dotnet\\X.csproj" /></ItemGroup></Project>',
+    )
+    write(
+        root / "Directory.Packages.props",
+        '<Project><ItemGroup><PackageVersion Version="0.3.0" Include="Starlings.Tokenizers" /></ItemGroup></Project>',
+    )
+    assert boundaries.main(["--root", str(root), "--no-closure"]) == 1
+    out = capsys.readouterr().out
+    assert "external/starling: submodule (gitlink) tracked" in out
+    assert "Starlings.Tokenizers VersionOverride '0.3.0'" in out
+    assert "Starlings.Tokenizers Version '0.3.0'" in out
+    assert "leaves the repository" in out
+    assert "CentralPackageVersionOverrideEnabled" in out
+    assert "Acquisition" not in out
 
 
 def assets(names: list[str]) -> str:
