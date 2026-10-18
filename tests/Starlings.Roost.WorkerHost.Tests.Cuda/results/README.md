@@ -12,6 +12,13 @@ segment and rings), `proc` (the real `WorkerRuntime` in a child process). Host l
 `Stopwatch.GetTimestamp` (CLOCK_MONOTONIC). 8000 steps after 200 warm-up steps, three interleaved rounds
 (direct, inproc, proc) per round. Percentiles are nearest-rank over the pooled steps.
 
+## Verdict for decision 21
+
+With the .NET host, process minus in-process is -1.2 us at p50 and -1.3 us at p99 pooled (per-round p99 gaps -316, +15
+and -5 us), against S8's +1.2 us and +21 us with the C++ host. The 90 us kill criterion (2% of a 4.5 ms step) is not
+met, so S8's provisional recommendation (a), out-of-process by default, stands. It remains subject to a re-measurement
+on a measured step once R-025 exists, and on a quieter machine (see the limits below).
+
 ## Result (depth 1, lock-step, `bench_4500us_d1.txt`, `pool_d1.txt`)
 
 Load average at the start of each of the nine runs was 1.0 to 3.9 for seven, 6.2 for one (`proc`, round 3) and 9.3 for one (`inproc`, round 3); it
