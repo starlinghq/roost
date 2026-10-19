@@ -1,4 +1,5 @@
 using System.Text;
+using Starlings.Roost.Abi;
 using Starlings.Roost.Kernels;
 
 namespace Starlings.Roost.Kernels.Tests;
@@ -19,13 +20,14 @@ internal static class TestManifest
 
     public static KernelManifest Repository() => KernelManifest.Load(Path.Combine(RepoRoot(), "kernels", "manifest.toml"));
 
-    /// <summary>A small manifest: Residual (residual-stub) and Gemm (gemm-x) for the given SMs, with one digest per SM.</summary>
+    /// <summary>A small manifest for the ABI the host is built against (<see cref="KernelAbi"/>) unless told otherwise: Residual (residual-stub) and Gemm (gemm-x) for the given SMs, with one digest per SM.</summary>
     public static KernelManifest Build(
         string sm86Status = "experimental",
         string digest86 = "00",
         long bytes86 = 0,
         bool gemmFor86 = false,
-        int abiMinor = 0,
+        int abiMinor = KernelAbi.Minor,
+        int abiMajor = KernelAbi.Major,
         string cuda = "13.3",
         string? gemmDigest86 = null)
     {
@@ -36,7 +38,7 @@ internal static class TestManifest
             schema_version = 1
             contract_version = 1
             [abi]
-            major = 1
+            major = {{abiMajor}}
             minor = {{abiMinor}}
             [toolkit]
             cuda = "{{cuda}}"
