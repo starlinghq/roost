@@ -1,0 +1,40 @@
+uptime:  14:41:39 up 4 days,  8:18,  1 user,  load average: 3.02, 8.21, 9.76
+bench mode=direct steps=8000 gpu_us=4500 depth=1 loadavg=3.02 runtime=.NET 10.0.12
+  step latency             n=8000 min=4518.5 p50=4529.5 p90=4565.1 p99=4590.3 p99.9=6376.5 max=9206.9 mean=4543.4 (us)
+  wall per step (throughput) = 4543.4 us
+  host thread allocated bytes in the measured loop = 0
+  gc collections during the measured loop: gen0=0 gen1=0 gen2=0
+uptime:  14:42:17 up 4 days,  8:18,  1 user,  load average: 6.92, 8.44, 9.77
+bench mode=inproc steps=8000 gpu_us=4500 depth=1 loadavg=6.92 runtime=.NET 10.0.12
+  step latency             n=8000 min=4518.5 p50=4538.5 p90=5330.1 p99=9224.5 p99.9=15002.9 max=38834.0 mean=4825.9 (us)
+  worker done->host seen   n=8000 min=0.1 p50=0.8 p90=236.5 p99=2854.0 p99.9=6795.3 max=13574.4 mean=135.8 (us)
+  wall per step (throughput) = 4826.5 us
+  host thread allocated bytes in the measured loop = 0
+  gc collections during the measured loop: gen0=0 gen1=0 gen2=0
+uptime:  14:42:57 up 4 days,  8:19,  1 user,  load average: 17.92, 10.77, 10.48
+bench mode=proc steps=8000 gpu_us=4500 depth=1 loadavg=17.92 runtime=.NET 10.0.12
+  step latency             n=8000 min=4516.7 p50=4534.9 p90=6173.7 p99=8844.4 p99.9=13069.9 max=24444.9 mean=4920.2 (us)
+  worker done->host seen   n=8000 min=0.2 p50=0.8 p90=778.2 p99=2728.7 p99.9=5261.8 max=19909.6 mean=220.5 (us)
+  wall per step (throughput) = 4920.6 us
+  host thread allocated bytes in the measured loop = 0
+  gc collections during the measured loop: gen0=0 gen1=0 gen2=0
+uptime:  14:43:38 up 4 days,  8:20,  1 user,  load average: 16.21, 11.07, 10.58
+bench mode=direct steps=8000 gpu_us=4500 depth=1 loadavg=16.21 runtime=.NET 10.0.12
+  step latency             n=8000 min=4519.8 p50=4542.3 p90=5496.1 p99=7525.4 p99.9=13035.2 max=28184.6 mean=4815.4 (us)
+  wall per step (throughput) = 4815.4 us
+  host thread allocated bytes in the measured loop = 0
+  gc collections during the measured loop: gen0=0 gen1=0 gen2=0
+uptime:  14:44:19 up 4 days,  8:20,  1 user,  load average: 18.33, 12.31, 11.02
+bench mode=inproc steps=8000 gpu_us=4500 depth=1 loadavg=18.33 runtime=.NET 10.0.12
+  step latency             n=8000 min=4515.0 p50=4528.4 p90=5424.9 p99=8132.5 p99.9=10039.2 max=17430.1 mean=4792.7 (us)
+  worker done->host seen   n=8000 min=0.1 p50=0.6 p90=452.9 p99=1967.0 p99.9=3888.9 max=12348.4 mean=138.4 (us)
+  wall per step (throughput) = 4793.0 us
+  host thread allocated bytes in the measured loop = 0
+  gc collections during the measured loop: gen0=0 gen1=0 gen2=0
+uptime:  14:45:00 up 4 days,  8:21,  1 user,  load average: 13.66, 12.03, 11.00
+bench mode=proc steps=8000 gpu_us=4500 depth=1 loadavg=13.66 runtime=.NET 10.0.12
+  step latency             n=8000 min=4515.3 p50=4527.3 p90=4537.0 p99=4574.3 p99.9=5040.0 max=8682.0 mean=4531.4 (us)
+  worker done->host seen   n=8000 min=0.1 p50=0.5 p90=1.0 p99=1.9 p99.9=13.0 max=1573.6 mean=1.1 (us)
+  wall per step (throughput) = 4531.6 us
+  host thread allocated bytes in the measured loop = 0
+  gc collections during the measured loop: gen0=0 gen1=0 gen2=0
