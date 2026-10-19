@@ -1,0 +1,80 @@
+using Starlings.Roost.ModelCompiler;
+
+namespace Starlings.Roost.ModelCompiler.Tests.Models;
+
+// A Qwen3.5-shaped tiny hybrid: four layers, three Gated DeltaNet layers (0, 1, 2) and one full-attention layer (3),
+// a pattern that yields 6 attention and 18 recurrent layers when repeated to 24 (the counts Qwen3.5-0.8B has, decision 15), with a sandbox-sized width. Two state groups: paged
+// K and V for the attention layer, recurrent state and convolution state for the others. The recurrent block uses
+// separate q, k, v, g and beta projections because the C3 GatedDeltaRule takes contiguous q, k, v, g and beta (no strides),
+// and every buffer has the extent the op's scalar arguments imply (q and k [tokens, k_heads*k_dim], v [tokens, v_heads*v_dim],
+// g and beta [tokens, v_heads]; HybridModelTests.RecurrentOpBuffersMatchTheirScalarArguments checks it). Only v goes through
+// the convolution here: the real Qwen3.5 block convolves the fused q/k/v projection before splitting it, which needs a split
+// or strided views the frozen v0 ops do not have (a stream A decision); the real definition is R-035.
+[RoostModel("tiny-hybrid", Dtype = "BF16")]
+[Dim("hidden", 64)]
+[Dim("inter", 128)]
+[Dim("inter2", "2*inter")]
+[Dim("vocab", 256)]
+[Dim("heads", 4)]
+[Dim("kv_heads", 2)]
+[Dim("head_dim", 16)]
+[Dim("q_dim", "heads*head_dim")]
+[Dim("kv_dim", "kv_heads*head_dim")]
+[Dim("k_heads", 4)]
+[Dim("v_heads", 4)]
+[Dim("k_dim", 16)]
+[Dim("v_dim", 16)]
+[Dim("conv_width", 4)]
+[Dim("block_size", 16)]
+[StateGroup("attn", "Full", Layers = "3:4", KvHeads = "kv_heads", HeadSize = "head_dim", BlockSize = "block_size")]
+[StateGroup("linear", "Recurrent", Layers = "0:3", StateShape = "v_heads,k_dim,v_dim", ConvShape = "v_heads*v_dim,conv_width-1", SnapshotSlots = "8")]
+[Weight("embed", "vocab,hidden", Source = "model.embed_tokens.weight")]
+[Weight("l{i}.norm", "hidden", Layers = "0:4")]
+[Weight("l{i}.q_proj", "q_dim,hidden", Layers = "3:4")]
+[Weight("l{i}.k_proj", "kv_dim,hidden", Layers = "3:4")]
+[Weight("l{i}.v_proj", "kv_dim,hidden", Layers = "3:4")]
+[Weight("l{i}.o_proj", "hidden,q_dim", Layers = "3:4")]
+[Weight("l{i}.qk_norm", "head_dim", Layers = "3:4")]
+[Weight("l{i}.lin_q_proj", "k_heads*k_dim,hidden", Layers = "0:3")]
+[Weight("l{i}.lin_k_proj", "k_heads*k_dim,hidden", Layers = "0:3")]
+[Weight("l{i}.lin_v_proj", "v_heads*v_dim,hidden", Layers = "0:3")]
+[Weight("l{i}.lin_conv", "v_heads*v_dim,conv_width", Layers = "0:3")]
+[Weight("l{i}.lin_g_proj", "v_heads,hidden", Layers = "0:3")]
+[Weight("l{i}.lin_beta_proj", "v_heads,hidden", Layers = "0:3")]
+[Weight("l{i}.lin_out", "hidden,v_heads*v_dim", Layers = "0:3")]
+[Weight("l{i}.mlp_norm", "hidden", Layers = "0:4")]
+[Weight("l{i}.gate_up", "inter2,hidden", Layers = "0:4")]
+[Weight("l{i}.down", "hidden,inter", Layers = "0:4")]
+[Weight("final_norm", "hidden")]
+[Weight("lm_head", "vocab,hidden")]
+[Node("embed", "Embedding", "Table=embed; Output=>h0[tokens,hidden]; Tokens=tokens; Dim=hidden; Vocab=vocab")]
+// ---- one layer: token mixer (Gated DeltaNet or attention), then the MLP ----
+[Node("l{i}.norm", "RmsNorm", "Input=h{i}; Weight=l{i}.norm; Output=>l{i}.x[tokens,hidden]; Rows=tokens; Dim=hidden; Eps=1e-6", Layers = "0:4")]
+[Node("l{i}.q", "Gemm", "A=l{i}.x; B=l{i}.q_proj; D=>l{i}.q[tokens,q_dim]; M=tokens; N=q_dim; K=hidden; TransposeB=true; Alpha=1", Layers = "3:4")]
+[Node("l{i}.k", "Gemm", "A=l{i}.x; B=l{i}.k_proj; D=>l{i}.k[tokens,kv_dim]; M=tokens; N=kv_dim; K=hidden; TransposeB=true; Alpha=1", Layers = "3:4")]
+[Node("l{i}.lin_q", "Gemm", "A=l{i}.x; B=l{i}.lin_q_proj; D=>l{i}.lq[tokens,k_heads*k_dim]; M=tokens; N=k_heads*k_dim; K=hidden; TransposeB=true; Alpha=1", Layers = "0:3")]
+[Node("l{i}.lin_k", "Gemm", "A=l{i}.x; B=l{i}.lin_k_proj; D=>l{i}.lk[tokens,k_heads*k_dim]; M=tokens; N=k_heads*k_dim; K=hidden; TransposeB=true; Alpha=1", Layers = "0:3")]
+[Node("l{i}.lin_v", "Gemm", "A=l{i}.x; B=l{i}.lin_v_proj; D=>l{i}.lv[tokens,v_heads*v_dim]; M=tokens; N=v_heads*v_dim; K=hidden; TransposeB=true; Alpha=1", Layers = "0:3")]
+[Node("l{i}.lin_conv", "CausalConv1d", "Input=l{i}.lv; Weight=l{i}.lin_conv; Output=>l{i}.lc[tokens,v_heads*v_dim]; ConvState=s:linear.conv; Batch=seqs; Tokens=tokens; Channels=v_heads*v_dim; Width=conv_width; Silu=true", Layers = "0:3")]
+[Node("l{i}.lin_g", "Gemm", "A=l{i}.x; B=l{i}.lin_g_proj; D=>l{i}.g[tokens,v_heads]; M=tokens; N=v_heads; K=hidden; TransposeB=true; Alpha=1", Layers = "0:3")]
+[Node("l{i}.lin_beta", "Gemm", "A=l{i}.x; B=l{i}.lin_beta_proj; D=>l{i}.beta[tokens,v_heads]; M=tokens; N=v_heads; K=hidden; TransposeB=true; Alpha=1", Layers = "0:3")]
+[Node("l{i}.delta", "GatedDeltaRule", "Q=l{i}.lq; K=l{i}.lk; V=l{i}.lc; G=l{i}.g; Beta=l{i}.beta; Output=>l{i}.o[tokens,v_heads*v_dim]; State=s:linear.state; Batch=seqs; Tokens=tokens; KHeads=k_heads; VHeads=v_heads; KDim=k_dim; VDim=v_dim; Scale=0.25; UseInitialState=true; L2NormQk=true", Layers = "0:3")]
+[Node("l{i}.lin_out", "Gemm", "A=l{i}.o; B=l{i}.lin_out; D=>l{i}.mix[tokens,hidden]; M=tokens; N=hidden; K=v_heads*v_dim; TransposeB=true; Alpha=1", Layers = "0:3")]
+[Node("l{i}.v", "Gemm", "A=l{i}.x; B=l{i}.v_proj; D=>l{i}.v[tokens,kv_dim]; M=tokens; N=kv_dim; K=hidden; TransposeB=true; Alpha=1", Layers = "3:4")]
+[Node("l{i}.qknorm", "QkNorm", "Q=l{i}.q=>l{i}.qn; K=l{i}.k=>l{i}.kn; QWeight=l{i}.qk_norm; KWeight=l{i}.qk_norm; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; Eps=1e-6", Layers = "3:4")]
+[Node("l{i}.rope", "Rope", "Q=l{i}.qn=>l{i}.qr; K=l{i}.kn=>l{i}.kr; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; RotaryDim=head_dim; Kind=Default; Theta=10000", Layers = "3:4")]
+[Node("l{i}.cache", "CacheWrite", "K=l{i}.kr; V=l{i}.v; KCache=s:attn.k; VCache=s:attn.v; Tokens=tokens; KvHeads=kv_heads; HeadDim=head_dim; BlockSize=block_size", Layers = "3:4")]
+[Node("l{i}.attn", "PagedAttention", "Q=l{i}.qr; KCache=s:attn.k; VCache=s:attn.v; Output=>l{i}.ao[tokens,q_dim]; Batch=seqs; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; BlockSize=block_size; Scale=0.25; Causal=true", Layers = "3:4")]
+[Node("l{i}.o_proj", "Gemm", "A=l{i}.ao; B=l{i}.o_proj; D=>l{i}.mix[tokens,hidden]; M=tokens; N=hidden; K=q_dim; TransposeB=true; Alpha=1", Layers = "3:4")]
+[Node("l{i}.mix_res", "Residual", "A=h{i}; B=l{i}.mix; Output=>l{i}.hm[tokens,hidden]; Elements=tokens*hidden", Layers = "0:4")]
+[Node("l{i}.mlp_norm", "RmsNorm", "Input=l{i}.hm; Weight=l{i}.mlp_norm; Output=>l{i}.y[tokens,hidden]; Rows=tokens; Dim=hidden; Eps=1e-6", Layers = "0:4")]
+[Node("l{i}.up", "Gemm", "A=l{i}.y; B=l{i}.gate_up; D=>l{i}.up[tokens,inter2]; M=tokens; N=inter2; K=hidden; TransposeB=true; Alpha=1", Layers = "0:4")]
+[Node("l{i}.act", "SiluAndMul", "Input=l{i}.up; Output=>l{i}.act[tokens,inter]; Rows=tokens; Dim=inter", Layers = "0:4")]
+[Node("l{i}.down", "Gemm", "A=l{i}.act; B=l{i}.down; D=>l{i}.mlp[tokens,hidden]; M=tokens; N=hidden; K=inter; TransposeB=true; Alpha=1", Layers = "0:4")]
+[Node("l{i}.mlp_res", "Residual", "A=l{i}.hm; B=l{i}.mlp; Output=>h{i+1}[tokens,hidden]; Elements=tokens*hidden", Layers = "0:4")]
+[Node("final_norm", "RmsNorm", "Input=h4; Weight=final_norm; Output=>final[tokens,hidden]; Rows=tokens; Dim=hidden; Eps=1e-6")]
+[Node("head", "LmHead", "Hidden=final; Weight=lm_head; Logits=>logits[selected,vocab]; Selected=selected; Dim=hidden; Vocab=vocab; VocabPadded=vocab")]
+[Output("logits")]
+public static partial class HybridModel
+{
+}
