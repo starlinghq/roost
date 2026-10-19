@@ -22,7 +22,7 @@ from pathlib import Path
 
 PLAN = Path(__file__).resolve().parent.parent / "docs" / "plan" / "build-plan.md"
 ROW = re.compile(r"^\| (R-\d{3}) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \| (.+?) \|$")
-EXPECTED = 113
+EXPECTED = 114
 
 # Work that lands in starlinghq/starling: none since the NuGet-only boundary (build plan section 2.2). Kept empty.
 STARLING_STREAMS: set[str] = set()
