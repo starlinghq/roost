@@ -9,7 +9,7 @@ Source data: r025-cpu-compare-sm86.txt (this directory), produced by run-eager.s
              of 0 is a defect and is worked around in Probe).
   Sample:    3 prompts (5, 6 and 19 tokens), 8 greedy tokens each, teacher-forced with the GPU's tokens; per-op outputs recorded for steps 0 to 2
              of the first prompt only (prefill, then two decode steps): 72 hidden-state rows, 54 recurrent and 54 conv state rows, 24 logits rows.
-  NOT covered: transformers fp32/bf16 as the reference (the profile's real reference is R-014's fixtures), contexts beyond 27 tokens, batch > 1,
+  NOT covered: transformers fp32/bf16 as the reference (the profile's real reference is R-014's fixtures), contexts beyond 26 keys (the longest sampled context: 19 prompt tokens plus 7 fed tokens at the last step; the per-layer and state tables cover only contexts of 5 to 7 tokens), batch > 1,
              the chunked GatedDeltaRule prefill variant (this run uses the recurrent variant for every length), SM 89, other SMs.
   The reference here is CpuOps, which is itself bf16-rounded per op, so these numbers bound GPU-versus-CpuOps agreement. They are a floor for the
   GPU-versus-transformers tolerance, not a replacement for measuring it.
@@ -21,12 +21,17 @@ Observed worst case over the sample, and a proposed bound (about 1.5 to 2 times 
   hidden state h{i+1} per layer, cosine               0.999926 (step 0, layer 19) >= 0.9999
   recurrent (delta rule) state, max|d| / max|ref|     0.0207 (step 0, layer 16)  <= 0.03
   conv state, max|d| / max|ref|                       0.0076 (step 0, layer 6)   <= 0.012
-  logits, max|d| (float32, 248320 entries)            0.2335                     <= 0.5, and <= 0.02 * (max - min of the reference row)
+  logits, max|d| (float32, 248320 entries)            0.2335 (moon step 5)       <= 0.5, and <= 0.02 * (max - min of the reference row)
+                                                         (worst relative: 0.2284 / 29.7 = 0.0077, moon step 0; a different step from the 0.2335)
   logits, cosine                                      0.999840                   >= 0.9997
   greedy tokens, teacher-forced                       24 of 24 agree             exact on fixture prompts, except where the reference's
-                                                                                 top-2 logit margin is below 2 * the logits bound
+                                                                                 top-2 logit margin is below 2 * the logits bound (see note)
 
 Notes for the maintainer:
+  - Greedy rule caveat: with a logits bound of 0.5 the near-tie exemption (margin below 1.0) would skip 9 of the 24 sampled steps (CPU margins
+    0.279, 0.320, 0.353, 0.390, 0.507, 0.698, 0.700, 0.862, 0.973), including the first-prompt ' Paris' token. The observed logit error is about
+    0.25, so the maintainer may prefer to anchor the exemption to the observed error (margin below 2 * 0.25 = 0.5, which exempts 4 of 24 steps)
+    or to pick fixtures with margins clear of it. Left to the maintainer.
   - Hidden-state differences are whole bf16 steps at the layer's scale (for example 0.03125 where the largest value is 2 to 4), so the relative form
     max|d| / max|ref| is the natural one; an absolute bound would need a per-layer table (the report has one).
   - Logits max|d| reaches 0.23 while the smallest top-2 margin seen was 0.235 (GPU) / 0.279 (CPU), so a greedy flip is possible in principle at
