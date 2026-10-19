@@ -39,7 +39,7 @@ public static class TinyWeights
     /// <returns>The values in row-major order.</returns>
     /// <remarks>
     /// Norm weights (a name ending in <c>norm</c>) are 1 plus up to 10 percent of noise. The embedding table is uniform in
-    /// [-1, 1). Every other slot is uniform in [-a, a) with a = 1.5 / sqrt(fan-in), the last dimension of the shape, so
+    /// [-1, 1). A_log is the log of a uniform draw from [0.1, 1). Every other slot is uniform in [-a, a) with a = 1.5 / sqrt(fan-in), the last dimension of the shape, so
     /// activations stay near unit size through the layers and the logits are not dominated by one token.
     /// </remarks>
     public static double[] Generate(ulong modelSeed, string slotName, string shape, DType dtype)
@@ -63,12 +63,15 @@ public static class TinyWeights
             amplitude = 1.5 / Math.Sqrt(dims[^1]);
         }
 
+        // A_log is the log of the decay rate, as in the checkpoint's initialisation (log of a uniform draw), drawn from
+        // [0.1, 1) so exp(A_log) is a moderate rate and the recurrent state carries across tokens instead of vanishing.
+        bool decayLog = slotName.EndsWith(".A_log", StringComparison.Ordinal);
         ulong state = SlotSeed(modelSeed, slotName);
         var values = new double[elements];
         for (long i = 0; i < elements; i++)
         {
             double u = (NextUInt64(ref state) >> 11) * (1.0 / 9007199254740992.0);
-            values[i] = Round(offset + (((2 * u) - 1) * amplitude), dtype);
+            values[i] = Round(decayLog ? Math.Log(0.1 + (0.9 * u)) : offset + (((2 * u) - 1) * amplitude), dtype);
         }
 
         return values;
