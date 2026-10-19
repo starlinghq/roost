@@ -69,6 +69,18 @@ public sealed class AdmittedPlanner
     public RoostError? TryFork(ulong parent, Request branch)
     {
         ArgumentNullException.ThrowIfNull(branch);
+
+        // Check forkability first: a refusal after admission would hand back a row that n, best_of or the beam width reserved.
+        if (!_planner.TryGetInfo(parent, out var info))
+        {
+            return new RoostError(RoostErrorCode.InvalidOption, "The parent is not live.", "parent");
+        }
+
+        if (!info.Resident || info.ComputedTokens >= info.TokenCount)
+        {
+            return new RoostError(RoostErrorCode.InvalidOption, "The parent holds no state yet, or waits for a sampled token.", "parent");
+        }
+
         if (!_admission.TryAdmitFork(parent, branch.Id.Value, out var error))
         {
             return error;
