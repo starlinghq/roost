@@ -6,8 +6,10 @@
 
 #include <cstdint>
 #include <cstring>
+#include <iterator>
 #include <new>
 #include <string>
+#include <vector>
 
 #include "roost_kernels.h"
 #include "roost_internal.h"
@@ -53,6 +55,18 @@ const RoostOpEntry kEntries[] = {
     },
 };
 
+// The table is the base entries above followed by each op family's own (roost_hybrid_entries: R-034), built once.
+const std::vector<RoostOpEntry>& AllEntries() {
+  static const std::vector<RoostOpEntry> all = [] {
+    std::vector<RoostOpEntry> v(std::begin(kEntries), std::end(kEntries));
+    uint32_t n = 0;
+    const RoostOpEntry* hybrid = roost_hybrid_entries(&n);
+    v.insert(v.end(), hybrid, hybrid + n);
+    return v;
+  }();
+  return all;
+}
+
 }  // namespace
 
 void roost_set_error(const char* message) { g_last_error = message; }
@@ -74,8 +88,8 @@ ROOST_API RoostStatus roost_register(RoostOpTable* table) {
     return ROOST_STATUS_ABI_MISMATCH;
   }
   table->entry_size = static_cast<uint32_t>(sizeof(RoostOpEntry));
-  table->entry_count = static_cast<uint32_t>(sizeof(kEntries) / sizeof(kEntries[0]));
-  table->entries = kEntries;
+  table->entry_count = static_cast<uint32_t>(AllEntries().size());
+  table->entries = AllEntries().data();
   table->library_name = "roost-kernels-sm" ROOST_STRINGIZE(ROOST_SM);
   table->library_abi_major = ROOST_ABI_MAJOR;
   table->library_abi_minor = ROOST_ABI_MINOR;
