@@ -1,0 +1,16 @@
+{
+  "format": "roost.conformance-tolerance-proposal",
+  "format_version": 1,
+  "status": "proposal",
+  "note": "Proposed by R-019 (stream D) for the maintainer. Not a protected file: evidence/protected/ is maintainer-only and nothing here edits it. The suite reads this file by default and reads a protected file instead when one is passed with --tolerances. An element passes when |got - ref| <= atol_rel * scale + rtol * |ref|, with ref from CpuOps (double, rounded once to the element type), or from an upstream golden, and scale the RMS of ref (or the largest |V| of the pool for attention). Exact classes compare bytes. The values are the ones R-017 proposed (kernels/README.md) and measured against SM 86; the largest utilisation each class reached in R-019's own runs is in the results files, not here.",
+  "classes": {
+    "exact": { "exact": true, "ops": ["Embedding", "CacheWrite", "CacheCopy", "Argmax"] },
+    "elementwise-bf16": { "rtol": 0.015625, "atol_rel": 0.000244140625, "scale": "rms", "ops": ["RmsNorm", "QkNorm", "Rope", "SiluAndMul", "Residual"] },
+    "elementwise-f16": { "rtol": 0.001953125, "atol_rel": 0.000030517578125, "scale": "rms", "ops": ["RmsNorm", "QkNorm", "Rope", "SiluAndMul", "Residual"] },
+    "elementwise-f32": { "rtol": 0.000000476837158203125, "atol_rel": 0.000000059604644775390625, "scale": "rms", "ops": ["Residual"] },
+    "gemm-bf16": { "rtol": 0.015625, "atol_rel": 0.001953125, "scale": "rms", "ops": ["Gemm"] },
+    "gemm-f16": { "rtol": 0.001953125, "atol_rel": 0.000244140625, "scale": "rms", "ops": ["Gemm"] },
+    "lm-head-f32": { "rtol": 0.000244140625, "atol_rel": 0.0001220703125, "scale": "rms", "ops": ["LmHead"] },
+    "attention-bf16": { "rtol": 0.0078125, "atol_rel": 0.00390625, "scale": "max-abs-v", "ops": ["PagedAttention"] }
+  }
+}

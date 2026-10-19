@@ -1,0 +1,30 @@
+{
+  "asset": {
+    "name": "roost-conformance-goldens.safetensors",
+    "sha256": "99b0726085266d8b003f29fa87087b15f7c82a6b1c5d3b4fcb9122cd91e1eeb4",
+    "size_bytes": 121874784
+  },
+  "base_seed": 20261019,
+  "case_count": 57,
+  "format": "roost.conformance-goldens-lock",
+  "format_version": 1,
+  "generator": {
+    "path": "tests/Starlings.Roost.Conformance/goldens/generate_goldens.py",
+    "sha256": "82525d3c04dfde1a933cbdd768de3275a103d3903c3cb859779a04265a9d6aac"
+  },
+  "model": {
+    "id": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17"
+  },
+  "release": {
+    "note": "A release asset, not committed. The tag is set when the asset is uploaded; the digest above is what binds it.",
+    "repository": "starlinghq/roost",
+    "tag": null
+  },
+  "versions": {
+    "numpy": "2.4.6",
+    "python": "3.13.15",
+    "torch": "2.9.1+cpu",
+    "transformers": "5.20.1"
+  }
+}

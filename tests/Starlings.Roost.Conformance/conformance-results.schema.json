@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/starlinghq/roost/tests/Starlings.Roost.Conformance/conformance-results.schema.json",
+  "title": "Roost kernel conformance results",
+  "description": "Results of the kernel conformance suite (build plan R-019, stream D) in the evaluator's stage-results envelope: format roost.stage-results, format_version 3, with task kernel-conformance and stage cpu or cuda. PROPOSED. evidence/schemas/stage-results.schema.json (stream B2) allows task generation only, so a document of this schema does not validate against it until B2 adds the task, the two stages and the case and section shapes below (a schema-change request, reported with R-019). Measurements only: no tolerance keys (the evaluator rejects them in results); the class a case was judged by is named, its limits are in the tolerance file whose digest is recorded.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "format_version", "task", "profile", "stage", "candidate", "producer", "cases", "sections"],
+  "properties": {
+    "format": { "const": "roost.stage-results" },
+    "format_version": { "const": 3 },
+    "task": { "const": "kernel-conformance" },
+    "profile": {
+      "description": "kernels/<subject>: the library (roost-kernels-sm86) or the CPU side (oracle, cpuops).",
+      "type": "string",
+      "pattern": "^kernels/[a-z0-9][a-z0-9.-]*$"
+    },
+    "stage": { "enum": ["cpu", "cuda"] },
+    "candidate": { "type": "string", "minLength": 1 },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "repository_commit": { "type": ["string", "null"], "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "machine": { "type": "string" },
+        "provider": { "type": "string" },
+        "provider_options": { "type": "object", "additionalProperties": { "type": "string" } }
+      }
+    },
+    "assets": {
+      "description": "Files the run loaded: the library, the tolerance file, the goldens.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "$ref": "#/$defs/sha256" }
+        }
+      }
+    },
+    "cases": {
+      "description": "Keyed <op>/<variant>/<case id> for conformance runs and <op>/<variant>/<tool> for sanitizer runs.",
+      "type": "object",
+      "additionalProperties": { "oneOf": [{ "$ref": "#/$defs/conformance_case" }, { "$ref": "#/$defs/sanitizer_case" }] }
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary"],
+      "properties": {
+        "summary": { "type": "object" },
+        "classes": {
+          "description": "Per tolerance class: cases, and the largest fraction of the class's limit any element used (1 is the limit).",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cases", "max_utilisation", "max_abs", "violations"],
+            "properties": {
+              "cases": { "type": "integer", "minimum": 0 },
+              "max_utilisation": { "type": "number", "minimum": 0 },
+              "max_abs": { "type": "number", "minimum": 0 },
+              "violations": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["op", "variant", "flags", "passed", "failed", "not_run", "abi_probe"],
+            "properties": {
+              "op": { "type": "string" },
+              "variant": { "type": "string" },
+              "flags": { "type": "string" },
+              "passed": { "type": "integer", "minimum": 0 },
+              "failed": { "type": "integer", "minimum": 0 },
+              "not_run": { "type": "integer", "minimum": 0 },
+              "abi_probe": { "enum": ["pass", "fail", "n/a"] }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "conformance_case": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "variant", "dtype", "source", "class", "outcome", "reference", "seed", "outputs", "determinism", "batch_invariance", "checks", "detail"],
+      "properties": {
+        "op": { "type": "string" },
+        "variant": { "type": "string" },
+        "dtype": { "type": "string" },
+        "source": { "enum": ["fixed", "random", "golden", "none"] },
+        "class": { "type": "string" },
+        "outcome": { "enum": ["pass", "fail", "error", "not_run"] },
+        "reference": { "enum": ["CpuOps", "golden", ""] },
+        "seed": { "type": "string", "pattern": "^[0-9]+$" },
+        "outputs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "count", "max_abs", "max_utilisation", "violations", "nonfinite", "ref_rms", "scale"],
+            "properties": {
+              "name": { "type": "string" },
+              "count": { "type": "integer", "minimum": 0 },
+              "max_abs": { "type": "number" },
+              "max_utilisation": { "type": "number" },
+              "violations": { "type": "integer", "minimum": 0 },
+              "nonfinite": { "type": "integer", "minimum": 0 },
+              "ref_rms": { "type": "number" },
+              "scale": { "type": "number" }
+            }
+          }
+        },
+        "determinism": { "enum": ["pass", "fail", "n/a"] },
+        "batch_invariance": { "enum": ["pass", "fail", "n/a"] },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "ok", "detail"],
+            "properties": { "name": { "type": "string" }, "ok": { "type": "boolean" }, "detail": { "type": "string" } }
+          }
+        },
+        "detail": { "type": "string" }
+      }
+    },
+    "sanitizer_case": {
+      "description": "One variant under one compute-sanitizer tool (written by sanitize.py).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "variant", "tool", "outcome", "sanitizer_errors", "exit_code", "conformance_passed", "conformance_failed", "conformance_green", "log", "log_sha256"],
+      "properties": {
+        "op": { "type": "string" },
+        "variant": { "type": "string" },
+        "tool": { "enum": ["memcheck", "racecheck", "synccheck", "initcheck"] },
+        "outcome": { "enum": ["pass", "fail"] },
+        "sanitizer_errors": { "type": "integer", "minimum": -1 },
+        "exit_code": { "type": "integer" },
+        "conformance_passed": { "type": "integer", "minimum": 0 },
+        "conformance_failed": { "type": "integer", "minimum": 0 },
+        "conformance_green": { "type": "boolean" },
+        "log": { "type": "string" },
+        "log_sha256": { "oneOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
+      }
+    }
+  }
+}

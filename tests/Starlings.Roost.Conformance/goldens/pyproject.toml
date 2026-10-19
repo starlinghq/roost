@@ -1,0 +1,38 @@
+# Upstream golden generator for the kernel conformance suite (build plan R-019). Tool-time Python only: nothing here ships,
+# and nothing under src/ may import it. Lint and format settings come from the repository's root ruff.toml.
+[build-system]
+requires = ["setuptools==80.9.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "roost-conformance-goldens"
+version = "0.1.0"
+description = "Generates the upstream golden tensors for the Roost kernel conformance suite."
+requires-python = ">=3.11"
+license = "MIT OR Apache-2.0"
+# The versions are the ones the evidence pipeline pins for its reference runner (evidence/pipeline/pyproject.toml): the
+# transformers release whose qwen3_5 implementation is the upstream definition of the M0 model's ops.
+dependencies = [
+    "numpy==2.4.6",
+    "safetensors==0.8.0",
+    "torch==2.9.1",
+    "transformers==5.20.1",
+]
+
+[project.scripts]
+roost-conformance-goldens = "generate_goldens:main"
+
+[dependency-groups]
+dev = ["pytest==8.4.2"]
+
+# CPU wheels only: the default PyPI wheel on Linux pulls the CUDA runtime, which a CPU reference does not need.
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[tool.setuptools]
+py-modules = ["generate_goldens"]
