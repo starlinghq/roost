@@ -131,26 +131,64 @@ public sealed class GatedDeltaRuleViewTests
         Assert.Equal(s0.ReadF32(), s1.ReadF32());
     }
 
+    // Each view starts at element 32 of a 64-element buffer and runs to its end, long enough for every stride here
+    // (contiguous extent 12, strided extent stride + row width), so only the stride check can reject these; ParamName pins
+    // which check threw. Starting mid-buffer also keeps a negative stride's reads inside the buffer if that check is missing.
     [Theory]
-    [InlineData(5, 0, 0, 6)]   // QStride below the row width (KHeads * KDim = 6)
-    [InlineData(0, -6, 0, 6)]  // negative KStride
-    [InlineData(0, 0, 3, 6)]   // VStride below the row width (VHeads * VDim = 4)
-    [InlineData(20, 20, 20, 25)] // a view span shorter than (Tokens - 1) * stride + row width = 26
-    public void RejectsAStrideBelowTheRowWidthOrASpanTooShortForIt(int qs, int ks, int vs, int spanLength)
+    [InlineData(5, 0, 0, "QStride")]  // QStride below the row width (KHeads * KDim = 6)
+    [InlineData(0, -6, 0, "KStride")] // negative KStride
+    [InlineData(0, 0, 3, "VStride")]  // VStride below the row width (VHeads * VDim = 4)
+    public void RejectsAStrideBelowTheRowWidth(int qs, int ks, int vs, string field)
     {
         using var f = new Bag();
         var buf = f.Add(Mem.Zeros(DType.F64, 64));
+        var span = new DeviceSpan { Address = buf.Address + (32 * sizeof(double)), Length = 32, Dtype = DType.F64 };
+        var a = StrideCase(f, span);
+        a.QStride = qs;
+        a.KStride = ks;
+        a.VStride = vs;
+        var e = Assert.Throws<ArgumentException>(() => CpuOps.GatedDeltaRule(a));
+        Assert.Equal(field, e.ParamName);
+    }
+
+    // The same views with strides at the row width run, so the rejections above come from the stride values alone.
+    [Fact]
+    public void StridesAtTheRowWidthAreAccepted()
+    {
+        using var f = new Bag();
+        var buf = f.Add(Mem.Zeros(DType.F64, 64));
+        var span = new DeviceSpan { Address = buf.Address + (32 * sizeof(double)), Length = 32, Dtype = DType.F64 };
+        var a = StrideCase(f, span);
+        a.QStride = 6;
+        a.KStride = 6;
+        a.VStride = 4;
+        CpuOps.GatedDeltaRule(a);
+    }
+
+    [Fact]
+    public void RejectsASpanTooShortForItsStride()
+    {
+        using var f = new Bag();
+        var buf = f.Add(Mem.Zeros(DType.F64, 64));
+        // (Tokens - 1) * stride + row width = 20 + 6 = 26 elements needed; the span has 25.
+        var span = new DeviceSpan { Address = buf.Address, Length = 25, Dtype = DType.F64 };
+        var a = StrideCase(f, span);
+        a.QStride = 20;
+        a.KStride = 20;
+        a.VStride = 20;
+        var e = Assert.Throws<ArgumentException>(() => CpuOps.GatedDeltaRule(a));
+        Assert.StartsWith("Q needs 26 elements", e.Message, StringComparison.Ordinal);
+    }
+
+    // Two tokens, one sequence, 2 key heads x 3 and 2 value heads x 2, with q, k and v all reading `span`.
+    private static GatedDeltaRuleArgs StrideCase(Bag f, DeviceSpan span)
+    {
         var g = f.Add(Mem.Zeros(DType.F64, 4));
         var o = f.Add(Mem.Zeros(DType.F64, 8));
         var st = f.Add(Mem.Zeros(DType.F32, 2 * 3 * 2));
         var slots = f.Add(Mem.I32(0));
         var cu = f.Add(Mem.I32(0, 2));
-        var span = new DeviceSpan { Address = buf.Address, Length = (ulong)spanLength, Dtype = DType.F64 };
-        var a = Args(span, span, span, g, g, o, st, slots, cu, 1, 2, 2, 2, 3, 2, false);
-        a.QStride = qs;
-        a.KStride = ks;
-        a.VStride = vs;
-        Assert.Throws<ArgumentException>(() => CpuOps.GatedDeltaRule(a));
+        return Args(span, span, span, g, g, o, st, slots, cu, 1, 2, 2, 2, 3, 2, false);
     }
 
     private static GatedDeltaRuleArgs Args(DeviceSpan q, DeviceSpan k, DeviceSpan v, Mem g, Mem beta, Mem o, Mem state, Mem slots, Mem cu, int batch, int tokens, int kh, int vh, int kd, int vd, bool l2) => new()
