@@ -59,6 +59,9 @@ internal sealed class WeightAttribute : Attribute
     public string? Source { get; set; }
 
     public string? Layers { get; set; }
+
+    /// <summary>The slot is loaded but no node of this definition reads it yet (an op the vocabulary lacks would); no ROOST014 for it.</summary>
+    public bool Reserved { get; set; }
 }
 
 /// <summary>One state group (contract C4). Kind is Full, Sliding or Recurrent. Layers selects the layers that hold state in it.</summary>

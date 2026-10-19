@@ -9,8 +9,8 @@ namespace Starlings.Roost.ModelCompiler.Tests.Models;
 // op's scalar arguments imply (q and k [tokens, k_heads*k_dim], v [tokens, v_heads*v_dim], g and beta [tokens, v_heads];
 // HybridModelTests.RecurrentOpBuffersMatchTheirScalarArguments checks it). Only v goes through the convolution here: the
 // real Qwen3.5 block convolves the fused q/k/v projection and reads q, k and v as row-strided column views of the conv
-// output (GatedDeltaRuleArgs QStride, KStride, VStride, contract version 2), which needs a view binding the generator does
-// not have yet; the real definition is R-035.
+// output (GatedDeltaRuleArgs QStride, KStride, VStride, contract version 2); FusedHybridModel does that with the view binding
+// (value[start:end]) and is the one that runs numerically on CpuOps, and Starlings.Roost.Models.Qwen35 is the real definition (R-035).
 [RoostModel("tiny-hybrid", Dtype = "BF16")]
 [Dim("hidden", 64)]
 [Dim("inter", 128)]
