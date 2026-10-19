@@ -7,7 +7,7 @@ public static class KernelAbi
     public const int Major = 1;
 
     /// <summary><c>ROOST_ABI_MINOR</c>. A loader accepts a library whose minor is at least this.</summary>
-    public const int Minor = 0;
+    public const int Minor = 1;
 
     /// <summary><c>ROOST_ABI_VERSION</c>, the value <c>roost_abi_version()</c> returns: major in the high 16 bits.</summary>
     public const uint Version = (Major << 16) | Minor;

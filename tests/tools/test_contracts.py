@@ -93,7 +93,7 @@ def test_semantic_checks_reject(example, change, expected):
 def test_c3_op_names_come_from_the_header():
     ops, major, minor = manifest_tool.header_ops_and_abi()
     assert {"RMSNORM", "PAGEDATTENTION", "GEMMW4A16", "DEQUANTIZEGGUF"} <= ops
-    assert (major, minor) == (1, 0)
+    assert (major, minor) == (1, 1)
 
 
 def test_layout_parser_reads_every_struct():
