@@ -90,7 +90,7 @@ public static unsafe class ModelWeightLoader
         var (host, verification, rawIndex) = StreamRaw(path, locked, slots);
         using var hostOwner = host;
 
-        // 2. The device arena, in model slot order.
+        // The device arena, in model slot order.
         var specs = slots.Select(static s => new WeightSlotSpec(s.Name, s.Name, s.Dtype, s.Elements)).ToList();
         var (placements, total) = WeightLayout.Plan(specs);
         var arena = allocator.Allocate(total, "weights");
@@ -113,11 +113,7 @@ public static unsafe class ModelWeightLoader
                     void* from;
                     if (slot.Assembler is null)
                     {
-                        if (sources.Count != 1 || sources[0].Length != slot.Bytes)
-                        {
-                            throw new WeightLoadException(RoostErrorCode.AssetMismatch, $"slot {slot.Name} is a plain copy but its source is {sources.Sum(static s => s.Length)} bytes, not {slot.Bytes}");
-                        }
-
+                        CheckPlainCopy(slot, sources);
                         from = (void*)sources[0].Address;
                     }
                     else
@@ -170,19 +166,33 @@ public static unsafe class ModelWeightLoader
                 return new WeightBytes((nint)Unsafe.AsPointer(in MemoryMarshal.GetReference(bytes)), bytes.Length);
             }).ToList();
             var destination = new Span<byte>(weights.Base + placements[i].Offset, checked((int)slot.Bytes));
-            if (slot.Assembler is null)
-            {
-                sources[0].Span.CopyTo(destination);
-            }
-            else
-            {
-                slot.Assembler(sources, destination);
-            }
+            Assemble(slot, sources, destination);
 
             weights.Add(new DeviceSpan { Address = (nint)(weights.Base + placements[i].Offset), Length = (ulong)slot.Elements, Dtype = slot.Dtype });
         }
 
         return weights;
+    }
+
+    private static void Assemble(EagerWeightSlot slot, List<WeightBytes> sources, Span<byte> destination)
+    {
+        if (slot.Assembler is null)
+        {
+            CheckPlainCopy(slot, sources);
+            sources[0].Span.CopyTo(destination);
+        }
+        else
+        {
+            slot.Assembler(sources, destination);
+        }
+    }
+
+    private static void CheckPlainCopy(EagerWeightSlot slot, List<WeightBytes> sources)
+    {
+        if (sources.Count != 1 || sources[0].Length != slot.Bytes)
+        {
+            throw new WeightLoadException(RoostErrorCode.AssetMismatch, $"slot {slot.Name} is a plain copy but its source is {sources.Sum(static s => s.Length)} bytes, not {slot.Bytes}");
+        }
     }
 
     private static (HostWeightArena Host, WeightLayout Verification, Dictionary<string, int> Index) StreamRaw(string path, LockedFile locked, IReadOnlyList<EagerWeightSlot> slots)
