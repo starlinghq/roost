@@ -341,6 +341,9 @@ internal static class Emitter
         w.Line("private static " + Span + " Tok(in StepContext c, long perToken, int rows, long elementsPerRow, " + DType + " dtype) =>");
         w.Line("    new " + Span + " { Address = c.Arena.Address + (nint)(perToken * c.Layout.CapacityTokens), Length = (ulong)((long)rows * elementsPerRow), Dtype = dtype };");
         w.Line("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
+        w.Line("private static " + Span + " View(" + Span + " s, long byteOffset, long elementOffset) =>");
+        w.Line("    new " + Span + " { Address = s.Address + (nint)byteOffset, Length = s.Length - (ulong)elementOffset, Dtype = s.Dtype };");
+        w.Line("[global::System.Runtime.CompilerServices.MethodImpl(global::System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]");
         w.Line("private static " + Span + " Fix(in StepContext c, long offset, long elements, " + DType + " dtype) =>");
         w.Line("    new " + Span + " { Address = c.Arena.Address + (nint)(c.Layout.FixedRegionOffset + offset), Length = (ulong)elements, Dtype = dtype };");
         w.Line();
@@ -426,7 +429,16 @@ internal static class Emitter
                 }
                 else if (i >= 0)
                 {
-                    result.Add((f.Name, ValueExpr(graph, plan, weightCount, node.Inputs[i])));
+                    string expr = ValueExpr(graph, plan, weightCount, node.Inputs[i]);
+                    if (node.Attributes.TryGetValue("view." + f.Name, out string? range))
+                    {
+                        // A column view: the span starts at the first column and runs to the end of the value.
+                        long start = long.Parse(range.Substring(0, range.IndexOf(':')), CultureInfo.InvariantCulture);
+                        int bytes = ModelBuilder.ByteSize(graph.Values[node.Inputs[i]].DType);
+                        expr = "View(" + expr + ", " + (start * bytes).ToString(CultureInfo.InvariantCulture) + "L, " + start.ToString(CultureInfo.InvariantCulture) + "L)";
+                    }
+
+                    result.Add((f.Name, expr));
                 }
 
                 continue;
