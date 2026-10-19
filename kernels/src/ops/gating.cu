@@ -99,6 +99,14 @@ inline bool PartialOverlap(const RoostDeviceSpan& x, uint64_t x_elems, const Roo
   return xb < yb + y_elems * ElementBytes(y.dtype) && yb < xb + x_elems * ElementBytes(x.dtype);
 }
 
+// Any overlap at all, including two ranges that start at the same address. GatedDeltaRuleGates has no in-place form:
+// element sizes and strides can differ between an input and an output, so even a shared start address races.
+inline bool AnyOverlap(const RoostDeviceSpan& x, uint64_t x_elems, const RoostDeviceSpan& y, uint64_t y_elems) {
+  const auto xb = reinterpret_cast<uintptr_t>(x.address);
+  const auto yb = reinterpret_cast<uintptr_t>(y.address);
+  return xb < yb + y_elems * ElementBytes(y.dtype) && yb < xb + x_elems * ElementBytes(x.dtype);
+}
+
 }  // namespace roost_hybrid_gating
 
 extern "C" RoostStatus roost_gated_delta_rule_gates_run(RoostContext* ctx, const void* params,
@@ -144,10 +152,17 @@ extern "C" RoostStatus roost_gated_delta_rule_gates_run(RoostContext* ctx, const
       return Fail(ROOST_STATUS_INVALID_ARGUMENT, "GatedDeltaRuleGates: a span is not aligned to its element size");
     }
   }
-  if (PartialOverlap(p.g, total, p.a, a_reach) || PartialOverlap(p.g, total, p.b, b_reach) ||
-      PartialOverlap(p.beta, total, p.a, a_reach) || PartialOverlap(p.beta, total, p.b, b_reach) ||
-      PartialOverlap(p.g, total, p.beta, total) || p.g.address == p.beta.address) {
-    return Fail(ROOST_STATUS_INVALID_ARGUMENT, "GatedDeltaRuleGates: g and beta must not overlap each other or the inputs");
+  const RoostDeviceSpan* outs[] = {&p.g, &p.beta};
+  const uint64_t in_elems[] = {a_reach, b_reach, vh, vh};
+  const RoostDeviceSpan* ins[] = {&p.a, &p.b, &p.a_log, &p.dt_bias};
+  bool overlap = AnyOverlap(p.g, total, p.beta, total);
+  for (const RoostDeviceSpan* o : outs) {
+    for (int k = 0; k < 4; ++k) {
+      overlap = overlap || AnyOverlap(*o, total, *ins[k], in_elems[k]);
+    }
+  }
+  if (overlap) {
+    return Fail(ROOST_STATUS_INVALID_ARGUMENT, "GatedDeltaRuleGates: g and beta must not overlap each other or any input (no in-place form, even from the same address)");
   }
   const uint64_t blocks = (total + 255) / 256;
   if (blocks > 0x7fffffffu) {

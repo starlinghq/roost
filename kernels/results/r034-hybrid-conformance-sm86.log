@@ -35,7 +35,12 @@ PASS gating/reject/gates a_stride below v_heads: status 1 (want 1): GatedDeltaRu
 PASS gating/reject/gates a shorter than its reach: status 1 (want 1): GatedDeltaRuleGates: a span is too short, has a NULL address or reserved0 set
 PASS gating/reject/gates g shorter than tokens * v_heads: status 1 (want 1): GatedDeltaRuleGates: a span is too short, has a NULL address or reserved0 set
 PASS gating/reject/gates f16 A_log: status 2 (want 2): GatedDeltaRuleGates: every span must be bf16 or f32
-PASS gating/reject/gates beta overlapping a: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or the inputs
+PASS gating/reject/gates beta overlapping a: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or any input (no in-place form, even from the same address)
+PASS gating/reject/gates g f32 at the same address as a bf16: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or any input (no in-place form, even from the same address)
+PASS gating/reject/gates beta at the same address as b: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or any input (no in-place form, even from the same address)
+PASS gating/reject/gates g at the same address as a_log: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or any input (no in-place form, even from the same address)
+PASS gating/reject/gates beta at the same address as dt_bias: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or any input (no in-place form, even from the same address)
+PASS gating/reject/gates beta at the same address as g: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or any input (no in-place form, even from the same address)
 PASS gating/reject/gates g not aligned to f32: status 1 (want 1): GatedDeltaRuleGates: a span is not aligned to its element size
 PASS gating/reject/norm eps NaN: status 1 (want 1): GatedRmsNorm: eps must be finite and non-negative
 PASS gating/reject/norm negative eps: status 1 (want 1): GatedRmsNorm: eps must be finite and non-negative
@@ -111,4 +116,4 @@ PASS graph/sigmoid-mul/f32 odd size: rows=7 dim=1001 in_place=False max_scaled=2
 PASS graph/gdn/recurrent/decode 4 x 1 token, strided views, initial state: tokens=4 batch=4 o: max_abs=9.54E-007 rel_to_max=2.22E-005 (tol 8.0E-003, ref max 0.043); state: max_abs=1.79E-007 rel_to_max=1.14E-007 (tol 1.0E-004, ref max 0.885); other slots untouched=True
 PASS graph/gdn/recurrent/packed [5,1,1], contiguous views: tokens=7 batch=3 o: max_abs=0.00E+000 rel_to_max=0.00E+000 (tol 8.0E-003, ref max 0.055); state: max_abs=1.19E-007 rel_to_max=9.37E-008 (tol 1.0E-004, ref max 1.033); other slots untouched=True
 PASS graph/gdn/recurrent/32 sequences x 1 token (serving-size decode batch): tokens=32 batch=32 o: max_abs=3.05E-005 rel_to_max=4.47E-004 (tol 8.0E-003, ref max 0.061); state: max_abs=2.38E-007 rel_to_max=1.22E-007 (tol 1.0E-004, ref max 1.116); other slots untouched=True
-112 checks, 0 failed
+117 checks, 0 failed
