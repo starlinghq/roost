@@ -1,0 +1,16 @@
+manifest sha256 13c7fb83fbf6725ee5f30e2cd68388bd3115a3534efe0b413b7f1018b956d38a, abi 1.0, cuda 13.3, min driver 580
+cudart 13030, driver 13030, 1 visible device(s), device 0 is SM 86
+cuBLASLt 130600, built against cudart 13000
+NVML driver 610.57.04
+NVML device 0 memory: 24576 MiB total, 23526 MiB free
+library for SM 86: /home/mark/Projects/roost-wave4/envs/R-023/kernels-build/libroost_kernels_sm86.so
+refused as expected, digest mismatch: kernel library digest mismatch for /home/mark/Projects/roost-wave4/envs/R-023/kernels-build/libroost_kernels_sm86.so: manifest 0000000000000000000000000000000000000000000000000000000000000000, file bf2384c7951898deac68116209cba93989a39e82e84ecde22f07c5fb16bf1bf5
+refused as expected, manifest pin mismatch: kernel manifest digest mismatch: pinned 1111111111111111111111111111111111111111111111111111111111111111, file 13c7fb83fbf6725ee5f30e2cd68388bd3115a3534efe0b413b7f1018b956d38a
+refused as expected, SM without a library (SM 75): profile unsupported on SM 75: the manifest builds no library for SM 75 (built: 80, 86, 89, 90, 100, 120)
+refused as expected, untested SM 89 without opt-in: profile unsupported on SM 89: the SM has no hardware evidence (status untested); opt in with AllowUntested
+loaded roost-kernels-sm86: abi 1.0, SM status Experimental, 1 entries
+  op Residual variant residual-stub flags GraphCapturable, Deterministic, BatchInvariant sm_min 80
+refused as expected, missing specialisation (Residual f8e4m3): profile unsupported: no kernel for op Residual on SM 86: 1 registered variant(s), none admits [Residual, act F8E4M3]: residual-stub: does not take activation F8E4M3
+refused as expected, missing op (PagedAttention): profile unsupported: no kernel for op PagedAttention on SM 86: no variant of the op is registered by the loaded libraries (the manifest lists no variant of the op); needed: PagedAttention, head_dim 256
+Residual bf16, 100003 elements, output aliasing a: 0 mismatches
+OK
