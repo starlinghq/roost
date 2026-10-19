@@ -86,7 +86,8 @@ public sealed class RoostTinyHybridNumericTests : IDisposable
             double[] logits = reference.Logits(seq.ToArray())[^1];
             double top = logits.Max();
             double second = logits.Where(x => x < top).Max();
-            Assert.True(top - second > Tolerances.GreedyMargin, $"top two logits are {top} and {second}");
+            TestContext.Current.SendDiagnosticMessage($"MEASURED greedy gap hybrid {top - second:E3}");
+            Assert.True(top - second > Tolerances.HybridGreedyMargin, $"top two logits are {top} and {second}");
             seq.Add(next);
         }
 
