@@ -31,7 +31,7 @@ Slot sources are plain checkpoint tensor names (`a+b` joins two). What a loader 
 | `l{i}.q_proj`, `q_gate_proj` (attention) | `...self_attn.q_proj.weight` [4096, 1024] | `QueryRows` / `GateRows`: per head, 256 query rows then 256 gate rows |
 | `l{i}.in_proj_qkv`, `in_proj_z`, `in_proj_a`, `in_proj_b`, `out_proj` | `...linear_attn.*.weight` | none |
 | `l{i}.conv` | `...linear_attn.conv1d.weight` [6144, 1, 4] | `SqueezeConv`: slot [6144, 4] |
-| `l{i}.A_log` (F32), `dt_bias`, `linear_norm` (F32) | `...linear_attn.A_log`, `dt_bias`, `norm.weight` | none; reserved slots (see below) |
+| `l{i}.A_log` (F32), `dt_bias`, `linear_norm` (F32) | `...linear_attn.A_log`, `dt_bias`, `norm.weight` | none; read by `GatedDeltaRuleGates` and `GatedRmsNorm` |
 | `l{i}.gate_up` | `...mlp.gate_proj.weight+...mlp.up_proj.weight` | `ConcatRows`: gate rows then up rows |
 | everything else | `...mlp.down_proj.weight`, `self_attn.{k,v,o}_proj.weight` | none |
 
@@ -39,20 +39,26 @@ Not slots: the 15 `mtp.*` tensors (`Qwen35WeightMap.Mtp`, the MTP head, mapped a
 `tests/Starlings.Roost.Models.Qwen35.Tests/Data/qwen35-0.8b.safetensors-header.txt` lists every text and MTP tensor with its dtype and shape
 from the locked file's header, and a test checks the map against it.
 
-## Not yet numerically complete
+## Gating steps (contract version 3)
 
-C3 has no op for four steps of the Qwen3.5 blocks, so `Qwen35Model.NumericallyComplete` is false and the logits are not the
-checkpoint's (`Qwen35Model.PendingOps` lists the steps). The definition already holds the projections and weights each step needs
-(`in_proj_z`, `in_proj_a`, `in_proj_b`, `q_gate_proj`, and the reserved `A_log`, `dt_bias`, `linear_norm` slots), so each lands as
-one node when its op exists:
+The forward runs the whole Qwen3.5 block on `CpuOps` (`Qwen35Model.NumericallyComplete`):
 
-1. `beta = sigmoid(b)` and `g = -exp(A_log) * softplus(a + dt_bias)` before the delta rule (today `a` and `b` go in raw);
-2. the gated output norm `rmsnorm(core_out) * linear_norm.weight * silu(z)` per value head after it (this order, norm before the
-   gate, is a proposal that no code or reference check on this branch has verified; the op's author must confirm it against transformers);
-3. the attention output gate `attn_out * sigmoid(gate)`;
-4. a zero-centred RMS norm form, so `1 + w` need not be rounded to bfloat16 at load.
+- linear layers: `GatedDeltaRuleGates` turns the raw `in_proj_a` and `in_proj_b` outputs into `g = -exp(A_log) * softplus(a + dt_bias)`
+  (float32 value) and `beta = sigmoid(b)`; the delta rule reads those;
+- linear layers: `GatedRmsNorm` computes `rmsnorm(core_out) * linear_norm.weight * silu(z)` per value head (Rows = tokens * 16,
+  Dim = 128, F32 weight, not zero-centred) and `out_proj` reads its output;
+- attention layers: `q_proj` interleaves each head's query and gate rows; the loader splits them (`QueryRows` / `GateRows`) and
+  `SigmoidMul` computes `attn_out * sigmoid(gate)` before `o_proj`.
 
-`NumericsAreIncompleteUntilTheContractHasTheOps` fails when `IRoostOps` gains any of the candidate ops, as a reminder to put the nodes in.
+Zero-centred norms are not in v3, so every decoder, q/k and final norm slot holds `bfloat16(1 + w)` (the ADR's loading rule;
+`WeightTransform.OnePlus`). transformers computes `1 + w` in float32, so those norms agree with it only to bfloat16 weight rounding.
+
+## Development evidence (not a fixture, not parity)
+
+One CPU forward on the locked checkpoint (Release, `CpuOps`) for the prompt "The capital of France is" (ids 760 6511 314 9338 369):
+the top logits are 279 " the" 15.008, 7172 " located" 14.179, 264 " a" 13.978, 11751 " Paris" 13.930, 303 " in" 13.650. Before the
+gating ops the argmax was 105607, a nonsense token. Prefill 11.4 s, decode step 4.7 s. Logits are finite, and prefill plus a decode
+step gives the same logits (cosine 1.000000) as one prefill. No reference comparison was made; R-022 does that.
 
 ## Unverified
 

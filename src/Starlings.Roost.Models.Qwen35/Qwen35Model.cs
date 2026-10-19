@@ -19,18 +19,16 @@ namespace Starlings.Roost.Models.Qwen35;
 // channels and q, k and v are then read as row-strided column views of its output (GatedDeltaRuleArgs QStride, KStride, VStride,
 // contract version 2), written Q=l{i}.c[0:key_dim] and so on.
 //
-// WHAT THIS FORWARD DOES NOT YET COMPUTE. C3 has no op for four steps of the Qwen3.5 blocks, so the logits of this forward are
-// NOT those of the checkpoint. Qwen35Model.NumericallyComplete is false until the ops exist; the definition already holds the
-// projections and weights these steps need so each lands as one node:
-//   1. linear layers: beta = sigmoid(b) and g = -exp(A_log) * softplus(a + dt_bias). The delta rule gets the raw projections a
-//      and b as G and Beta. (A_log, dt_bias are reserved slots.)
-//   2. linear layers: the output norm rmsnorm(core_out) * norm.weight * silu(z), per value head. out_proj reads the
-//      delta-rule output directly. (z is projected but unread; norm.weight is a reserved slot.)
-//   3. attention layers: the output gate, attn_out * sigmoid(gate). o_proj reads the attention output directly. (The gate is
-//      projected by q_gate_proj but unread.)
-//   4. RmsNorm and QkNorm have no zero-centred form, so the slots hold bfloat16(1 + w), which loses the low bits of 1 + w that
-//      transformers keeps in float32.
-// The contract-change request in the R-035 report names the ops. Nothing may trust these logits for parity (R-022 needs them).
+// THE GATING STEPS (contract version 3, ops GatedDeltaRuleGates, GatedRmsNorm and SigmoidMul):
+//   - linear layers: GatedDeltaRuleGates turns the raw projections a and b into g = -exp(A_log) * softplus(a + dt_bias) (float32)
+//     and beta = sigmoid(b); the delta rule reads those. A_log (F32) and dt_bias (BF16) are weight slots.
+//   - linear layers: GatedRmsNorm applies rmsnorm(core_out) * linear_norm.weight * silu(z) per value head (Rows = tokens * v_heads,
+//     Dim = 128; the weight is F32 and not zero-centred) before out_proj.
+//   - attention layers: q_proj interleaves each head's query and output-gate rows; the loader splits them into q_proj and
+//     q_gate_proj, and SigmoidMul computes attn_out * sigmoid(gate) before o_proj.
+//   - ZERO-CENTRED NORMS. Contract v3 has no zero-centred RmsNorm/QkNorm, so the decoder, q/k and final norm slots hold
+//     bfloat16(1 + w) (Qwen35WeightMap OnePlus, the ADR's loading rule). transformers computes 1 + w in float32, so this drops the
+//     low bits of 1 + w: parity of those norms is to bfloat16 weight rounding, not exact. The gated output norm is not zero-centred.
 //
 // Not modelled: the MTP head (Qwen35WeightMap.Mtp, unused in M0), vision, multimodal rope sections (the checkpoint has mrope_interleaved=true with sections [11,11,10]; that a text-only prompt
 // reduces to plain rotary embedding is expected but NOT checked by any test or reference comparison, and R-022 must check it), YaRN.
@@ -70,9 +68,9 @@ namespace Starlings.Roost.Models.Qwen35;
 [Weight("l{i}.in_proj_z", "value_dim,hidden", Source = "model.language_model.layers.{i}.linear_attn.in_proj_z.weight", Layers = "0:24%4!=3")]
 [Weight("l{i}.in_proj_a", "v_heads,hidden", Source = "model.language_model.layers.{i}.linear_attn.in_proj_a.weight", Layers = "0:24%4!=3")]
 [Weight("l{i}.in_proj_b", "v_heads,hidden", Source = "model.language_model.layers.{i}.linear_attn.in_proj_b.weight", Layers = "0:24%4!=3")]
-[Weight("l{i}.A_log", "v_heads", Dtype = "F32", Source = "model.language_model.layers.{i}.linear_attn.A_log", Layers = "0:24%4!=3", Reserved = true)]
-[Weight("l{i}.dt_bias", "v_heads", Source = "model.language_model.layers.{i}.linear_attn.dt_bias", Layers = "0:24%4!=3", Reserved = true)]
-[Weight("l{i}.linear_norm", "v_dim", Dtype = "F32", Source = "model.language_model.layers.{i}.linear_attn.norm.weight", Layers = "0:24%4!=3", Reserved = true)]
+[Weight("l{i}.A_log", "v_heads", Dtype = "F32", Source = "model.language_model.layers.{i}.linear_attn.A_log", Layers = "0:24%4!=3")]
+[Weight("l{i}.dt_bias", "v_heads", Source = "model.language_model.layers.{i}.linear_attn.dt_bias", Layers = "0:24%4!=3")]
+[Weight("l{i}.linear_norm", "v_dim", Dtype = "F32", Source = "model.language_model.layers.{i}.linear_attn.norm.weight", Layers = "0:24%4!=3")]
 [Weight("l{i}.out_proj", "hidden,value_dim", Source = "model.language_model.layers.{i}.linear_attn.out_proj.weight", Layers = "0:24%4!=3")]
 [Weight("l{i}.post_norm", "hidden", Source = "model.language_model.layers.{i}.post_attention_layernorm.weight", Layers = "0:24")]
 [Weight("l{i}.gate_up", "inter2,hidden", Source = "model.language_model.layers.{i}.mlp.gate_proj.weight+model.language_model.layers.{i}.mlp.up_proj.weight", Layers = "0:24")]
@@ -87,8 +85,10 @@ namespace Starlings.Roost.Models.Qwen35;
 [Node("l{i}.z", "Gemm", "A=l{i}.x; B=l{i}.in_proj_z; D=>l{i}.z[tokens,value_dim]; M=tokens; N=value_dim; K=hidden; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4!=3")]
 [Node("l{i}.a", "Gemm", "A=l{i}.x; B=l{i}.in_proj_a; D=>l{i}.a[tokens,v_heads]; M=tokens; N=v_heads; K=hidden; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4!=3")]
 [Node("l{i}.b", "Gemm", "A=l{i}.x; B=l{i}.in_proj_b; D=>l{i}.b[tokens,v_heads]; M=tokens; N=v_heads; K=hidden; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4!=3")]
-[Node("l{i}.delta", "GatedDeltaRule", "Q=l{i}.c[0:key_dim]; K=l{i}.c[key_dim:2*key_dim]; V=l{i}.c[2*key_dim:conv_dim]; QStride=conv_dim; KStride=conv_dim; VStride=conv_dim; G=l{i}.a; Beta=l{i}.b; Output=>l{i}.o[tokens,value_dim]; State=s:linear.state; Batch=seqs; Tokens=tokens; KHeads=k_heads; VHeads=v_heads; KDim=k_dim; VDim=v_dim; Scale=0.08838834764831845; UseInitialState=true; L2NormQk=true", Layers = "0:24%4!=3")]
-[Node("l{i}.out_proj", "Gemm", "A=l{i}.o; B=l{i}.out_proj; D=>l{i}.mix[tokens,hidden]; M=tokens; N=hidden; K=value_dim; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4!=3")]
+[Node("l{i}.gates", "GatedDeltaRuleGates", "A=l{i}.a; B=l{i}.b; ALog=l{i}.A_log; DtBias=l{i}.dt_bias; G=>l{i}.g[tokens,v_heads]:F32; Beta=>l{i}.beta[tokens,v_heads]; Tokens=tokens; VHeads=v_heads", Layers = "0:24%4!=3")]
+[Node("l{i}.delta", "GatedDeltaRule", "Q=l{i}.c[0:key_dim]; K=l{i}.c[key_dim:2*key_dim]; V=l{i}.c[2*key_dim:conv_dim]; QStride=conv_dim; KStride=conv_dim; VStride=conv_dim; G=l{i}.g; Beta=l{i}.beta; Output=>l{i}.o[tokens,value_dim]; State=s:linear.state; Batch=seqs; Tokens=tokens; KHeads=k_heads; VHeads=v_heads; KDim=k_dim; VDim=v_dim; Scale=0.08838834764831845; UseInitialState=true; L2NormQk=true", Layers = "0:24%4!=3")]
+[Node("l{i}.onorm", "GatedRmsNorm", "Input=l{i}.o; Gate=l{i}.z; Weight=l{i}.linear_norm; Output=>l{i}.on[tokens,value_dim]; Rows=tokens*v_heads; Dim=v_dim; Eps=1e-6", Layers = "0:24%4!=3")]
+[Node("l{i}.out_proj", "Gemm", "A=l{i}.on; B=l{i}.out_proj; D=>l{i}.mix[tokens,hidden]; M=tokens; N=hidden; K=value_dim; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4!=3")]
 // -- full attention --
 [Node("l{i}.q", "Gemm", "A=l{i}.x; B=l{i}.q_proj; D=>l{i}.q[tokens,q_dim]; M=tokens; N=q_dim; K=hidden; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4=3")]
 [Node("l{i}.gate", "Gemm", "A=l{i}.x; B=l{i}.q_gate_proj; D=>l{i}.gate[tokens,q_dim]; M=tokens; N=q_dim; K=hidden; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4=3")]
@@ -98,7 +98,8 @@ namespace Starlings.Roost.Models.Qwen35;
 [Node("l{i}.rope", "Rope", "Q=l{i}.qn=>l{i}.qr; K=l{i}.kn=>l{i}.kr; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; RotaryDim=rotary_dim; Kind=Default; Theta=10000000", Layers = "0:24%4=3")]
 [Node("l{i}.cache", "CacheWrite", "K=l{i}.kr; V=l{i}.v; KCache=s:attn.k; VCache=s:attn.v; Tokens=tokens; KvHeads=kv_heads; HeadDim=head_dim; BlockSize=block_size; KvLayout=PagedNhd", Layers = "0:24%4=3")]
 [Node("l{i}.attn", "PagedAttention", "Q=l{i}.qr; KCache=s:attn.k; VCache=s:attn.v; Output=>l{i}.ao[tokens,q_dim]; Batch=seqs; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; BlockSize=block_size; KvLayout=PagedNhd; Scale=0.0625; Causal=true", Layers = "0:24%4=3")]
-[Node("l{i}.o_proj", "Gemm", "A=l{i}.ao; B=l{i}.o_proj; D=>l{i}.mix[tokens,hidden]; M=tokens; N=hidden; K=q_dim; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4=3")]
+[Node("l{i}.ogate", "SigmoidMul", "Input=l{i}.ao; Gate=l{i}.gate; Output=>l{i}.aog[tokens,q_dim]; Rows=tokens; Dim=q_dim", Layers = "0:24%4=3")]
+[Node("l{i}.o_proj", "Gemm", "A=l{i}.aog; B=l{i}.o_proj; D=>l{i}.mix[tokens,hidden]; M=tokens; N=hidden; K=q_dim; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4=3")]
 // -- MLP --
 [Node("l{i}.mix_res", "Residual", "A=h{i}; B=l{i}.mix; Output=>l{i}.hm[tokens,hidden]; Elements=tokens*hidden", Layers = "0:24")]
 [Node("l{i}.post_norm", "RmsNorm", "Input=l{i}.hm; Weight=l{i}.post_norm; Output=>l{i}.y[tokens,hidden]; Rows=tokens; Dim=hidden; Eps=1e-6", Layers = "0:24")]
@@ -112,17 +113,15 @@ namespace Starlings.Roost.Models.Qwen35;
 public static partial class Qwen35Model
 {
     /// <summary>
-    /// Whether <see cref="Forward{TOps}"/> computes the checkpoint's function. False: C3 lacks the ops for the beta and decay
-    /// of the linear layers, their gated output norm and the attention output gate (see <see cref="PendingOps"/>).
+    /// Whether <see cref="Forward{TOps}"/> computes the checkpoint's function: yes, on contract version 3 (the gating ops). Two
+    /// approximations remain and are named in <see cref="Approximations"/>.
     /// </summary>
-    public const bool NumericallyComplete = false;
+    public const bool NumericallyComplete = true;
 
-    /// <summary>The steps of Qwen3.5 the forward leaves out because C3 has no op for them, with where each belongs.</summary>
-    public static IReadOnlyList<string> PendingOps { get; } =
+    /// <summary>Known deviations from transformers' arithmetic that the contract cannot remove yet.</summary>
+    public static IReadOnlyList<string> Approximations { get; } =
     [
-        "linear layers, before the delta rule: beta = sigmoid(b); g = -exp(A_log) * softplus(a + dt_bias)",
-        "linear layers, after the delta rule: rmsnorm(core_out) * linear_norm.weight * silu(z), per value head",
-        "attention layers, after attention: attn_out * sigmoid(gate)",
-        "all RMS norms: zero-centred weights (output * (1 + w)) without the bfloat16 rounding of 1 + w",
+        "decoder, q/k and final RMS norms: the slots hold bfloat16(1 + w) (ADR); transformers computes 1 + w in float32",
+        "multimodal rope: text-only prompts are assumed to reduce to plain rotary embedding (not yet checked against a reference)",
     ];
 }

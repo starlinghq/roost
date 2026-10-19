@@ -185,7 +185,7 @@ public class Qwen35DefinitionTests
         string[] used =
         [
             "Embedding", "Gemm", "LmHead", "PagedAttention", "QkNorm", "Residual", "RmsNorm", "Rope", "SiluAndMul", "CacheWrite",
-            "CausalConv1d", "GatedDeltaRule",
+            "CausalConv1d", "GatedDeltaRule", "GatedDeltaRuleGates", "GatedRmsNorm", "SigmoidMul",
         ];
         Assert.Equal(used.Order().ToArray(), Qwen35Model.UsedOps.Order().ToArray());
     }
@@ -206,16 +206,33 @@ public class Qwen35DefinitionTests
     }
 
     [Fact]
-    public void NumericsAreIncompleteUntilTheContractHasTheOps()
+    public void TheGatingOpsAreInTheGraphAndTheirInputsAreWired()
     {
-        // The forward skips four steps of the Qwen3.5 blocks because C3 has no op for them (README, Qwen35Model.PendingOps). When an
-        // op for one lands in IRoostOps this test fails: put the node in the definition, then delete this check and the flag.
-        Assert.False(Qwen35Model.NumericallyComplete);
-        Assert.Equal(4, Qwen35Model.PendingOps.Count);
-        string[] candidates = ["SigmoidMul", "SigmoidGate", "Sigmoid", "Softplus", "RmsNormGated", "GatedRmsNorm", "DeltaGates", "DeltaGate", "GateMul", "Mul", "Multiply"];
-        var ops = typeof(IRoostOps).GetMethods(BindingFlags.Public | BindingFlags.Static).Select(m => m.Name).ToArray();
-        Assert.DoesNotContain(ops, o => candidates.Contains(o, StringComparer.OrdinalIgnoreCase));
-        var args = typeof(RmsNormArgs).GetFields().Select(f => f.Name).ToArray();
-        Assert.DoesNotContain(args, f => f.Contains("Offset", StringComparison.OrdinalIgnoreCase) || f.Contains("Centered", StringComparison.OrdinalIgnoreCase));
+        var g = Qwen35Model.BuildGraph();
+        Assert.True(Qwen35Model.NumericallyComplete);
+        Assert.Equal(18, g.Nodes.Count(n => n.Op == "GatedDeltaRuleGates"));
+        Assert.Equal(18, g.Nodes.Count(n => n.Op == "GatedRmsNorm"));
+        Assert.Equal(6, g.Nodes.Count(n => n.Op == "SigmoidMul"));
+
+        string In(OpNode n, string field) => g.Values[n.Inputs[Array.IndexOf(n.Attributes["in"].Split(','), field)]].Name;
+        var gates = g.Nodes.First(n => n.Op == "GatedDeltaRuleGates");
+        Assert.Equal(["l0.a", "l0.b", "l0.A_log", "l0.dt_bias"], new[] { In(gates, "A"), In(gates, "B"), In(gates, "ALog"), In(gates, "DtBias") });
+        var gv = g.Values.Single(v => v.Name == "l0.g");
+        Assert.Equal(GraphDType.F32, gv.DType);
+        Assert.Equal(GraphDType.BF16, g.Values.Single(v => v.Name == "l0.beta").DType);
+        var delta = g.Nodes.First(n => n.Op == "GatedDeltaRule");
+        Assert.Equal("l0.g", In(delta, "G"));
+        Assert.Equal("l0.beta", In(delta, "Beta"));
+
+        var norm = g.Nodes.First(n => n.Op == "GatedRmsNorm");
+        Assert.Equal(["l0.o", "l0.z", "l0.linear_norm"], new[] { In(norm, "Input"), In(norm, "Gate"), In(norm, "Weight") });
+        Assert.Equal("(128)", norm.Attributes["arg.Dim"]);
+        var outProj = g.Nodes.Single(n => n.Attributes["node"] == "l0.out_proj");
+        Assert.Equal("l0.on", In(outProj, "A"));
+
+        var sm = g.Nodes.First(n => n.Op == "SigmoidMul");
+        Assert.Equal(["l3.ao", "l3.gate"], new[] { In(sm, "Input"), In(sm, "Gate") });
+        var oProj = g.Nodes.Single(n => n.Attributes["node"] == "l3.o_proj");
+        Assert.Equal("l3.aog", In(oProj, "A"));
     }
 }
