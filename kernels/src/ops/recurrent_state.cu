@@ -9,7 +9,6 @@
 #include <cstdint>
 
 #include "hybrid_common.h"
-#include "hybrid_params.h"
 
 namespace roost_hybrid_state {
 

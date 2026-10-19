@@ -4,11 +4,11 @@
 # pins from it (kernels/tools/manifest_cmake.py), so this file is the only place a pin lives.
 
 schema_version = 1
-contract_version = 1
+contract_version = 3
 
 [abi]
 major = 1
-minor = 0
+minor = 2
 
 [toolkit]
 cuda = "13.3"
@@ -24,7 +24,7 @@ status = "untested"
 [[sm]]
 arch = 86
 status = "experimental"
-evidence = "kernels/results/r016-stub-sm86.log"
+evidence = "kernels/results/r017-ops-sm86.log"
 
 [[sm]]
 arch = 89
@@ -51,6 +51,7 @@ repo = "https://github.com/flashinfer-ai/flashinfer"
 sha = "d84335d8c54e0c8f9f7e22faa15c7e34a58abf94"
 license = "Apache-2.0"
 files = [{ path = "include/**", spdx = "Apache-2.0" }]
+ops = ["RmsNorm", "QkNorm", "SiluAndMul", "PagedAttention"]
 
 [[upstreams]]
 name = "cutlass"
@@ -73,8 +74,18 @@ sha = "329b534245d3d7bb27cc03a99e87bdc51fb28d06"
 license = "MIT"
 files = [{ path = "fla/**", spdx = "MIT" }]
 
+# Vendor libraries the kernel library links and does not redistribute: cuBLASLt from the CUDA toolkit (S2). The digest is the
+# development host's libcublasLt.so.13.6.0.2 (CUDA 13.3.73); the Gemm algorithms pinned below are valid for it. The licence is the
+# CUDA toolkit EULA; its redistribution terms belong to the decision 5 licence review and are not asserted here.
+[[external_libraries]]
+name = "cublaslt"
+version = "13.6.0.2"
+sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+bytes = 516598272
+license = "NVIDIA CUDA Toolkit EULA"
+
 # Residual is the registered stub of R-016: a correct but unoptimised op that proves build, registration and run.
-# R-017 and R-034 add the real ops (and their upstream sources) to this list.
+# R-017 adds the M0 attention-side ops below; R-034 adds the hybrid ops.
 [[ops]]
 op = "Residual"
 
@@ -90,47 +101,574 @@ layouts = ["row_major"]
 min_alignment = 4
 
 # Digests of the per-SM libraries (libroost_kernels_sm<N>.so). Written by kernels/tools/record_digests.py; do not
-# edit by hand. All six entries are from the development host (CUDA 13.3.73, gcc 16.2.1), one build each; only SM 86 has run on
-# hardware. They were reproduced at the recorded checkout path only; another path gave other bytes (see README, Hybrid ops). The release workflow (R-060) replaces
+# edit by hand. All six entries are from the development host (CUDA 13.3.73, gcc 16.2.1), built twice per SM at one checkout path with identical bytes
+# (kernels/ci/build-all-sm.sh); only SM 86 has run on hardware. One library per SM holds every variant, so every variant's block lists
+# the same file. They DEPEND on the source checkout path (nvcc hashes it into _INTERNAL_ symbol names; a build from another path gives
+# another digest, e.g. SM 86: 14856fad... vs 0f707ae0...), so they reproduce only from the development checkout path. The release workflow (R-060) replaces
 # these with the digests of the pinned CI container build and publishes the files as release assets.
 # BEGIN binaries residual-stub
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "68fcd43b77b4ff86434f4a7fa7636d65254e7c24727959e4306a18239fe4561a"
-bytes = 884040
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "a0046520022507f3efbbc86bf65e6b7a0e9d6f3d7689e1d0e85f31d131b73932"
-bytes = 871752
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
 
 [[ops.variants.binaries]]
 arch = 89
-sha256 = "2e053ef97d22a7ec0bf74f35105fee46271158c431f20177af4a1d67110aaad7"
-bytes = 867656
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "1e564d0c4f46f95c49ab0e3f9ce7f08fc562121b6ee261943ea1c85b47a35b62"
-bytes = 871752
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "23db5fee83e82177ddaac8e7673b44e3d5c6b9655917424620c1a27121ceeb1d"
-bytes = 1076552
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "cfd1469dde151680f1c6fac6d94723133c8e926863d1d5332c49bf95a2e5be87"
-bytes = 1072456
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
 # END binaries residual-stub
+
+[[ops]]
+op = "RmsNorm"
+
+[[ops.variants]]
+id = "rms-norm-flashinfer"
+source = "flashinfer"
+flags = ["deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f16"]
+layouts = ["row_major"]
+min_alignment = 16
+
+# BEGIN binaries rms-norm-flashinfer
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries rms-norm-flashinfer
+
+[[ops]]
+op = "QkNorm"
+
+[[ops.variants]]
+id = "qk-norm-flashinfer"
+source = "flashinfer"
+flags = ["deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f16"]
+layouts = ["row_major"]
+min_alignment = 16
+head_dims = [256]
+
+# BEGIN binaries qk-norm-flashinfer
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries qk-norm-flashinfer
+
+[[ops]]
+op = "Rope"
+
+[[ops.variants]]
+id = "rope-roost"
+source = "roost"
+flags = ["deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f16"]
+head_dims = [64, 128, 256]
+layouts = ["row_major"]
+min_alignment = 2
+
+# BEGIN binaries rope-roost
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries rope-roost
+
+[[ops]]
+op = "PagedAttention"
+
+[[ops.variants]]
+id = "paged-attention-flashinfer-fa2"
+source = "flashinfer"
+flags = ["deterministic", "needs_plan"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16"]
+kv_dtypes = ["bf16"]
+head_dims = [256]
+page_sizes = [16, 32, 64]
+layouts = ["paged_nhd", "paged_hnd"]
+min_alignment = 16
+group_sizes = [4]
+
+# BEGIN binaries paged-attention-flashinfer-fa2
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries paged-attention-flashinfer-fa2
+
+[[ops]]
+op = "SiluAndMul"
+
+[[ops.variants]]
+id = "silu-and-mul-flashinfer"
+source = "flashinfer"
+flags = ["deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f16"]
+layouts = ["row_major"]
+min_alignment = 16
+
+# BEGIN binaries silu-and-mul-flashinfer
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries silu-and-mul-flashinfer
+
+[[ops]]
+op = "Gemm"
+
+[[ops.variants]]
+id = "gemm-cublaslt"
+source = "cublaslt"
+flags = ["deterministic", "batch_invariant", "needs_plan", "plan_per_shape"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f16"]
+layouts = ["row_major"]
+min_alignment = 16
+weight_dtypes = ["bf16", "f16"]
+
+[[ops.variants.gemm_algos]]
+n = 1024
+k = 3584
+dtype = "bf16"
+arch = 86
+algo_id = 21
+split_k = 5
+tile = 15
+stages = 18
+library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+
+[[ops.variants.gemm_algos]]
+n = 4096
+k = 1024
+dtype = "bf16"
+arch = 86
+algo_id = 6
+split_k = 1
+tile = 15
+stages = 17
+library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+
+[[ops.variants.gemm_algos]]
+n = 7168
+k = 1024
+dtype = "bf16"
+arch = 86
+algo_id = 6
+split_k = 1
+tile = 18
+stages = 15
+library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+
+[[ops.variants.gemm_algos]]
+n = 1024
+k = 2048
+dtype = "bf16"
+arch = 86
+algo_id = 21
+split_k = 9
+tile = 20
+stages = 11
+library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+
+[[ops.variants.gemm_algos]]
+n = 512
+k = 1024
+dtype = "bf16"
+arch = 86
+algo_id = 21
+split_k = 8
+tile = 11
+stages = 20
+library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+
+# BEGIN binaries gemm-cublaslt
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries gemm-cublaslt
+
+[[ops]]
+op = "Embedding"
+
+[[ops.variants]]
+id = "embedding-roost"
+source = "roost"
+flags = ["deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f16", "f32"]
+weight_dtypes = ["bf16", "f16", "f32"]
+layouts = ["row_major"]
+min_alignment = 2
+
+# BEGIN binaries embedding-roost
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries embedding-roost
+
+[[ops]]
+op = "LmHead"
+
+[[ops.variants]]
+id = "lm-head-cublaslt"
+source = "cublaslt"
+flags = ["deterministic", "batch_invariant", "needs_plan", "plan_per_shape"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f16"]
+layouts = ["row_major"]
+min_alignment = 16
+weight_dtypes = ["bf16", "f16"]
+
+# BEGIN binaries lm-head-cublaslt
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries lm-head-cublaslt
+
+[[ops]]
+op = "CacheWrite"
+
+[[ops.variants]]
+id = "cache-write-roost"
+source = "roost"
+flags = ["deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+kv_dtypes = ["bf16", "f16", "f32"]
+head_dims = [256]
+page_sizes = [16, 32, 64]
+layouts = ["paged_nhd", "paged_hnd"]
+min_alignment = 2
+
+# BEGIN binaries cache-write-roost
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries cache-write-roost
+
+[[ops]]
+op = "CacheCopy"
+
+[[ops.variants]]
+id = "cache-copy-roost"
+source = "roost"
+flags = ["deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+kv_dtypes = ["bf16", "f16", "f32", "u8"]
+layouts = ["paged_nhd", "paged_hnd"]
+min_alignment = 1
+
+# BEGIN binaries cache-copy-roost
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "4ae49ee06d9aadd20826485acabc04db1385c67a33a638dfa4db31193c1288f5"
+bytes = 2451224
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "92fbf26b8d8193064ccf9d16ee10a38ef6f775886c32429c32b63ffb17308ec2"
+bytes = 2447128
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "8f74814534842cf8fc62c66206cfb79a60bffd80f0225f74d770eba5dc84f4c1"
+bytes = 2590488
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "6ef929465c6f25c3c25a3f937ac5c3e60599c744ad7dfbe0762d7d182e9ee22f"
+bytes = 3364632
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "6cef40c27803169bd21d88979a768057e9f038193443b62c6e2f83ac16b16657"
+bytes = 3430168
+# END binaries cache-copy-roost
 
 # R-034: the hybrid ops of Qwen3.5-0.8B (decision 15). CausalConv1d and the recurrent state ops are plain CUDA C++ (S3 did
 # not cover them); GatedDeltaRule is the S3 Triton AOT path, in two variants: chunked prefill (needs plan()) and the fused
 # recurrent kernel (decode and short continuations; graph capturable). The digests are of the same per-SM library as the
 # Residual stub's, recorded from the development host's AOT build (CUDA 13.3.73, gcc 16.2.1, the [triton_aot] closure below).
-# They are recorded for the new variants only; the Residual stub's block above predates these ops and must be re-recorded
-# (kernels/tools/record_digests.py --write) when the branches that add ops are merged.
+# One library per SM holds every variant, so every variant's block lists the same file (kernels/tools/record_digests.py).
 [[ops]]
 op = "CausalConv1d"
 

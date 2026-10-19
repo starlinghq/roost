@@ -3,7 +3,6 @@
 
 #include <cstdint>
 
-#include "hybrid_params.h"
 #include "roost_internal.h"
 #include "roost_kernels.h"
 

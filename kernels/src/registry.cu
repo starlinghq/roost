@@ -1,8 +1,8 @@
 // C1 exports and the registration table of the Roost kernel library (R-016). One library is built per SM, so the
 // digest of each release asset is per SM and the loader's refusal of a missing SM is a file lookup.
 //
-// The table lists the variants the library was built with. Today that is the Residual stub that proves the build,
-// registration and run path; R-017 and R-034 add the real ops behind the same table.
+// The table lists the variants the library was built with: the Residual stub that proves the build, registration and run
+// path (R-016) and the M0 attention-side ops (R-017). R-034 adds the hybrid ops behind the same table.
 
 #include <cstdint>
 #include <cstring>
@@ -55,13 +55,16 @@ const RoostOpEntry kEntries[] = {
     },
 };
 
-// The table is the base entries above followed by each op family's own (roost_hybrid_entries: R-034), built once.
+// The table the library registers: the R-016 stub, then each item's group of entries (R-017: m0_registry.cu; R-034: the
+// hybrid ops, hybrid_entries.cu), built once.
 const std::vector<RoostOpEntry>& AllEntries() {
   static const std::vector<RoostOpEntry> all = [] {
     std::vector<RoostOpEntry> v(std::begin(kEntries), std::end(kEntries));
-    uint32_t n = 0;
-    const RoostOpEntry* hybrid = roost_hybrid_entries(&n);
-    v.insert(v.end(), hybrid, hybrid + n);
+    uint32_t count = 0;
+    const RoostOpEntry* m0 = roost_m0_entries(&count);
+    v.insert(v.end(), m0, m0 + count);
+    const RoostOpEntry* hybrid = roost_hybrid_entries(&count);
+    v.insert(v.end(), hybrid, hybrid + count);
     return v;
   }();
   return all;
@@ -88,8 +91,9 @@ ROOST_API RoostStatus roost_register(RoostOpTable* table) {
     return ROOST_STATUS_ABI_MISMATCH;
   }
   table->entry_size = static_cast<uint32_t>(sizeof(RoostOpEntry));
-  table->entry_count = static_cast<uint32_t>(AllEntries().size());
-  table->entries = AllEntries().data();
+  const std::vector<RoostOpEntry>& all = AllEntries();
+  table->entry_count = static_cast<uint32_t>(all.size());
+  table->entries = all.data();
   table->library_name = "roost-kernels-sm" ROOST_STRINGIZE(ROOST_SM);
   table->library_abi_major = ROOST_ABI_MAJOR;
   table->library_abi_minor = ROOST_ABI_MINOR;
@@ -109,12 +113,18 @@ ROOST_API RoostStatus roost_context_create(const RoostContextCreateParams* param
     roost_set_error("roost_context_create: reserved0 must be zero");
     return ROOST_STATUS_INVALID_ARGUMENT;
   }
-  *out = new (std::nothrow) RoostContext{params->device, params->flags};
+  *out = new (std::nothrow) RoostContext{params->device, params->flags, nullptr};
   if (*out == nullptr) {
     roost_set_error("roost_context_create: out of host memory");
     return ROOST_STATUS_OUT_OF_MEMORY;
   }
-  const RoostStatus status = roost_hybrid_context_init(*out);  // R-034
+  RoostStatus status = roost_gemm_context_init(*out);
+  if (status == ROOST_STATUS_OK) {
+    status = roost_hybrid_context_init(*out);  // R-034
+    if (status != ROOST_STATUS_OK) {
+      roost_gemm_context_release(*out);
+    }
+  }
   if (status != ROOST_STATUS_OK) {
     delete *out;
     *out = nullptr;
@@ -127,6 +137,7 @@ ROOST_API RoostStatus roost_context_destroy(RoostContext* ctx) {
   if (ctx != nullptr) {
     roost_hybrid_context_release(ctx);  // R-034
   }
+  roost_gemm_context_release(ctx);
   delete ctx;
   return ROOST_STATUS_OK;
 }
