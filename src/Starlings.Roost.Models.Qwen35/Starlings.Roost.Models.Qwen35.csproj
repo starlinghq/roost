@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost model definition for Qwen3.5-0.8B (R-035): 24 layers, 6 full attention and 18 Gated DeltaNet, two state groups, and the weight map of the locked checkpoint. The package ships the code the model compiler generated from the definition, so a consumer needs no generator.</Description>
+    <!-- Packing is opt-in, like every Roost package (nothing is published before Preview 1, R-062). -->
+    <IsPackable>true</IsPackable>
+    <PackageId>Starlings.Roost.Models.Qwen35</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <!-- The generated model members are public and carry no XML docs; the hand-written files here document theirs. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <!-- The generator runs at build time only: its output is compiled into this assembly and the package carries no reference to it. -->
+    <ProjectReference Include="../Starlings.Roost.ModelCompiler/Starlings.Roost.ModelCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <InternalsVisibleTo Include="Starlings.Roost.Models.Qwen35.Tests" />
+  </ItemGroup>
+</Project>

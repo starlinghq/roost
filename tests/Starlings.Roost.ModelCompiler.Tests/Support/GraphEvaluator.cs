@@ -92,7 +92,15 @@ public sealed unsafe class GraphEvaluator<TOps> : IGraphEvaluator
         {
             if (Array.IndexOf(outFields, inFields[i]) < 0)
             {
-                argsType.GetField(inFields[i])!.SetValue(args, spans[node.Inputs[i]]);
+                var span = spans[node.Inputs[i]];
+                if (node.Attributes.TryGetValue("view." + inFields[i], out string? range))
+                {
+                    // A column view (graph protocol key view.FIELD = "start:end"): starts at the first column, runs to the end of the value.
+                    long start = long.Parse(range.AsSpan(0, range.IndexOf(':')), CultureInfo.InvariantCulture);
+                    span = new DeviceSpan { Address = span.Address + (nint)(start * Native.Size(span.Dtype)), Length = span.Length - (ulong)start, Dtype = span.Dtype };
+                }
+
+                argsType.GetField(inFields[i])!.SetValue(args, span);
             }
         }
 
