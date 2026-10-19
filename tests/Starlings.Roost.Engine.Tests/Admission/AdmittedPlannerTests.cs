@@ -71,6 +71,30 @@ public sealed class AdmittedPlannerTests
     }
 
     [Fact]
+    public void ANotYetForkableParentKeepsAllRowsOfAnNGreaterThanOneRequest()
+    {
+        var p = Make(Hybrid(attentionBlocks: 100, slots: 4));
+        Assert.Null(p.TryAdd(WithN(1, 9, 4, 3)));
+        Assert.Equal(RoostErrorCode.InvalidOption, p.TryFork(1, Req(2, 1, 4))!.Code); // not resident yet
+        Assert.Equal(3, p.Admission.ReservedRows);
+        Assert.Equal(3, p.Admission.Reserved(1));
+        Assert.Equal(8, p.Admission.Reserved(0));
+        Assert.Equal(RoostErrorCode.InvalidOption, p.TryFork(99, Req(3, 1, 4))!.Code);
+
+        p.ApplyResult(Simulate(p.Plan()!));
+        Assert.Null(p.TryFork(1, Req(2, 1, 4)));
+        Assert.Null(p.TryFork(1, Req(3, 1, 4)));
+        Assert.Equal(3, p.Admission.ReservedRows);
+        p.Planner.CheckInvariants();
+    }
+
+    private static Request WithN(ulong id, int prompt, int maxTokens, int n)
+    {
+        var r = Req(id, prompt, maxTokens);
+        return r with { Sampling = r.Sampling with { N = n } };
+    }
+
+    [Fact]
     public void AdmittedRequestsNeverNeedPreemptionAndEveryReservationComesBack()
     {
         // 40 requests of varied sizes against pools that hold about six at a time: admission refuses the rest and the

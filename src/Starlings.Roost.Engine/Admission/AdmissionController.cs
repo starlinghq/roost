@@ -21,8 +21,8 @@ namespace Starlings.Roost.Engine.Admission;
 /// the blocks it can write and its recurrent slot. <see cref="TryAdmitFork"/> claims one of those rows; a fork beyond
 /// them reserves one more row, or is refused. A finished row returns its own share at once and the shared prompt blocks
 /// when the last row is gone.</para>
-/// <para><b>Order of refusals.</b> <see cref="RoostErrorCode.InvalidOption"/>, <see cref="RoostErrorCode.ProfileUnsupported"/>,
-/// <see cref="RoostErrorCode.PromptTooLong"/>, <see cref="RoostErrorCode.QueueFull"/> (live rows at
+/// <para><b>Order of refusals.</b> <see cref="RoostErrorCode.InvalidOption"/>, <see cref="RoostErrorCode.PromptTooLong"/>,
+/// <see cref="RoostErrorCode.ProfileUnsupported"/> (an unknown adapter), <see cref="RoostErrorCode.QueueFull"/> (live rows at
 /// <see cref="AdmissionOptions.MaxLiveSequences"/>), then <see cref="RoostErrorCode.InsufficientDeviceMemory"/> (the
 /// reservation does not fit beside the others, or alone, or the device is below its free floor). Memory refusals are
 /// the only ones that clear by themselves when other requests finish; a worst case larger than a pool says so in its message.</para>
@@ -182,7 +182,7 @@ public sealed class AdmissionController
 
         var perGroup = WorstCaseReservation.Compute(_groups, prompt, sampling.MaxTokens, _options.ContextLength);
         var rows = WorstCaseReservation.Rows(sampling);
-        var single = WorstCaseReservation.Compute(_groups, prompt, 1, _options.ContextLength);
+        var single = WorstCaseReservation.Compute(_groups, prompt, 0, _options.ContextLength);
         for (var i = 0; i < _groups.Length; i++)
         {
             // The prompt alone, with one row, must fit a pool at all.
