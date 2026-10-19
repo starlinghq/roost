@@ -45,7 +45,7 @@ The suite never injects a fault: it launches nothing outside a variant's registe
 
 ## The CPU half (CI)
 
-`dotnet test --solution Roost.slnx` runs, in about 40 seconds:
+`dotnet test --solution Roost.slnx` runs the following (the timing was not measured in Release; in Debug the Conformance assembly took about 2.5 minutes in the review):
 
 - the full `ci` profile with `OracleBackend` as the candidate. The oracle is a second implementation of the M0 ops written from the
   C3 definitions with no code shared with `CpuOps`; agreement checks the reference every GPU result is judged by;
@@ -145,7 +145,9 @@ point. The sanitizer driver writes the same envelope (`sanitizer.results.json`) 
 
 Library: `libroost_kernels_sm86.so`, sha256 `0f707ae0…` (the digest in `kernels/manifest.toml`; built from the R-017 checkout at
 `5846bcd`, `kernels/README.md` explains why the digest depends on the build path). RTX 3090, driver 610.57, CUDA 13.3, `gpu-lease`
-leases on device 3090. Suite commit `b18d0da`; base seed 20261019.
+leases on device 3090. Suite commit `b18d0da`; base seed 20261019. The run documents record producer commit `b18d0da`, not the
+branch head: the later commits changed only documentation, line wrapping in `sanitize.py`, and `generate_goldens.py` with its lock hash (the committed
+goldens bytes still match the lock), with no change to the suite C# code. The GPU runs were not repeated after those commits.
 
 - **Conformance, `full` profile, 464 passed and 5 failed** of 469 (240 random, 172 fixed, 57 golden; 0 not run). Determinism held for
   all 469 and batch invariance for the 275 cases that have a single-row form. Registered variants: 11, all with an `ABI_MISMATCH` pass.
@@ -156,13 +158,13 @@ leases on device 3090. Suite commit `b18d0da`; base seed 20261019.
   versions of the fixed cases and the fixed bf16 cases with alpha, bias or C alone pass. The same inputs, `fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1`, pass at bucket 0 and fail at bucket 49 (two random cases of other shapes fail at bucket 0), which points at the
   algorithm the plan pins for a shape (`kernels/src/gemm.cu`) more than at the epilogue formula. The error is 1 to 4 bf16 ulp of the
   result with partial sums of several units, which fits a rounding to the 16-bit output type between the C and bias parts of the
-  epilogue; that was not confirmed. Reproduce: `--ops Gemm --case fixed-epilogue`. The kernel and the tolerance are not mine to
+  epilogue; this is a hypothesis, not confirmed, and no log supports it. Reproduce: `--ops Gemm --case fixed-epilogue`. The kernel and the tolerance are not mine to
   change: the options are a kernel fix, or a maintainer-approved class for that epilogue.
 - **compute-sanitizer** (`results/sanitizer/`, `sanitize.py`, profile `sanitizer`, every one of the 11 variants under memcheck with
   `--leak-check full`, racecheck and synccheck: 33 runs): **32 runs report zero** (memcheck 0 errors and 0 bytes leaked, synccheck 0
   errors, racecheck 0 hazards for 10 variants). **One does not: `paged-attention-flashinfer-fa2` under racecheck** reports
   hazards in `flashinfer::BatchPrefillWithPagedKVCacheKernel` (bf16, head_dim 256, 4 query heads per KV head, CTA tile 16): 23 errors
-  and 370 warnings in the committed run (101 displayed), 32 and 360 in an earlier identical run, so the count varies. All prefill-mode
+  and 370 warnings in the committed run (101 displayed); the count was not compared across runs, so whether it varies is unknown. All prefill-mode
   cases show it; decode-mode cases show none. Smallest reproducer: `--case prefill-one-token` (16 errors, 4 warnings). It is upstream
   FlashInfer code at the manifest's pinned SHA; whether it is a true race or a racecheck limitation with the kernel's `cp.async` and
   warp-synchronous code is not established. The same variant is clean under memcheck and synccheck, and its outputs match `CpuOps`.
@@ -172,6 +174,15 @@ leases on device 3090. Suite commit `b18d0da`; base seed 20261019.
   `99b07260…`, as in the lock.
 
 ## Not done
+
+- Open decisions and requests (deferred, not guessed):
+  - `paged-attention-flashinfer-fa2` is not racecheck-clean, so the criterion "zero reports" is not met. It needs a maintainer decision:
+    a kernel or patch fix (stream D), a documented racecheck limitation, or an approved exception.
+  - The five `gemm-cublaslt` bf16 failures (beta != 0 with bias) need a kernel fix (stream D) or a maintainer decision on the `gemm-bf16`
+    class. Conformance is not green on SM 86 until then.
+  - `evidence/schemas/stage-results.schema.json` does not accept `task: kernel-conformance`; stream B2 must extend it.
+  - The maintainer must approve or amend `op-class-tolerances.proposal.json` and place it in `evidence/protected/`.
+  - A filtered rerun (`--ops Gemm --case fixed-epilogue`) printed "1 not run" in the review; the full committed run has 0. Not investigated.
 
 - The goldens file is not uploaded as a release asset (no release is made here) and CI does not fetch it; the real-goldens test is skipped there.
 - SM 89 has not run (the RTX 4060 Ti had 15.7 of 16.4 GiB in use during the work); only SM 86 has hardware evidence. Other SMs stay `untested`.
