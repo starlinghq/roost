@@ -20,7 +20,7 @@ correct, unoptimised op that proves the build, registration and run path) and th
 | `tools/record_digests.py` | SHA-256 of the built libraries; `--write` records them in the manifest, `--check` compares. |
 | `tools/check_provenance.py` | Fails a pin or patch-set change that does not change `PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` (and any tree where the manifest and those files disagree). |
 | `ci/build-all-sm.sh` | What the CI `kernels` job runs: every SM, built twice, byte-compared, registration table checked without a GPU. |
-| `results/` | Raw text logs of GPU runs (`r016-stub-sm86.log`, `r017-ops-sm86.log`, `r017-stub-check-sm86.log`). |
+| `results/` | Raw text logs of GPU runs (`r016-stub-sm86.log`, `r017-ops-sm86.log`, `r017-graph-sm86.log`, `r017-stub-check-sm86.log`) and one excerpt (`r017-rejected-configs-sm86.log`). |
 
 ## Build
 
@@ -80,14 +80,14 @@ How the ops meet C1:
   manifest (`gemm_algos`) with the digest of the cuBLASLt build; the plan record is private, so the check that a new cuBLASLt picks the same
   algorithm belongs to the conformance suite (R-019).
 
-Findings that changed the design (all in `results/r017-ops-sm86.log` or reproducible with the tests):
+Findings that changed the design (evidence differs per finding: the Rope result is excerpted in `results/r017-rejected-configs-sm86.log` and the replacement is logged in `results/r017-ops-sm86.log`; the split-K figures have no log; the head_dim 256 attention result is in `results/r017-ops-sm86.log`):
 
 - **FlashInfer's Rope is not accurate enough.** It forms `pos * freq` in fp32 and calls the `__sincosf` intrinsic, which does no range reduction.
   Against `CpuOps` its error grew with the position: 1.6e-2 absolute on outputs of RMS 1 (several bf16 ulps) for positions below 4096 and
   7.8e-2 for positions up to 2^18, in a first run of these tests (the FAIL lines are excerpted unedited in `results/r017-rejected-configs-sm86.log`; the
   full log was never committed and the harness has no flag that reruns the rejected kernel; the cause is in `pos_enc.cuh`: `__sincosf` and
   `__powf`). `rope-roost` forms frequency and angle in double, reduces the angle modulo 2 pi in double and calls `sincosf` on the reduced
-  angle; with it the same cases, up to positions of 2^31 - 1, stay inside the elementwise tolerance below (largest utilisation 0.44).
+  angle; with it the same cases, up to positions of 2^31 - 1, stay inside the elementwise tolerance below (the 2^31 - 1 cases peak at utilisation 0.436, and 0.491 is the largest of the 55 Rope checks in `results/r017-ops-sm86.log`).
 - **cuBLASLt's default split-K reduction loses fp32 accumulation with a 16-bit output.** With the default reduction schemes, split-K plans kept
   partial sums in the output type and showed errors of 1.6e-2 to 3.1e-2 absolute on outputs of RMS 1 against `CpuOps` (about 4 bf16 ulps; the
   failing cases were the shapes whose plan chose split-K, 8 and 9 ways, in a first run). **These split-K figures have no committed or local log and are unreproduced**: treat them as the implementer's observation, not evidence. The plan now allows only
@@ -123,10 +123,11 @@ One run of the harness ended with a glibc abort: `tools/gpu-lease run --device 3
 Roost.KernelOps.Tests.Cuda.dll libroost_kernels_sm86.so --filter attention,graph --log run4.log` printed `double free or corruption
 (!prev)` after the two failures of the `graph` group, so the process died by SIGABRT (the pipe hid the exit code). The cause is in the test
 harness, not the library: `GraphCase` assigned its own `q` buffer to the batch's `Q`, so `Batch.Dispose` and `using var q` freed it twice. The
-assignment is removed in this commit, but **the `graph` group has not been run since**, following the maintainer-desktop rule to stop after a signal
-death. It is therefore not in the default groups (`--filter graph` runs it). Its first run captured the five-op decode step (RmsNorm, Gemm, Rope,
-CacheWrite, PagedAttention) into a CUDA graph without error, but the replay did not equal the eager step, and why is unknown (the harness bug
-may or may not be the reason). Until it passes, no R-017 variant claims `graph_capturable`.
+assignment is removed. The `graph` group was then run once more, on the ABI 1.1 library (`results/r017-graph-sm86.log`, raw): the process exited
+normally with code 1, no signal, and `coredumpctl list` held 1165 lines before and after. The five-op decode step (RmsNorm, Gemm, Rope,
+CacheWrite, PagedAttention) captured into a CUDA graph without error (1 pass), but the replay did not equal the eager step bitwise and the second
+replay did not equal the first (2 failures); the cause is unknown and was not investigated or rerun. CUDA graph replay is R-033's criterion, not R-017's.
+The group stays opt-in (`--filter graph`), and no R-017 variant claims `graph_capturable`.
 
 ## Reproducibility and digests
 
@@ -137,13 +138,13 @@ path (they come from `cuda::std` entities in the headers, so a named namespace i
 paths agree was wrong for this tree. The manifest digests are reproducible only from `/home/mark/Projects/roost-wave4/R-017`; making the build path
 independent (for example a fixed build path in CI) is open. Linking needs no line info (it records source mtimes), no build id and no local symbols
 (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
-The manifest's six digests are the development host's, one build each, and only SM 86 has run on hardware. The CI job
+The manifest's SM 86 digests were re-recorded after the C1 ABI 1.1 header (one build, the development host's); the digests of SM 80, 89, 90, 100 and 120 are still those of the ABI 1.0 build and are stale until CI or the release workflow records them. Only SM 86 has run on hardware. The CI job
 reports, and does not fail on, a difference from them; the release workflow (R-060) records the digests of the pinned
 container build and publishes the libraries.
 
 ## Not done
 
-- R-017: `graph_capturable` is not claimed for any M0 op (see "Signal death during R-017"); GeluAndMul, Argmax and Sample are not in R-017's list; FP8 and quantised KV (R-043), INT4 (R-077), sliding window (R-113) and RoPE scaling variants (R-098) are refused with `UNSUPPORTED`; no throughput number is claimed (the tests check numerical agreement only); SM 80, 89, 90, 100 and 120 compile (CI builds them) but no M0 op has run on them.
+- R-017: `graph_capturable` is not claimed for any M0 op (graph replay is R-033's; see "Signal death during R-017"); GeluAndMul, Argmax and Sample are not in R-017's list; FP8 and quantised KV (R-043), INT4 (R-077), sliding window (R-113) and RoPE scaling variants (R-098) are refused with `UNSUPPORTED`; no throughput number is claimed (the tests check numerical agreement only); SM 80, 89, 90, 100 and 120 compile (CI builds them) but no M0 op has run on them.
 
 - MSVC kernel build: GitHub-hosted Windows runners ship no CUDA toolkit, so it is not built. The sources use `ROOST_API`
   from the C1 header and no POSIX types, and `stub_check.cpp` has a `LoadLibrary` path, but none of it has been compiled with

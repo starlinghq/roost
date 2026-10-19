@@ -4,11 +4,11 @@
 # pins from it (kernels/tools/manifest_cmake.py), so this file is the only place a pin lives.
 
 schema_version = 1
-contract_version = 1
+contract_version = 2
 
 [abi]
 major = 1
-minor = 0
+minor = 1
 
 [toolkit]
 cuda = "13.3"
@@ -114,7 +114,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -160,7 +160,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -207,7 +207,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -254,7 +254,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -304,7 +304,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -350,7 +350,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -452,7 +452,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -499,7 +499,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -546,7 +546,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -594,7 +594,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
@@ -640,7 +640,7 @@ bytes = 2451224
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220"
+sha256 = "fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73"
 bytes = 2447128
 
 [[ops.variants.binaries]]
