@@ -11,11 +11,8 @@ public sealed class CpuOpsPrefixCacheTests
     private static readonly PlannerOptions Off = new() { MaxTokensPerStep = 64 };
     private static readonly PlannerOptions On = Off with { PrefixCache = new PrefixCacheOptions() };
 
-    private static CacheRunResult RunOnCpu(int blocks, PlannerOptions options, Request[][] waves, int inFlight)
-    {
-        var result = Run(() => Attention(blocks), options, waves, inFlight, b => new CpuOpsTinyWorker(b));
-        return result;
-    }
+    private static CacheRunResult RunOnCpu(int blocks, PlannerOptions options, Request[][] waves, int inFlight, bool corrupt = false) =>
+        Run(() => Attention(blocks), options, waves, inFlight, b => new CpuOpsTinyWorker(b) { CorruptFirstCachedBlock = corrupt });
 
     private static void AssertBitIdentical(CacheRunResult a, CacheRunResult b)
     {
@@ -69,5 +66,28 @@ public sealed class CpuOpsPrefixCacheTests
         }
 
         Assert.True(preemptions > 0 && evictions > 0, $"preemptions {preemptions} evictions {evictions}");
+    }
+
+    /// <summary>
+    /// The bit-identity check has teeth: with one cached block's contents perturbed, the cached run's logits differ from the
+    /// uncached run's (so the attention really reads the cached keys and values), while the same run uncorrupted matches.
+    /// </summary>
+    [Fact]
+    public void CorruptedCachedBlockMakesLogitsDiffer()
+    {
+        Request[][] waves =
+        [
+            [Req(1, Seq(0, 30))],
+            [Req(2, Seq(0, 30).Concat(Seq(500, 5)))],
+        ];
+        var plain = RunOnCpu(200, Off, waves, 1);
+        AssertBitIdentical(plain, RunOnCpu(200, On, waves, 1));
+
+        var corrupted = RunOnCpu(200, On, waves, 1, corrupt: true);
+        Assert.True(corrupted.Stats!.Value.HitTokens > 0, "the cache never hit, so nothing was corrupted");
+        Assert.ThrowsAny<Exception>(() => AssertBitIdentical(plain, corrupted));
+        var x = ((CpuOpsTinyWorker)plain.Worker).Logits[2];
+        var y = ((CpuOpsTinyWorker)corrupted.Worker).Logits[2];
+        Assert.False(x[0].AsSpan().SequenceEqual(y[0]), "request 2's logits ignore the cached block");
     }
 }

@@ -58,6 +58,15 @@ internal sealed unsafe class CpuOpsTinyWorker : IPlanWorker, IDisposable
 
     public long ComputedTokens { get; private set; }
 
+    /// <summary>
+    /// When set, the first block a request finds already cached (its first step starts past position 0) has its keys and
+    /// values perturbed in every layer before that step runs: a test double for a cache that serves wrong contents.
+    /// </summary>
+    public bool CorruptFirstCachedBlock { get; init; }
+
+    private readonly HashSet<ulong> _seen = [];
+    private bool _corrupted;
+
     /// <summary>For each request, the logits (as raw bits) of every row sampled, in order.</summary>
     public Dictionary<ulong, List<uint[]>> Logits { get; } = [];
 
@@ -90,6 +99,16 @@ internal sealed unsafe class CpuOpsTinyWorker : IPlanWorker, IDisposable
         }
 
         var rows = plan.Sequences;
+        foreach (var s in rows)
+        {
+            if (_seen.Add(s.SequenceHandle) && s.PositionOffset > 0 && CorruptFirstCachedBlock && !_corrupted)
+            {
+                _corrupted = true;
+                var gb = plan.GroupBlocks[(int)s.GroupBlocksStart];
+                CorruptBlock(plan.BlockIds[(int)gb.BlockStart]);
+            }
+        }
+
         var total = plan.TokenIds.Length;
         var h = new float[total * Dim];
         for (var t = 0; t < total; t++)
@@ -267,6 +286,22 @@ internal sealed unsafe class CpuOpsTinyWorker : IPlanWorker, IDisposable
     private static DeviceSpan F32(nint p, int n) => new() { Address = p, Length = (ulong)n, Dtype = DType.F32 };
 
     private static DeviceSpan I32(int* p, int n) => new() { Address = (nint)p, Length = (ulong)n, Dtype = DType.I32 };
+
+    private void CorruptBlock(int block)
+    {
+        var floats = _blockSize * KvHeads * HeadDim;
+        for (var l = 0; l < Layers; l++)
+        {
+            foreach (var pool in new[] { _k[l], _v[l] })
+            {
+                var p = (float*)pool + ((long)block * floats);
+                for (var i = 0; i < floats; i++)
+                {
+                    p[i] += 0.5f;
+                }
+            }
+        }
+    }
 
     private void CopyBlock(nint pool, int[] pair)
     {
