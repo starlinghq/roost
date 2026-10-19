@@ -228,6 +228,9 @@ def test_registered_m0_variants_are_the_manifests():
 
     registry = (ROOT / "kernels" / "src" / "m0_registry.cu").read_text(encoding="utf-8")
     registered = set(re.findall(r'Entry\(ROOST_OP_\w+,\s*\w+(?:\s*\|\s*\w+)*,\s*"([a-z0-9.-]+)"', registry))
+    # The hybrid ops (R-034) register from their own file.
+    hybrid = (ROOT / "kernels" / "src" / "ops" / "hybrid_entries.cu").read_text(encoding="utf-8")
+    registered |= set(re.findall(r'/\* variant_id \*/ "([a-z0-9.-]+)"', hybrid))
     manifest = tomllib.loads((ROOT / "kernels" / "manifest.toml").read_text(encoding="utf-8"))
     declared = {v["id"] for op in manifest["ops"] for v in op["variants"]} - {"residual-stub"}
     assert registered == declared

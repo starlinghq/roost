@@ -56,6 +56,7 @@ endif()
 
 # --- Libraries, one per SM -----------------------------------------------------------------------------------------
 set(ROOST_LIBRARY_SOURCES src/registry.cu src/residual.cu src/m0_registry.cu src/m0_ops.cu src/paged_attention.cu src/gemm.cu)
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/RoostHybrid.cmake") # R-034: appends src/ops/*.cu, defines roost_hybrid_attach()
 set(ROOST_TARGETS "")
 foreach(arch IN LISTS ROOST_SM_LIST)
   set(target roost_kernels_sm${arch})
@@ -77,6 +78,7 @@ foreach(arch IN LISTS ROOST_SM_LIST)
     # them after the process id), so the digest recorded in the manifest can be reproduced.
     target_link_options(${target} PRIVATE -Wl,--build-id=none -Wl,--strip-all)
   endif()
+  roost_hybrid_attach(${target} ${arch})
   list(APPEND ROOST_TARGETS ${target})
 endforeach()
 
