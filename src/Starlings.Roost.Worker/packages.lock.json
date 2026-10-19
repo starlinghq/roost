@@ -19,6 +19,32 @@
       },
       "starlings.roost.cuda": {
         "type": "Project"
+      },
+      "starlings.roost.engine": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.kernels": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.workerhost": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Engine": "[0.0.0-dev, )"
+        }
       }
     }
   }
