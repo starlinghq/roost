@@ -106,7 +106,7 @@ public class ManifestAndNamesTests
         var env = new Dictionary<string, string> { ["ROOST_CUDA_LIB_DIR"] = "/x", ["CUDA_HOME"] = "/cuda" };
         var dirs = CudaLibraryResolver.SearchDirectories(CudaPlatform.Linux, k => env.GetValueOrDefault(k));
         Assert.Equal("/x", dirs[0]);
-        Assert.Contains("/cuda/lib64", dirs);
+        Assert.Contains(Path.Combine("/cuda", "lib64"), dirs); // the resolver joins with the host separator
         var win = CudaLibraryResolver.SearchDirectories(CudaPlatform.Windows, k => k == "CUDA_PATH" ? @"C:\cuda" : null);
         Assert.Equal(2, win.Count);
     }
