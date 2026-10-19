@@ -1,0 +1,184 @@
+# Kernel manifest (contract C5, schema in tools/kernel-manifest.schema.json, validated by
+# tools/validate-kernel-manifest.py). Stream C writes it; the loader (R-023), the conformance suite (R-019), the
+# release workflow and kernels/tools/check_provenance.py read it. The CMake build reads the SM list and the upstream
+# pins from it (kernels/tools/manifest_cmake.py), so this file is the only place a pin lives.
+
+schema_version = 1
+contract_version = 1
+
+[abi]
+major = 1
+minor = 0
+
+[toolkit]
+cuda = "13.3"
+# CUDA 13.x minor-version compatibility floor (decision 17). The stub was run on driver 610.57 only.
+min_driver = "580"
+host_compiler = "gcc 16.2.1 (development host, SM 86 run); gcc 13 in the CI container"
+
+# One entry per SM the library is built for. An SM without hardware evidence is untested (AGENTS.md).
+[[sm]]
+arch = 80
+status = "untested"
+
+[[sm]]
+arch = 86
+status = "experimental"
+evidence = "kernels/results/r016-stub-sm86.log"
+
+[[sm]]
+arch = 89
+status = "untested"
+
+[[sm]]
+arch = 90
+status = "untested"
+
+[[sm]]
+arch = 100
+status = "untested"
+
+[[sm]]
+arch = 120
+status = "untested"
+
+# Upstream sources, fetched by full commit SHA at build time and never committed. Patch sets live in
+# kernels/upstream/<name>.patches/ (none yet: S2 and S6 need none for the M0 paths). A SHA bump changes
+# PROVENANCE.md and THIRD-PARTY-NOTICES.md in the same change (kernels/tools/check_provenance.py).
+[[upstreams]]
+name = "flashinfer"
+repo = "https://github.com/flashinfer-ai/flashinfer"
+sha = "d84335d8c54e0c8f9f7e22faa15c7e34a58abf94"
+license = "Apache-2.0"
+files = [{ path = "include/**", spdx = "Apache-2.0" }]
+
+[[upstreams]]
+name = "cutlass"
+repo = "https://github.com/NVIDIA/cutlass"
+sha = "098de2a652cf8f00fd70b2df54051c7eccbb855a"
+license = "BSD-3-Clause"
+files = [{ path = "include/**", spdx = "BSD-3-Clause" }]
+
+[[upstreams]]
+name = "vllm"
+repo = "https://github.com/vllm-project/vllm"
+sha = "7879f3687b5b6a4be4754242e70b9c21cf7b4183"
+license = "Apache-2.0"
+files = [{ path = "csrc/**", spdx = "Apache-2.0" }]
+
+[[upstreams]]
+name = "flash-linear-attention"
+repo = "https://github.com/fla-org/flash-linear-attention"
+sha = "329b534245d3d7bb27cc03a99e87bdc51fb28d06"
+license = "MIT"
+files = [{ path = "fla/**", spdx = "MIT" }]
+
+# Residual is the registered stub of R-016: a correct but unoptimised op that proves build, registration and run.
+# R-017 and R-034 add the real ops (and their upstream sources) to this list.
+[[ops]]
+op = "Residual"
+
+[[ops.variants]]
+id = "residual-stub"
+source = "roost"
+flags = ["graph_capturable", "deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["f32", "f16", "bf16"]
+layouts = ["row_major"]
+min_alignment = 4
+
+# Digests of the per-SM libraries (libroost_kernels_sm<N>.so). Written by kernels/tools/record_digests.py; do not
+# edit by hand. All six entries are from the development host (CUDA 13.3.73, gcc 16.2.1), one build each; only SM 86 has run on
+# hardware. They do not depend on the source checkout path (checked at two paths). The release workflow (R-060) replaces
+# these with the digests of the pinned CI container build and publishes the files as release assets.
+# BEGIN binaries residual-stub
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "a3a85531d773ffdc5b8bf909ba08b8f29e79dbb198e739d4587693ed604f495a"
+bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "bf2384c7951898deac68116209cba93989a39e82e84ecde22f07c5fb16bf1bf5"
+bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "a44d45016389ec7e5628a68100f53bdde6e81cbee6d9f7e1f0136e709d649d32"
+bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "1cf405dfed9843334e98a01ce9f8220e826168ab2374a2c85e2e6b5b9a49969e"
+bytes = 48088
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "afeb0a7349befdeead945ea6b1a7791ea2e446301c551eaede9000dd9f6f6c58"
+bytes = 52184
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "c9db863fdb577500c8192065f91218a93cf48eb8f3c06e0a0e87f5d2e00cfa4a"
+bytes = 52184
+# END binaries residual-stub
+
+# Build-time Python closure for the Triton AOT kernels of the hybrid ops (decision 23, S3). Python is never a runtime
+# dependency. The AOT build itself is R-034; the pins below are S3's measured configs: the first six from spikes/s3-triton-gdn/pins.json, the seventh
+# (fused_recurrent_gated_delta_rule_fwd_kernel, from S3's capture log and docs/m0/roost-s3-triton-aot-gdn.md, not in pins.json),
+# frozen because autotune winners are not reproducible.
+[triton_aot]
+python = "3.12.14"
+requires_gpu_build_host = true
+
+[triton_aot.packages]
+triton = "3.8.0"
+torch = "2.14.1+cu130"
+transformers = "5.20.1"
+einops = "0.8.2"
+numpy = "2.5.4"
+fla = "0.6.0"
+
+[[triton_aot.kernels]]
+name = "l2norm_fwd_kernel"
+upstream = "flash-linear-attention"
+specializations = 1
+config = { num_warps = 2, num_stages = 3, constexprs = { BT = 16 } }
+
+[[triton_aot.kernels]]
+name = "chunk_local_cumsum_scalar_kernel"
+upstream = "flash-linear-attention"
+specializations = 2
+config = { num_warps = 1, num_stages = 3 }
+
+[[triton_aot.kernels]]
+name = "chunk_gated_delta_rule_fwd_kkt_solve_kernel"
+upstream = "flash-linear-attention"
+specializations = 2
+config = { num_warps = 1, num_stages = 3, constexprs = { BK = 64 } }
+
+[[triton_aot.kernels]]
+name = "recompute_w_u_fwd_kernel"
+upstream = "flash-linear-attention"
+specializations = 2
+config = { num_warps = 2, num_stages = 2 }
+
+[[triton_aot.kernels]]
+name = "chunk_gated_delta_rule_fwd_kernel_h_blockdim64"
+upstream = "flash-linear-attention"
+specializations = 4
+config = { num_warps = 2, num_stages = 2, constexprs = { BV = 32 } }
+
+[[triton_aot.kernels]]
+name = "chunk_fwd_kernel_o"
+upstream = "flash-linear-attention"
+specializations = 2
+config = { num_warps = 2, num_stages = 3, constexprs = { BK = 32, BV = 32 } }
+
+[[triton_aot.kernels]]
+name = "fused_recurrent_gated_delta_rule_fwd_kernel"
+upstream = "flash-linear-attention"
+specializations = 2
+config = { num_warps = 1, num_stages = 3 }
