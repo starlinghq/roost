@@ -194,3 +194,49 @@ def test_digest_json_and_library_discovery(tmp_path: Path):
 def test_sm_list_flag(flag, capsys):
     assert manifest_cmake.main([str(ROOT / "kernels" / "manifest.toml"), flag]) == 0
     assert capsys.readouterr().out.strip() == "80;86;89;90;100;120"
+
+
+def _code(path: Path) -> str:
+    """Source text without // comments and string literals' contents, for scans of what a file calls."""
+    import re
+
+    text = path.read_text(encoding="utf-8")
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    return "\n".join(line.split("//", 1)[0] for line in text.splitlines())
+
+
+def test_m0_op_sources_do_not_allocate_or_synchronise_in_calls():
+    """C1 and R-017: entry points never allocate device memory and never synchronise the host.
+
+    Setup may allocate (roost_context_create builds the cuBLASLt handle; plan() uses host containers inside FlashInfer
+    and cuBLASLt), but the op sources themselves never call the allocating or synchronising runtime functions.
+    """
+    import re
+
+    forbidden = re.compile(
+        r"\b(cudaMalloc\w*|cudaFree\w*|cudaHostAlloc|cudaDeviceSynchronize|cudaStreamSynchronize|cudaEventSynchronize"
+        r"|cudaMemcpy|cudaMemset|cudaMallocAsync|cudaFreeAsync|malloc|calloc|realloc|free)\s*\("
+    )
+    for name in ("m0_ops.cu", "paged_attention.cu", "gemm.cu", "op_common.h"):
+        hits = forbidden.findall(_code(ROOT / "kernels" / "src" / name))
+        assert not hits, f"{name} calls {hits}"
+        assert " new " not in _code(ROOT / "kernels" / "src" / name), f"{name} uses new"
+
+
+def test_registered_m0_variants_are_the_manifests():
+    import re
+
+    registry = (ROOT / "kernels" / "src" / "m0_registry.cu").read_text(encoding="utf-8")
+    registered = set(re.findall(r'Entry\(ROOST_OP_\w+,\s*\w+(?:\s*\|\s*\w+)*,\s*"([a-z0-9.-]+)"', registry))
+    manifest = tomllib.loads((ROOT / "kernels" / "manifest.toml").read_text(encoding="utf-8"))
+    declared = {v["id"] for op in manifest["ops"] for v in op["variants"]} - {"residual-stub"}
+    assert registered == declared
+    # Every M0 variant of the manifest names a source the manifest knows: an upstream, an external library or "roost".
+    sources = (
+        {u["name"] for u in manifest["upstreams"]} | {x["name"] for x in manifest["external_libraries"]} | {"roost"}
+    )
+    assert {v["source"] for op in manifest["ops"] for v in op["variants"]} <= sources
+    # Pinned Gemm algorithms name the cuBLASLt build they were observed with.
+    digest = {x["name"]: x["sha256"] for x in manifest["external_libraries"]}["cublaslt"]
+    gemm = next(v for op in manifest["ops"] for v in op["variants"] if v["id"] == "gemm-cublaslt")
+    assert gemm["gemm_algos"] and all(a["library_sha256"] == digest for a in gemm["gemm_algos"])
