@@ -154,6 +154,81 @@ public sealed class StepPlannerTests
     }
 
     [Fact]
+    public void NobodyIsPreemptedWhenEvenAllVictimsCouldNotSatisfyTheRequest()
+    {
+        var m = Hybrid(attentionBlocks: 6, slots: 4); // 24 tokens
+        var p = Make(m);
+        p.Add(Req(1, 8, priority: RequestPriority.High));
+        p.Add(Req(2, 8, priority: RequestPriority.Low));
+        p.ApplyResult(Simulate(p.Plan()!));
+        Assert.Empty(p.DrainNotices());
+
+        // 40 tokens need 10 blocks; the pool has 6 and the only possible victim (2) frees 2 more, which is 4 in all.
+        p.Add(Req(3, 40));
+        var plan = p.Plan()!;
+        Assert.DoesNotContain(plan.Sequences, s => s.SequenceHandle == 3);
+        Assert.Empty(p.DrainNotices());
+        Assert.True(p.TryGetInfo(2, out var info));
+        Assert.True(info.Resident);
+        Assert.True(info.ComputedTokens > 0);
+        p.CheckInvariants();
+    }
+
+    [Fact]
+    public void ARecomputedSeededSequenceUsesTheSamePhiloxOffsetAtEveryPosition()
+    {
+        static (Dictionary<ulong, ulong> Offsets, bool Preempted) Run(int blocks)
+        {
+            var p = Make(Hybrid(blocks, 4));
+            p.Add(Req(1, 8, maxTokens: 12, priority: RequestPriority.Low, seed: 7));
+            p.Add(Req(2, 12, maxTokens: 6, priority: RequestPriority.High));
+            var offsets = new Dictionary<ulong, ulong>();
+            var preempted = false;
+            for (var i = 0; i < 1000; i++)
+            {
+                var plan = p.Plan();
+                preempted |= p.DrainNotices().Any(n => n.Kind == PlannerNoticeKind.Preempted && n.Handle == 1);
+                if (plan is null)
+                {
+                    break;
+                }
+
+                for (var r = 0; r < plan.Sequences.Length; r++)
+                {
+                    var row = plan.Sequences[r];
+                    if (row.SequenceHandle != 1 || (row.Flags & SequenceOptions.Sample) == 0)
+                    {
+                        continue;
+                    }
+
+                    var at = row.PositionOffset + row.TokenCount;
+                    var offset = plan.Sampling[r].PhiloxOffset;
+                    if (offsets.TryGetValue(at, out var seen))
+                    {
+                        Assert.Equal(seen, offset);
+                    }
+
+                    offsets[at] = offset;
+                }
+
+                p.ApplyResult(Simulate(plan));
+            }
+
+            return (offsets, preempted);
+        }
+
+        var roomy = Run(40);
+        var tight = Run(6);
+        Assert.False(roomy.Preempted);
+        Assert.True(tight.Preempted);
+        Assert.True(tight.Offsets.Count > 1);
+        foreach (var (at, offset) in tight.Offsets)
+        {
+            Assert.Equal(roomy.Offsets[at], offset);
+        }
+    }
+
+    [Fact]
     public void TightPoolsActuallyPreempt()
     {
         var p = Make(Hybrid(28, 3), tokens: 24, rows: 6);
