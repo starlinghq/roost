@@ -834,3 +834,86 @@ public struct SampleParams
     /// <summary>Reserved; zero.</summary>
     public uint Reserved0;
 }
+
+/// <summary>Gated delta rule over packed sequences, with row-strided q, k and v views (ABI 1.1).</summary>
+/// <remarks>
+/// Mirror of <c>RoostGatedDeltaRuleParams</c> in <c>kernels/include/roost_kernels.h</c>. For Qwen3.5, q, k and v are column
+/// slices of the causal conv1d output: q at column 0, k at <c>k_heads * k_dim</c>, v at <c>2 * k_heads * k_dim</c>, each with
+/// the conv output's row width as stride.
+/// </remarks>
+[NativeStruct("RoostGatedDeltaRuleParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct GatedDeltaRuleParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>[tokens, k_heads, k_dim] at q_stride</summary>
+    public DeviceSpan Q;
+
+    /// <summary>[tokens, k_heads, k_dim] at k_stride</summary>
+    public DeviceSpan K;
+
+    /// <summary>[tokens, v_heads, v_dim] at v_stride</summary>
+    public DeviceSpan V;
+
+    /// <summary>[tokens, v_heads] log decay</summary>
+    public DeviceSpan G;
+
+    /// <summary>[tokens, v_heads]</summary>
+    public DeviceSpan Beta;
+
+    /// <summary>[tokens, v_heads, v_dim], contiguous</summary>
+    public DeviceSpan Output;
+
+    /// <summary>Recurrent pool [slots, v_heads, k_dim, v_dim] f32 (C4)</summary>
+    public DeviceSpan State;
+
+    /// <summary>[batch] int32 slot per sequence</summary>
+    public DeviceSpan StateSlots;
+
+    /// <summary>[batch + 1] int32 token offsets</summary>
+    public DeviceSpan CuSeqlens;
+
+    /// <summary>[batch + 1] host copy for plan() (chunk tables, S3); zero when no plan is needed</summary>
+    public nint CuSeqlensHost;
+
+    /// <summary>C field <c>batch</c>, documented in the header.</summary>
+    public uint Batch;
+
+    /// <summary>C field <c>tokens</c>, documented in the header.</summary>
+    public uint Tokens;
+
+    /// <summary>C field <c>k_heads</c>, documented in the header.</summary>
+    public uint KHeads;
+
+    /// <summary>A multiple of k_heads</summary>
+    public uint VHeads;
+
+    /// <summary>C field <c>k_dim</c>, documented in the header.</summary>
+    public uint KDim;
+
+    /// <summary>C field <c>v_dim</c>, documented in the header.</summary>
+    public uint VDim;
+
+    /// <summary>Elements between token rows of q; 0 means k_heads * k_dim</summary>
+    public uint QStride;
+
+    /// <summary>0 means k_heads * k_dim</summary>
+    public uint KStride;
+
+    /// <summary>0 means v_heads * v_dim</summary>
+    public uint VStride;
+
+    /// <summary>Nonzero: start from the slot's state; zero: start from zero</summary>
+    public uint UseInitialState;
+
+    /// <summary>Nonzero: l2-normalise q and k inside the op</summary>
+    public uint L2NormQk;
+
+    /// <summary>Query scale; 0 means 1 / sqrt(k_dim)</summary>
+    public float Scale;
+}
