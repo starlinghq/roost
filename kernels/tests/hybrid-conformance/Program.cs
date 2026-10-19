@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using Roost.HybridConformance;
 
 // R-034 conformance of the hybrid GPU ops against CpuOps (R-018).
-//   Roost.HybridConformance <libroost_kernels_sm*.so> [--only conv|gdn] [--log file]
+//   Roost.HybridConformance <libroost_kernels_sm*.so> [--only state|gdn] [--log file]
 // Run through tools/gpu-lease (the lease sets CUDA_VISIBLE_DEVICES, so the device is ordinal 0).
 if (args.Length < 1)
 {
