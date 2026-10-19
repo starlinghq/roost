@@ -14,6 +14,7 @@ internal static class WorkerProcessEntry
     public const string HostFlag = "--roost-fake-host";
     public const string OpenDelayPrefix = "--open-delay-ms=";
     public const string FailOpenFlag = "--fail-open";
+    public const string SegmentDirPrefix = "--segment-dir=";
 
     [ModuleInitializer]
     internal static void Enter()
@@ -67,7 +68,8 @@ internal static class WorkerProcessEntry
     /// </summary>
     private static int RunHostHarness()
     {
-        var transport = new ProcessWorkerTransport(Command());
+        var directory = Environment.GetCommandLineArgs().FirstOrDefault(a => a.StartsWith(SegmentDirPrefix, StringComparison.Ordinal))?[SegmentDirPrefix.Length..];
+        var transport = new ProcessWorkerTransport(Command(), new WorkerTransportOptions { SegmentDirectory = directory });
         var result = transport.StartAsync(Rig.DefaultLaunch(), CancellationToken.None).AsTask().GetAwaiter().GetResult();
         Console.Out.WriteLine($"READY {result.WorkerProcessId} {transport.SegmentPath}");
         Console.Out.Flush();

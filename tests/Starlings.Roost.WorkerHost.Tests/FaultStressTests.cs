@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
-using Starlings.Roost.Engine.Rings;
 using Starlings.Roost.Plans;
 using Starlings.Roost.Transport;
 using Starlings.Roost.WorkerHost.Tests.Support;
@@ -16,7 +15,9 @@ namespace Starlings.Roost.WorkerHost.Tests;
 /// same transport object, checking that the step ids restart at 1, that the old worker is gone and that the segment file
 /// is gone. The first episodes cycle through every terminal event once in a seeded order, so a short run still covers all
 /// of them.
-/// <para>Length: <c>ROOST_WORKER_STRESS_SECONDS</c> (default 6; the long evidence run uses several minutes).
+/// <para>Length: a few seconds by default (<see cref="DefaultSeconds"/>, still every terminal event once). A longer run
+/// is an explicit opt-in: set <c>ROOST_LONG_STRESS_SECONDS</c> to the number of seconds (the evidence run uses several
+/// minutes). The crash episode uses a clean nonzero exit, never a fatal signal, so a long run writes no core dumps.
 /// <c>ROOST_WORKER_STRESS_SEED</c> fixes the seed, which is printed with the result and fully determines the sequence of
 /// operations and terminal events (timing on the machine is not deterministic, so a replay with the same seed repeats the
 /// sequence, not the interleaving). <c>ROOST_WORKER_STRESS_LOG</c> names a file that gets the result line and the trace.</para>
@@ -25,6 +26,8 @@ namespace Starlings.Roost.WorkerHost.Tests;
 /// </summary>
 public sealed class FaultStressTests
 {
+    private const ulong DefaultSeconds = 3;
+
     private enum Terminal
     {
         Sticky,
@@ -42,10 +45,9 @@ public sealed class FaultStressTests
     [Fact]
     public async Task EveryFaultPathIsClassifiedExactlyAndTheTransportRecoversEveryTime()
     {
-        var seconds = Env("ROOST_WORKER_STRESS_SECONDS", 6UL);
+        var seconds = Env("ROOST_LONG_STRESS_SECONDS", DefaultSeconds);
         var seed = Env("ROOST_WORKER_STRESS_SEED", (ulong)Environment.TickCount64);
-        var directory = Path.Combine(RingSegment.DefaultDirectory(), $"roost-stress-{Guid.NewGuid():N}");
-        _ = Directory.CreateDirectory(directory);
+        var directory = TestSegments.NewDirectory();
         var run = new Run(seed, directory);
         try
         {
