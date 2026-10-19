@@ -19,7 +19,12 @@ public sealed unsafe class Qwen35SmokeTests : IDisposable
     private const int BlockSize = 16;
     private const int Vocab = 248320;
 
+    // "The capital of France is" (ids decoded from the snapshot's tokenizer.json).
     private static readonly int[] Prompt = [760, 6511, 314, 9338, 369];
+
+    // Development evidence from the locked snapshot, not parity: the top five next tokens are " the", " located", " a", " Paris", " in".
+    private const int TheToken = 279;
+    private const int ParisToken = 11751;
     private static readonly Qwen35Model.ForwardLayout Layout = new(maxTokens: 8, maxSequences: 1, maxKvBlocks: 2);
 
     private readonly List<nint> _blocks = [];
@@ -186,6 +191,7 @@ public sealed unsafe class Qwen35SmokeTests : IDisposable
         int topWhole = Array.IndexOf(whole, whole.Max());
         int topStepped = Array.IndexOf(stepped, stepped.Max());
         var top = whole.Select((v, i) => (v, i)).OrderByDescending(x => x.v).Take(10).ToArray();
+        log.Add("prompt \"The capital of France is\" ids " + string.Join(" ", Prompt));
         log.Add("top 10 (prefill): " + string.Join(", ", top.Select(x => string.Create(CultureInfo.InvariantCulture, $"{x.i}:{x.v:F3}"))));
         double dot = 0;
         double nw = 0;
@@ -203,6 +209,11 @@ public sealed unsafe class Qwen35SmokeTests : IDisposable
         {
             File.WriteAllLines(path, log);
         }
+
+        // Regression guard for the gating ops (before them the argmax was a nonsense token): the plausible continuation wins.
+        Assert.Equal(TheToken, topWhole);
+        Assert.Equal(TheToken, topStepped);
+        Assert.Contains(ParisToken, top.Take(5).Select(x => x.i));
 
         // The state groups carry across steps: the decode step on kept state matches the longer prefill closely.
         Assert.True(cosine > 0.99, $"cosine {cosine}");
