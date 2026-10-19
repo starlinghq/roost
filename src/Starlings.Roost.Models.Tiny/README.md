@@ -12,3 +12,16 @@ model's seed and the slot's name (SplitMix64 and IEEE double arithmetic, so the 
 `TinyConfig` repeats each model's widths and seed for tests and tools; a test compares them with the generated slots.
 What the hybrid leaves out of Qwen3.5 (the attention output gate, the z projection with its gated norm, the `A_log` and
 `dt_bias` transforms) is listed in `RoostTinyHybrid.cs`; those belong to the real definition (R-035).
+
+## Open follow-ups
+
+R-021 is partial until the first item below is done.
+
+1. After the C3-qkv item lands (Q, K and V as views of the `CausalConv1d` output): bind the three `delta` arguments Q, K
+   and V to those views, delete `GatedDeltaRuleReadsThePlaceholderUntilC3ViewsLand`, enable `NumericRunWaitsForViews`
+   and compare against a double transcription as `RoostTinyTests` does.
+2. `PagedAttention.Mode` is left at its default for prefill (inherited from R-020); a GPU backend may mishandle it.
+   Track it with the GPU backend item.
+3. The hybrid omits `z`, `A_log`, `dt_bias` and the attention output gate; R-035 owns them.
+4. Maintainer decisions pending: the fused-slot `Source` convention (`a+b`), the placement of this project (the plan
+   layout lists no Tiny project), and the C3-qkv contract-change request.
