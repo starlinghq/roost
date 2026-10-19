@@ -227,7 +227,7 @@ public sealed class WeightStreamerTests : IDisposable
     }
 
     [Fact]
-    public void ADeviceThatCannotHoldTheWeightsIsATypedFailure()
+    public void OutOfDeviceMemoryReportsItsOwnErrorCode()
     {
         var file = Build(FileOrder());
         var path = Write(_dir, file);
