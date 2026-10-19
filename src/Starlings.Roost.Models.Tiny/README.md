@@ -7,21 +7,23 @@ model's seed and the slot's name (SplitMix64 and IEEE double arithmetic, so the 
 | Model | Shape | State groups | Status |
 | --- | --- | --- | --- |
 | `roost-tiny` (`RoostTiny`) | Qwen3-shaped: 4 layers of GQA attention with per-head Q and K norms, NeoX rope, SwiGLU; f32; separate head | one full-attention group | Generates and runs on `CpuOps`; prefill, decode, chunked prefill and mixed batches match an independent double transcription |
-| `roost-tiny-hybrid` (`RoostTinyHybrid`) | Qwen3.5-shaped: 8 layers, full attention at `i % 4 == 3`, Gated DeltaNet elsewhere; bf16; head tied to the embedding; fused `in_proj_qkv` and a convolution over all its channels | paged K and V; recurrent state and convolution state | Structure tests only. Its numeric run waits for the C3-qkv item (views), because `GatedDeltaRule` cannot yet read q, k and v from the fused convolution output |
+| `roost-tiny-hybrid` (`RoostTinyHybrid`) | Qwen3.5-shaped, layer structure and slot names as R-035: 8 layers, full attention at `i % 4 == 3`, Gated DeltaNet elsewhere; bf16 with float32 `A_log` and gated-norm weights; head tied to the embedding; fused `in_proj_qkv` and a convolution over all its channels, read by `GatedDeltaRule` as three column views (`Q=l{i}.qkvc[0:key_dim]`, ...); `GatedDeltaRuleGates`, `GatedRmsNorm` with `in_proj_z`, and in attention a separate `q_gate_proj` with `SigmoidMul` | paged K and V; recurrent state and convolution state | Generates and runs on `CpuOps` (contract v3); prefill, decode, chunked prefill and mixed batches match an independent transcription that rounds to bfloat16 where the backend stores |
+
+Self-consistency tests run on both models in CI: chunked prefill against one call, and several sequences in one batch
+against each alone. The tolerances and what they were measured against are in `tests/.../Support/Tolerances.cs`.
+`TinyHybridReference` is an independent double-precision transcription of the hybrid layer (conv with SiLU, L2-normalised q/k,
+the delta rule, the gated norm, the sigmoid gate); with `roundActivations` it rounds each op's output to bfloat16 the way the
+definition's dtype says, which makes the comparison with `CpuOps` tight (most rows are identical); without it, the difference is the
+bfloat16 noise of the activations, which is large for these random weights.
 
 `TinyConfig` repeats each model's widths and seed for tests and tools; a test compares them with the generated slots.
-What the hybrid leaves out of Qwen3.5 (the attention output gate, the z projection with its gated norm, the `A_log` and
-`dt_bias` transforms) is listed in `RoostTinyHybrid.cs`; those belong to the real definition (R-035).
+Not modelled (as in R-035): multimodal rope sections (partial rotary, a quarter of the head, is) and the zero-centred norm
+weights (tiny norm weights are applied as stored).
 
 ## Open follow-ups
 
-R-021 is partial until the first item below is done.
-
-1. After the C3-qkv item lands (Q, K and V as views of the `CausalConv1d` output): bind the three `delta` arguments Q, K
-   and V to those views, delete `GatedDeltaRuleReadsThePlaceholderUntilC3ViewsLand`, enable `NumericRunWaitsForViews`
-   and compare against a double transcription as `RoostTinyTests` does.
-2. `PagedAttention.Mode` is left at its default for prefill (inherited from R-020); a GPU backend may mishandle it.
+1. `PagedAttention.Mode` is left at its default for prefill (inherited from R-020); a GPU backend may mishandle it.
    Track it with the GPU backend item.
-3. The hybrid omits `z`, `A_log`, `dt_bias` and the attention output gate; R-035 owns them.
-4. Maintainer decisions pending: the fused-slot `Source` convention (`a+b`), the placement of this project (the plan
-   layout lists no Tiny project), and the C3-qkv contract-change request.
+2. Maintainer decisions pending: the fused-slot `Source` convention (`a+b`), the split of `q_proj` into `q_proj` and
+   `q_gate_proj` (both slots name the same checkpoint tensor; the loader splits the interleaved rows), the view-binding syntax
+   (taken unchanged from R-035's branch), and the placement of this project (the plan layout lists no Tiny project).

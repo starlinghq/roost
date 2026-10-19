@@ -24,7 +24,8 @@ public sealed class RoostTinyTests : IDisposable
             worst = Math.Max(worst, Math.Abs(got[i] - want[i]) / (1 + Math.Abs(want[i])));
         }
 
-        Assert.True(worst < 1e-4, $"{what}: worst scaled difference {worst}");
+        Assert.True(worst < Tolerances.DenseReference, $"{what}: worst scaled difference {worst}");
+        TestContext.Current.SendDiagnosticMessage($"MEASURED reference dense {what}: worst scaled {worst:E3}");
     }
 
     [Fact]
@@ -143,6 +144,71 @@ public sealed class RoostTinyTests : IDisposable
         Assert.Empty(sa.Blocks.Intersect(sb.Blocks));
         Assert.Equal(2, sa.Blocks.Count);
         Assert.Single(sb.Blocks);
+    }
+
+    [Fact]
+    public void ChunkedPrefillEqualsOneCallWithinTheSelfConsistencyTolerance()
+    {
+        int[] prompt = Prompt(37, 10);
+        int[] next = Prompt(4, 11);
+        float[][] baseline = Chunked(_runner, prompt, next, [37]);
+        foreach (int[] chunks in Chunkings)
+        {
+            using var other = new TinyRunner();
+            float[][] got = Chunked(other, prompt, next, chunks);
+            for (int step = 0; step < baseline.Length; step++)
+            {
+                Tolerances.AssertSelfConsistent(baseline[step], got[step], $"chunking {string.Join('+', chunks)}, step {step}", "dense", Tolerances.DenseSelf);
+            }
+        }
+    }
+
+    [Fact]
+    public void SequencesInOneBatchEqualEachAloneWithinTheSelfConsistencyTolerance()
+    {
+        int[][] prompts = [Prompt(25, 12), Prompt(7, 13), Prompt(18, 14)];
+        int[][] nexts = [Prompt(3, 15), Prompt(3, 16), Prompt(3, 17)];
+        var seqs = new[] { new TinyRunner.Sequence(), new TinyRunner.Sequence(), new TinyRunner.Sequence() };
+        var together = new List<float[][]> { _runner.Step((seqs[0], prompts[0]), (seqs[1], prompts[1]), (seqs[2], prompts[2])) };
+        for (int i = 0; i < 3; i++)
+        {
+            together.Add(_runner.Step((seqs[0], nexts[0][i..(i + 1)]), (seqs[1], nexts[1][i..(i + 1)]), (seqs[2], nexts[2][i..(i + 1)])));
+        }
+
+        for (int s = 0; s < 3; s++)
+        {
+            using var alone = new TinyRunner();
+            var seq = new TinyRunner.Sequence();
+            Tolerances.AssertSelfConsistent(alone.Step((seq, prompts[s]))[0], together[0][s], $"sequence {s} prefill", "dense", Tolerances.DenseSelf);
+            for (int i = 0; i < 3; i++)
+            {
+                Tolerances.AssertSelfConsistent(alone.Step((seq, nexts[s][i..(i + 1)]))[0], together[i + 1][s], $"sequence {s} decode {i}", "dense", Tolerances.DenseSelf);
+            }
+        }
+    }
+
+    private static readonly int[][] Chunkings = [[20, 17], [1, 16, 1, 19], [5, 5, 5, 5, 5, 5, 5, 2], Enumerable.Repeat(1, 37).ToArray()];
+
+    private static float[][] Chunked(TinyRunner runner, int[] prompt, int[] next, int[] chunks)
+    {
+        Assert.Equal(prompt.Length, chunks.Sum());
+        var seq = new TinyRunner.Sequence();
+        var result = new List<float[]>();
+        int at = 0;
+        float[] last = [];
+        foreach (int n in chunks)
+        {
+            last = runner.Step((seq, prompt[at..(at + n)]))[0];
+            at += n;
+        }
+
+        result.Add(last);
+        foreach (int token in next)
+        {
+            result.Add(runner.Step((seq, new[] { token }))[0]);
+        }
+
+        return result.ToArray();
     }
 
     [Fact]

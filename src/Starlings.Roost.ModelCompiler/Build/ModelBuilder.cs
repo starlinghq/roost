@@ -52,6 +52,7 @@ internal sealed class ModelBuilder
     private readonly HashSet<string> _poisoned = new HashSet<string>(StringComparer.Ordinal);
     private readonly Dictionary<int, string> _overwrittenBy = new Dictionary<int, string>();
     private readonly HashSet<int> _read = new HashSet<int>();
+    private readonly HashSet<string> _reserved = new HashSet<string>(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _planValues = new Dictionary<string, int>(StringComparer.Ordinal);
     private readonly List<WeightSlotInfo> _weights = new List<WeightSlotInfo>();
     private readonly List<StateSlotInfo> _stateSlots = new List<StateSlotInfo>();
@@ -104,7 +105,7 @@ internal sealed class ModelBuilder
 
         foreach (var w in _weights)
         {
-            if (!_read.Contains(_byName[w.Name]))
+            if (!_read.Contains(_byName[w.Name]) && !_reserved.Contains(w.Name))
             {
                 _report(Diagnostics.UnusedWeight, w.Location, "Weight slot '" + w.Name + "' is never read by a node; the loader still reserves its slot");
             }
@@ -166,6 +167,11 @@ internal sealed class ModelBuilder
 
             var info = new WeightSlotInfo(name, source.Length == 0 ? null : source, dtype, dims.Select(d => d.Size).ToArray(), layer, w.Location);
             _weights.Add(info);
+            if (w.Reserved)
+            {
+                _reserved.Add(name);
+            }
+
             AddValue(name, ValueKind.Weight, dims, dtype, GraphLayout.RowMajor);
         }
     }
@@ -422,6 +428,20 @@ internal sealed class ModelBuilder
                 string raw = b.Raw;
                 int arrow = raw.IndexOf("=>", StringComparison.Ordinal);
                 string src = arrow >= 0 ? raw.Substring(0, arrow).Trim() : raw;
+                (long Start, long End)? view = null;
+                if (arrow < 0 && src.EndsWith("]", StringComparison.Ordinal) && src.IndexOf('[') > 0)
+                {
+                    int open = src.IndexOf('[');
+                    string range = src.Substring(open + 1, src.Length - open - 2);
+                    src = src.Substring(0, open).Trim();
+                    view = ParseView(range, name, b.Field, loc);
+                    if (view is null)
+                    {
+                        bad = true;
+                        continue;
+                    }
+                }
+
                 TargetSpec? target = arrow >= 0 ? ParseTarget(raw.Substring(arrow + 2)) : (TargetSpec?)null;
                 int? srcId = null;
                 if (src.Length > 0)
@@ -437,8 +457,19 @@ internal sealed class ModelBuilder
                     }
                     else
                     {
+                        if (view.HasValue && !CheckView(srcId.Value, view.Value, name, b.Field, loc))
+                        {
+                            bad = true;
+                            continue;
+                        }
+
                         inFields.Add(b.Field);
                         inValues.Add(srcId.Value);
+                        if (view.HasValue)
+                        {
+                            attrs["view." + b.Field] = view.Value.Start.ToString(CultureInfo.InvariantCulture) + ":" + view.Value.End.ToString(CultureInfo.InvariantCulture);
+                        }
+
                         if (_values[srcId.Value].Kind == ValueKind.State)
                         {
                             stateGroup = stateGroup ?? _stateSlots[srcId.Value - _weights.Count].Group;
@@ -604,6 +635,61 @@ internal sealed class ModelBuilder
 
         _usedOps.Add(op.Name);
         _nodes.Add(new NodeRec(nodeIndex, op.Name, inValues, outValues, attrs));
+    }
+
+    /// <summary>Parses the <c>start:end</c> of a column view: two integer expressions over the dims, 0 &lt;= start &lt; end.</summary>
+    private (long Start, long End)? ParseView(string range, string node, string field, LocationInfo? loc)
+    {
+        int colon = range.IndexOf(':');
+        if (colon < 0)
+        {
+            Fail(Diagnostics.BadBinding, loc, "Node '" + node + "' field '" + field + "': a view is written value[start:end] (columns of the last dimension), not '[" + range + "]'");
+            return null;
+        }
+
+        var dims = _dims.ToDictionary(k => k.Key, k => k.Value);
+        long end = 0;
+        string? error = null;
+        if (!DimExpression.TryEvaluate(range.Substring(0, colon), dims, out long start, out error)
+            || !DimExpression.TryEvaluate(range.Substring(colon + 1), dims, out end, out error))
+        {
+            Fail(Diagnostics.BadBinding, loc, "Node '" + node + "' field '" + field + "' view [" + range + "]: " + error + " (a view's bounds are integer expressions over the dims)");
+            return null;
+        }
+
+        if (start < 0 || end <= start)
+        {
+            Fail(Diagnostics.BadBinding, loc, "Node '" + node + "' field '" + field + "': view [" + start.ToString(CultureInfo.InvariantCulture) + ":" + end.ToString(CultureInfo.InvariantCulture) + "] needs 0 <= start < end");
+            return null;
+        }
+
+        return (start, end);
+    }
+
+    /// <summary>A view is a column slice of a token-major activation (a node output): the value must have rank 2 or more and a last dimension of at least <c>end</c>.</summary>
+    private bool CheckView(int valueId, (long Start, long End) view, string node, string field, LocationInfo? loc)
+    {
+        var v = _values[valueId];
+        if (v.Kind != ValueKind.Intermediate && v.Kind != ValueKind.Output)
+        {
+            Fail(Diagnostics.BadBinding, loc, "Node '" + node + "' field '" + field + "' takes a view of '" + v.Name + "', but only node outputs can be viewed");
+            return false;
+        }
+
+        if (v.Shape.Count < 2 || v.Shape[v.Shape.Count - 1].IsSymbolic)
+        {
+            Fail(Diagnostics.BadBinding, loc, "Node '" + node + "' field '" + field + "' takes a view of '" + v.Name + "', which needs a fixed last dimension and a leading token dimension");
+            return false;
+        }
+
+        long width = v.Shape[v.Shape.Count - 1].Size;
+        if (view.End > width)
+        {
+            Fail(Diagnostics.BadBinding, loc, "Node '" + node + "' field '" + field + "': view end " + view.End.ToString(CultureInfo.InvariantCulture) + " is beyond the " + width.ToString(CultureInfo.InvariantCulture) + " columns of '" + v.Name + "'");
+            return false;
+        }
+
+        return true;
     }
 
     private sealed class TargetSpec

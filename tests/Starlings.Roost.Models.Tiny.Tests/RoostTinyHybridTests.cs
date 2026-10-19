@@ -9,7 +9,7 @@ namespace Starlings.Roost.Models.Tiny.Tests;
 
 /// <summary>
 /// roost-tiny-hybrid (Qwen3.5-shaped) structure: weight and state slots, the fused linear-attention projection, plan inputs,
-/// graph pattern and call order. The numeric half is waiting for the C3-qkv item (views), see <see cref="NumericRunWaitsForViews"/>.
+/// graph pattern, the q/k/v views and call order. The numeric half is in <see cref="RoostTinyHybridNumericTests"/>.
 /// </summary>
 public class RoostTinyHybridTests
 {
@@ -54,6 +54,12 @@ public class RoostTinyHybridTests
             Assert.Equal($"{C.LinearValueHeads},{C.Hidden}", slots[$"l{l}.in_proj_a"].Shape);
             Assert.Equal($"{C.LinearValueHeads},{C.Hidden}", slots[$"l{l}.in_proj_b"].Shape);
             Assert.Equal($"{C.Hidden},{C.LinearValueHeads * C.LinearValueDim}", slots[$"l{l}.out_proj"].Shape);
+            Assert.Equal($"{C.LinearValueHeads * C.LinearValueDim},{C.Hidden}", slots[$"l{l}.in_proj_z"].Shape);
+            Assert.Equal($"{C.LinearValueHeads}", slots[$"l{l}.A_log"].Shape);
+            Assert.Equal($"{C.LinearValueHeads}", slots[$"l{l}.dt_bias"].Shape);
+            Assert.Equal($"{C.LinearValueDim}", slots[$"l{l}.linear_norm"].Shape);
+            Assert.Equal($"model.language_model.layers.{l}.linear_attn.A_log", slots[$"l{l}.A_log"].Source);
+            Assert.Equal($"model.language_model.layers.{l}.linear_attn.norm.weight", slots[$"l{l}.linear_norm"].Source);
             Assert.DoesNotContain($"l{l}.q_proj", slots.Keys);
             Assert.DoesNotContain($"l{l}.lin_q_proj", slots.Keys);
         }
@@ -63,22 +69,31 @@ public class RoostTinyHybridTests
             Assert.DoesNotContain($"l{l}.in_proj_qkv", slots.Keys);
             Assert.Equal($"{C.Heads * C.HeadDim},{C.Hidden}", slots[$"l{l}.q_proj"].Shape);
             Assert.Equal($"{C.KvHeads * C.HeadDim},{C.Hidden}", slots[$"l{l}.k_proj"].Shape);
+            // The output gate is its own projection (the loader splits the checkpoint's interleaved q_proj, as in R-035).
+            Assert.Equal($"{C.Heads * C.HeadDim},{C.Hidden}", slots[$"l{l}.q_gate_proj"].Shape);
+            Assert.Equal(slots[$"l{l}.q_proj"].Source, slots[$"l{l}.q_gate_proj"].Source);
         }
     }
 
     [Fact]
-    public void WeightSlotsAreBf16AndTheHeadIsTiedToTheEmbedding()
+    public void WeightSlotsAreBf16ExceptTheFloat32GatingParametersAndTheHeadIsTiedToTheEmbedding()
     {
         var names = RoostTinyHybrid.WeightSlots.Select(s => s.Name).ToArray();
-        Assert.Equal(1 + (LinearLayers.Length * 9) + (AttentionLayers.Length * 10) + 1, names.Length);
+        Assert.Equal(1 + (LinearLayers.Length * 13) + (AttentionLayers.Length * 11) + 1, names.Length);
         Assert.Equal("embed", names[0]);
         Assert.Equal("final_norm", names[^1]);
         Assert.DoesNotContain("lm_head", names);
         Assert.True(C.TiedHead);
-        Assert.All(RoostTinyHybrid.WeightSlots, s => Assert.Equal(DType.BF16, s.Dtype));
+        foreach (var slot in RoostTinyHybrid.WeightSlots)
+        {
+            // A_log and the gated norm's weight are float32 in the checkpoint; everything else is bfloat16.
+            bool f32 = slot.Name.EndsWith(".A_log", StringComparison.Ordinal) || slot.Name.EndsWith(".linear_norm", StringComparison.Ordinal);
+            Assert.Equal(f32 ? DType.F32 : DType.BF16, slot.Dtype);
+        }
+
         Assert.Equal(
-            ["l0.input_norm", "l0.in_proj_qkv", "l0.conv", "l0.in_proj_a", "l0.in_proj_b", "l0.out_proj", "l0.post_norm", "l0.gate_up", "l0.down"],
-            names.Skip(1).Take(9).ToArray());
+            ["l0.input_norm", "l0.in_proj_qkv", "l0.conv", "l0.in_proj_z", "l0.in_proj_a", "l0.in_proj_b", "l0.A_log", "l0.dt_bias", "l0.linear_norm", "l0.out_proj", "l0.post_norm", "l0.gate_up", "l0.down"],
+            names.Skip(1).Take(13).ToArray());
 
         var graph = RoostTinyHybrid.BuildGraph();
         var head = graph.Nodes.Single(n => n.Op == "LmHead");
@@ -134,8 +149,8 @@ public class RoostTinyHybridTests
     [Fact]
     public void GraphHasTheHybridLayerPattern()
     {
-        string[] linear = ["RmsNorm", "Gemm", "CausalConv1d", "Gemm", "Gemm", "GatedDeltaRule", "Gemm", "Residual", "RmsNorm", "Gemm", "SiluAndMul", "Gemm", "Residual"];
-        string[] attention = ["RmsNorm", "Gemm", "Gemm", "Gemm", "QkNorm", "Rope", "CacheWrite", "PagedAttention", "Gemm", "Residual", "RmsNorm", "Gemm", "SiluAndMul", "Gemm", "Residual"];
+        string[] linear = ["RmsNorm", "Gemm", "CausalConv1d", "Gemm", "Gemm", "Gemm", "GatedDeltaRuleGates", "GatedDeltaRule", "GatedRmsNorm", "Gemm", "Residual", "RmsNorm", "Gemm", "SiluAndMul", "Gemm", "Residual"];
+        string[] attention = ["RmsNorm", "Gemm", "Gemm", "Gemm", "Gemm", "QkNorm", "Rope", "CacheWrite", "PagedAttention", "SigmoidMul", "Gemm", "Residual", "RmsNorm", "Gemm", "SiluAndMul", "Gemm", "Residual"];
         var expected = new List<string> { "Embedding" };
         for (int l = 0; l < C.Layers; l++)
         {
@@ -146,7 +161,10 @@ public class RoostTinyHybridTests
         var g = RoostTinyHybrid.BuildGraph();
         Assert.Equal(expected, g.Nodes.Select(n => n.Op).ToArray());
         Assert.Equal(6, g.Nodes.Count(n => n.Op == "GatedDeltaRule"));
+        Assert.Equal(6, g.Nodes.Count(n => n.Op == "GatedDeltaRuleGates"));
+        Assert.Equal(6, g.Nodes.Count(n => n.Op == "GatedRmsNorm"));
         Assert.Equal(2, g.Nodes.Count(n => n.Op == "PagedAttention"));
+        Assert.Equal(2, g.Nodes.Count(n => n.Op == "SigmoidMul"));
 
         // The one fused Gemm of a linear layer produces all conv_dim channels, and the convolution runs over all of them.
         var qkv = g.Values.Single(v => v.Name == "l0.qkv");
@@ -160,40 +178,43 @@ public class RoostTinyHybridTests
         Assert.Equal(GraphDType.F32, g.Values.Single(v => v.Name == "logits").DType);
     }
 
-    // The placeholder, held in place by a test. GatedDeltaRule needs q, k and v as three contiguous buffers; the fused
-    // convolution output has them side by side in each token row, which C3 cannot slice (no views). Until the C3-qkv item
-    // adds them, the definition binds the whole convolution output to all three arguments, so Forward is structurally right
-    // and numerically wrong. This test pins that state: when the definition starts reading slices, it fails, and the
-    // numeric test below must be switched on in the same change.
+    // GatedDeltaRule reads q, k and v as three row-strided column views of the fused convolution output: Q at column 0,
+    // K at k_heads*k_dim and V at 2*k_heads*k_dim of each conv_dim-wide token row (contract version 2).
     [Fact]
-    public void GatedDeltaRuleReadsThePlaceholderUntilC3ViewsLand()
+    public void GatedDeltaRuleReadsQKAndVAsViewsOfTheConvolutionOutput()
     {
         var g = RoostTinyHybrid.BuildGraph();
-        foreach (var n in g.Nodes.Where(n => n.Op == "GatedDeltaRule"))
+        int key = C.LinearKeyHeads * C.LinearKeyDim;
+        int convDim = C.LinearConvDim;
+        var deltas = g.Nodes.Where(n => n.Op == "GatedDeltaRule").ToArray();
+        Assert.Equal(LinearLayers.Length, deltas.Length);
+        foreach (var n in deltas)
         {
             string[] fields = n.Attributes["in"].Split(',');
             GraphValue Bound(string field) => g.Values[n.Inputs[Array.IndexOf(fields, field)]];
+            string Arg(string name) => n.Attributes["arg." + name].Trim('(', ')');
 
-            long Arg(string name) => long.Parse(n.Attributes["arg." + name].Trim('(', ')'), CultureInfo.InvariantCulture);
-            long Cols(GraphValue v) => v.Shape[1].Size;
+            // All three views are of the one convolution output.
+            var conv = Bound("Q");
+            Assert.Equal(conv.Id, Bound("K").Id);
+            Assert.Equal(conv.Id, Bound("V").Id);
+            Assert.EndsWith(".qkvc", conv.Name, StringComparison.Ordinal);
+            Assert.Equal(convDim, conv.Shape[1].Size);
+            Assert.Equal($"0:{key}", n.Attributes["view.Q"]);
+            Assert.Equal($"{key}:{2 * key}", n.Attributes["view.K"]);
+            Assert.Equal($"{2 * key}:{convDim}", n.Attributes["view.V"]);
+            Assert.Equal(convDim.ToString(CultureInfo.InvariantCulture), Arg("QStride"));
+            Assert.Equal(convDim.ToString(CultureInfo.InvariantCulture), Arg("KStride"));
+            Assert.Equal(convDim.ToString(CultureInfo.InvariantCulture), Arg("VStride"));
 
-            var q = Bound("Q");
-            Assert.Equal(q.Id, Bound("K").Id);
-            Assert.Equal(q.Id, Bound("V").Id);
-            Assert.Equal(C.LinearConvDim, Cols(q));
-            Assert.NotEqual(Arg("KHeads") * Arg("KDim"), Cols(q));
-            Assert.NotEqual(Arg("VHeads") * Arg("VDim"), Cols(q));
-
-            // G and Beta are real separate projections already.
-            Assert.Equal(Arg("VHeads"), Cols(Bound("G")));
-            Assert.Equal(Arg("VHeads"), Cols(Bound("Beta")));
-            Assert.NotEqual(Bound("G").Id, Bound("Beta").Id);
+            // G (float32) and Beta come from the gates op, not the raw projections.
+            var gv = Bound("G");
+            var beta = Bound("Beta");
+            Assert.EndsWith(".g", gv.Name, StringComparison.Ordinal);
+            Assert.Equal(GraphDType.F32, gv.DType);
+            Assert.EndsWith(".beta", beta.Name, StringComparison.Ordinal);
+            Assert.Equal(GraphDType.BF16, beta.DType);
         }
-    }
-
-    [Fact(Skip = "Waiting for the C3-qkv item: GatedDeltaRule must read q, k and v as views of the fused convolution output (K at element offset k_heads*k_dim and V at 2*k_heads*k_dim of each token row). Until then roost-tiny-hybrid's Forward is numerically meaningless; switch this on, compare against a double transcription as RoostTinyTests does, and delete GatedDeltaRuleReadsThePlaceholderUntilC3ViewsLand.")]
-    public void NumericRunWaitsForViews()
-    {
     }
 
     [Fact]
