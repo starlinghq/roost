@@ -10,6 +10,9 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Scheduling/Recordings/*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <ProjectReference Include="../../src/Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
   </ItemGroup>
