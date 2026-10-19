@@ -1,0 +1,40 @@
+R-025: proposed GPU bf16 profile tolerances, Qwen3.5-0.8B, from the SM 86 eager-worker run. PROPOSAL ONLY.
+No protected tolerance file was read or changed; the maintainer sets tolerances (evidence/protected/).
+
+Source data: r025-cpu-compare-sm86.txt (this directory), produced by run-eager.sh at the commit that carries this file.
+  GPU:       eager worker on CudaOps, RTX 3090 (SM 86, status Experimental), kernel library fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7
+             (R-034 build of kernels/manifest.toml at 2ed875c), bf16 weights and activations, float32 recurrent state, deterministic variants.
+  Reference: CpuOps (double arithmetic, every op rounded once into its output dtype), the same generated forward, the same locked checkpoint
+             (Qwen/Qwen3.5-0.8B at 2fc06364715b967f1860aea9cf38778875588b17), both with WindowLeft = -1 (see the PR: the generated forward's default
+             of 0 is a defect and is worked around in Probe).
+  Sample:    3 prompts (5, 6 and 19 tokens), 8 greedy tokens each, teacher-forced with the GPU's tokens; per-op outputs recorded for steps 0 to 2
+             of the first prompt only (prefill, then two decode steps): 72 hidden-state rows, 54 recurrent and 54 conv state rows, 24 logits rows.
+  NOT covered: transformers fp32/bf16 as the reference (the profile's real reference is R-014's fixtures), contexts beyond 27 tokens, batch > 1,
+             the chunked GatedDeltaRule prefill variant (this run uses the recurrent variant for every length), SM 89, other SMs.
+  The reference here is CpuOps, which is itself bf16-rounded per op, so these numbers bound GPU-versus-CpuOps agreement. They are a floor for the
+  GPU-versus-transformers tolerance, not a replacement for measuring it.
+
+Observed worst case over the sample, and a proposed bound (about 1.5 to 2 times the observed worst, rounded):
+
+  metric                                              observed worst             proposed bound
+  hidden state h{i+1} per layer, max|d| / max|ref|    0.0333 (step 0, layer 12)  <= 0.05
+  hidden state h{i+1} per layer, cosine               0.999926 (step 0, layer 19) >= 0.9999
+  recurrent (delta rule) state, max|d| / max|ref|     0.0207 (step 0, layer 16)  <= 0.03
+  conv state, max|d| / max|ref|                       0.0076 (step 0, layer 6)   <= 0.012
+  logits, max|d| (float32, 248320 entries)            0.2335                     <= 0.5, and <= 0.02 * (max - min of the reference row)
+  logits, cosine                                      0.999840                   >= 0.9997
+  greedy tokens, teacher-forced                       24 of 24 agree             exact on fixture prompts, except where the reference's
+                                                                                 top-2 logit margin is below 2 * the logits bound
+
+Notes for the maintainer:
+  - Hidden-state differences are whole bf16 steps at the layer's scale (for example 0.03125 where the largest value is 2 to 4), so the relative form
+    max|d| / max|ref| is the natural one; an absolute bound would need a per-layer table (the report has one).
+  - Logits max|d| reaches 0.23 while the smallest top-2 margin seen was 0.235 (GPU) / 0.279 (CPU), so a greedy flip is possible in principle at
+    this noise level even though none occurred. A greedy gate therefore needs the margin rule above, or the fixtures must be chosen with margins
+    well clear of it; an unconditional "greedy tokens equal" gate would be flaky on near-ties.
+  - Per op class (worst relative max|d| over all traced steps and layers, from the report): Gemm 0.045, RmsNorm 0.030, SiluAndMul 0.030,
+    PagedAttention 0.026, GatedRmsNorm 0.025, GatedDeltaRuleGates.g 0.018, GatedDeltaRule.out 0.013, SigmoidMul 0.013, CausalConv1d.out 0.012,
+    QkNorm and Rope 0.012, LmHead.logits 0.010. Op-level bounds should come from R-019's conformance runs, which test each op on its own
+    inputs; these numbers include the error carried in from earlier layers.
+  - Determinism: a second GPU process produced a bit-identical dump (tokens, logits and every recorded op output), so the differences above
+    are not run-to-run noise on this device.
