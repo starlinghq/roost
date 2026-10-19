@@ -1,0 +1,128 @@
+"""Ahead-of-time compile R-034's gated delta rule Triton specialisations for one SM into a C++ source of cubin arrays.
+
+usage: build_gdn.py <fla-checkout> <gdn_specs.json> <sm> <out.cpp>
+
+Build time only; Triton and Python never load at runtime. For each specialisation in gdn_specs.json (written by
+capture_specs.py from live flash-linear-attention launches with S3's pinned configs) this rebuilds the Triton ASTSource,
+compiles it for the requested SM with triton.compile (the call triton.tools.compile makes; that tool cannot express the
+None constexprs or the run-time grid FLA needs, see docs/m0/roost-s3-triton-aot-gdn.md) and writes the cubin into
+<out.cpp> together with what the C++ launcher checks at load time: the kernel name, the run-time argument list, the
+shared-memory size and the thread count. The order of the table is the order of ROLES, which kernels/src/ops/gdn_aot.h
+mirrors.
+
+FLA is imported from <fla-checkout>, which must be at the SHA in gdn_specs.json (the manifest's pin). Set
+TRITON_CACHE_DIR to an empty directory so every compile is cold. The build host needs a visible CUDA device: Triton
+builds its argument binder from the current device (S3), and importing FLA queries torch.cuda at import time, so a
+driver stub is not enough (tried: CUDA_VISIBLE_DEVICES="" stops at fla.utils.hardware). A build without a device omits
+the AOT ops, see kernels/cmake/RoostHybrid.cmake.
+"""
+
+import hashlib
+import importlib
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+C_TYPES = {"i32", "i64", "fp32"}
+
+# (kernel name, USE_INITIAL_STATE or None) -> role name, in table order. kernels/src/ops/gdn_aot.h has the same list.
+ROLES = [
+    ("cumsum", "chunk_local_cumsum_scalar_kernel", None),
+    ("kkt_solve", "chunk_gated_delta_rule_fwd_kkt_solve_kernel", None),
+    ("recompute_w_u", "recompute_w_u_fwd_kernel", None),
+    ("chunk_h_h0", "chunk_gated_delta_rule_fwd_kernel_h_blockdim64", True),
+    ("chunk_h", "chunk_gated_delta_rule_fwd_kernel_h_blockdim64", False),
+    ("chunk_o", "chunk_fwd_kernel_o", None),
+    ("recurrent", "fused_recurrent_gated_delta_rule_fwd_kernel", None),
+]
+
+
+def role_of(spec):
+    for index, (_, kernel, init) in enumerate(ROLES):
+        if spec["kernel"] == kernel and (init is None or bool(spec["constexprs"].get("USE_INITIAL_STATE")) == init):
+            return index
+    raise SystemExit(f"no role for {spec['kernel']}")
+
+
+def main():
+    fla_dir, specs_path, sm, out_path = (
+        Path(sys.argv[1]).resolve(),
+        Path(sys.argv[2]),
+        int(sys.argv[3]),
+        Path(sys.argv[4]),
+    )
+    doc = json.loads(specs_path.read_text())
+    sha = subprocess.run(
+        ["git", "-C", str(fla_dir), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+    ).stdout.strip()
+    if sha != doc["fla_sha"]:
+        raise SystemExit(f"{fla_dir} is at {sha}, the specs were captured at {doc['fla_sha']}")
+    sys.path.insert(0, str(fla_dir))
+
+    import triton
+    from triton.backends.compiler import GPUTarget
+
+    target = GPUTarget("cuda", sm, 32)
+    if triton.__version__ != doc["triton"]:
+        raise SystemExit(f"Triton {triton.__version__} is installed, the specs were captured with {doc['triton']}")
+
+    def unwrap(k):
+        while not isinstance(k, triton.runtime.jit.JITFunction):
+            k = k.fn
+        return k
+
+    backend = triton.compiler.make_backend(target)
+    entries = {}
+    for s in doc["specs"]:
+        fn = unwrap(getattr(importlib.import_module(s["module"]), s["kernel"]))
+        fn.create_binder()
+        attrs = {tuple(k): [tuple(a) for a in v] for k, v in s["attrs"]}
+        src = fn.ASTSource(fn=fn, constexprs=dict(s["constexprs"]), signature=s["signature"], attrs=attrs)
+        options = backend.parse_options({"num_warps": s["num_warps"], "num_stages": s["num_stages"]})
+        ck = triton.compile(src, target=target, options=options.__dict__)
+        md = ck.metadata
+        if getattr(md, "global_scratch_size", 0) > 0:
+            raise SystemExit(f"{s['kernel']} needs global scratch; the launcher does not provide it")
+        runtime = [(n, s["signature"][n]) for n in s["arg_names"] if s["signature"][n] != "constexpr"]
+        for _, t in runtime:
+            if not (t.startswith("*") or t in C_TYPES):
+                raise SystemExit(f"unsupported argument type {t}")
+        role = role_of(s)
+        if role in entries:
+            raise SystemExit(f"two specialisations for role {ROLES[role][0]}")
+        entries[role] = dict(
+            spec=s, cubin=ck.asm["cubin"], name=md.name, shared=md.shared, threads=md.num_warps * 32, runtime=runtime
+        )
+        print(
+            f"{ROLES[role][0]:14s} {md.name} sm{sm} {len(ck.asm['cubin'])} B shared {md.shared} warps {md.num_warps}",
+            flush=True,
+        )
+    missing = [ROLES[i][0] for i in range(len(ROLES)) if i not in entries]
+    if missing:
+        raise SystemExit(f"specs missing for roles {missing}")
+
+    parts = [
+        "// Generated by kernels/aot/build_gdn.py; never committed. Triton ",
+        f"{triton.__version__}, flash-linear-attention {sha}, sm_{sm}.\n",
+        '#include "gdn_aot.h"\n\nnamespace roost_gdn {\n\n',
+    ]
+    for i in range(len(ROLES)):
+        e = entries[i]
+        parts.append(f"static const unsigned char kCubin{i}[] = {{{','.join(str(b) for b in e['cubin'])}}};\n")
+    parts.append("\nconst GdnKernel kGdnKernels[kGdnKernelCount] = {\n")
+    for i, (role, _, _) in enumerate(ROLES):
+        e = entries[i]
+        sig = ",".join(f"{n}:{t}" for n, t in e["runtime"])
+        digest = hashlib.sha256(e["cubin"]).hexdigest()
+        fields = [f'"{role}"', f'"{e["name"]}"', f'"{sig}"', f"kCubin{i}", str(len(e["cubin"]))]
+        fields += [str(e["shared"]), str(e["threads"]), f'"{digest}"']
+        parts.append(f"    {{{', '.join(fields)}}},\n")
+    parts.append("};\n\n}  // namespace roost_gdn\n")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text("".join(parts))
+    print(f"sm{sm}: {len(ROLES)} cubins, {sum(len(e['cubin']) for e in entries.values())} B -> {out_path}")
+
+
+if __name__ == "__main__":
+    main()
