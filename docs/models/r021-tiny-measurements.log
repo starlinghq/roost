@@ -1,0 +1,129 @@
+MEASURED greedy gap hybrid 1.598E+000
+MEASURED greedy gap hybrid 1.823E+000
+MEASURED greedy gap hybrid 2.018E+000
+MEASURED greedy gap hybrid 2.106E+000
+MEASURED greedy gap hybrid 2.541E+000
+MEASURED greedy gap hybrid 3.280E+000
+MEASURED greedy gap hybrid 3.725E+000
+MEASURED greedy gap hybrid 7.424E-001
+MEASURED reference dense A chunk 1: worst scaled 2.481E-007
+MEASURED reference dense A chunk 2: worst scaled 2.864E-007
+MEASURED reference dense A chunk 3: worst scaled 2.135E-007
+MEASURED reference dense B decode 1: worst scaled 2.546E-007
+MEASURED reference dense B decode 2: worst scaled 2.716E-007
+MEASURED reference dense B prompt: worst scaled 2.198E-007
+MEASURED reference dense position 0: worst scaled 1.907E-007
+MEASURED reference dense position 10: worst scaled 3.268E-007
+MEASURED reference dense position 11: worst scaled 2.430E-007
+MEASURED reference dense position 12: worst scaled 2.688E-007
+MEASURED reference dense position 13: worst scaled 3.216E-007
+MEASURED reference dense position 14: worst scaled 2.145E-007
+MEASURED reference dense position 15: worst scaled 2.706E-007
+MEASURED reference dense position 16: worst scaled 2.358E-007
+MEASURED reference dense position 17: worst scaled 3.128E-007
+MEASURED reference dense position 18: worst scaled 2.718E-007
+MEASURED reference dense position 19: worst scaled 3.148E-007
+MEASURED reference dense position 1: worst scaled 2.846E-007
+MEASURED reference dense position 20: worst scaled 2.865E-007
+MEASURED reference dense position 2: worst scaled 2.174E-007
+MEASURED reference dense position 3: worst scaled 3.561E-007
+MEASURED reference dense position 4: worst scaled 2.404E-007
+MEASURED reference dense position 5: worst scaled 2.879E-007
+MEASURED reference dense position 6: worst scaled 2.725E-007
+MEASURED reference dense position 7: worst scaled 3.454E-007
+MEASURED reference dense position 8: worst scaled 3.350E-007
+MEASURED reference dense position 9: worst scaled 2.333E-007
+MEASURED reference dense prefill of 20 tokens (two blocks): worst scaled 3.020E-007
+MEASURED reference hybrid A chunk 1: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid A chunk 2: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid A chunk 3: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid B decode 1: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid B decode 2: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid B prompt: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 0: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 10: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 11: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 12: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 13: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 14: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 15: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 16: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 17: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 18: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 19: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 1: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 20: worst scaled 1.049E-001, median 5.714E-003
+MEASURED reference hybrid position 2: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 3: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 4: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 5: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 6: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 7: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 8: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid position 9: worst scaled 0.000E+000, median 0.000E+000
+MEASURED reference hybrid prefill of 20 tokens (two blocks): worst scaled 7.082E-002, median 7.963E-003
+MEASURED self dense chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 0: worst scaled 0.000E+000
+MEASURED self dense chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 1: worst scaled 0.000E+000
+MEASURED self dense chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 2: worst scaled 0.000E+000
+MEASURED self dense chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 3: worst scaled 0.000E+000
+MEASURED self dense chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 4: worst scaled 0.000E+000
+MEASURED self dense chunking 1+16+1+19, step 0: worst scaled 0.000E+000
+MEASURED self dense chunking 1+16+1+19, step 1: worst scaled 0.000E+000
+MEASURED self dense chunking 1+16+1+19, step 2: worst scaled 0.000E+000
+MEASURED self dense chunking 1+16+1+19, step 3: worst scaled 0.000E+000
+MEASURED self dense chunking 1+16+1+19, step 4: worst scaled 0.000E+000
+MEASURED self dense chunking 20+17, step 0: worst scaled 0.000E+000
+MEASURED self dense chunking 20+17, step 1: worst scaled 0.000E+000
+MEASURED self dense chunking 20+17, step 2: worst scaled 0.000E+000
+MEASURED self dense chunking 20+17, step 3: worst scaled 0.000E+000
+MEASURED self dense chunking 20+17, step 4: worst scaled 0.000E+000
+MEASURED self dense chunking 5+5+5+5+5+5+5+2, step 0: worst scaled 0.000E+000
+MEASURED self dense chunking 5+5+5+5+5+5+5+2, step 1: worst scaled 0.000E+000
+MEASURED self dense chunking 5+5+5+5+5+5+5+2, step 2: worst scaled 0.000E+000
+MEASURED self dense chunking 5+5+5+5+5+5+5+2, step 3: worst scaled 0.000E+000
+MEASURED self dense chunking 5+5+5+5+5+5+5+2, step 4: worst scaled 0.000E+000
+MEASURED self dense sequence 0 decode 0: worst scaled 0.000E+000
+MEASURED self dense sequence 0 decode 1: worst scaled 0.000E+000
+MEASURED self dense sequence 0 decode 2: worst scaled 0.000E+000
+MEASURED self dense sequence 0 prefill: worst scaled 0.000E+000
+MEASURED self dense sequence 1 decode 0: worst scaled 0.000E+000
+MEASURED self dense sequence 1 decode 1: worst scaled 0.000E+000
+MEASURED self dense sequence 1 decode 2: worst scaled 0.000E+000
+MEASURED self dense sequence 1 prefill: worst scaled 0.000E+000
+MEASURED self dense sequence 2 decode 0: worst scaled 0.000E+000
+MEASURED self dense sequence 2 decode 1: worst scaled 0.000E+000
+MEASURED self dense sequence 2 decode 2: worst scaled 0.000E+000
+MEASURED self dense sequence 2 prefill: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 0: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 1: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 2: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 3: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1+1, step 4: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+16+1+19, step 0: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+16+1+19, step 1: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+16+1+19, step 2: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+16+1+19, step 3: worst scaled 0.000E+000
+MEASURED self hybrid chunking 1+16+1+19, step 4: worst scaled 0.000E+000
+MEASURED self hybrid chunking 20+17, step 0: worst scaled 0.000E+000
+MEASURED self hybrid chunking 20+17, step 1: worst scaled 0.000E+000
+MEASURED self hybrid chunking 20+17, step 2: worst scaled 0.000E+000
+MEASURED self hybrid chunking 20+17, step 3: worst scaled 0.000E+000
+MEASURED self hybrid chunking 20+17, step 4: worst scaled 0.000E+000
+MEASURED self hybrid chunking 5+5+5+5+5+5+5+2, step 0: worst scaled 0.000E+000
+MEASURED self hybrid chunking 5+5+5+5+5+5+5+2, step 1: worst scaled 0.000E+000
+MEASURED self hybrid chunking 5+5+5+5+5+5+5+2, step 2: worst scaled 0.000E+000
+MEASURED self hybrid chunking 5+5+5+5+5+5+5+2, step 3: worst scaled 0.000E+000
+MEASURED self hybrid chunking 5+5+5+5+5+5+5+2, step 4: worst scaled 0.000E+000
+MEASURED self hybrid sequence 0 decode 0: worst scaled 0.000E+000
+MEASURED self hybrid sequence 0 decode 1: worst scaled 0.000E+000
+MEASURED self hybrid sequence 0 decode 2: worst scaled 0.000E+000
+MEASURED self hybrid sequence 0 prefill: worst scaled 0.000E+000
+MEASURED self hybrid sequence 1 decode 0: worst scaled 0.000E+000
+MEASURED self hybrid sequence 1 decode 1: worst scaled 0.000E+000
+MEASURED self hybrid sequence 1 decode 2: worst scaled 0.000E+000
+MEASURED self hybrid sequence 1 prefill: worst scaled 0.000E+000
+MEASURED self hybrid sequence 2 decode 0: worst scaled 0.000E+000
+MEASURED self hybrid sequence 2 decode 1: worst scaled 0.000E+000
+MEASURED self hybrid sequence 2 decode 2: worst scaled 0.000E+000
+MEASURED self hybrid sequence 2 prefill: worst scaled 0.000E+000
+MEASURED unrounded hybrid decode 21 positions: worst scaled 1.600E+000
