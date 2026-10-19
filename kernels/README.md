@@ -100,16 +100,21 @@ The tolerances are development limits inside the harness, not a tolerance file; 
 
 Measured on the RTX 3090 (SM 86) by the harness, against `CpuOps` in double on random inputs of the Qwen3.5-0.8B shapes
 (`kernels/results/r034-hybrid-conformance-sm86.log`, 117 checks). The metric is the worst `|got - ref| / (|ref| + floor)`
-over the output, with the floor named in the table; the GatedDeltaRule rows use `|got - ref|` over the reference maximum.
+over the output, with the floor named in the table. For the GatedDeltaRule rows the floor is the reference maximum
+(`refMax`, the largest `|ref|` over that output or the whole state pool, as in `GdnCases.cs` and `Compare.Errors`), so the
+metric is `|got - ref| / (|ref| + refMax)`, not `|got - ref| / refMax`. It sits between 0.5x and 1x of the latter (the
+denominator runs from `refMax` to `2 * refMax`), so a figure here is not comparable with one taken as error over reference
+max. A tolerance file and the harness must use this same formula; a limit written for one metric and applied with the other
+is off by up to a factor of two.
 A bf16 output can differ from the double reference by one bf16 step, which is 2^-8 to 2^-7 relative to the result
 (0.0039 to 0.0078), so the proposed bf16 limit is 2^-7 = 7.8e-3; a float32 output differs by float rounding only.
 
 | Op, output | Metric (floor) | Worst measured | Dev limit in harness | Proposed |
 | --- | --- | --- | --- | --- |
-| GatedDeltaRule chunk, o (bf16) | rel to max | 5.81e-3 | 1.6e-2 | 1.6e-2 (2.8x; S3 measured 5.6e-3 against fp32) |
-| GatedDeltaRule chunk, state (f32) | rel to max | 4.40e-3 | 1.0e-2 | 1.0e-2 (2.3x; S3 measured 3.5e-3) |
-| GatedDeltaRule recurrent, o (bf16) | rel to max | 4.47e-4 | 8e-3 | 2e-3 (4.5x) |
-| GatedDeltaRule recurrent, state (f32) | rel to max | 1.22e-7 | 1e-4 | 1e-5 (80x; sequences up to 200 tokens measured) |
+| GatedDeltaRule chunk, o (bf16) | scaled (floor = ref max) | 5.81e-3 | 1.6e-2 | 1.6e-2 (2.8x) |
+| GatedDeltaRule chunk, state (f32) | scaled (floor = ref max) | 4.40e-3 | 1.0e-2 | 1.0e-2 (2.3x) |
+| GatedDeltaRule recurrent, o (bf16) | scaled (floor = ref max) | 4.47e-4 | 8e-3 | 2e-3 (4.5x) |
+| GatedDeltaRule recurrent, state (f32) | scaled (floor = ref max) | 1.22e-7 | 1e-4 | 1e-5 (82x; sequences up to 200 tokens measured) |
 | CausalConv1d, bf16 output | scaled (1e-3) | 7.57e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
 | CausalConv1d, f32 output | scaled (0.1) | 1.7e-6 | 2e-5 | 1e-5 |
 | CausalConv1d state, RecurrentStateCopy, RecurrentStateSnapshot | bytes | identical | identical | identical (0) |
@@ -127,6 +132,11 @@ for outputs below 0.1, and floor 1e-2 hides relative error on small GatedRmsNorm
 (7.8e-3 against 7.57e-3 measured) is one bf16 step against a reference rounded to bf16, so it allows no two-step disagreement.
 (3) The recurrent GatedDeltaRule proposal (o 2e-3, state 1e-5) is tighter than the limits the harness asserts (8e-3, 1e-4), so
 no committed run enforces the proposed values; the log shows the measured maxima (4.47e-4, 1.22e-7) only.
+
+The headroom ratio is proposed limit over worst measured value, both under the metric above (1.6e-2 / 5.81e-3, 1.0e-2 /
+4.40e-3, 2e-3 / 4.47e-4, 1e-5 / 1.22e-7). S3 (`docs/m0/roost-s3-triton-aot-gdn.md`) reported its chunk figures (5.0e-4 on `o`,
+3.3e-3 on state, against an fp32 reference) as max error over reference max, a different metric from the one here, so those
+numbers are not a comparison for the rows above and are not used to size the limits.
 
 Caveats: random inputs, not real activations; one GPU (SM 86); sequences of at most 1500 tokens for the chunk variant and 200
 for the recurrent one. The numbers for the chunk variant are bf16 rounding of FLA's own intermediates, so they do not tighten
