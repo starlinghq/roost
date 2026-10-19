@@ -1,7 +1,10 @@
 /*
  * roost_kernels.h: the kernel library C ABI and registration table (contract C1, build plan section 5).
  *
- * ABI major 1, minor 0. Frozen as contract v0 by R-004; the ADR is the "Contracts" section of README.md.
+ * ABI major 1, minor 2. Frozen as contract v0 by R-004 (1.0); 1.1 adds RoostGatedDeltaRuleParams with row strides for
+ * q, k and v (2026-10-19); 1.2 adds the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul) and the params
+ * of CausalConv1d, RecurrentStateCopy and RecurrentStateSnapshot (contract version 3). The ADR is the "Contracts" section
+ * of README.md.
  *
  * Rules (the ADR gives the reasons):
  *   - Fixed-width integer types, float, double and pointers only. No size_t, long, bool, enum-typed fields or POSIX
@@ -21,8 +24,9 @@
  *     streams and graphs pass between them.
  *   - Batch invariance and determinism are registration flags and context options, never environment variables (S2).
  *
- * Only M0 ops have params structs here. Op ids for later phases are reserved below so their numbering never moves;
- * their params structs are added, never changed, when their items land.
+ * Params structs exist for the M0 ops and for the hybrid ops Qwen3.5-0.8B needs (moved into M0 by decision 15). Op ids for
+ * later phases are reserved below so their numbering never moves; their params structs are added, never changed, when
+ * their items land.
  */
 #ifndef ROOST_KERNELS_H_
 #define ROOST_KERNELS_H_
@@ -48,7 +52,7 @@ extern "C" {
 /* ---- Versions ------------------------------------------------------------------------------------------------ */
 
 #define ROOST_ABI_MAJOR 1
-#define ROOST_ABI_MINOR 0
+#define ROOST_ABI_MINOR 2
 /* roost_abi_version() returns (major << 16) | minor. */
 #define ROOST_ABI_VERSION ((ROOST_ABI_MAJOR << 16) | ROOST_ABI_MINOR)
 
@@ -125,6 +129,10 @@ typedef int32_t RoostStatus;
 #define ROOST_OP_RECURRENT_STATE_COPY 130
 #define ROOST_OP_RECURRENT_STATE_SNAPSHOT 131
 #define ROOST_OP_SLIDING_WINDOW_ATTENTION 132
+/* Qwen3.5 gating (contract version 3, ABI 1.2); numbered in the hybrid block next to GatedDeltaRule */
+#define ROOST_OP_GATED_DELTA_RULE_GATES 133
+#define ROOST_OP_GATED_RMS_NORM 134
+#define ROOST_OP_SIGMOID_MUL 135
 /* Reserved, M2 */
 #define ROOST_OP_ROPE_SCALED 160
 #define ROOST_OP_QUANTIZE 161
@@ -405,7 +413,11 @@ typedef struct RoostGemmParams {
   uint32_t transpose_b;
   float alpha;
   float beta;
-  uint32_t shape_bucket; /* plan's shape bucket; selects the pinned algorithm (S2) */
+  /* Upper bound on m that plan() chose the pinned algorithm for (S2), in rows, not an index. 0 means the call's own m.
+   * plan() picks the algorithm for M = shape_bucket; run() accepts any m up to the planned bucket and returns
+   * ROOST_STATUS_INVALID_ARGUMENT above it. Every call with the same bucket, n, k, types and transposes uses one
+   * algorithm, which is what makes a row's result independent of the other rows (contract version 3). */
+  uint32_t shape_bucket;
   uint32_t reserved0;
 } RoostGemmParams;
 
@@ -435,7 +447,7 @@ typedef struct RoostLmHeadParams {
   uint32_t vocab;
   uint32_t vocab_padded;
   float soft_cap; /* 0 disables final logit soft-capping */
-  uint32_t shape_bucket;
+  uint32_t shape_bucket; /* upper bound on selected, as RoostGemmParams.shape_bucket bounds m; 0 means selected */
 } RoostLmHeadParams;
 
 /* output = a + b (a may alias output). */
@@ -510,6 +522,152 @@ typedef struct RoostSampleParams {
   uint32_t stride;
   uint32_t reserved0;
 } RoostSampleParams;
+
+/* ---- Hybrid (recurrent) params, ABI 1.1 and 1.2 -------------------------------------------------------------- */
+
+/* Gated delta rule over packed sequences (contract C3 GatedDeltaRule; CpuOps.GatedDeltaRule is the exact definition).
+ * Per sequence b (tokens cu_seqlens[b] to cu_seqlens[b + 1]) and value head h, with key head h / (v_heads / k_heads)
+ * and state S [k_dim, v_dim] from slot state_slots[b]: q and k are l2-normalised when l2_norm_qk is set, q is scaled,
+ * S = S * exp(g_t), S = S + k (outer) (beta_t * (v_t - S^T k)), o_t = S^T q; S is written back to the slot.
+ *
+ * The l2 norm of q and k happens here and nowhere else (contract version 3): with l2_norm_qk set, each key head's row of
+ * k_dim elements of q and of k is multiplied by 1 / sqrt(sum(x^2) + 1e-6), eps fixed at 1e-6, before the query scale.
+ * This is transformers' use_qk_l2norm_in_kernel=True, which Qwen3.5 always passes; a Qwen3.5 caller sets l2_norm_qk and
+ * scale 0, and no separate normalisation op runs on the views. g and beta come from GatedDeltaRuleGates below.
+ *
+ * q, k and v are row-strided views: row t of q starts at element t * q_stride of the q span (likewise k and v), and the
+ * heads of a row are contiguous. A stride of 0 means a contiguous tensor (k_heads * k_dim, or v_heads * v_dim). For
+ * Qwen3.5 the three views are column slices of the causal conv1d output [tokens, 2 * k_heads * k_dim + v_heads * v_dim]:
+ * q at column 0, k at column k_heads * k_dim, v at column 2 * k_heads * k_dim, all with that row width as stride (6144
+ * for Qwen3.5-0.8B). Output, g and beta are contiguous. */
+typedef struct RoostGatedDeltaRuleParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan q;           /* [tokens, k_heads, k_dim] at q_stride */
+  RoostDeviceSpan k;           /* [tokens, k_heads, k_dim] at k_stride */
+  RoostDeviceSpan v;           /* [tokens, v_heads, v_dim] at v_stride */
+  RoostDeviceSpan g;           /* [tokens, v_heads] log decay */
+  RoostDeviceSpan beta;        /* [tokens, v_heads] */
+  RoostDeviceSpan output;      /* [tokens, v_heads, v_dim], contiguous */
+  RoostDeviceSpan state;       /* recurrent pool [slots, v_heads, k_dim, v_dim] f32 (C4) */
+  RoostDeviceSpan state_slots; /* [batch] int32 slot per sequence */
+  RoostDeviceSpan cu_seqlens;  /* [batch + 1] int32 token offsets */
+  const int32_t* cu_seqlens_host; /* [batch + 1] host copy for plan() (chunk tables, S3); NULL when no plan is needed */
+  uint32_t batch;
+  uint32_t tokens;
+  uint32_t k_heads;
+  uint32_t v_heads;            /* a multiple of k_heads */
+  uint32_t k_dim;
+  uint32_t v_dim;
+  uint32_t q_stride;           /* elements between token rows of q; 0 means k_heads * k_dim */
+  uint32_t k_stride;           /* 0 means k_heads * k_dim */
+  uint32_t v_stride;           /* 0 means v_heads * v_dim */
+  uint32_t use_initial_state;  /* nonzero: start from the slot's state; zero: start from zero */
+  uint32_t l2_norm_qk;         /* nonzero: l2-normalise q and k inside the op */
+  float scale;                 /* query scale; 0 means 1 / sqrt(k_dim) */
+} RoostGatedDeltaRuleParams;
+
+/* Gated DeltaNet gates from the raw a and b projections (contract C3 GatedDeltaRuleGates; ABI 1.2). Per token t and value
+ * head h: g = -exp(a_log[h]) * softplus(a[t, h] + dt_bias[h]) and beta = sigmoid(b[t, h]), where softplus(x) is
+ * log(1 + exp(x)), and x itself above 20 as in torch.nn.functional.softplus. This is transformers 5.20.1
+ * Qwen3_5GatedDeltaNet.forward: g is computed in float32 and beta in the activation type, so a Qwen3.5 caller passes g as
+ * an f32 span and beta in the activation type, which is what GatedDeltaRule reads. a and b are row-strided like q, k and
+ * v above, so they may be column views of a fused projection. Each span's own dtype gives its element type. */
+typedef struct RoostGatedDeltaRuleGatesParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan a;       /* [tokens, v_heads] at a_stride */
+  RoostDeviceSpan b;       /* [tokens, v_heads] at b_stride */
+  RoostDeviceSpan a_log;   /* [v_heads] */
+  RoostDeviceSpan dt_bias; /* [v_heads] */
+  RoostDeviceSpan g;       /* [tokens, v_heads] output, contiguous */
+  RoostDeviceSpan beta;    /* [tokens, v_heads] output, contiguous */
+  uint32_t tokens;
+  uint32_t v_heads;
+  uint32_t a_stride;       /* elements between token rows of a; 0 means v_heads */
+  uint32_t b_stride;       /* 0 means v_heads */
+} RoostGatedDeltaRuleGatesParams;
+
+/* Gated RMS norm, norm before gate (contract C3 GatedRmsNorm; ABI 1.2): per row of dim elements,
+ * out = x * rsqrt(mean(x^2) + eps) * weight * silu(gate), with silu(z) = z * sigmoid(z). The weight multiplies as stored
+ * (it is not zero-centred, unlike the decoder RMS norms). Qwen3.5 applies it to the gated delta rule output per value
+ * head: rows = tokens * v_heads, dim = v_dim, gate = in_proj_z's output, weight = linear_attn.norm.weight (float32 in the
+ * checkpoint) and eps = rms_norm_eps (transformers 5.20.1 Qwen3_5RMSNormGated). input may alias output. */
+typedef struct RoostGatedRmsNormParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan input;  /* [rows, dim] */
+  RoostDeviceSpan gate;   /* [rows, dim] */
+  RoostDeviceSpan weight; /* [dim], its own dtype (f32 for Qwen3.5) */
+  RoostDeviceSpan output; /* [rows, dim] */
+  uint32_t rows;
+  uint32_t dim;
+  float eps;
+  uint32_t reserved0;
+} RoostGatedRmsNormParams;
+
+/* out = input * sigmoid(gate), elementwise over [rows, dim] (contract C3 SigmoidMul; ABI 1.2). Qwen3.5's full-attention
+ * output gate: attn_out * sigmoid(gate) before o_proj, rows = tokens, dim = heads * head_dim. q_proj packs each head's
+ * query rows and then its gate rows ([heads, 2 * head_dim] per token), so the gate is not a column slice of q_proj's
+ * output; the weight loader splits the rows into a query and a gate projection. input may alias output. */
+typedef struct RoostSigmoidMulParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan input;  /* [rows, dim] */
+  RoostDeviceSpan gate;   /* [rows, dim] */
+  RoostDeviceSpan output; /* [rows, dim] */
+  uint32_t rows;
+  uint32_t dim;
+} RoostSigmoidMulParams;
+
+/* Depthwise causal convolution over packed sequences, one filter per channel (contract C3 CausalConv1d; ABI 1.2, lifted
+ * unchanged from R-034's provisional kernels/src/ops/hybrid_params.h). y_t = bias + sum_{j < width} weight[c, j] *
+ * x_{t - (width - 1) + j}, x before the sequence start coming from the slot's conv_state (oldest first);
+ * weight[c, width - 1] multiplies the current token. SiLU is applied last when silu is set. Afterwards the slot holds the
+ * last width - 1 inputs of [state, sequence]. The state is always read: a fresh sequence needs a zeroed slot. input and
+ * output must not overlap. A sequence of zero tokens leaves its slot untouched. */
+typedef struct RoostCausalConv1dParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan input;       /* [tokens, channels] */
+  RoostDeviceSpan weight;      /* [channels, width] */
+  RoostDeviceSpan bias;        /* optional [channels]; address NULL when unused */
+  RoostDeviceSpan output;      /* [tokens, channels] */
+  RoostDeviceSpan conv_state;  /* pool [slots, channels, width - 1] */
+  RoostDeviceSpan state_slots; /* [batch] int32 */
+  RoostDeviceSpan cu_seqlens;  /* [batch + 1] int32 */
+  uint32_t batch;
+  uint32_t tokens;
+  uint32_t channels;
+  uint32_t width;
+  uint32_t silu;               /* nonzero: apply SiLU */
+  uint32_t reserved0;
+} RoostCausalConv1dParams;
+
+/* Copies slot pairs[i, 0] to slot pairs[i, 1] of pool as slot_bytes bytes, in pair order: a later pair sees an earlier
+ * pair's write. A pair with equal slots is a no-op. Slot indices are not range-checked (they are device data). ABI 1.2. */
+typedef struct RoostRecurrentStateCopyParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan pool;
+  RoostDeviceSpan pairs; /* [count, 2] int32 (source slot, destination slot) */
+  uint64_t slot_bytes;
+  uint32_t count;
+  uint32_t reserved0;
+} RoostRecurrentStateCopyParams;
+
+/* pairs[i, 0] is a pool slot and pairs[i, 1] a snapshots entry. restore == 0 copies slot to snapshot, nonzero copies
+ * snapshot to slot. Byte copies in pair order. ABI 1.2. */
+typedef struct RoostRecurrentStateSnapshotParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan pool;
+  RoostDeviceSpan snapshots;
+  RoostDeviceSpan pairs; /* [count, 2] int32 (slot, snapshot) */
+  uint64_t slot_bytes;
+  uint32_t count;
+  uint32_t restore;
+} RoostRecurrentStateSnapshotParams;
 
 /* ---- Exports ------------------------------------------------------------------------------------------------- */
 

@@ -112,8 +112,11 @@ A node whose op or arguments fail is reported once; nodes that read its outputs 
 
 * The forward is unrolled: 24 layers of a Qwen3.5-shaped model are about 6 200 generated lines in one method. Loop
   emission over a per-layer weight table is not built (S4 "first thing to try").
-* There are no views: C3 buffers are whole `DeviceSpan`s without strides, so a node cannot read a slice of a value. A
-  definition needs separate projections where a checkpoint fuses them, or an op that produces the split.
+* There is no view binding: a node binds a whole value to a buffer field, so it cannot yet read a slice of a value.
+  Since contract version 2, `GatedDeltaRuleArgs` takes row-strided q, k and v (`QStride`, `KStride`, `VStride`, bindable
+  as scalars; 0 means contiguous), so Qwen3.5's fused q/k/v conv output can be read in place once a definition can bind
+  a column slice (for example `Q=l{i}.c[0:key_dim]`); until then a definition needs separate projections where a
+  checkpoint fuses them.
 * Only `AddRmsNorm` has an unfused form in the lowering; other fused ops come from passes (stream L).
 * Plan-input auto-fill goes by field name, so an unbound `Ids` span is the token-id input for every op that has one. For
   `Argmax` and `Sample`, `Ids` is an output; bind it explicitly if a definition ever includes them (the forward ends at
