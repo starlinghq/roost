@@ -32,8 +32,9 @@ namespace Starlings.Roost.Engine.Rings;
 /// <item><description>Only if every join returned true: <c>Volatile.Write</c> of the unmapped state (after which
 /// <see cref="Base"/> and <see cref="Header"/> throw <see cref="ObjectDisposedException"/>), then
 /// <c>ReleasePointer</c>, the view and the file. If any join timed out, nothing is released: the view stays mapped
-/// (leaked, if it never ends) and <see cref="Close"/> returns false, because an unmap under a running poller is an
-/// access violation (SIGSEGV on Linux) that kills the process. A later <see cref="Close"/> tries again.</description></item>
+/// (leaked, if it never ends), the creator's file name is unlinked, and <see cref="Close"/> returns false, because
+/// an unmap under a running poller is an access violation (SIGSEGV on Linux) that kills the process. A later
+/// <see cref="Close"/> tries again.</description></item>
 /// </list>
 /// </remarks>
 public sealed unsafe class RingSegment : IDisposable
@@ -197,7 +198,10 @@ public sealed unsafe class RingSegment : IDisposable
 
         if (!allEnded)
         {
-            return false; // step 3 refused: a poller may still read the view, so it stays mapped
+            // Step 3 refused: a poller may still read the view, so it stays mapped. The name is unlinked anyway (the
+            // mapping does not need it), so a leaked segment leaves no file behind.
+            DeleteFileIfOwner();
+            return false;
         }
 
         lock (_lock)
@@ -214,18 +218,7 @@ public sealed unsafe class RingSegment : IDisposable
             _file.Dispose();
         }
 
-        if (_owner)
-        {
-            try
-            {
-                File.Delete(Path);
-            }
-            catch (IOException)
-            {
-                // Already gone or still open elsewhere; the name is unique per run.
-            }
-        }
-
+        DeleteFileIfOwner();
         return true;
     }
 
@@ -234,6 +227,23 @@ public sealed unsafe class RingSegment : IDisposable
     /// view stays mapped (see <see cref="IsMapped"/>) rather than being released under it.
     /// </summary>
     public void Dispose() => _ = Close(PollingThread.DefaultJoinTimeout);
+
+    private void DeleteFileIfOwner()
+    {
+        if (!_owner)
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(Path);
+        }
+        catch (IOException)
+        {
+            // Already gone or still open elsewhere; the name is unique per run.
+        }
+    }
 
     private static RingSegment Map(string path, FileStream stream, long bytes, bool owner)
     {

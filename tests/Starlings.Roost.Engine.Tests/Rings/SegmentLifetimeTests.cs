@@ -88,6 +88,7 @@ public sealed class SegmentLifetimeTests : IDisposable
 
         Assert.False(_segment.Close(TimeSpan.FromMilliseconds(50)));
         Assert.True(_segment.IsMapped);
+        Assert.False(File.Exists(_path)); // the name is unlinked; the mapping does not need it
         Assert.False(poller.HasExited);
 
         _gate.Set();
