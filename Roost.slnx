@@ -4,6 +4,7 @@
     <Project Path="src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <Project Path="src/Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
     <Project Path="src/Starlings.Roost.Generation/Starlings.Roost.Generation.csproj" />
+    <Project Path="src/Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
     <Project Path="src/Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" />
     <Project Path="src/Starlings.Roost.ModelCompiler/Starlings.Roost.ModelCompiler.csproj" />
     <Project Path="src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
@@ -14,5 +15,6 @@
     <Project Path="tests/Starlings.Roost.Generation.Tests/Starlings.Roost.Generation.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.ModelCompiler.Tests/Starlings.Roost.ModelCompiler.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Ops.Tests/Starlings.Roost.Ops.Tests.csproj" />
+    <Project Path="tests/Starlings.Roost.WorkerHost.Tests/Starlings.Roost.WorkerHost.Tests.csproj" />
   </Folder>
 </Solution>
