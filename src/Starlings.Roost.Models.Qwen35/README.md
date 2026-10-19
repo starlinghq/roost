@@ -47,8 +47,14 @@ checkpoint's (`Qwen35Model.PendingOps` lists the steps). The definition already 
 one node when its op exists:
 
 1. `beta = sigmoid(b)` and `g = -exp(A_log) * softplus(a + dt_bias)` before the delta rule (today `a` and `b` go in raw);
-2. the gated output norm `rmsnorm(core_out) * linear_norm.weight * silu(z)` per value head after it;
+2. the gated output norm `rmsnorm(core_out) * linear_norm.weight * silu(z)` per value head after it (this order, norm before the
+   gate, is a proposal that no code or reference check on this branch has verified; the op's author must confirm it against transformers);
 3. the attention output gate `attn_out * sigmoid(gate)`;
 4. a zero-centred RMS norm form, so `1 + w` need not be rounded to bfloat16 at load.
 
 `NumericsAreIncompleteUntilTheContractHasTheOps` fails when `IRoostOps` gains any of the candidate ops, as a reminder to put the nodes in.
+
+## Unverified
+
+- A text-only prompt reducing the interleaved mrope (sections `[11,11,10]`) to plain rotary embedding is not tested here; R-022 must check it.
+- Package restore: the nupkg lists Abstractions, Graph and Ops as dependencies, but those projects are not packable yet, so it cannot be restored standalone.

@@ -32,8 +32,8 @@ namespace Starlings.Roost.Models.Qwen35;
 //      transformers keeps in float32.
 // The contract-change request in the R-035 report names the ops. Nothing may trust these logits for parity (R-022 needs them).
 //
-// Not modelled: the MTP head (Qwen35WeightMap.Mtp, unused in M0), vision, multimodal rope sections (a text-only prompt makes the
-// three position rows equal, which is plain rotary embedding), YaRN.
+// Not modelled: the MTP head (Qwen35WeightMap.Mtp, unused in M0), vision, multimodal rope sections (the checkpoint has mrope_interleaved=true with sections [11,11,10]; that a text-only prompt
+// reduces to plain rotary embedding is expected but NOT checked by any test or reference comparison, and R-022 must check it), YaRN.
 [RoostModel("qwen3.5-0.8b", Dtype = "BF16")]
 [Dim("hidden", 1024)]
 [Dim("inter", 3584)]
