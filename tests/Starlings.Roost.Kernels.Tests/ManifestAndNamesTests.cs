@@ -10,8 +10,9 @@ public class ManifestAndNamesTests
     public void RepositoryManifestParsesWithTheFieldsTheLoaderReads()
     {
         var m = TestManifest.Repository();
-        Assert.Equal(1, m.AbiMajor);
-        Assert.Equal(0, m.AbiMinor);
+        // The repository manifest tracks the header the library is built against (R-017 moved it to 1.1).
+        Assert.Equal(KernelAbi.Major, m.AbiMajor);
+        Assert.Equal(KernelAbi.Minor, m.AbiMinor);
         Assert.Equal("13.3", m.Cuda);
         Assert.Equal(13, m.CudaMajor);
         Assert.Contains(m.Sms, s => s is { Arch: 86, Status: SmStatus.Experimental });
@@ -106,7 +107,7 @@ public class ManifestAndNamesTests
         var env = new Dictionary<string, string> { ["ROOST_CUDA_LIB_DIR"] = "/x", ["CUDA_HOME"] = "/cuda" };
         var dirs = CudaLibraryResolver.SearchDirectories(CudaPlatform.Linux, k => env.GetValueOrDefault(k));
         Assert.Equal("/x", dirs[0]);
-        Assert.Contains("/cuda/lib64", dirs);
+        Assert.Contains(Path.Combine("/cuda", "lib64"), dirs); // the resolver joins with the host separator
         var win = CudaLibraryResolver.SearchDirectories(CudaPlatform.Windows, k => k == "CUDA_PATH" ? @"C:\cuda" : null);
         Assert.Equal(2, win.Count);
     }

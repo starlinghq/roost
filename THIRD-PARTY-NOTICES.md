@@ -11,7 +11,7 @@ Starling-family files reused here are listed in `PROVENANCE.md`.
 ## FlashInfer
 
 - Repository: https://github.com/flashinfer-ai/flashinfer at `d84335d8c54e0c8f9f7e22faa15c7e34a58abf94`
-- Taken: headers under `include/` (norm, activation, RoPE, paged KV append, decode and prefill attention), unmodified.
+- Taken: headers under `include/` as used by R-017 (`norm.cuh`: RMSNorm and QKRMSNorm; `activation.cuh`: the act-and-mul kernel; paged batch decode and batch prefill attention with their scheduler, `page.cuh` and the headers they include), unmodified. Not used: its RoPE kernel (R-017 measured it and wrote its own, kernels/README.md).
 - Licence: Apache-2.0 (text below, under "Apache License 2.0"). The repository also carries `LICENSE.kda-for-kda.txt`
   (MIT, copyright 2026 KDA Team) for code adopted from that project; its text is reproduced under "KDA Team (MIT)".
 
@@ -374,5 +374,5 @@ The text of the licence for FlashInfer and vLLM, copied from vLLM's `LICENSE` at
 
 ## NVIDIA CUDA toolkit
 
-The kernel libraries link the shared CUDA runtime, and Gemm will call cuBLASLt (S2). Both come from the CUDA toolkit under
-the NVIDIA CUDA EULA; their redistribution terms belong to the decision 5 licence review and are not asserted here.
+The kernel libraries link the shared CUDA runtime, and Gemm and LmHead call cuBLASLt (S2, R-017). Both come from the CUDA toolkit
+under the NVIDIA CUDA EULA, linked dynamically and not part of the kernel assets; their redistribution terms belong to the decision 5 licence review and are not asserted here.

@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Roost engine core (stream G). R-027: request queue, plan and result rings over the C8 shared-memory segment, polling threads.</Description>
+    <Description>Roost engine core (stream G). R-027: request queue, plan and result rings over the C8 shared-memory segment, polling threads. R-028: typed block manager. R-029: planner with chunked prefill, recompute preemption and priority and deadline scheduling.</Description>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>

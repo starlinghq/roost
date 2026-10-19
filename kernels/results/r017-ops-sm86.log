@@ -1,0 +1,311 @@
+# R-017 M0 attention-side ops: kernels/tests/ops-cuda against CpuOps (R-018, double precision), RTX 3090 (SM 86)
+# 2026-10-19T18:39Z host: nvcc 13.3.73 ; gcc 16.2.1 ; driver 610.57.04 ; library sha256 fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73 (built against the C1 ABI 1.1 header)
+# tools/gpu-lease run --device 3090 --need-mib 6000 --stream C --wait 3600 -- dotnet Roost.KernelOps.Tests.Cuda.dll libroost_kernels_sm86.so --log <this file>
+# Groups run: norm rope data invariance gemm attention real. The graph group is NOT in this log (kernels/README.md, 'Signal death during R-017').
+# Random inputs come from fixed per-group seeds. The 'real' group reads the locked Qwen3.5-0.8B checkpoint in place.
+library roost-kernels-sm86 abi 0x10001 entries 11; device sm_86; 2026-10-19T18:39:21.9018357Z
+--- norm
+PASS RmsNorm BF16 rows=1 dim=1024 strides=1024/1024             class=elementwise-bf16   n=1024      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm BF16 rows=7 dim=1024 strides=1024/1024             class=elementwise-bf16   n=7168      max_abs=0.00E+000 ref_rms=1.01E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm BF16 rows=64 dim=1024 strides=1024/1024            class=elementwise-bf16   n=65536     max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm BF16 rows=257 dim=1024 strides=1024/1024           class=elementwise-bf16   n=263168    max_abs=7.81E-003 ref_rms=1.01E+000 utilisation=0.306 violations=0 nonfinite=0
+PASS RmsNorm BF16 rows=5 dim=1024 strides=1280/1152             class=elementwise-bf16   n=5120      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm BF16 output padding untouched                      
+PASS RmsNorm BF16 rows=3 dim=3584 strides=3584/3584             class=elementwise-bf16   n=10752     max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm BF16 q tokens=1 strides=2048/512                    class=elementwise-bf16   n=2048      max_abs=0.00E+000 ref_rms=1.01E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm BF16 k tokens=1 strides=2048/512                    class=elementwise-bf16   n=512       max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm BF16 q tokens=5 strides=2048/512                    class=elementwise-bf16   n=10240     max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm BF16 k tokens=5 strides=2048/512                    class=elementwise-bf16   n=2560      max_abs=0.00E+000 ref_rms=1.03E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm BF16 q tokens=33 strides=2048/512                   class=elementwise-bf16   n=67584     max_abs=7.81E-003 ref_rms=1.03E+000 utilisation=0.429 violations=0 nonfinite=0
+PASS QkNorm BF16 k tokens=33 strides=2048/512                   class=elementwise-bf16   n=16896     max_abs=0.00E+000 ref_rms=1.03E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm BF16 q tokens=9 strides=2560/704                    class=elementwise-bf16   n=18432     max_abs=0.00E+000 ref_rms=1.01E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm BF16 k tokens=9 strides=2560/704                    class=elementwise-bf16   n=4608      max_abs=0.00E+000 ref_rms=1.03E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS SiluAndMul BF16 rows=1 dim=3584                            class=elementwise-bf16   n=3584      max_abs=0.00E+000 ref_rms=2.67E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS SiluAndMul BF16 rows=8 dim=3584                            class=elementwise-bf16   n=28672     max_abs=0.00E+000 ref_rms=2.61E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS SiluAndMul BF16 rows=33 dim=3584                           class=elementwise-bf16   n=118272    max_abs=0.00E+000 ref_rms=2.66E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS SiluAndMul BF16 rows=3 dim=1000                            class=elementwise-bf16   n=3000      max_abs=0.00E+000 ref_rms=2.69E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS SiluAndMul BF16 rows=3 dim=1001                            class=elementwise-bf16   n=3003      max_abs=0.00E+000 ref_rms=2.65E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm F16 rows=1 dim=1024 strides=1024/1024              class=elementwise-f16    n=1024      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm F16 rows=7 dim=1024 strides=1024/1024              class=elementwise-f16    n=7168      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm F16 rows=64 dim=1024 strides=1024/1024             class=elementwise-f16    n=65536     max_abs=9.77E-004 ref_rms=1.02E+000 utilisation=0.328 violations=0 nonfinite=0
+PASS RmsNorm F16 rows=257 dim=1024 strides=1024/1024            class=elementwise-f16    n=263168    max_abs=9.77E-004 ref_rms=1.02E+000 utilisation=0.428 violations=0 nonfinite=0
+PASS RmsNorm F16 rows=5 dim=1024 strides=1280/1152              class=elementwise-f16    n=5120      max_abs=0.00E+000 ref_rms=1.03E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm F16 output padding untouched                       
+PASS RmsNorm F16 rows=3 dim=3584 strides=3584/3584              class=elementwise-f16    n=10752     max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm F16 q tokens=1 strides=2048/512                     class=elementwise-f16    n=2048      max_abs=2.44E-004 ref_rms=1.04E+000 utilisation=0.242 violations=0 nonfinite=0
+PASS QkNorm F16 k tokens=1 strides=2048/512                     class=elementwise-f16    n=512       max_abs=0.00E+000 ref_rms=1.01E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm F16 q tokens=5 strides=2048/512                     class=elementwise-f16    n=10240     max_abs=2.44E-004 ref_rms=1.04E+000 utilisation=0.258 violations=0 nonfinite=0
+PASS QkNorm F16 k tokens=5 strides=2048/512                     class=elementwise-f16    n=2560      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm F16 q tokens=33 strides=2048/512                    class=elementwise-f16    n=67584     max_abs=9.77E-004 ref_rms=1.01E+000 utilisation=0.415 violations=0 nonfinite=0
+PASS QkNorm F16 k tokens=33 strides=2048/512                    class=elementwise-f16    n=16896     max_abs=1.95E-003 ref_rms=1.01E+000 utilisation=0.300 violations=0 nonfinite=0
+PASS QkNorm F16 q tokens=9 strides=2560/704                     class=elementwise-f16    n=18432     max_abs=0.00E+000 ref_rms=1.01E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm F16 k tokens=9 strides=2560/704                     class=elementwise-f16    n=4608      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS SiluAndMul F16 rows=1 dim=3584                             class=elementwise-f16    n=3584      max_abs=0.00E+000 ref_rms=2.73E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS SiluAndMul F16 rows=8 dim=3584                             class=elementwise-f16    n=28672     max_abs=9.77E-004 ref_rms=2.62E+000 utilisation=0.301 violations=0 nonfinite=0
+PASS SiluAndMul F16 rows=33 dim=3584                            class=elementwise-f16    n=118272    max_abs=3.91E-003 ref_rms=2.64E+000 utilisation=0.417 violations=0 nonfinite=0
+PASS SiluAndMul F16 rows=3 dim=1000                             class=elementwise-f16    n=3000      max_abs=9.77E-004 ref_rms=2.77E+000 utilisation=0.301 violations=0 nonfinite=0
+PASS SiluAndMul F16 rows=3 dim=1001                             class=elementwise-f16    n=3003      max_abs=0.00E+000 ref_rms=2.69E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS RmsNorm short struct_size -> ABI_MISMATCH                  
+PASS RmsNorm abi_minor above the library's -> ABI_MISMATCH      
+PASS RmsNorm short span -> INVALID_ARGUMENT                     
+PASS RmsNorm weight dtype mismatch -> INVALID_ARGUMENT          
+PASS RmsNorm non-zero reserved -> INVALID_ARGUMENT              
+PASS RmsNorm f32 -> UNSUPPORTED                                 
+PASS RmsNorm misaligned input -> INVALID_ARGUMENT               
+--- rope
+PASS Rope BF16 qwen35 tokens=1 8/2x256 rot=64 maxpos=4096 q     class=elementwise-bf16   n=2048      max_abs=0.00E+000 ref_rms=9.89E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 qwen35 tokens=1 8/2x256 rot=64 maxpos=4096 k     class=elementwise-bf16   n=512       max_abs=0.00E+000 ref_rms=9.92E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 qwen35 tokens=17 8/2x256 rot=64 maxpos=4096 q    class=elementwise-bf16   n=34816     max_abs=1.53E-005 ref_rms=1.00E+000 utilisation=0.055 violations=0 nonfinite=0
+PASS Rope BF16 qwen35 tokens=17 8/2x256 rot=64 maxpos=4096 k    class=elementwise-bf16   n=8704      max_abs=0.00E+000 ref_rms=9.92E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 q   class=elementwise-bf16   n=264192    max_abs=7.81E-003 ref_rms=9.99E-001 utilisation=0.379 violations=0 nonfinite=0
+PASS Rope BF16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 k   class=elementwise-bf16   n=66048     max_abs=4.77E-007 ref_rms=1.01E+000 utilisation=0.002 violations=0 nonfinite=0
+PASS Rope BF16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 q class=elementwise-bf16   n=264192    max_abs=7.81E-003 ref_rms=1.00E+000 utilisation=0.362 violations=0 nonfinite=0
+PASS Rope BF16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 k class=elementwise-bf16   n=66048     max_abs=3.91E-003 ref_rms=9.98E-001 utilisation=0.322 violations=0 nonfinite=0
+PASS Rope BF16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 q class=elementwise-bf16   n=67584     max_abs=1.22E-004 ref_rms=1.00E+000 utilisation=0.197 violations=0 nonfinite=0
+PASS Rope BF16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 k class=elementwise-bf16   n=16896     max_abs=3.91E-003 ref_rms=1.01E+000 utilisation=0.284 violations=0 nonfinite=0
+PASS Rope BF16 interleaved tokens=33 8/2x256 rot=64 maxpos=4096 q class=elementwise-bf16   n=67584     max_abs=0.00E+000 ref_rms=1.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 interleaved tokens=33 8/2x256 rot=64 maxpos=4096 k class=elementwise-bf16   n=16896     max_abs=1.91E-006 ref_rms=1.00E+000 utilisation=0.008 violations=0 nonfinite=0
+PASS Rope BF16 hd64 tokens=33 8/2x64 rot=64 maxpos=4096 q       class=elementwise-bf16   n=16896     max_abs=0.00E+000 ref_rms=9.99E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 hd64 tokens=33 8/2x64 rot=64 maxpos=4096 k       class=elementwise-bf16   n=4224      max_abs=4.88E-004 ref_rms=1.01E+000 utilisation=0.347 violations=0 nonfinite=0
+PASS Rope BF16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 q   class=elementwise-bf16   n=67584     max_abs=7.81E-003 ref_rms=1.00E+000 utilisation=0.374 violations=0 nonfinite=0
+PASS Rope BF16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 k   class=elementwise-bf16   n=33792     max_abs=0.00E+000 ref_rms=9.99E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 q class=elementwise-bf16   n=33792     max_abs=0.00E+000 ref_rms=1.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 k class=elementwise-bf16   n=8448      max_abs=0.00E+000 ref_rms=9.85E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 q class=elementwise-bf16   n=67584     max_abs=0.00E+000 ref_rms=1.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 k class=elementwise-bf16   n=16896     max_abs=0.00E+000 ref_rms=9.91E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 huge-positions tokens=65 8/2x256 rot=64 maxpos=2147483647 q class=elementwise-bf16   n=133120    max_abs=3.91E-003 ref_rms=9.98E-001 utilisation=0.320 violations=0 nonfinite=0
+PASS Rope BF16 huge-positions tokens=65 8/2x256 rot=64 maxpos=2147483647 k class=elementwise-bf16   n=33280     max_abs=0.00E+000 ref_rms=1.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope BF16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 q class=elementwise-bf16   n=66560     max_abs=7.81E-003 ref_rms=1.00E+000 utilisation=0.408 violations=0 nonfinite=0
+PASS Rope BF16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 k class=elementwise-bf16   n=16640     max_abs=7.81E-003 ref_rms=9.98E-001 utilisation=0.309 violations=0 nonfinite=0
+PASS Rope F16 qwen35 tokens=1 8/2x256 rot=64 maxpos=4096 q      class=elementwise-f16    n=2048      max_abs=0.00E+000 ref_rms=1.01E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope F16 qwen35 tokens=1 8/2x256 rot=64 maxpos=4096 k      class=elementwise-f16    n=512       max_abs=0.00E+000 ref_rms=9.78E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope F16 qwen35 tokens=17 8/2x256 rot=64 maxpos=4096 q     class=elementwise-f16    n=34816     max_abs=3.05E-005 ref_rms=9.99E-001 utilisation=0.255 violations=0 nonfinite=0
+PASS Rope F16 qwen35 tokens=17 8/2x256 rot=64 maxpos=4096 k     class=elementwise-f16    n=8704      max_abs=0.00E+000 ref_rms=9.88E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Rope F16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 q    class=elementwise-f16    n=264192    max_abs=9.77E-004 ref_rms=1.00E+000 utilisation=0.483 violations=0 nonfinite=0
+PASS Rope F16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 k    class=elementwise-f16    n=66048     max_abs=1.95E-003 ref_rms=9.99E-001 utilisation=0.438 violations=0 nonfinite=0
+PASS Rope F16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 q class=elementwise-f16    n=264192    max_abs=9.77E-004 ref_rms=1.00E+000 utilisation=0.432 violations=0 nonfinite=0
+PASS Rope F16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 k class=elementwise-f16    n=66048     max_abs=4.88E-004 ref_rms=1.00E+000 utilisation=0.260 violations=0 nonfinite=0
+PASS Rope F16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 q class=elementwise-f16    n=67584     max_abs=9.77E-004 ref_rms=1.00E+000 utilisation=0.422 violations=0 nonfinite=0
+PASS Rope F16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 k class=elementwise-f16    n=16896     max_abs=2.44E-004 ref_rms=1.00E+000 utilisation=0.407 violations=0 nonfinite=0
+PASS Rope F16 interleaved tokens=33 8/2x256 rot=64 maxpos=4096 q class=elementwise-f16    n=67584     max_abs=6.10E-005 ref_rms=1.01E+000 utilisation=0.305 violations=0 nonfinite=0
+PASS Rope F16 interleaved tokens=33 8/2x256 rot=64 maxpos=4096 k class=elementwise-f16    n=16896     max_abs=2.44E-004 ref_rms=1.00E+000 utilisation=0.261 violations=0 nonfinite=0
+PASS Rope F16 hd64 tokens=33 8/2x64 rot=64 maxpos=4096 q        class=elementwise-f16    n=16896     max_abs=4.88E-004 ref_rms=1.00E+000 utilisation=0.456 violations=0 nonfinite=0
+PASS Rope F16 hd64 tokens=33 8/2x64 rot=64 maxpos=4096 k        class=elementwise-f16    n=4224      max_abs=1.91E-006 ref_rms=9.99E-001 utilisation=0.052 violations=0 nonfinite=0
+PASS Rope F16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 q    class=elementwise-f16    n=67584     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=0.491 violations=0 nonfinite=0
+PASS Rope F16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 k    class=elementwise-f16    n=33792     max_abs=9.77E-004 ref_rms=1.00E+000 utilisation=0.411 violations=0 nonfinite=0
+PASS Rope F16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 q class=elementwise-f16    n=33792     max_abs=4.88E-004 ref_rms=9.95E-001 utilisation=0.435 violations=0 nonfinite=0
+PASS Rope F16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 k class=elementwise-f16    n=8448      max_abs=5.96E-008 ref_rms=1.01E+000 utilisation=0.002 violations=0 nonfinite=0
+PASS Rope F16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 q class=elementwise-f16    n=67584     max_abs=4.88E-004 ref_rms=9.96E-001 utilisation=0.290 violations=0 nonfinite=0
+PASS Rope F16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 k class=elementwise-f16    n=16896     max_abs=3.05E-005 ref_rms=1.01E+000 utilisation=0.252 violations=0 nonfinite=0
+PASS Rope F16 huge-positions tokens=65 8/2x256 rot=64 maxpos=2147483647 q class=elementwise-f16    n=133120    max_abs=9.77E-004 ref_rms=1.00E+000 utilisation=0.436 violations=0 nonfinite=0
+PASS Rope F16 huge-positions tokens=65 8/2x256 rot=64 maxpos=2147483647 k class=elementwise-f16    n=33280     max_abs=7.63E-006 ref_rms=1.00E+000 utilisation=0.137 violations=0 nonfinite=0
+PASS Rope F16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 q class=elementwise-f16    n=66560     max_abs=4.88E-004 ref_rms=9.99E-001 utilisation=0.437 violations=0 nonfinite=0
+PASS Rope F16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 k class=elementwise-f16    n=16640     max_abs=6.10E-005 ref_rms=9.94E-001 utilisation=0.305 violations=0 nonfinite=0
+PASS Rope odd rotary_dim -> INVALID_ARGUMENT                    
+PASS Rope rotary_dim > head_dim -> INVALID_ARGUMENT             
+PASS Rope rotary_dim 600 -> UNSUPPORTED                         
+PASS Rope llama3 without factors -> INVALID_ARGUMENT            
+PASS Rope int64 positions -> INVALID_ARGUMENT                   
+--- data
+PASS Embedding BF16 vocab=4096 dim=1024 tokens=1                class=exact              n=2048      max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding BF16 vocab=4096 dim=1024 tokens=300              class=exact              n=614400    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding F16 vocab=4096 dim=1024 tokens=1                 class=exact              n=2048      max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding F16 vocab=4096 dim=1024 tokens=300               class=exact              n=614400    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding F32 vocab=4096 dim=1024 tokens=1                 class=exact              n=4096      max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding F32 vocab=4096 dim=1024 tokens=300               class=exact              n=1228800   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding BF16 vocab=4096 dim=1001 tokens=17               class=exact              n=34034     max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding BF16 vocab=4096 dim=1002 tokens=17               class=exact              n=34068     max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Embedding out-of-range ids give zero rows, no fault        
+PASS CacheWrite BF16 PagedNhd page=16 tokens=37 K pool          class=exact              n=655360    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedNhd page=16 tokens=37 V pool          class=exact              n=655360    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedNhd page=32 tokens=37 K pool          class=exact              n=1310720   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedNhd page=32 tokens=37 V pool          class=exact              n=1310720   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedNhd page=64 tokens=37 K pool          class=exact              n=2621440   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedNhd page=64 tokens=37 V pool          class=exact              n=2621440   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedHnd page=16 tokens=37 K pool          class=exact              n=655360    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedHnd page=16 tokens=37 V pool          class=exact              n=655360    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedHnd page=32 tokens=37 K pool          class=exact              n=1310720   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedHnd page=32 tokens=37 V pool          class=exact              n=1310720   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedHnd page=64 tokens=37 K pool          class=exact              n=2621440   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite BF16 PagedHnd page=64 tokens=37 V pool          class=exact              n=2621440   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite F32 PagedNhd page=16 tokens=9 K pool            class=exact              n=1310720   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite F32 PagedNhd page=16 tokens=9 V pool            class=exact              n=1310720   max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheWrite out-of-pool slots are skipped, in-pool slot written 
+PASS CacheWrite k_scale != 1 -> UNSUPPORTED                     
+PASS CacheWrite cache dtype != activation dtype -> UNSUPPORTED  
+PASS CacheCopy block_bytes=16384 same pool                      class=exact              n=393216    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheCopy block_bytes=16384 two pools                      class=exact              n=393216    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheCopy block_bytes=1001 same pool                       class=exact              n=24024     max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS CacheCopy pairs outside the pool are skipped, valid pair copied 
+--- invariance
+PASS RmsNorm BF16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+PASS QkNorm BF16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+PASS SiluAndMul BF16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+PASS Rope BF16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+PASS RmsNorm F16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+PASS QkNorm F16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+PASS SiluAndMul F16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+PASS Rope F16: two runs, and rows {1,17} alone, are bitwise equal to the 64-row call 
+--- gemm
+PASS Gemm BF16 q_proj m=1 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=4096      max_abs=4.88E-004 ref_rms=1.01E+000 utilisation=0.131 violations=0 nonfinite=0
+     algo=31 tile=15 stages=17 splitk=1 scratch=0 (q_proj, m=1)
+PASS Gemm BF16 q_proj m=3 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=12288     max_abs=7.81E-003 ref_rms=9.79E-001 utilisation=0.246 violations=0 nonfinite=0
+PASS Gemm BF16 q_proj m=17 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=69632     max_abs=4.88E-004 ref_rms=9.99E-001 utilisation=0.141 violations=0 nonfinite=0
+PASS Gemm BF16 q_proj m=64 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=262144    max_abs=1.56E-002 ref_rms=9.99E-001 utilisation=0.413 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=1 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=512       max_abs=0.00E+000 ref_rms=9.81E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=3 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1536      max_abs=3.81E-006 ref_rms=1.03E+000 utilisation=0.002 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=17 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=8704      max_abs=0.00E+000 ref_rms=1.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=64 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=32768     max_abs=7.81E-003 ref_rms=1.01E+000 utilisation=0.361 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=1 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1024      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=3 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=3072      max_abs=7.81E-003 ref_rms=1.04E+000 utilisation=0.324 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=17 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=7.81E-003 ref_rms=1.01E+000 utilisation=0.385 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=64 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=65536     max_abs=3.91E-003 ref_rms=1.00E+000 utilisation=0.330 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=1 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=7168      max_abs=7.81E-003 ref_rms=9.99E-001 utilisation=0.301 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=3 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=21504     max_abs=7.81E-003 ref_rms=9.89E-001 utilisation=0.327 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=17 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=121856    max_abs=7.81E-003 ref_rms=1.00E+000 utilisation=0.390 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=64 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=458752    max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=0.457 violations=0 nonfinite=0
+PASS Gemm BF16 down m=1 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1024      max_abs=0.00E+000 ref_rms=1.05E+000 utilisation=0.000 violations=0 nonfinite=0
+     algo=13 tile=0 stages=0 splitk=1 scratch=0 (down, m=1)
+PASS Gemm BF16 down m=3 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=3072      max_abs=9.54E-007 ref_rms=9.91E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 down m=17 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=7.81E-003 ref_rms=9.92E-001 utilisation=0.400 violations=0 nonfinite=0
+PASS Gemm BF16 down m=64 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=65536     max_abs=7.81E-003 ref_rms=9.94E-001 utilisation=0.413 violations=0 nonfinite=0
+PASS Gemm F16 q_proj m=1 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=4096      max_abs=9.77E-004 ref_rms=1.03E+000 utilisation=0.434 violations=0 nonfinite=0
+     algo=31 tile=15 stages=17 splitk=1 scratch=0 (q_proj, m=1)
+PASS Gemm F16 q_proj m=3 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=12288     max_abs=9.77E-004 ref_rms=9.90E-001 utilisation=0.423 violations=0 nonfinite=0
+PASS Gemm F16 q_proj m=17 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=69632     max_abs=1.95E-003 ref_rms=9.99E-001 utilisation=0.464 violations=0 nonfinite=0
+PASS Gemm F16 q_proj m=64 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=262144    max_abs=1.95E-003 ref_rms=9.96E-001 utilisation=0.469 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=1 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=512       max_abs=2.44E-004 ref_rms=1.01E+000 utilisation=0.210 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=3 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=1536      max_abs=9.77E-004 ref_rms=1.00E+000 utilisation=0.361 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=17 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=8704      max_abs=1.95E-003 ref_rms=9.93E-001 utilisation=0.467 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=64 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=32768     max_abs=1.95E-003 ref_rms=9.88E-001 utilisation=0.434 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=1 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=1024      max_abs=7.63E-006 ref_rms=1.03E+000 utilisation=0.028 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=3 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=3072      max_abs=1.53E-005 ref_rms=9.87E-001 utilisation=0.052 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=17 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=17408     max_abs=9.77E-004 ref_rms=9.96E-001 utilisation=0.442 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=64 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=65536     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=0.448 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=1 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=7168      max_abs=1.95E-003 ref_rms=9.97E-001 utilisation=0.408 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=3 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=21504     max_abs=1.95E-003 ref_rms=9.98E-001 utilisation=0.470 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=17 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=121856    max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=0.461 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=64 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=458752    max_abs=3.91E-003 ref_rms=9.95E-001 utilisation=0.473 violations=0 nonfinite=0
+PASS Gemm F16 down m=1 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=1024      max_abs=0.00E+000 ref_rms=9.84E-001 utilisation=0.000 violations=0 nonfinite=0
+     algo=13 tile=0 stages=0 splitk=1 scratch=0 (down, m=1)
+PASS Gemm F16 down m=3 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=3072      max_abs=4.88E-004 ref_rms=9.63E-001 utilisation=0.324 violations=0 nonfinite=0
+PASS Gemm F16 down m=17 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=17408     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=0.427 violations=0 nonfinite=0
+PASS Gemm F16 down m=64 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=65536     max_abs=1.95E-003 ref_rms=9.99E-001 utilisation=0.470 violations=0 nonfinite=0
+PASS Gemm BF16 q_proj-m200 m=200 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=256 class=gemm-bf16          n=819200    max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=0.460 violations=0 nonfinite=0
+PASS Gemm BF16 down-nontransposed m=17 n=1024 k=3584 tB=0 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=7.81E-003 ref_rms=1.01E+000 utilisation=0.335 violations=0 nonfinite=0
+PASS Gemm BF16 bias m=17 n=1024 k=2048 tB=1 bias=1 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=7.81E-003 ref_rms=1.13E+000 utilisation=0.435 violations=0 nonfinite=0
+PASS Gemm BF16 alpha-beta-c m=17 n=1024 k=2048 tB=1 bias=0 a/b=0.5/0.25 bucket=0 class=gemm-bf16          n=17408     max_abs=6.10E-005 ref_rms=5.62E-001 utilisation=0.047 violations=0 nonfinite=0
+PASS Gemm BF16 alpha-beta-c-bias m=5 n=512 k=1024 tB=0 bias=1 a/b=2/1 bucket=64 class=gemm-bf16          n=2560      max_abs=0.00E+000 ref_rms=2.29E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm F16 bias m=17 n=1024 k=2048 tB=1 bias=1 a/b=1/0 bucket=0 class=gemm-f16           n=17408     max_abs=1.95E-003 ref_rms=1.10E+000 utilisation=0.419 violations=0 nonfinite=0
+PASS Gemm BF16 small-k8 m=4 n=64 k=8 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=256       max_abs=0.00E+000 ref_rms=1.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm n=1024 k=3584 bucket 64: two runs are bit-identical   algo=21 tile=15 stages=18 splitk=5 scratch=1310720
+PASS Gemm n=1024 k=3584 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=1024 k=3584: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=4096 k=1024 bucket 64: two runs are bit-identical   algo=6 tile=15 stages=17 splitk=1 scratch=0
+PASS Gemm n=4096 k=1024 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=4096 k=1024: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=7168 k=1024 bucket 64: two runs are bit-identical   algo=6 tile=18 stages=15 splitk=1 scratch=0
+PASS Gemm n=7168 k=1024 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=7168 k=1024: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=1024 k=2048 bucket 64: two runs are bit-identical   algo=21 tile=20 stages=11 splitk=9 scratch=2097152
+PASS Gemm n=1024 k=2048 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=1024 k=2048: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=512 k=1024 bucket 64: two runs are bit-identical    algo=21 tile=11 stages=20 splitk=8 scratch=1048576
+PASS Gemm n=512 k=1024 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=512 k=1024: m above the planned bucket -> INVALID_ARGUMENT 
+PASS LmHead BF16 vocab=4096 dim=1024 padded=4096 selected=1 cap=0 class=lm-head-f32        n=4096      max_abs=4.29E-006 ref_rms=1.56E+000 utilisation=0.009 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead BF16 vocab=4096 dim=1024 padded=4096 selected=3 cap=0 class=lm-head-f32        n=12288     max_abs=9.54E-006 ref_rms=1.54E+000 utilisation=0.016 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead BF16 vocab=4000 dim=1024 padded=4096 selected=5 cap=30 class=lm-head-f32        n=20000     max_abs=1.14E-005 ref_rms=1.58E+000 utilisation=0.019 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead F16 vocab=4096 dim=1024 padded=4128 selected=2 cap=0 class=lm-head-f32        n=8192      max_abs=1.62E-005 ref_rms=1.54E+000 utilisation=0.024 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead bucket 8: two runs, and rows {1,3,5} alone, are bitwise equal to the 8-row call algo=21 tile=15 stages=12 splitk=1 scratch=0
+PASS Gemm transpose_a -> UNSUPPORTED                            
+PASS Gemm f32 -> UNSUPPORTED                                    
+PASS Gemm run with another n than planned -> INVALID_ARGUMENT   
+PASS Gemm misaligned a -> INVALID_ARGUMENT                      
+PASS Gemm short d -> INVALID_ARGUMENT                           
+PASS Gemm plan into a too-small plan record -> WORKSPACE_TOO_SMALL 
+--- attention
+PASS PagedAttention decode mixed4 PagedNhd ps16 q=1,1,1,1 kv=5,37,130,16 ws=40KiB class=attention-bf16     n=8192      max_abs=1.95E-003 ref_rms=3.62E-001 utilisation=0.096 violations=0 nonfinite=0
+PASS PagedAttention decode mixed4 PagedNhd ps16: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode mixed4 PagedHnd ps16 q=1,1,1,1 kv=5,37,130,16 ws=40KiB class=attention-bf16     n=8192      max_abs=1.95E-003 ref_rms=3.82E-001 utilisation=0.092 violations=0 nonfinite=0
+PASS PagedAttention decode mixed4 PagedHnd ps16: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode mixed4 PagedNhd ps32 q=1,1,1,1 kv=5,37,130,16 ws=40KiB class=attention-bf16     n=8192      max_abs=1.95E-003 ref_rms=3.72E-001 utilisation=0.105 violations=0 nonfinite=0
+PASS PagedAttention decode mixed4 PagedNhd ps32: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode mixed4 PagedHnd ps64 q=1,1,1,1 kv=5,37,130,16 ws=40KiB class=attention-bf16     n=8192      max_abs=1.95E-003 ref_rms=3.64E-001 utilisation=0.101 violations=0 nonfinite=0
+PASS PagedAttention decode mixed4 PagedHnd ps64: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode single-token-history q=1 kv=1 ws=0KiB class=attention-bf16     n=2048      max_abs=0.00E+000 ref_rms=9.84E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS PagedAttention decode single-token-history: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode page-multiples q=1,1,1,1 kv=16,32,48,64 ws=0KiB class=attention-bf16     n=8192      max_abs=7.63E-006 ref_rms=2.71E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS PagedAttention decode page-multiples: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode single-6000 (split-KV) q=1 kv=6000 ws=378KiB class=attention-bf16     n=2048      max_abs=2.44E-004 ref_rms=2.12E-002 utilisation=0.012 violations=0 nonfinite=0
+PASS PagedAttention decode single-6000 (split-KV): run() with NULL host tables equals the planned run 
+PASS PagedAttention decode single-6000 (split-KV): second run bit-identical 
+PASS PagedAttention decode mixed8 q=1,1,1,1,.. kv=900,17,1,2048,.. ws=362KiB class=attention-bf16     n=16384     max_abs=1.95E-003 ref_rms=4.03E-001 utilisation=0.085 violations=0 nonfinite=0
+PASS PagedAttention decode mixed8: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode mixed8: second run bit-identical     
+PASS PagedAttention decode mixed8 HND ps64 q=1,1,1,1,.. kv=900,17,1,2048,.. ws=362KiB class=attention-bf16     n=16384     max_abs=1.95E-003 ref_rms=3.91E-001 utilisation=0.085 violations=0 nonfinite=0
+PASS PagedAttention decode mixed8 HND ps64: run() with NULL host tables equals the planned run 
+PASS PagedAttention decode batch64 q=1,1,1,1,.. kv=205,288,181,54,.. ws=901KiB class=attention-bf16     n=131072    max_abs=3.91E-003 ref_rms=1.76E-001 utilisation=0.169 violations=0 nonfinite=0
+PASS PagedAttention decode batch64: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill one-token q=1 kv=1 ws=0KiB          class=attention-bf16     n=2048      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS PagedAttention prefill one-token: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill fresh-100 q=100 kv=100 ws=0KiB      class=attention-bf16     n=204800    max_abs=1.56E-002 ref_rms=3.04E-001 utilisation=0.467 violations=0 nonfinite=0
+PASS PagedAttention prefill fresh-100: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill fresh-100 HND q=100 kv=100 ws=0KiB  class=attention-bf16     n=204800    max_abs=1.56E-002 ref_rms=3.06E-001 utilisation=0.492 violations=0 nonfinite=0
+PASS PagedAttention prefill fresh-100 HND: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill fresh-700 ps64 q=700 kv=700 ws=0KiB class=attention-bf16     n=1433600   max_abs=1.56E-002 ref_rms=1.42E-001 utilisation=0.454 violations=0 nonfinite=0
+PASS PagedAttention prefill fresh-700 ps64: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill fresh-700 ps64: second run bit-identical 
+PASS PagedAttention prefill fresh-1024 q=1024 kv=1024 ws=1KiB   class=attention-bf16     n=2097152   max_abs=1.56E-002 ref_rms=1.21E-001 utilisation=0.398 violations=0 nonfinite=0
+PASS PagedAttention prefill fresh-1024: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill chunk-128-of-1000 q=128 kv=1000 ws=8225KiB class=attention-bf16     n=262144    max_abs=1.95E-003 ref_rms=5.34E-002 utilisation=0.089 violations=0 nonfinite=0
+PASS PagedAttention prefill chunk-128-of-1000: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill chunk-128-of-1000: second run bit-identical 
+PASS PagedAttention prefill chunk-128-of-1000 HND ps32 q=128 kv=1000 ws=8225KiB class=attention-bf16     n=262144    max_abs=1.95E-003 ref_rms=5.32E-002 utilisation=0.092 violations=0 nonfinite=0
+PASS PagedAttention prefill chunk-128-of-1000 HND ps32: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill multi-seq q=17,64,1,200 kv=17,300,50,200 ws=5270KiB class=attention-bf16     n=577536    max_abs=1.56E-002 ref_rms=2.46E-001 utilisation=0.434 violations=0 nonfinite=0
+PASS PagedAttention prefill multi-seq: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill non-causal-32-of-200 q=32 kv=200 ws=514KiB class=attention-bf16     n=65536     max_abs=3.91E-003 ref_rms=1.17E-001 utilisation=0.172 violations=0 nonfinite=0
+PASS PagedAttention prefill non-causal-32-of-200: run() with NULL host tables equals the planned run 
+PASS PagedAttention prefill partial-last-page q=33,5 kv=33,21 ws=0KiB class=attention-bf16     n=77824     max_abs=1.56E-002 ref_rms=4.39E-001 utilisation=0.443 violations=0 nonfinite=0
+PASS PagedAttention prefill partial-last-page: run() with NULL host tables equals the planned run 
+PASS PagedAttention head_dim 128 -> UNSUPPORTED                 
+PASS PagedAttention group size 8 -> UNSUPPORTED                 
+PASS PagedAttention sliding window -> UNSUPPORTED               
+PASS PagedAttention soft cap -> UNSUPPORTED                     
+PASS PagedAttention decode with tokens != batch -> INVALID_ARGUMENT 
+PASS PagedAttention plan made for decode, run as prefill -> INVALID_ARGUMENT 
+PASS PagedAttention plan without host tables -> INVALID_ARGUMENT 
+PASS PagedAttention kv_indices shorter than the planned pages -> INVALID_ARGUMENT 
+PASS PagedAttention f16 q -> INVALID_ARGUMENT                   
+PASS PagedAttention row-major KV -> INVALID_ARGUMENT            
+PASS PagedAttention plan into a small workspace -> WORKSPACE_TOO_SMALL 
+--- real
+real weights from model.safetensors-00001-of-00001.safetensors (read in place)
+PASS RmsNorm bf16 real layer-3 input_layernorm rows=5           class=elementwise-bf16   n=5120      max_abs=0.00E+000 ref_rms=3.58E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm bf16 real layer-3 q_norm tokens=9                   class=elementwise-bf16   n=18432     max_abs=0.00E+000 ref_rms=4.64E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS QkNorm bf16 real layer-3 k_norm tokens=9                   class=elementwise-bf16   n=4608      max_abs=0.00E+000 ref_rms=4.78E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.q_proj m=1 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=4096      max_abs=2.38E-007 ref_rms=6.44E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.q_proj m=17 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=69632     max_abs=3.91E-003 ref_rms=6.14E-001 utilisation=0.305 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.k_proj m=1 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=512       max_abs=0.00E+000 ref_rms=3.87E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.k_proj m=17 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=8704      max_abs=0.00E+000 ref_rms=3.94E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.v_proj m=1 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=512       max_abs=0.00E+000 ref_rms=3.72E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.v_proj m=17 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=8704      max_abs=1.95E-003 ref_rms=4.13E-001 utilisation=0.294 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.o_proj m=1 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1024      max_abs=0.00E+000 ref_rms=5.45E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 real self_attn.o_proj m=17 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=9.77E-004 ref_rms=5.55E-001 utilisation=0.234 violations=0 nonfinite=0
+PASS Gemm BF16 real mlp.gate_proj m=1 n=3584 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=3584      max_abs=1.95E-003 ref_rms=5.14E-001 utilisation=0.269 violations=0 nonfinite=0
+PASS Gemm BF16 real mlp.gate_proj m=17 n=3584 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=60928     max_abs=3.91E-003 ref_rms=5.17E-001 utilisation=0.354 violations=0 nonfinite=0
+PASS Gemm BF16 real mlp.up_proj m=1 n=3584 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=3584      max_abs=0.00E+000 ref_rms=2.61E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 real mlp.up_proj m=17 n=3584 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=60928     max_abs=4.88E-004 ref_rms=2.54E-001 utilisation=0.230 violations=0 nonfinite=0
+PASS Gemm BF16 real mlp.down_proj m=1 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1024      max_abs=9.54E-007 ref_rms=4.70E-001 utilisation=0.001 violations=0 nonfinite=0
+PASS Gemm BF16 real mlp.down_proj m=17 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=1.95E-003 ref_rms=4.87E-001 utilisation=0.256 violations=0 nonfinite=0
+PASS Embedding bf16 real embed_tokens vocab=248320 tokens=200   class=exact              n=409600    max_abs=0.00E+000 ref_rms=0.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS LmHead BF16 real tied vocab=248320 dim=1024 padded=248320 selected=1 cap=0 class=lm-head-f32        n=248320    max_abs=4.77E-007 ref_rms=5.55E-001 utilisation=0.003 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead BF16 real tied vocab=248320 dim=1024 padded=248320 selected=3 cap=0 class=lm-head-f32        n=744960    max_abs=5.96E-006 ref_rms=5.91E-001 utilisation=0.021 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+=== 292 passed, 0 failed

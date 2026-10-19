@@ -32,13 +32,26 @@ public class LoaderTests
     }
 
     [Theory]
-    [InlineData(2u << 16 | 0u)] // other major
-    [InlineData(0u << 16 | 5u)]
-    public void AnotherAbiMajorIsAnAssetMismatch(uint abi)
+    [InlineData(KernelAbi.Major + 1, KernelAbi.Minor)]
+    [InlineData(KernelAbi.Major + 1, 0)]
+    [InlineData(KernelAbi.Major - 1, KernelAbi.Minor + 5)]
+    public void AnotherAbiMajorIsAnAssetMismatch(int major, int minor)
     {
         FakeKernelLibrary.Reset();
         StubOnly();
-        FakeKernelLibrary.Abi = abi;
+        FakeKernelLibrary.Abi = ((uint)major << 16) | (uint)minor;
+        var e = Assert.Throws<KernelLoadException>(() => Attach(Options()));
+        Assert.Equal(RoostErrorCode.AssetMismatch, e.Error.Code);
+        Assert.Contains("ABI", e.Message);
+    }
+
+    [Fact]
+    public void ALibraryWithAnOlderMinorThanTheCallersIsAnAssetMismatch()
+    {
+        Assert.True(KernelAbi.Minor >= 1, "the host minor must be at least 1 for an older library minor to exist");
+        FakeKernelLibrary.Reset();
+        StubOnly();
+        FakeKernelLibrary.Abi = FakeKernelLibrary.LibraryAbi = ((uint)KernelAbi.Major << 16) | (uint)(KernelAbi.Minor - 1);
         var e = Assert.Throws<KernelLoadException>(() => Attach(Options()));
         Assert.Equal(RoostErrorCode.AssetMismatch, e.Error.Code);
         Assert.Contains("ABI", e.Message);
@@ -49,19 +62,40 @@ public class LoaderTests
     {
         FakeKernelLibrary.Reset();
         StubOnly();
-        FakeKernelLibrary.Abi = FakeKernelLibrary.LibraryAbi = (1u << 16) | 3u;
+        var abi = ((uint)KernelAbi.Major << 16) | (uint)(KernelAbi.Minor + 2);
+        FakeKernelLibrary.Abi = FakeKernelLibrary.LibraryAbi = abi;
         using var lib = Attach(Options());
-        Assert.Equal((1u << 16) | 3u, lib.AbiVersion);
+        Assert.Equal(abi, lib.AbiVersion);
     }
 
     [Fact]
     public void AbiRuleIsMajorEqualAndMinorAtLeast()
     {
-        // The loader's own minor is 0, so no lower minor exists to test through the library; the rule itself is KernelAbi's.
-        Assert.True(KernelAbi.IsCompatible((1u << 16) | 0u));
-        Assert.True(KernelAbi.IsCompatible((1u << 16) | 7u));
-        Assert.False(KernelAbi.IsCompatible((2u << 16) | 0u));
+        var major = (uint)KernelAbi.Major;
+        var minor = (uint)KernelAbi.Minor;
+        Assert.True(KernelAbi.IsCompatible((major << 16) | minor));
+        Assert.True(KernelAbi.IsCompatible((major << 16) | (minor + 7)));
+        Assert.False(KernelAbi.IsCompatible((major << 16) | (minor - 1)));
+        Assert.False(KernelAbi.IsCompatible(((major + 1) << 16) | minor));
+        Assert.False(KernelAbi.IsCompatible(((major - 1) << 16) | minor));
         Assert.False(KernelAbi.IsCompatible(0u));
+    }
+
+    [Fact]
+    public void AManifestForAnOlderMinorThanTheLoaderIsAnAssetMismatch()
+    {
+        var m = TestManifest.Build(abiMinor: KernelAbi.Minor - 1);
+        var e = Assert.Throws<KernelLoadException>(() => KernelLibrary.Load("x", Options(m)));
+        Assert.Equal(RoostErrorCode.AssetMismatch, e.Error.Code);
+        Assert.Contains("manifest is for ABI", e.Message);
+    }
+
+    [Fact]
+    public void AManifestForANewerMinorThanTheLoaderIsAdmitted()
+    {
+        // Past the ABI check, the missing file is what stops this load.
+        var m = TestManifest.Build(abiMinor: KernelAbi.Minor + 1);
+        Assert.Throws<ProfileUnsupportedException>(() => KernelLibrary.Load("/nonexistent/x.so", Options(m)));
     }
 
     [Fact]
@@ -69,7 +103,8 @@ public class LoaderTests
     {
         FakeKernelLibrary.Reset();
         StubOnly();
-        FakeKernelLibrary.LibraryAbi = (1u << 16) | 1u;
+        // Both versions are acceptable on their own; they differ from each other.
+        FakeKernelLibrary.LibraryAbi = FakeKernelLibrary.Abi + 1;
         var e = Assert.Throws<KernelLoadException>(() => Attach(Options()));
         Assert.Equal(RoostErrorCode.AssetMismatch, e.Error.Code);
     }
@@ -239,7 +274,7 @@ public class LoaderTests
     [Fact]
     public void AManifestForAnotherAbiMajorIsRefused()
     {
-        var toml = "schema_version = 1\ncontract_version = 1\n[abi]\nmajor = 2\nminor = 0\n[toolkit]\ncuda = \"13.3\"\nmin_driver = \"580\"\n" +
+        var toml = "schema_version = 1\ncontract_version = 1\n[abi]\nmajor = " + (KernelAbi.Major + 1) + "\nminor = " + KernelAbi.Minor + "\n[toolkit]\ncuda = \"13.3\"\nmin_driver = \"580\"\n" +
                    "[[sm]]\narch = 86\nstatus = \"experimental\"\n";
         var m = KernelManifest.Parse(System.Text.Encoding.UTF8.GetBytes(toml));
         Assert.Equal(RoostErrorCode.AssetMismatch, Assert.Throws<KernelLoadException>(() => KernelLibrary.Load("x", Options(m))).Error.Code);

@@ -21,6 +21,8 @@ public readonly partial struct CpuOps
     /// S    = S + k (outer) d
     /// o_t  = S^T q
     /// </code>
+    /// <para>Q, K and V are read as row-strided views (QStride, KStride, VStride; 0 means contiguous), so for Qwen3.5 they can be column slices of one
+    /// causal conv1d output; a non-zero stride smaller than the row width is rejected. Output is contiguous.</para>
     /// <para>S starts as the slot's contents when UseInitialState is set and as zero otherwise; it is carried in double for the whole call and written back
     /// to the slot as float32 once at the end (a sequence of zero tokens leaves its slot untouched). Q, K, V and Output are DType; G and Beta are read as their span's
     /// Dtype (DType when the span has none). Beta is used as given (any sigmoid is applied upstream), G is the log decay.</para>
@@ -34,9 +36,12 @@ public readonly partial struct CpuOps
 
         int kd = a.KDim;
         int vd = a.VDim;
-        Need(a.Q, (long)a.Tokens * a.KHeads * kd, nameof(a.Q));
-        Need(a.K, (long)a.Tokens * a.KHeads * kd, nameof(a.K));
-        Need(a.V, (long)a.Tokens * a.VHeads * vd, nameof(a.V));
+        long qs = RowStride(a.QStride, (long)a.KHeads * kd, nameof(a.QStride));
+        long ks = RowStride(a.KStride, (long)a.KHeads * kd, nameof(a.KStride));
+        long vs = RowStride(a.VStride, (long)a.VHeads * vd, nameof(a.VStride));
+        Need(a.Q, StridedExtent(a.Tokens, qs, (long)a.KHeads * kd), nameof(a.Q));
+        Need(a.K, StridedExtent(a.Tokens, ks, (long)a.KHeads * kd), nameof(a.K));
+        Need(a.V, StridedExtent(a.Tokens, vs, (long)a.VHeads * vd), nameof(a.V));
         Need(a.G, (long)a.Tokens * a.VHeads, nameof(a.G));
         Need(a.Beta, (long)a.Tokens * a.VHeads, nameof(a.Beta));
         Need(a.Output, (long)a.Tokens * a.VHeads * vd, nameof(a.Output));
@@ -89,13 +94,14 @@ public readonly partial struct CpuOps
                     int kh = h / group;
                     for (long t = t0; t < t1; t++)
                     {
-                        long qo = ((t * a.KHeads) + kh) * kd;
+                        long qo = (t * qs) + ((long)kh * kd);
+                        long ko = (t * ks) + ((long)kh * kd);
                         double qq = 0;
                         double kk = 0;
                         for (int i = 0; i < kd; i++)
                         {
                             q[i] = Load(a.Q.Address, a.DType, qo + i);
-                            k[i] = Load(a.K.Address, a.DType, qo + i);
+                            k[i] = Load(a.K.Address, a.DType, ko + i);
                             qq += q[i] * q[i];
                             kk += k[i] * k[i];
                         }
@@ -110,7 +116,8 @@ public readonly partial struct CpuOps
 
                         double decay = Math.Exp(Load(a.G.Address, gt, (t * a.VHeads) + h));
                         double beta = Load(a.Beta.Address, bt, (t * a.VHeads) + h);
-                        long vo = ((t * a.VHeads) + h) * vd;
+                        long vo = (t * vs) + ((long)h * vd);
+                        long oo = ((t * a.VHeads) + h) * vd;
                         for (int j = 0; j < vd; j++)
                         {
                             double kv = 0;
@@ -132,7 +139,7 @@ public readonly partial struct CpuOps
                                 o += s[(i * vd) + j] * q[i];
                             }
 
-                            Store(a.Output.Address, a.DType, vo + j, o);
+                            Store(a.Output.Address, a.DType, oo + j, o);
                         }
                     }
 
@@ -222,6 +229,16 @@ public readonly partial struct CpuOps
             }
         }
     }
+
+    // Elements between token rows of a GatedDeltaRule view: 0 means the contiguous row width, otherwise at least that.
+    private static long RowStride(int stride, long rowWidth, string name) =>
+        stride == 0 ? rowWidth
+        : stride >= rowWidth ? stride
+        : throw new ArgumentException($"{name} must be 0 or at least {rowWidth}.", name);
+
+    // Elements a row-strided view spans: from the start of row 0 to the end of the last row.
+    private static long StridedExtent(int tokens, long stride, long rowWidth) =>
+        tokens <= 0 ? 0 : ((tokens - 1L) * stride) + rowWidth;
 
     // Element i of [state (Width - 1 entries), sequence inputs] for one channel.
     private static double ConvInput(in CausalConv1dArgs a, DType stateType, long t0, long stateOffset, int c, long i, int stateLen) =>

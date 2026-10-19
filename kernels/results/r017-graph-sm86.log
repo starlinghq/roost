@@ -1,0 +1,6 @@
+library roost-kernels-sm86 abi 0x10001 entries 11; device sm_86; 2026-10-19T18:40:38.2989955Z
+--- graph
+PASS Graph: decode step (RmsNorm, Gemm, Rope, CacheWrite, PagedAttention) captured 
+FAIL Graph: replay output equals the eager step bitwise         
+FAIL Graph: second replay (state restored) equals the first     
+=== 1 passed, 2 failed
