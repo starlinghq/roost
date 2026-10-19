@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Starlings.Roost.Cuda is local-only (not in Roost.slnx); its pure name-mapping logic is covered here. -->
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Cuda/Starlings.Roost.Cuda.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" />
+  </ItemGroup>
+</Project>

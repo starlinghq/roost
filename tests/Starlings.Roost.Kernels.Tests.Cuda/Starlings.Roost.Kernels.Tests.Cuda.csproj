@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Local only, not in Roost.slnx (AGENTS.md): runs the R-016 stub kernel library through the R-023 loader on a GPU. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Cuda/Starlings.Roost.Cuda.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" />
+  </ItemGroup>
+</Project>
