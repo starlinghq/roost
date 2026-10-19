@@ -152,7 +152,7 @@ ROOST_QWEN35_CHECKPOINT=$SNAP ROOST_R022_OUT=$E/run dotnet test --project tests/
 $E/venv/bin/python -I tests/Starlings.Roost.Models.Qwen35.Tests/Parity/scripts/check_template.py $SNAP $E/run
 # 2. reference: transformers fp32 with hook capture (39 s, 5 x ~500 MB of captures)
 OMP_NUM_THREADS=4 uv run --project evidence/pipeline --locked --extra reference roost-evidence reference-run $SNAP $E/run/prompts.jsonl --out $E/ref --capture-layers --state-forwards 24
-# 3. candidate: CpuOps, teacher-forced (about 20 minutes for 5 cases); ROOST_R022_PERTURB and ROOST_R022_CASES for negative runs
+# 3. candidate: CpuOps, teacher-forced (about 20 minutes for 5 cases)
 ROOST_QWEN35_CHECKPOINT=$SNAP ROOST_R022_REFERENCE=$E/ref ROOST_R022_OUT=$E/cand dotnet test --project tests/Starlings.Roost.Models.Qwen35.Tests -c Release --no-build -- --filter-method '*TeacherForcedCapture'
 # 4. the gate (tolerances.json rendered from the proposal's [tolerances], command in the .toml) and the distributions
 uv run --project evidence/pipeline --locked roost-evidence evaluate-layers $E/cand --reference $E/ref/reference.jsonl --reference-captures $E/ref --tolerances $E/tolerances.json --report report.json
@@ -160,6 +160,34 @@ $E/venv/bin/python -I tests/Starlings.Roost.Models.Qwen35.Tests/Parity/scripts/a
 $E/venv/bin/python -I tests/Starlings.Roost.Models.Qwen35.Tests/Parity/scripts/relative_attribution.py $E/ref $E/cand 0.1
 $E/venv/bin/python -I tests/Starlings.Roost.Models.Qwen35.Tests/Parity/scripts/emulate_bf16_attention_layer.py $SNAP $E/ref $E/cand 15 capital
 ```
+
+The negative runs (`r022/evaluate-layers-{drop-attention-gate,drop-z-gate,norm-eps-1e-5}.json`) cover two of the five cases, so
+they are gated against a two-case reference, not `reference.jsonl`; the reports hash it as `reference-2cases.jsonl`
+(`74d16237...`). That file is `reference.jsonl` filtered to the ids `capital` and `long-context`, lines unchanged
+(`Parity/scripts/filter_reference.py`). Do not run the window-defect or baseline commands above against it, and do not run these
+against the full reference (the other three cases would be reported as missing). `Parity/scripts/negative_runs.sh` does all of it:
+
+```sh
+# regenerates $E/reference-2cases.jsonl, $E/cand-<p>/ and $E/eval-<p>.json for the three perturbations (about 4 minutes each);
+# HEAVY_LOCK is the wave's flock file; $E needs ref/ (step 2), tolerances.json (step 4) and venv/
+HEAVY_LOCK=.../envs/heavy.lock tests/Starlings.Roost.Models.Qwen35.Tests/Parity/scripts/negative_runs.sh $SNAP $E [drop-attention-gate drop-z-gate norm-eps-1e-5]
+```
+
+The same by hand, for one perturbation `P` (`ROOST_R022_PERTURB` names the defect injected inside `RecordingOps`; `ROOST_R022_CASES`
+limits the candidate to the two cases):
+
+```sh
+python3 -I tests/Starlings.Roost.Models.Qwen35.Tests/Parity/scripts/filter_reference.py $E/ref/reference.jsonl $E/reference-2cases.jsonl capital,long-context
+ROOST_QWEN35_CHECKPOINT=$SNAP ROOST_R022_REFERENCE=$E/ref ROOST_R022_OUT=$E/cand-$P ROOST_R022_PERTURB=$P ROOST_R022_CASES=capital,long-context dotnet test --project tests/Starlings.Roost.Models.Qwen35.Tests -c Release --no-build -- --filter-method '*TeacherForcedCapture'
+# from inside $E, so the report's input names are relative; exits 1 ("failed") by design
+uv run --project <repo>/evidence/pipeline --locked roost-evidence evaluate-layers cand-$P --reference reference-2cases.jsonl --reference-captures ref --tolerances tolerances.json --report eval-$P.json
+```
+
+Checked: `negative_runs.sh` rerun for `drop-z-gate` (8.5 minutes under the heavy-work lock) wrote a report byte-identical to
+`r022/evaluate-layers-drop-z-gate.json`; the other two were not rerun.
+
+`$P` is `drop-attention-gate`, `drop-z-gate` or `norm-eps-1e-5`. The window defect is not a perturbation: it is the definition as R-035
+left it (`WindowLeft` unbound, commit `25c24c9`) on all five cases; its commands are not scripted here.
 
 Revisions: branch `evidence/r022-cpu-parity` from `models/r035-qwen35` at `25c24c94febae08a053c15b5f50b4bd2a1be65ea`; .NET 10.0.12;
 transformers 5.20.1, torch 2.9.1+cpu, safetensors 0.8.0 (`evidence/pipeline/uv.lock`); `Starlings.Models.Qwen35` 0.2.0,

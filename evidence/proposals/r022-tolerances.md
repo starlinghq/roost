@@ -4,6 +4,28 @@
 directory holds proposals awaiting that decision, and no gate reads it. Values: [`r022-tolerances.toml`](r022-tolerances.toml).
 Procedure, revisions and full tables: [`docs/m0/roost-r022-cpu-parity.md`](../../docs/m0/roost-r022-cpu-parity.md).
 
+## Decision order: the metric first
+
+**The maintainer is being asked to choose the hidden-state metric before any of the values below.** The values are unchanged from the
+first version of this proposal; they are the answer to the question "how large an absolute error is acceptable", and that question is
+the weaker one. The data supports a row-relative metric (`||c - r|| / ||r||` per position), paired with cosine similarity, over the
+absolute `float.layer_hidden_max_abs` bound of 2.0:
+
+- Row-relative separates the fixed definition from every defect by a wide margin: 0.067 for the fixed definition, at least 1.41 for
+  each of the four defects (1.62 window, 5.82 attention gate, 11.3 `silu(z)`, 1.41 eps), so a bound near 0.1 passes the fixed definition
+  and fails each defect.
+- Cosine similarity was not measured in this run; only the row-relative figures above are data. Row-relative L2 bounds the
+  angle as well, so it is a pairing choice, not a separate measurement.
+- It also attributes each defect to the layer where it enters (layer 3 for the window defect in all five cases; layer 3, 0 and 0 for
+  the attention-gate, `silu(z)` and eps runs; `docs/m0/r022/relative-attribution.txt`).
+- The absolute bound of 2.0 must be at least the final norm's 1.33 (ten times the layers' scale), so it cannot attribute: it
+  attributes the window defect to layers 18-23, not layer 3, and a layers-only absolute bound misses short prompts.
+
+The evaluator reads only the absolute key today; a row-relative or cosine check is a request to stream B2 (see the R-022 report,
+Requests). If the maintainer picks the row-relative metric, the other proposed keys (recurrent, conv, step-0, near-tie) stand as
+proposed and the hidden key is replaced by the metric's own bound; if the absolute metric is kept, 2.0 is the value, with the
+attribution limit above.
+
 ## Which profile these are for
 
 Tolerances are per profile (decision 8). **Every value below belongs to one profile: `qwen3.5-0.8b/cpu-fp64-reference`**, the
