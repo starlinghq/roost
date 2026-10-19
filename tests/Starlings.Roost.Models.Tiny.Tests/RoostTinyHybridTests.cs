@@ -164,6 +164,8 @@ public class RoostTinyHybridTests
         Assert.Equal(6, g.Nodes.Count(n => n.Op == "GatedDeltaRuleGates"));
         Assert.Equal(6, g.Nodes.Count(n => n.Op == "GatedRmsNorm"));
         Assert.Equal(2, g.Nodes.Count(n => n.Op == "PagedAttention"));
+        // Full attention: an unbound WindowLeft is 0, a one-token window on CpuOps (R-022); -1 disables the window.
+        Assert.All(g.Nodes.Where(n => n.Op == "PagedAttention"), n => Assert.Equal("-1", n.Attributes["arg.WindowLeft"]));
         Assert.Equal(2, g.Nodes.Count(n => n.Op == "SigmoidMul"));
 
         // The one fused Gemm of a linear layer produces all conv_dim channels, and the convolution runs over all of them.
