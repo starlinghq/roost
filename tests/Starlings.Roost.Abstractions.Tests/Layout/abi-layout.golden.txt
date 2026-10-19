@@ -256,6 +256,31 @@ struct RoostSampleParams size=264 align=8
   vocab 252 4 u32
   stride 256 4 u32
   reserved0 260 4 u32
+struct RoostGatedDeltaRuleParams size=280 align=8
+  struct_size 0 4 u32
+  abi_minor 4 4 u32
+  q 8 24 RoostDeviceSpan
+  k 32 24 RoostDeviceSpan
+  v 56 24 RoostDeviceSpan
+  g 80 24 RoostDeviceSpan
+  beta 104 24 RoostDeviceSpan
+  output 128 24 RoostDeviceSpan
+  state 152 24 RoostDeviceSpan
+  state_slots 176 24 RoostDeviceSpan
+  cu_seqlens 200 24 RoostDeviceSpan
+  cu_seqlens_host 224 8 ptr
+  batch 232 4 u32
+  tokens 236 4 u32
+  k_heads 240 4 u32
+  v_heads 244 4 u32
+  k_dim 248 4 u32
+  v_dim 252 4 u32
+  q_stride 256 4 u32
+  k_stride 260 4 u32
+  v_stride 264 4 u32
+  use_initial_state 268 4 u32
+  l2_norm_qk 272 4 u32
+  scale 276 4 f32
 struct RoostTableRef size=16 align=8
   offset 0 8 u64
   count 8 4 u32

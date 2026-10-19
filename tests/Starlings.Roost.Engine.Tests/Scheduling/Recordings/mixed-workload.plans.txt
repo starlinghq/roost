@@ -1,0 +1,103 @@
+add 1 Added
+add 2 Added
+add 3 Added
+add 4 Added
+add 5 Added
+plan 1 rows=2 tokens=20 ops=0 3fe2484a33eafe591e5aafc182f2cc116ca15dfb890244124e54994720d22fdd
+plan 2 rows=2 tokens=20 ops=0 e4457987b57a7f4eb27e37c47be601b07b867fb7b7883884ac1679167bdb847b
+fork 1 7 NotForkable
+result 1 finished=[]
+fork 1 7 Forked
+plan 3 rows=2 tokens=11 ops=2 5fb0b49601b0066d34993980b9b6451e925f6565c590093d9e98d284b082dedb
+  Preempted 7
+result 2 finished=[]
+plan 4 rows=1 tokens=1 ops=0 a4d7a6ff968a62f3cb0536ab8e18b8baa36380fbc12eb9922a822f35bf80cea6
+add 6 Added
+result 3 finished=[]
+plan 5 rows=3 tokens=20 ops=0 1afe2182ab5362e1c58ed0c7eeab3d5f9ea9154bc02da5a38666205128589575
+result 4 finished=[]
+cancel 3 True
+plan 6 rows=2 tokens=13 ops=0 69f6e5ddeb0bfddf637cb7921f98560f43d438f72587d6640ed77a341dc4d19f
+result 5 finished=[]
+plan 7 rows=2 tokens=2 ops=0 ca6644ae50a70a6f3ff27d54b3ff12dab240ce22ef22cd3fb8b7596c87899187
+result 6 finished=[]
+plan 8 rows=2 tokens=2 ops=0 81a33b862b4209a0efb0e473c3038ea07fb328d8170081aad97c6814feca2728
+result 7 finished=[]
+plan 9 rows=2 tokens=2 ops=0 9108fd7ad8eb45ee2145a989a2879f93681d59bcca3a0a8cddc12ecd0f679a31
+result 8 finished=[]
+plan 10 rows=2 tokens=2 ops=0 6952d6343a46199f4295ac3f58f8819059183c45d2e48a290aa030529b5429fb
+result 9 finished=[]
+plan 11 rows=2 tokens=2 ops=0 35817f20beb84e60ef2f394a23df5e87edc9bb107b00385db27ea5683d86f00e
+restart
+  Preempted 1
+  Preempted 2
+  Preempted 5
+  Preempted 6
+plan 12 rows=2 tokens=20 ops=0 eff574e7199bbd6090c8675e03ed2df0806fe4960e313b934eca75da060f1ea4
+plan 13 rows=2 tokens=20 ops=0 220e938ce8592699acc97c7cace74273e7fa72c47dc1a6aff0db4dbd7add33d5
+result 12 finished=[]
+plan 14 rows=2 tokens=20 ops=0 9de590222c575a85e067666c4db698582c89a831f2cb5b0d430d2d4845f054f4
+result 13 finished=[]
+plan 15 rows=3 tokens=20 ops=0 71057adf92f0f55637db7b7263b05d81346b8f61c2c534cfc6f10860dad6e87f
+result 14 finished=[]
+plan 16 rows=2 tokens=18 ops=0 89fed6944c496b7ee661efba7b688a6e98df4e4d492a5cac7f2f46a42dee9935
+result 15 finished=[]
+plan 17 rows=2 tokens=2 ops=0 d9fa72d393ad2049326d003e4ac693864defb237228d82897532f3b3f337a1b1
+result 16 finished=[]
+plan 18 rows=2 tokens=2 ops=0 d2f15f77afaa4d4643e22c0548bff66811e3a86c90640be456fb1b34ae99ec11
+result 17 finished=[]
+plan 19 rows=2 tokens=2 ops=0 f7613b280cd35f4429121d85b27646534abf0db1b98de0b6703557ddfabecdca
+result 18 finished=[]
+plan 20 rows=2 tokens=2 ops=0 b1ec6a56b3e2e631a4ba346172f2d5e7c0bf649df58ea0b13e078cbbd125864d
+result 19 finished=[]
+plan 21 rows=2 tokens=2 ops=0 a09f9c978e9a0318a25489444e3867057261088e34a0012781f51445e0701782
+result 20 finished=[]
+plan 22 rows=2 tokens=2 ops=0 354b03a379b8b8fabff6e6ba9ab7e86d0a6276f70abb197701344b04555ac5e6
+result 21 finished=[]
+plan 23 rows=2 tokens=2 ops=0 a4d99900f10c64573cc54ffd40a070a535123bdf24f6cd064083b01f5c8edfe2
+result 22 finished=[]
+plan 24 rows=2 tokens=2 ops=0 b297f0b1a3337956c0c513534fff2ab4303c3c84a51a1a66857eccbc6c946b98
+result 23 finished=[]
+plan 25 rows=2 tokens=2 ops=0 37fc9438b85bd361ac9c5df4f5d4aec810e9c88f7358c0e8e0e3283bd8befd81
+result 24 finished=[1:Length]
+plan 26 rows=2 tokens=20 ops=0 5c544ed6ff74619478aeced60cb726960b5136ba144c48f4dc429a859f348d04
+result 25 finished=[]
+plan 27 rows=2 tokens=20 ops=0 fe1d4d02ecf5109bf3d5cb029ebf103a9b75fb75a8896ea682532968fce48d3a
+  Preempted 5
+result 26 finished=[]
+plan 28 rows=3 tokens=20 ops=0 2711a33311bff38e557d150109c6137977baba7b84e9e9893586900df7793a1b
+  Preempted 4
+result 27 finished=[2:Length]
+plan 29 rows=1 tokens=20 ops=0 56bb9fd2df8c875eda539b0686edb3eb4402c1b30ca3c8073a655fd566bd0f93
+result 28 finished=[]
+plan 30 rows=3 tokens=13 ops=0 447d1853a0d10f0cf7b69bd5747769a7384a46ffe1a5f30d835ffb7f9f8946e7
+result 29 finished=[]
+plan 31 rows=1 tokens=1 ops=0 5587abceca24fe9af6f061ad33e09336c17353e11e8b6d82d54e52071b4df52d
+result 30 finished=[5:Length,6:Length]
+plan 32 rows=1 tokens=1 ops=0 1b3ee3c8df97918978e1a3936f3ad40e8542203bcac63f0885eaf959873c21f6
+result 31 finished=[]
+plan 33 rows=1 tokens=1 ops=0 e50e6e197fcf6162de139979e97149b244e28df2397159002ea2fffd8d4c86d8
+result 32 finished=[]
+plan 34 rows=1 tokens=1 ops=0 c59b8568d8c237d7cb5fff05ae265dc84dbc5980df3f5ba01ec88e9e5d1e6c52
+result 33 finished=[]
+plan 35 rows=1 tokens=1 ops=0 fd493121d3e75ba0956673d18b2b41b0f591038e5ffc409d038342119992635b
+result 34 finished=[]
+plan 36 rows=1 tokens=1 ops=0 c809f879e399b50a0f65414da00197b6bc3ee834fb5e220720af2001746b505d
+result 35 finished=[]
+plan 37 rows=1 tokens=1 ops=0 c017239deedf22269ae21af0422b70312381592eb4bbf67067fcebed83187e11
+result 36 finished=[]
+plan 38 rows=1 tokens=1 ops=0 87f9f7864372012da9cb980694975c3d2249fa7fffe7cf32dcaa747de7682b93
+result 37 finished=[]
+plan 39 rows=1 tokens=1 ops=0 54de0b738b6d8dd2d376ca030475a07d02954c2d6c8c3e5b11b1219587483517
+result 38 finished=[]
+plan 40 rows=1 tokens=1 ops=0 79071770c7d38d1b343c7459d5f658acba2eed5fd5f174bbab8c600c1c1caf13
+result 39 finished=[]
+plan 41 rows=1 tokens=1 ops=0 c2faf2a4c899f80ccadb479adb29dadc51ba8401e520715a1b0cb219f68ed342
+result 40 finished=[]
+plan 42 rows=1 tokens=1 ops=0 34d09b8dbd175eaed5c426a01540a8d2d61db8f58d5602f46aa8bf4f5bc1bda7
+result 41 finished=[]
+plan 43 rows=1 tokens=1 ops=0 e2b2da6f7c56ac1a58f38287094a8122b41743197ba12d73c0f20f2f530b1525
+result 42 finished=[7:Length]
+plan none
+result 43 finished=[4:Eos]
+plan none
