@@ -7,7 +7,7 @@ public static class KernelAbi
     public const int Major = 1;
 
     /// <summary><c>ROOST_ABI_MINOR</c>. A loader accepts a library whose minor is at least this.</summary>
-    public const int Minor = 1;
+    public const int Minor = 2;
 
     /// <summary><c>ROOST_ABI_VERSION</c>, the value <c>roost_abi_version()</c> returns: major in the high 16 bits.</summary>
     public const uint Version = (Major << 16) | Minor;
@@ -200,6 +200,15 @@ public enum OpId : uint
 
     /// <summary>Reserved, M1.</summary>
     SlidingWindowAttention = 132,
+
+    /// <summary>Qwen3.5 gating (contract version 3): Gated DeltaNet g and beta from the a and b projections.</summary>
+    GatedDeltaRuleGates = 133,
+
+    /// <summary>Qwen3.5 gating (contract version 3): RMS norm then a SiLU gate, per value head.</summary>
+    GatedRmsNorm = 134,
+
+    /// <summary>Qwen3.5 gating (contract version 3): the full-attention output gate, input * sigmoid(gate).</summary>
+    SigmoidMul = 135,
 
     /// <summary>Reserved, M2: YaRN, longrope, dynamic NTK.</summary>
     RopeScaled = 160,
