@@ -108,17 +108,15 @@ public sealed unsafe class GeneratedForwardTests
     }
 
     [Fact]
-    public void TheGeneratedForwardLeavesWindowLeftAtZeroForEveryAttentionLayer()
+    public void TheGeneratedForwardBindsNoWindowForEveryAttentionLayer()
     {
-        // Defect found by R-025: PagedAttentionArgs.WindowLeft is "-1 disables", the generated code never sets it, and 0 means a window of
-        // zero keys back, so CpuOps attends to the current key only and the GPU kernel refuses the call. If the generator is fixed
-        // (WindowLeft = -1 emitted), this test fails and Probe's workaround can go.
+        // R-025 found WindowLeft unbound (0, a one-token window); R-035 binds -1 in the model definition.
         RecordingOps.Windows = [];
         try
         {
             RunForward<RecordingOps>();
             Assert.Equal(6, RecordingOps.Windows.Count);
-            Assert.All(RecordingOps.Windows, w => Assert.Equal(0, w));
+            Assert.All(RecordingOps.Windows, w => Assert.Equal(-1, w));
         }
         finally
         {
@@ -127,7 +125,7 @@ public sealed unsafe class GeneratedForwardTests
     }
 
     [Fact]
-    public void ProbePassesNoWindowToTheBackend()
+    public void ProbePassesTheGeneratedWindowThrough()
     {
         RecordingOps.Windows = [];
         try

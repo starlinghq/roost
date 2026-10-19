@@ -57,10 +57,10 @@ public sealed class PlanAndResultTests
     }
 
     [Fact]
-    public void TheLayoutHoldsHalfAsManyFloatRowsAsTheGeneratedBufferHoldsBf16Rows()
+    public void TheLayoutHoldsOneFloatLogitsRowPerTokenRow()
     {
         var layout = Model.Layout(64, 1, 8);
-        Assert.Equal(32, layout.MaxSelected);
+        Assert.Equal(64, layout.MaxSelected);
         Assert.Equal(new Qwen35Model.ForwardLayout(64, 1, 8).ArenaBytes, layout.ArenaBytes);
         Assert.Equal(DType.I64, layout.Dtypes["SlotMapping"]);
         Assert.Equal(DType.I32, layout.Dtypes["Rows"]);

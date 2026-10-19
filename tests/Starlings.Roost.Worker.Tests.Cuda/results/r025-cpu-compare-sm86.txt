@@ -1,38 +1,38 @@
-CPU phase: CpuOps (double precision), weights 1435 MiB verified sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696 in 6.1 s
+CPU phase: CpuOps (double precision), weights 1435 MiB verified sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696 in 5.8 s
 GPU dump: SM 86, kernel library sha256 fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7
-WindowLeft handling: -1 (no window), both backends
+WindowLeft: -1 (no window) bound by the generated forward (R-035), both backends
 
 == prompt capital-of-france: ids [760 6511 314 9338 369], GPU greedy tokens [11751 13 198 760 6511 314 9338 369]
-  step  0 ( 5 tok, 10.9 s): GPU  11751 CPU  11751 agree    logits max|d| 0.1462 (logit range 26.8) cos 0.9999729; top-2 margin GPU 0.241 CPU 0.279
-  step  1 ( 1 tok, 2.7 s): GPU     13 CPU     13 agree    logits max|d| 0.1825 (logit range 29.5) cos 0.9999434; top-2 margin GPU 0.367 CPU 0.353
-  step  2 ( 1 tok, 4.3 s): GPU    198 CPU    198 agree    logits max|d| 0.1612 (logit range 28.0) cos 0.9999706; top-2 margin GPU 0.859 CPU 0.862
-  step  3 ( 1 tok, 4.0 s): GPU    760 CPU    760 agree    logits max|d| 0.1735 (logit range 24.8) cos 0.9998395; top-2 margin GPU 1.470 CPU 1.414
-  step  4 ( 1 tok, 4.1 s): GPU   6511 CPU   6511 agree    logits max|d| 0.1039 (logit range 24.5) cos 0.9999769; top-2 margin GPU 2.767 CPU 2.782
-  step  5 ( 1 tok, 2.8 s): GPU    314 CPU    314 agree    logits max|d| 0.1406 (logit range 32.5) cos 0.9999556; top-2 margin GPU 3.565 CPU 3.541
-  step  6 ( 1 tok, 2.8 s): GPU   9338 CPU   9338 agree    logits max|d| 0.1112 (logit range 27.0) cos 0.9999834; top-2 margin GPU 0.688 CPU 0.700
-  step  7 ( 1 tok, 2.7 s): GPU    369 CPU    369 agree    logits max|d| 0.1609 (logit range 30.9) cos 0.9999598; top-2 margin GPU 3.500 CPU 3.539
+  step  0 ( 5 tok, 10.1 s): GPU  11751 CPU  11751 agree    logits max|d| 0.1462 (logit range 26.8) cos 0.9999729; top-2 margin GPU 0.241 CPU 0.279
+  step  1 ( 1 tok, 2.8 s): GPU     13 CPU     13 agree    logits max|d| 0.1825 (logit range 29.5) cos 0.9999434; top-2 margin GPU 0.367 CPU 0.353
+  step  2 ( 1 tok, 2.8 s): GPU    198 CPU    198 agree    logits max|d| 0.1612 (logit range 28.0) cos 0.9999706; top-2 margin GPU 0.859 CPU 0.862
+  step  3 ( 1 tok, 2.7 s): GPU    760 CPU    760 agree    logits max|d| 0.1735 (logit range 24.8) cos 0.9998395; top-2 margin GPU 1.470 CPU 1.414
+  step  4 ( 1 tok, 2.7 s): GPU   6511 CPU   6511 agree    logits max|d| 0.1039 (logit range 24.5) cos 0.9999769; top-2 margin GPU 2.767 CPU 2.782
+  step  5 ( 1 tok, 2.6 s): GPU    314 CPU    314 agree    logits max|d| 0.1406 (logit range 32.5) cos 0.9999556; top-2 margin GPU 3.565 CPU 3.541
+  step  6 ( 1 tok, 2.6 s): GPU   9338 CPU   9338 agree    logits max|d| 0.1112 (logit range 27.0) cos 0.9999834; top-2 margin GPU 0.688 CPU 0.700
+  step  7 ( 1 tok, 2.6 s): GPU    369 CPU    369 agree    logits max|d| 0.1609 (logit range 30.9) cos 0.9999598; top-2 margin GPU 3.500 CPU 3.539
   greedy: 8 of 8 tokens agree; first divergence none
 
 == prompt python-def: ids [727 73111 1393 1590 198 257], GPU greedy tokens [413 307 2564 220 16 25 198 260]
-  step  0 ( 6 tok, 23.9 s): GPU    413 CPU    413 agree    logits max|d| 0.1659 (logit range 30.7) cos 0.9999458; top-2 margin GPU 0.940 CPU 0.973
-  step  1 ( 1 tok, 4.3 s): GPU    307 CPU    307 agree    logits max|d| 0.1666 (logit range 32.3) cos 0.9999344; top-2 margin GPU 3.620 CPU 3.621
-  step  2 ( 1 tok, 3.5 s): GPU   2564 CPU   2564 agree    logits max|d| 0.1453 (logit range 30.5) cos 0.9998868; top-2 margin GPU 0.424 CPU 0.390
-  step  3 ( 1 tok, 3.1 s): GPU    220 CPU    220 agree    logits max|d| 0.1395 (logit range 33.3) cos 0.9999575; top-2 margin GPU 4.595 CPU 4.606
-  step  4 ( 1 tok, 2.7 s): GPU     16 CPU     16 agree    logits max|d| 0.1578 (logit range 33.6) cos 0.9998812; top-2 margin GPU 0.235 CPU 0.320
+  step  0 ( 6 tok, 11.5 s): GPU    413 CPU    413 agree    logits max|d| 0.1659 (logit range 30.7) cos 0.9999458; top-2 margin GPU 0.940 CPU 0.973
+  step  1 ( 1 tok, 2.6 s): GPU    307 CPU    307 agree    logits max|d| 0.1666 (logit range 32.3) cos 0.9999344; top-2 margin GPU 3.620 CPU 3.621
+  step  2 ( 1 tok, 2.6 s): GPU   2564 CPU   2564 agree    logits max|d| 0.1453 (logit range 30.5) cos 0.9998868; top-2 margin GPU 0.424 CPU 0.390
+  step  3 ( 1 tok, 2.6 s): GPU    220 CPU    220 agree    logits max|d| 0.1395 (logit range 33.3) cos 0.9999575; top-2 margin GPU 4.595 CPU 4.606
+  step  4 ( 1 tok, 2.6 s): GPU     16 CPU     16 agree    logits max|d| 0.1578 (logit range 33.6) cos 0.9998812; top-2 margin GPU 0.235 CPU 0.320
   step  5 ( 1 tok, 2.7 s): GPU     25 CPU     25 agree    logits max|d| 0.1813 (logit range 35.7) cos 0.9999047; top-2 margin GPU 4.676 CPU 4.659
-  step  6 ( 1 tok, 2.7 s): GPU    198 CPU    198 agree    logits max|d| 0.1444 (logit range 33.7) cos 0.9999244; top-2 margin GPU 3.157 CPU 3.154
-  step  7 ( 1 tok, 2.7 s): GPU    260 CPU    260 agree    logits max|d| 0.1312 (logit range 31.6) cos 0.9999009; top-2 margin GPU 1.937 CPU 1.970
+  step  6 ( 1 tok, 2.6 s): GPU    198 CPU    198 agree    logits max|d| 0.1444 (logit range 33.7) cos 0.9999244; top-2 margin GPU 3.157 CPU 3.154
+  step  7 ( 1 tok, 2.6 s): GPU    260 CPU    260 agree    logits max|d| 0.1312 (logit range 31.6) cos 0.9999009; top-2 margin GPU 1.937 CPU 1.970
   greedy: 8 of 8 tokens agree; first divergence none
 
 == prompt moon-landing: ids [623 220 16 24 21 24 11 279 1118 12313 25286 383 279 16820 13 561 8684 557 2512], GPU greedy tokens [279 33986 220 16 16 8684 13 561]
-  step  0 (19 tok, 35.8 s): GPU    279 CPU    279 agree    logits max|d| 0.2284 (logit range 29.7) cos 0.9999733; top-2 margin GPU 1.921 CPU 1.869
-  step  1 ( 1 tok, 2.7 s): GPU  33986 CPU  33986 agree    logits max|d| 0.2002 (logit range 28.8) cos 0.9999763; top-2 margin GPU 1.286 CPU 1.287
-  step  2 ( 1 tok, 2.8 s): GPU    220 CPU    220 agree    logits max|d| 0.2044 (logit range 35.5) cos 0.9999740; top-2 margin GPU 2.239 CPU 2.242
-  step  3 ( 1 tok, 2.7 s): GPU     16 CPU     16 agree    logits max|d| 0.1838 (logit range 35.8) cos 0.9998414; top-2 margin GPU 3.546 CPU 3.519
+  step  0 (19 tok, 34.4 s): GPU    279 CPU    279 agree    logits max|d| 0.2284 (logit range 29.7) cos 0.9999733; top-2 margin GPU 1.921 CPU 1.869
+  step  1 ( 1 tok, 2.6 s): GPU  33986 CPU  33986 agree    logits max|d| 0.2002 (logit range 28.8) cos 0.9999763; top-2 margin GPU 1.286 CPU 1.287
+  step  2 ( 1 tok, 2.7 s): GPU    220 CPU    220 agree    logits max|d| 0.2044 (logit range 35.5) cos 0.9999740; top-2 margin GPU 2.239 CPU 2.242
+  step  3 ( 1 tok, 2.6 s): GPU     16 CPU     16 agree    logits max|d| 0.1838 (logit range 35.8) cos 0.9998414; top-2 margin GPU 3.546 CPU 3.519
   step  4 ( 1 tok, 2.7 s): GPU     16 CPU     16 agree    logits max|d| 0.2050 (logit range 33.3) cos 0.9999586; top-2 margin GPU 3.656 CPU 3.569
-  step  5 ( 1 tok, 2.7 s): GPU   8684 CPU   8684 agree    logits max|d| 0.2335 (logit range 34.1) cos 0.9999706; top-2 margin GPU 1.098 CPU 1.055
-  step  6 ( 1 tok, 2.7 s): GPU     13 CPU     13 agree    logits max|d| 0.1549 (logit range 32.8) cos 0.9999550; top-2 margin GPU 0.694 CPU 0.698
-  step  7 ( 1 tok, 2.7 s): GPU    561 CPU    561 agree    logits max|d| 0.1410 (logit range 28.6) cos 0.9999659; top-2 margin GPU 0.533 CPU 0.507
+  step  5 ( 1 tok, 2.6 s): GPU   8684 CPU   8684 agree    logits max|d| 0.2335 (logit range 34.1) cos 0.9999706; top-2 margin GPU 1.098 CPU 1.055
+  step  6 ( 1 tok, 2.6 s): GPU     13 CPU     13 agree    logits max|d| 0.1549 (logit range 32.8) cos 0.9999550; top-2 margin GPU 0.694 CPU 0.698
+  step  7 ( 1 tok, 3.4 s): GPU    561 CPU    561 agree    logits max|d| 0.1410 (logit range 28.6) cos 0.9999659; top-2 margin GPU 0.533 CPU 0.507
   greedy: 8 of 8 tokens agree; first divergence none
 
 == summary: 24 of 24 greedy tokens agree across 3 prompts; worst step-0 logits max|d| 0.2284

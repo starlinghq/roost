@@ -43,30 +43,18 @@ public static class ProbeState
     [ThreadStatic]
     private static Recorder? s_recorder;
 
-    [ThreadStatic]
-    private static bool s_keepWindowZero;
-
     /// <summary>The recorder of the calling thread, or null.</summary>
     public static Recorder? Recorder
     {
         get => s_recorder;
         set => s_recorder = value;
     }
-
-    /// <summary>Whether to leave the generated <c>WindowLeft = 0</c> alone (reproduces CpuOps' self-only attention).</summary>
-    public static bool KeepWindowZero
-    {
-        get => s_keepWindowZero;
-        set => s_keepWindowZero = value;
-    }
 }
 
 /// <summary>
 /// A pass-through backend for the GPU/CPU comparison. It forwards every op to <typeparamref name="TInner"/> and, when a
-/// <see cref="Recorder"/> is set on the thread, records each op's output after it ran. It also works around one defect of
-/// the generated forward: the generated PagedAttention arguments leave <c>WindowLeft</c> at 0, which means "a window of
-/// zero" to CpuOps and to the GPU kernel (the kernel refuses it) and "no window" to nobody; the model has none, so the
-/// wrapper passes -1. See the R-025 report.
+/// <see cref="Recorder"/> is set on the thread, records each op's output after it ran. It changes no argument: the generated forward binds
+/// <c>WindowLeft = -1</c> itself since R-035 (R-025 recheck).
 /// </summary>
 /// <typeparam name="TInner">The backend.</typeparam>
 public readonly struct Probe<TInner> : IRoostOps
@@ -101,13 +89,7 @@ public readonly struct Probe<TInner> : IRoostOps
     /// <inheritdoc/>
     public static void PagedAttention(in PagedAttentionArgs a)
     {
-        var b = a;
-        if (!ProbeState.KeepWindowZero && b.WindowLeft == 0)
-        {
-            b.WindowLeft = -1;
-        }
-
-        TInner.PagedAttention(in b);
+        TInner.PagedAttention(in a);
         ProbeState.Recorder?.Add("PagedAttention", "out", a.Output, (long)a.Tokens * a.QHeads * a.HeadDim);
     }
 
