@@ -48,8 +48,27 @@ up to 16 (4 for Qwen3.5), bf16 activations and float32 recurrent state; anything
 - **Workspace.** `workspace` gives the device bytes (`plan_bytes` 16 and `pinned_host_bytes` for the chunk tables on the
   chunk variant), bounded by shape only (chunks at most `tokens / 64 + batch`). The caller keeps the pinned buffer alive
   until the copy `plan()` queues has run. Nothing allocates inside a call; cubins load when the context is created.
-- **Slots.** Slot indices are device data and are not range-checked. A sequence of zero tokens (or a negative slot) leaves
-  its slot untouched, as `CpuOps` does.
+- **Slots.** Slot indices are device data and are not range-checked. A sequence of zero tokens leaves its slot untouched,
+  as `CpuOps` does. A negative slot on a sequence with tokens is outside the contract (`CpuOps` throws
+  `ArgumentException`); the library does not fault on it: that sequence starts from a zero state (the dense initial state
+  is zeroed before the gather, so `use_initial_state` makes no difference) and its final state is not written back.
+  The harness checks this (`gdn/negative-slot/*`), so the DETERMINISTIC flag holds for that input too.
+- **Limits.** `CausalConv1d` takes up to 2^31 - 1 tokens or sequences and up to 8,388,480 channels in one call (tokens and
+  sequences ride on grid x; channel blocks on y, which is capped at 65535 blocks of 128); beyond that it returns
+  `ROOST_STATUS_INVALID_ARGUMENT`. `GatedDeltaRule` takes up to 2^24 tokens and 2^20 sequences (sequences ride on grid x
+  in the state gather and scatter). The harness runs a 70000-token conv sequence.
+- **Graph capture.** The `GRAPH_CAPTURABLE` ops (recurrent GatedDeltaRule, CausalConv1d and the two state ops) are
+  captured into a CUDA graph and replayed once by the harness (`graph/*` checks: the same cases as the direct runs, with
+  `run()` captured by `cudaStreamBeginCapture` and launched through `cudaGraphLaunch`). Replaying a graph many times
+  while the caller changes the device inputs between replays is not exercised.
+- **Digest reproducibility.** The manifest digests of the AOT libraries were reproduced byte for byte only at the recorded
+  checkout path (two builds there are identical; the six SMs' no-AOT builds are identical across two builds in CI). A
+  reviewer's AOT build of SM 86 from another checkout path gave `5ebfa478...` against the recorded `d48830e9...`, a
+  12-byte difference in every nvcc-compiled object (R-016's `residual.cu.o` too), while the generated C++ and all 7 Triton
+  cubins were identical and equal S3's capture. So the "also from different checkout paths" claim in the next section is
+  not established for the AOT library, and a third party cannot reproduce the manifest digests from another path. The
+  cause is not found (the object file's `tmpxft_<pid>` FILE symbol varies per process and is one candidate). Fixing it is
+  a build-system change shared with R-016, and the digest policy is the maintainer's, so it is deferred.
 - **Params of CausalConv1d and the state ops** are not in `roost_kernels.h` (contract C1, stream A). They are declared in
   `src/ops/hybrid_params.h`, mirroring the C3 argument structs, until a stream A contract-change PR lifts them into the
   header (ABI 1.2) with their C# mirrors. No loader can call these three ops before that.
@@ -85,7 +104,7 @@ an upstream yet, so the stub builds without it).
 
 ## Reproducibility and digests
 
-Builds of the same sources are byte-identical per SM, also from different checkout paths (checked for all six SMs at two
+Builds of the same sources are byte-identical per SM at one checkout path (R-016 also checked two paths for the stub; R-034 found the AOT library differs at another path, see Hybrid ops) (checked for all six SMs at two
 paths with CUDA 13.3.73 and gcc 16.2.1; the CI job also compares two builds per SM). That needs no line info (it records
 source mtimes), no build id, no local symbols (nvcc names them after the process id) and no anonymous namespace in a `.cu`
 file: nvcc derives that namespace's symbol hash from the source path, so kernels live in a named namespace. This is

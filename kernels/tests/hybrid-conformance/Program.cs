@@ -2,11 +2,11 @@ using System.Runtime.InteropServices;
 using Roost.HybridConformance;
 
 // R-034 conformance of the hybrid GPU ops against CpuOps (R-018).
-//   Roost.HybridConformance <libroost_kernels_sm*.so> [--only state|gdn] [--log file]
+//   Roost.HybridConformance <libroost_kernels_sm*.so> [--only state|gdn|graph] [--log file]
 // Run through tools/gpu-lease (the lease sets CUDA_VISIBLE_DEVICES, so the device is ordinal 0).
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: Roost.HybridConformance <library> [--only state|gdn] [--log file]");
+    Console.Error.WriteLine("usage: Roost.HybridConformance <library> [--only state|gdn|graph] [--log file]");
     return 2;
 }
 
@@ -29,6 +29,17 @@ try
     if (only is null or "gdn")
     {
         GdnCases.Run(lib, report, stream);
+    }
+
+    // GRAPH_CAPTURABLE ops: the same cases with run() captured into a CUDA graph and replayed once.
+    if (only is null or "graph")
+    {
+        lib.GraphMode = true;
+        report.Prefix = "graph/";
+        StateCases.Run(lib, report, stream);
+        GdnCases.RunGraph(lib, report, stream);
+        lib.GraphMode = false;
+        report.Prefix = "";
     }
 }
 finally

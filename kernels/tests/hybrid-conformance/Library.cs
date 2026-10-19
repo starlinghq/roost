@@ -128,9 +128,23 @@ internal sealed unsafe class Library : IDisposable
         }
     }
 
+    /// <summary>When set, Run captures the call into a CUDA graph and replays it once instead of launching directly.</summary>
+    public bool GraphMode { get; set; }
+
     public void Run<T>(in OpEntry e, in T p, Workspace* ws, nint stream)
-        where T : unmanaged =>
-        Throw(RunRaw(e, p, ws, stream), "run");
+        where T : unmanaged
+    {
+        if (!GraphMode)
+        {
+            Throw(RunRaw(e, p, ws, stream), "run");
+            return;
+        }
+
+        var entry = e;
+        var pp = p;
+        var w = ws;
+        Throw(Cuda.RunGraphed(stream, () => RunRaw(entry, pp, w, stream)), "run (graph capture)");
+    }
 
     public void Plan<T>(in OpEntry e, in T p, Workspace* ws, nint stream)
         where T : unmanaged =>

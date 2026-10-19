@@ -5,6 +5,9 @@ internal sealed class Report
 {
     private readonly List<string> _lines = [];
 
+    /// <summary>Put in front of every check name; set to run the same cases in another mode.</summary>
+    public string Prefix { get; set; } = "";
+
     public int Failures { get; private set; }
 
     public int Checks { get; private set; }
@@ -23,7 +26,7 @@ internal sealed class Report
             Failures++;
         }
 
-        Line($"{(ok ? "PASS" : "FAIL")} {name}: {detail}");
+        Line($"{(ok ? "PASS" : "FAIL")} {Prefix}{name}: {detail}");
     }
 
     public void Save(string? path)
