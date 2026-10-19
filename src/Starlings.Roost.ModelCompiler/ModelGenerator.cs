@@ -165,7 +165,7 @@ public sealed class ModelGenerator : IIncrementalGenerator
                     dims.Add(new DimSpec(Arg(0), Arg(1), loc));
                     break;
                 case Attributes.Weight:
-                    weights.Add(new WeightSpec(Arg(0), Arg(1), NamedOrNull("Dtype"), NamedOrNull("Source"), NamedOrNull("Layers"), loc));
+                    weights.Add(new WeightSpec(Arg(0), Arg(1), NamedOrNull("Dtype"), NamedOrNull("Source"), NamedOrNull("Layers"), loc, attr.NamedArguments.Any(k => k.Key == "Reserved" && k.Value.Value is true)));
                     break;
                 case Attributes.StateGroup:
                     groups.Add(new GroupSpec(
