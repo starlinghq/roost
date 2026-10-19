@@ -10,8 +10,9 @@ public class ManifestAndNamesTests
     public void RepositoryManifestParsesWithTheFieldsTheLoaderReads()
     {
         var m = TestManifest.Repository();
-        Assert.Equal(1, m.AbiMajor);
-        Assert.Equal(0, m.AbiMinor);
+        // The repository manifest tracks the header the library is built against (R-017 moved it to 1.1).
+        Assert.Equal(KernelAbi.Major, m.AbiMajor);
+        Assert.Equal(KernelAbi.Minor, m.AbiMinor);
         Assert.Equal("13.3", m.Cuda);
         Assert.Equal(13, m.CudaMajor);
         Assert.Contains(m.Sms, s => s is { Arch: 86, Status: SmStatus.Experimental });
