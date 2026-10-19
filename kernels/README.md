@@ -84,12 +84,13 @@ Findings that changed the design (all in `results/r017-ops-sm86.log` or reproduc
 
 - **FlashInfer's Rope is not accurate enough.** It forms `pos * freq` in fp32 and calls the `__sincosf` intrinsic, which does no range reduction.
   Against `CpuOps` its error grew with the position: 1.6e-2 absolute on outputs of RMS 1 (several bf16 ulps) for positions below 4096 and
-  7.8e-2 for positions up to 2^18, in a first run of these tests (not kept in the log; the cause is in `pos_enc.cuh`: `__sincosf` and
+  7.8e-2 for positions up to 2^18, in a first run of these tests (the FAIL lines are excerpted unedited in `results/r017-rejected-configs-sm86.log`; the
+  full log was never committed and the harness has no flag that reruns the rejected kernel; the cause is in `pos_enc.cuh`: `__sincosf` and
   `__powf`). `rope-roost` forms frequency and angle in double, reduces the angle modulo 2 pi in double and calls `sincosf` on the reduced
   angle; with it the same cases, up to positions of 2^31 - 1, stay inside the elementwise tolerance below (largest utilisation 0.44).
 - **cuBLASLt's default split-K reduction loses fp32 accumulation with a 16-bit output.** With the default reduction schemes, split-K plans kept
   partial sums in the output type and showed errors of 1.6e-2 to 3.1e-2 absolute on outputs of RMS 1 against `CpuOps` (about 4 bf16 ulps; the
-  failing cases were the shapes whose plan chose split-K, 8 and 9 ways, in a first run that is not kept). The plan now allows only
+  failing cases were the shapes whose plan chose split-K, 8 and 9 ways, in a first run). **These split-K figures have no committed or local log and are unreproduced**: treat them as the implementer's observation, not evidence. The plan now allows only
   `CUBLASLT_REDUCTION_SCHEME_COMPUTE_TYPE`, which keeps fp32 partial sums and is deterministic.
 - **FlashInfer attention at head_dim 256** builds for SM 86 with the unmodified headers (prefill chooses CTA tiles of 16 or 64 rows; 128 never
   occurs at this head size). Decode, prefill, chunked prefill over an existing cache, multi-sequence batches, non-causal prefill and split-KV
@@ -112,7 +113,9 @@ a fraction of the reference's RMS (of max |V| for attention). Utilisation is the
 
 The attention bound comes from FlashInfer rounding the softmax weights to bf16 before the PV product: each output carries up to
 2^-8 * sum(p |v|) <= 2^-8 * max|V| whatever its own size. A first proposal of 2^-6 relative to the output RMS failed two of 1.4M elements
-of long prefills (1.56e-2 absolute at |V| up to about 4.5) and was replaced by this one; no kernel changed.
+of long prefills (1.56e-2 absolute at |V| up to about 4.5) and was replaced by this one; no kernel changed. **The criterion was changed after the code failed it**: the failing lines are in
+`results/r017-rejected-configs-sm86.log` (utilisation 1.16 and 1.10 under the first criterion, 0.45 and 0.40 under the new one, same 1.56e-2 error). It is a
+proposal for a maintainer to read (plan section 9), not a validated bound.
 
 ### Signal death during R-017
 
@@ -127,11 +130,13 @@ may or may not be the reason). Until it passes, no R-017 variant claims `graph_c
 
 ## Reproducibility and digests
 
-Builds of the same sources are byte-identical per SM, also from different checkout paths (checked for all six SMs at two
-paths with CUDA 13.3.73 and gcc 16.2.1; the CI job also compares two builds per SM). That needs no line info (it records
-source mtimes), no build id, no local symbols (nvcc names them after the process id) and no anonymous namespace in a `.cu`
-file: nvcc derives that namespace's symbol hash from the source path, so kernels live in a named namespace. This is
-verified on one toolchain only; the digest still depends on the toolchain, so another nvcc or gcc gives other digests.
+Builds are byte-identical per SM when made from the same checkout path (the same path twice; the CI job compares two builds per SM at one path).
+They are **not** path independent: a review build of this branch from another checkout gave sha256 14856fad... for SM 86 against 0f707ae0... in the
+manifest. Sizes are equal and all 576 differing bytes are nvcc `_INTERNAL_<hash>_<file>_cu_...` symbol names, whose hash derives from the source
+path (they come from `cuda::std` entities in the headers, so a named namespace in our sources does not remove them). The earlier statement that two
+paths agree was wrong for this tree. The manifest digests are reproducible only from `/home/mark/Projects/roost-wave4/R-017`; making the build path
+independent (for example a fixed build path in CI) is open. Linking needs no line info (it records source mtimes), no build id and no local symbols
+(nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
 The manifest's six digests are the development host's, one build each, and only SM 86 has run on hardware. The CI job
 reports, and does not fail on, a difference from them; the release workflow (R-060) records the digests of the pinned
 container build and publishes the libraries.

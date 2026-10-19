@@ -101,9 +101,10 @@ layouts = ["row_major"]
 min_alignment = 4
 
 # Digests of the per-SM libraries (libroost_kernels_sm<N>.so). Written by kernels/tools/record_digests.py; do not
-# edit by hand. All six entries are from the development host (CUDA 13.3.73, gcc 16.2.1), built twice per SM with identical bytes
+# edit by hand. All six entries are from the development host (CUDA 13.3.73, gcc 16.2.1), built twice per SM at one checkout path with identical bytes
 # (kernels/ci/build-all-sm.sh); only SM 86 has run on hardware. One library per SM holds every variant, so every variant's block lists
-# the same file. They do not depend on the source checkout path (checked at two paths). The release workflow (R-060) replaces
+# the same file. They DEPEND on the source checkout path (nvcc hashes it into _INTERNAL_ symbol names; a build from another path gives
+# another digest, e.g. SM 86: 14856fad... vs 0f707ae0...), so they reproduce only from the development checkout path. The release workflow (R-060) replaces
 # these with the digests of the pinned CI container build and publishes the files as release assets.
 # BEGIN binaries residual-stub
 [[ops.variants.binaries]]
