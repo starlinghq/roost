@@ -178,6 +178,15 @@ public class GeneratorDiagnosticsTests
     }
 
     [Fact]
+    public void AReservedWeightNothingReadsGetsNoWarningButStillHasASlot()
+    {
+        var r = Run(Model("[Weight(\"orphan\", \"d\", Reserved = true)]"));
+        Assert.DoesNotContain(r.Generator, d => d.Id == "ROOST014");
+        Assert.Contains(r.Sources, s => s.Contains("\"orphan\"", StringComparison.Ordinal));
+        Assert.Empty(r.Compile.Where(d => d.Severity >= DiagnosticSeverity.Warning));
+    }
+
+    [Fact]
     public void AWeightNothingReadsIsAWarningAndStillGenerates()
     {
         var r = Run(Model("[Weight(\"orphan\", \"d\")]"));
