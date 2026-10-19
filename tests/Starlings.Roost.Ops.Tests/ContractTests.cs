@@ -21,7 +21,9 @@ public sealed class ContractTests
     {
         foreach (OpId op in Enum.GetValues<OpId>().Where(o => o != OpId.None))
         {
-            bool expected = OpCatalog.IsM0(op) || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot;
+            bool expected = OpCatalog.IsM0(op)
+                || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
+                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul;
             Assert.Equal(expected, Reports<CpuOps>(op));
         }
 
