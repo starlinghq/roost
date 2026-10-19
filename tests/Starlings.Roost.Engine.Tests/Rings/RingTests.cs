@@ -14,7 +14,9 @@ public sealed class RingTests : IDisposable
         _segment = RingSegment.Create(_path, new SegmentOptions { PlanSlotCount = 8, ResultSlotCount = 8 });
     }
 
-    public void Dispose() => _segment.Dispose();
+    // Close stops and joins every poller the test made with CreatePoller before it unmaps; false means one is still
+    // running and the view was kept mapped, which is a test failure, not a crash.
+    public void Dispose() => Assert.True(_segment.Close(TimeSpan.FromSeconds(30)), "a poller did not stop; the segment was left mapped");
 
     [Fact]
     public void PlanRingHoldsAtMostTheBufferCountUntilTheWorkerReleases()
@@ -103,10 +105,12 @@ public sealed class RingTests : IDisposable
         string? workerFailure = null;
         var done = 0;
 
-        // The worker is a PollingThread: take a plan, check it, publish a result, release the plan.
-        var workerLoop = new PollingThread("test-worker", () =>
+        // The worker is a PollingThread over the segment: take a plan, check it, publish a result, release the plan.
+        // It takes a plan only when a result slot is free, so a poll never waits inside itself and a stop request is
+        // seen between polls even if the host stops releasing results.
+        using var workerLoop = _segment.CreatePoller("test-worker", () =>
         {
-            if (done >= steps || !worker.TryTakePlan(out var slot))
+            if (done >= steps || !worker.CanPublishResult() || !worker.TryTakePlan(out var slot))
             {
                 return false;
             }
@@ -115,11 +119,6 @@ public sealed class RingTests : IDisposable
             if (slot.StepId != Stress.StressProtocol.FirstStepId + (ulong)done || failure is not null)
             {
                 workerFailure ??= failure ?? $"step {slot.StepId} at position {done}";
-            }
-
-            while (!worker.CanPublishResult())
-            {
-                Thread.SpinWait(10);
             }
 
             Stress.StressProtocol.FillResult(worker.ResultBuffer(worker.NextResultBufferIndex), slot.StepId);
@@ -159,7 +158,7 @@ public sealed class RingTests : IDisposable
             }
         }
 
-        workerLoop.Dispose();
+        Assert.True(workerLoop.Stop(TimeSpan.FromSeconds(30)));
         Assert.Null(workerLoop.Fault);
         Assert.Null(workerFailure);
     }
