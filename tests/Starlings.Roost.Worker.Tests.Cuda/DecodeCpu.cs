@@ -12,7 +12,7 @@ using Starlings.Roost.Worker.Weights;
 // R-025 CPU phase: replays the GPU phase's prompts on CpuOps (double precision) through the same generated forward,
 // teacher-forced with the GPU's tokens so every step is compared on the same inputs, and writes a text report: greedy
 // agreement, step-0 and per-step logits differences, and per-op max-abs differences for the traced steps.
-//   usage: cpu --ckpt <dir> --lock <lock.toml> --dump <dump> --report <text file> [--keep-window-zero]
+//   usage: cpu --ckpt <dir> --lock <lock.toml> --dump <dump> --report <text file> [--keep-window-zero] [--only <prompt index>] [--max-steps N]
 internal static unsafe class DecodeCpu
 {
     private const string Weights = "model.safetensors-00001-of-00001.safetensors";
@@ -46,13 +46,21 @@ internal static unsafe class DecodeCpu
         var perOp = new Dictionary<string, Agg>();
         var layerRows = new List<(int Step, int Layer, double MaxAbs, double Scale, double Cos)>();
         var stateRows = new List<(int Step, int Layer, string What, double MaxAbs, double Scale)>();
-        foreach (var gpu in dump.Prompts)
+        int only = args.Contains("--only") ? int.Parse(Opt("--only"), CultureInfo.InvariantCulture) : -1;
+        int maxSteps = args.Contains("--max-steps") ? int.Parse(Opt("--max-steps"), CultureInfo.InvariantCulture) : int.MaxValue;
+        for (int promptIndex = 0; promptIndex < dump.Prompts.Count; promptIndex++)
         {
+            if (only >= 0 && promptIndex != only)
+            {
+                continue;
+            }
+
+            var gpu = dump.Prompts[promptIndex];
             Line($"== prompt {gpu.Name}: ids [{string.Join(' ', gpu.Ids)}], GPU greedy tokens [{string.Join(' ', gpu.Tokens)}]");
             using var run = new HostRun(model, layout, weights, MaxTokens);
             var cpuTokens = new List<int>();
             int firstDivergence = -1;
-            for (int step = 0; step < gpu.Tokens.Length; step++)
+            for (int step = 0; step < Math.Min(gpu.Tokens.Length, maxSteps); step++)
             {
                 int[] stepTokens = step == 0 ? gpu.Ids : [gpu.Tokens[step - 1]]; // teacher forcing: the GPU's token
                 int offset = step == 0 ? 0 : gpu.Ids.Length + step - 1;
@@ -99,7 +107,7 @@ internal static unsafe class DecodeCpu
                 }
             }
 
-            Line($"  greedy: {gpu.Tokens.Zip(cpuTokens).Count(static p => p.First == p.Second)} of {gpu.Tokens.Length} tokens agree; first divergence {(firstDivergence < 0 ? "none" : firstDivergence.ToString(CultureInfo.InvariantCulture))}");
+            Line($"  greedy: {gpu.Tokens.Zip(cpuTokens).Count(static p => p.First == p.Second)} of {cpuTokens.Count} tokens agree; first divergence {(firstDivergence < 0 ? "none" : firstDivergence.ToString(CultureInfo.InvariantCulture))}");
             Line();
         }
 
