@@ -153,7 +153,8 @@ leases on device 3090. Suite commit `b18d0da`; base seed 20261019.
   bias together: `fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket49` (utilisation 1.09, 3 of 9984 elements),
   `fixed-epilogue-…-ab0.5.1-bucket49` (1.10, 1), `random-2-BF16-39x856x832-…-bucket49` (1.95, 23 of 33384),
   `random-6-BF16-53x856x1152-…-bucket0` (1.48, 16 of 45368), `random-10-BF16-27x288x544-tb0-…-bucket0` (1.31, 1 of 7776). The f16
-  versions of the fixed cases and the fixed bf16 cases with alpha, bias or C alone pass. The error is 1 to 4 bf16 ulp of the
+  versions of the fixed cases and the fixed bf16 cases with alpha, bias or C alone pass. The same inputs, `fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1`, pass at bucket 0 and fail at bucket 49 (two random cases of other shapes fail at bucket 0), which points at the
+  algorithm the plan pins for a shape (`kernels/src/gemm.cu`) more than at the epilogue formula. The error is 1 to 4 bf16 ulp of the
   result with partial sums of several units, which fits a rounding to the 16-bit output type between the C and bias parts of the
   epilogue; that was not confirmed. Reproduce: `--ops Gemm --case fixed-epilogue`. The kernel and the tolerance are not mine to
   change: the options are a kernel fix, or a maintainer-approved class for that epilogue.
