@@ -46,6 +46,12 @@ public static partial class TinyDense { }
   `s:group.l3.role` for a named one: roles `k`, `v`, `state`, `conv`) or a plan input (`p:Ids`). Scalar fields take an
   integer expression (over dims and the step symbols `tokens`, `selected`, `seqs`, `kv_blocks`), a float, `true` or
   `false`, or an enum member name.
+* **Views**: a buffer field read from a node output can take a column slice of it, `Q=l{i}.c[0:key_dim]` (`[start:end]`,
+  integer expressions over the dims, end excluded; the value is token-major with a fixed last dimension of at least `end`).
+  The field's span starts at column `start` and runs to the end of the value; the row stride is not inferred, so the node also
+  binds the stride scalars (`QStride=conv_dim`). Qwen3.5's fused q/k/v projection is convolved once and read by
+  `GatedDeltaRule` as three views of the convolution output. The graph keeps the parent value as the node's input and records the
+  slice as `view.FIELD` (below). A view of a weight, a state slot or a plan input, or combined with `=>`, is ROOST004.
 * **Filled for you**: a buffer field a node leaves unbound and whose name is `Ids`, `Positions`, `SlotMapping`, `QIndptr`,
   `KvIndptr`, `KvIndices`, `KvLastPageLength`, `Rows`, `StateSlots` or `CuSeqlens` reads the step's plan input of that name;
   a `DType` field gets the model dtype; `KvDType` gets the dtype of the state slot bound in the node. Other unbound
@@ -74,7 +80,9 @@ out per token of capacity, so offsets scale with `ForwardLayout.CapacityTokens`.
 Everything the lowering needs is in the graph, so the output of a pass can be lowered or evaluated the same way.
 `OpNode.Attributes` holds `in` and `out` (comma-separated argument-field names, one per `Inputs` and `Outputs` position;
 a field in both is in place), `arg.FIELD` (a scalar argument, with dims folded into integer expressions), `node` (the
-definition's node name) and `layer`. Value ids index `OpGraph.Values`: weight slots first, then state slots, then plan
+definition's node name) and `layer`. `view.FIELD` (`start:end`, a column view of that input; element offset `start` of the value, the same value id as the
+other fields that view it).
+Value ids index `OpGraph.Values`: weight slots first, then state slots, then plan
 inputs and activations in order of first use. Plan inputs are `ValueKind.Input` named `plan.<Field>`; state slots are
 `ValueKind.State` with a leading `blocks` or `slots` dimension.
 
@@ -104,7 +112,7 @@ evaluator over the node attributes above.
 | ROOST011 | A state group is invalid |
 | ROOST012 | A fused op has no known unfused form |
 | ROOST013 | A contract type the generated code needs is not referenced |
-| ROOST014 | (warning) A weight slot is never read |
+| ROOST014 | (warning) A weight slot is never read; `[Weight(..., Reserved = true)]` marks a slot loaded for a node that cannot be written yet |
 
 A node whose op or arguments fail is reported once; nodes that read its outputs are not reported again.
 
@@ -112,11 +120,8 @@ A node whose op or arguments fail is reported once; nodes that read its outputs 
 
 * The forward is unrolled: 24 layers of a Qwen3.5-shaped model are about 6 200 generated lines in one method. Loop
   emission over a per-layer weight table is not built (S4 "first thing to try").
-* There is no view binding: a node binds a whole value to a buffer field, so it cannot yet read a slice of a value.
-  Since contract version 2, `GatedDeltaRuleArgs` takes row-strided q, k and v (`QStride`, `KStride`, `VStride`, bindable
-  as scalars; 0 means contiguous), so Qwen3.5's fused q/k/v conv output can be read in place once a definition can bind
-  a column slice (for example `Q=l{i}.c[0:key_dim]`); until then a definition needs separate projections where a
-  checkpoint fuses them.
+* A view is a column slice of one value's last dimension and nothing else (no row slices, no reshape), and the stride
+  scalars of an op that takes them are the definition's to bind (nothing checks that `QStride` matches the viewed value's width).
 * Only `AddRmsNorm` has an unfused form in the lowering; other fused ops come from passes (stream L).
 * Plan-input auto-fill goes by field name, so an unbound `Ids` span is the token-id input for every op that has one. For
   `Argmax` and `Sample`, `Ids` is an output; bind it explicitly if a definition ever includes them (the forward ends at
