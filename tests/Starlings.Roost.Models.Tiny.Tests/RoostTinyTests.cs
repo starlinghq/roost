@@ -24,8 +24,8 @@ public sealed class RoostTinyTests : IDisposable
             worst = Math.Max(worst, Math.Abs(got[i] - want[i]) / (1 + Math.Abs(want[i])));
         }
 
-        Assert.True(worst < Tolerances.DenseReference, $"{what}: worst scaled difference {worst}");
         TestContext.Current.SendDiagnosticMessage($"MEASURED reference dense {what}: worst scaled {worst:E3}");
+        Assert.True(worst < Tolerances.DenseReference, $"{what}: worst scaled difference {worst}");
     }
 
     [Fact]

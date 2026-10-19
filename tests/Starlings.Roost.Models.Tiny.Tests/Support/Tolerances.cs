@@ -30,6 +30,9 @@ public static class Tolerances
     /// <summary>Smallest gap between the top two reference logits for a greedy step not to count as a near-tie.</summary>
     public const double GreedyMargin = 1e-3;
 
+    /// <summary>The same for roost-tiny-hybrid, whose bfloat16 logits can move by about 0.5 when a rounding tie flips; the pinned run has a smallest gap of 0.74.</summary>
+    public const double HybridGreedyMargin = 0.5;
+
     public static double Worst(double[] want, float[] got)
     {
         Assert.Equal(want.Length, got.Length);
