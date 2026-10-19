@@ -125,10 +125,255 @@ sha256 = "c9db863fdb577500c8192065f91218a93cf48eb8f3c06e0a0e87f5d2e00cfa4a"
 bytes = 52184
 # END binaries residual-stub
 
+# R-034: the hybrid ops of Qwen3.5-0.8B (decision 15). CausalConv1d and the recurrent state ops are plain CUDA C++ (S3 did
+# not cover them); GatedDeltaRule is the S3 Triton AOT path, in two variants: chunked prefill (needs plan()) and the fused
+# recurrent kernel (decode and short continuations; graph capturable). The digests are of the same per-SM library as the
+# Residual stub's, recorded from the development host's AOT build (CUDA 13.3.73, gcc 16.2.1, the [triton_aot] closure below).
+# They are recorded for the new variants only; the Residual stub's block above predates these ops and must be re-recorded
+# (kernels/tools/record_digests.py --write) when the branches that add ops are merged.
+[[ops]]
+op = "CausalConv1d"
+
+[[ops.variants]]
+id = "causal-conv1d-cuda"
+source = "roost"
+flags = ["graph_capturable", "deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16", "f32"]
+layouts = ["row_major"]
+min_alignment = 4
+
+# BEGIN binaries causal-conv1d-cuda
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+bytes = 884040
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+bytes = 867656
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
+bytes = 1080648
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
+bytes = 1076552
+# END binaries causal-conv1d-cuda
+
+[[ops]]
+op = "RecurrentStateCopy"
+
+[[ops.variants]]
+id = "recurrent-state-copy-cuda"
+source = "roost"
+flags = ["graph_capturable", "deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+layouts = ["row_major"]
+min_alignment = 1
+
+# BEGIN binaries recurrent-state-copy-cuda
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+bytes = 884040
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+bytes = 867656
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
+bytes = 1080648
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
+bytes = 1076552
+# END binaries recurrent-state-copy-cuda
+
+[[ops]]
+op = "RecurrentStateSnapshot"
+
+[[ops.variants]]
+id = "recurrent-state-snapshot-cuda"
+source = "roost"
+flags = ["graph_capturable", "deterministic", "batch_invariant"]
+
+[ops.variants.constraints]
+sm_min = 80
+layouts = ["row_major"]
+min_alignment = 1
+
+# BEGIN binaries recurrent-state-snapshot-cuda
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+bytes = 884040
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+bytes = 867656
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
+bytes = 1080648
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
+bytes = 1076552
+# END binaries recurrent-state-snapshot-cuda
+
+[[ops]]
+op = "GatedDeltaRule"
+
+[[ops.variants]]
+id = "gated-delta-rule-chunk-aot"
+source = "flash-linear-attention"
+flags = ["deterministic", "batch_invariant", "needs_plan"]
+triton_kernels = [
+  "chunk_local_cumsum_scalar_kernel",
+  "chunk_gated_delta_rule_fwd_kkt_solve_kernel",
+  "recompute_w_u_fwd_kernel",
+  "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+  "chunk_fwd_kernel_o",
+]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16"]
+head_dims = [128]
+group_sizes = [1]
+layouts = ["row_major"]
+min_alignment = 16
+
+# BEGIN binaries gated-delta-rule-chunk-aot
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+bytes = 884040
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+bytes = 867656
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
+bytes = 1080648
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
+bytes = 1076552
+# END binaries gated-delta-rule-chunk-aot
+
+[[ops.variants]]
+id = "gated-delta-rule-recurrent-aot"
+source = "flash-linear-attention"
+flags = ["graph_capturable", "deterministic", "batch_invariant"]
+triton_kernels = ["fused_recurrent_gated_delta_rule_fwd_kernel"]
+
+[ops.variants.constraints]
+sm_min = 80
+act_dtypes = ["bf16"]
+head_dims = [128]
+group_sizes = [1]
+layouts = ["row_major"]
+min_alignment = 16
+
+# BEGIN binaries gated-delta-rule-recurrent-aot
+[[ops.variants.binaries]]
+arch = 80
+sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+bytes = 884040
+
+[[ops.variants.binaries]]
+arch = 86
+sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 89
+sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+bytes = 867656
+
+[[ops.variants.binaries]]
+arch = 90
+sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+bytes = 871752
+
+[[ops.variants.binaries]]
+arch = 100
+sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
+bytes = 1080648
+
+[[ops.variants.binaries]]
+arch = 120
+sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
+bytes = 1076552
+# END binaries gated-delta-rule-recurrent-aot
+
 # Build-time Python closure for the Triton AOT kernels of the hybrid ops (decision 23, S3). Python is never a runtime
-# dependency. The AOT build itself is R-034; the pins below are S3's measured configs: the first six from spikes/s3-triton-gdn/pins.json, the seventh
-# (fused_recurrent_gated_delta_rule_fwd_kernel, from S3's capture log and docs/m0/roost-s3-triton-aot-gdn.md, not in pins.json),
-# frozen because autotune winners are not reproducible.
+# dependency. The AOT build is kernels/aot/build_gdn.py (R-034), run by CMake with -DROOST_TRITON_PYTHON. The pins below are
+# S3's measured configs (kernels/aot/pins.json is S3's pins.json; the fused recurrent kernel's config is fixed in FLA's
+# wrapper), frozen because autotune winners are not reproducible. `specializations` counts what R-034 builds: only the
+# varlen set (the engine packs sequences), and not l2norm_fwd_kernel, because the library normalises the strided q and k
+# views in its own kernel. kernels/aot/gdn_specs.json holds the captured signatures, written by kernels/aot/capture_specs.py.
 [triton_aot]
 python = "3.12.14"
 requires_gpu_build_host = true
@@ -142,43 +387,37 @@ numpy = "2.5.4"
 fla = "0.6.0"
 
 [[triton_aot.kernels]]
-name = "l2norm_fwd_kernel"
-upstream = "flash-linear-attention"
-specializations = 1
-config = { num_warps = 2, num_stages = 3, constexprs = { BT = 16 } }
-
-[[triton_aot.kernels]]
 name = "chunk_local_cumsum_scalar_kernel"
 upstream = "flash-linear-attention"
-specializations = 2
+specializations = 1
 config = { num_warps = 1, num_stages = 3 }
 
 [[triton_aot.kernels]]
 name = "chunk_gated_delta_rule_fwd_kkt_solve_kernel"
 upstream = "flash-linear-attention"
-specializations = 2
+specializations = 1
 config = { num_warps = 1, num_stages = 3, constexprs = { BK = 64 } }
 
 [[triton_aot.kernels]]
 name = "recompute_w_u_fwd_kernel"
 upstream = "flash-linear-attention"
-specializations = 2
+specializations = 1
 config = { num_warps = 2, num_stages = 2 }
 
 [[triton_aot.kernels]]
 name = "chunk_gated_delta_rule_fwd_kernel_h_blockdim64"
 upstream = "flash-linear-attention"
-specializations = 4
+specializations = 2
 config = { num_warps = 2, num_stages = 2, constexprs = { BV = 32 } }
 
 [[triton_aot.kernels]]
 name = "chunk_fwd_kernel_o"
 upstream = "flash-linear-attention"
-specializations = 2
+specializations = 1
 config = { num_warps = 2, num_stages = 3, constexprs = { BK = 32, BV = 32 } }
 
 [[triton_aot.kernels]]
 name = "fused_recurrent_gated_delta_rule_fwd_kernel"
 upstream = "flash-linear-attention"
-specializations = 2
+specializations = 1
 config = { num_warps = 1, num_stages = 3 }

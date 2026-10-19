@@ -114,10 +114,19 @@ ROOST_API RoostStatus roost_context_create(const RoostContextCreateParams* param
     roost_set_error("roost_context_create: out of host memory");
     return ROOST_STATUS_OUT_OF_MEMORY;
   }
+  const RoostStatus status = roost_hybrid_context_init(*out);  // R-034
+  if (status != ROOST_STATUS_OK) {
+    delete *out;
+    *out = nullptr;
+    return status;
+  }
   return ROOST_STATUS_OK;
 }
 
 ROOST_API RoostStatus roost_context_destroy(RoostContext* ctx) {
+  if (ctx != nullptr) {
+    roost_hybrid_context_release(ctx);  // R-034
+  }
   delete ctx;
   return ROOST_STATUS_OK;
 }
