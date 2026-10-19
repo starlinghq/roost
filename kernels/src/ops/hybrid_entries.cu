@@ -31,7 +31,42 @@ constexpr RoostConstraints PlainConstraints(uint64_t act_mask, uint32_t alignmen
   };
 }
 
+#ifdef ROOST_HYBRID_GDN
+constexpr RoostConstraints GdnConstraints() {
+  RoostConstraints c = PlainConstraints(Bit(ROOST_DTYPE_BF16), 16);
+  c.head_dim_mask = uint64_t{1} << 7;  // head size 128 = 16 * (7 + 1)
+  c.group_size_mask = 1u;               // 16 value heads per 16 key heads: one value head per key head
+  return c;
+}
+#endif
+
 const RoostOpEntry kHybridEntries[] = {
+#ifdef ROOST_HYBRID_GDN
+    {
+        /* op */ ROOST_OP_GATED_DELTA_RULE,
+        /* flags */ ROOST_FLAG_DETERMINISTIC | ROOST_FLAG_BATCH_INVARIANT | ROOST_FLAG_NEEDS_PLAN,
+        /* variant_id */ "gated-delta-rule-chunk-aot",
+        /* params_struct_size */ static_cast<uint32_t>(sizeof(RoostGatedDeltaRuleParams)),
+        /* params_abi_minor */ ROOST_ABI_MINOR,
+        /* constraints */ GdnConstraints(),
+        /* run */ roost_gdn_chunk_run,
+        /* plan */ roost_gdn_chunk_plan,
+        /* workspace */ roost_gdn_chunk_workspace,
+        /* reserved0 */ 0,
+    },
+    {
+        /* op */ ROOST_OP_GATED_DELTA_RULE,
+        /* flags */ kStateFlags,
+        /* variant_id */ "gated-delta-rule-recurrent-aot",
+        /* params_struct_size */ static_cast<uint32_t>(sizeof(RoostGatedDeltaRuleParams)),
+        /* params_abi_minor */ ROOST_ABI_MINOR,
+        /* constraints */ GdnConstraints(),
+        /* run */ roost_gdn_recurrent_run,
+        /* plan */ nullptr,
+        /* workspace */ roost_gdn_recurrent_workspace,
+        /* reserved0 */ 0,
+    },
+#endif
     {
         /* op */ ROOST_OP_CAUSAL_CONV1D,
         /* flags */ kStateFlags,
@@ -78,3 +113,9 @@ const RoostOpEntry* roost_hybrid_entries(uint32_t* count) {
   *count = static_cast<uint32_t>(sizeof(kHybridEntries) / sizeof(kHybridEntries[0]));
   return kHybridEntries;
 }
+
+#ifndef ROOST_HYBRID_GDN
+// Built without the Triton AOT kernels: GatedDeltaRule is not registered and there is no per-context state.
+RoostStatus roost_hybrid_context_init(RoostContext* /*ctx*/) { return ROOST_STATUS_OK; }
+void roost_hybrid_context_release(RoostContext* /*ctx*/) {}
+#endif
