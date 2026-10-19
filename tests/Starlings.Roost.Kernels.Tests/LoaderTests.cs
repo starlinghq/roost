@@ -222,9 +222,9 @@ public class LoaderTests
         var m = TestManifest.Build();
         var missing = Assert.Throws<ProfileUnsupportedException>(() => KernelLibrary.Load("x", Options(m, sm: 75)));
         Assert.Equal(75, missing.Sm);
-        Assert.Equal(OpId.Residual, missing.Op);
+        Assert.Equal(OpId.None, missing.Op);
         Assert.Contains("SM 75", missing.Message);
-        Assert.Contains("Residual", missing.Message);
+        Assert.DoesNotContain("Residual", missing.Message);
 
         var unsupported = Assert.Throws<ProfileUnsupportedException>(() => KernelLibrary.Load("x", Options(m, sm: 90, untested: true)));
         Assert.Contains("unsupported", unsupported.Message);

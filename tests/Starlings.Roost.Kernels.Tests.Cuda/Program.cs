@@ -59,7 +59,7 @@ internal static unsafe class Check
         Refused<KernelLoadException>("manifest pin mismatch", () => KernelManifest.Load(manifestPath, new string('1', 64)),
             e => e.Error.Code == RoostErrorCode.AssetMismatch);
         Refused<ProfileUnsupportedException>("SM without a library (SM 75)", () => KernelLibrary.Load(file, new KernelLoadOptions(manifest, 75, true)),
-            e => e.Sm == 75 && e.Op == OpId.Residual);
+            e => e.Sm == 75 && e.Op == OpId.None);
         Refused<ProfileUnsupportedException>("untested SM 89 without opt-in", () => KernelLibrary.Load(file, new KernelLoadOptions(manifest, 89)),
             e => e.Sm == 89);
 
