@@ -19,9 +19,3 @@ dotnet build tests/Starlings.Roost.Worker.Tests.Cuda -c Release -v q
 mkdir -p "$SCRATCH"
 flock "$HEAVY" -c "tools/gpu-lease run --device 3090 --need-mib 6000 --wait 3600 --stream F -- $EXE gpu --ckpt $HUB --lock $LOCK --manifest $MANIFEST --kernels $KERNELS --out $SCRATCH/gpu.dump --allow-untested" 2>&1 | tee "$RESULTS/r025-eager-decode-$LABEL.log"
 flock "$HEAVY" -c "$EXE cpu --ckpt $HUB --lock $LOCK --dump $SCRATCH/gpu.dump --report $RESULTS/r025-cpu-compare-$LABEL.txt" 2>&1 | tail -n 5
-# Optional: the WindowLeft defect evidence (results/r025-cpu-window-zero-$LABEL.txt). The generated forward sends WindowLeft = 0, which
-# CpuOps reads as "attend to the current key only"; the CPU phase therefore rewrites it to -1 unless --keep-window-zero is given. This keeps
-# the generated default, on step 0 of the first prompt only. Set R025_WINDOW_ZERO=1 to run it.
-if [ "${R025_WINDOW_ZERO:-0}" = 1 ]; then
-  flock "$HEAVY" -c "$EXE cpu --ckpt $HUB --lock $LOCK --dump $SCRATCH/gpu.dump --report $RESULTS/r025-cpu-window-zero-$LABEL.txt --keep-window-zero --only 0 --max-steps 1" 2>&1 | tail -n 5
-fi

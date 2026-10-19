@@ -9,8 +9,8 @@ namespace Starlings.Roost.Worker.Tests.Support;
 
 /// <summary>
 /// The adapter between the eager worker and the generated Qwen3.5-0.8B forward: slot tables, weight assembly from the
-/// weight map, layout offsets and the call into <c>Qwen35Model.Forward</c>. The forward runs through <see cref="Probe{TInner}"/>
-/// so the harness can record per-op outputs and so the generated <c>WindowLeft = 0</c> reaches the backends as -1.
+/// weight map, layout offsets and the call into <c>Qwen35Model.Forward</c>. The forward runs the generated code directly on
+/// the backend; only when a <see cref="Recorder"/> is set (the per-layer comparison) does it go through <see cref="Probe{TInner}"/>.
 /// </summary>
 public sealed class Qwen35EagerModel : IEagerModel
 {
@@ -73,8 +73,8 @@ public sealed class Qwen35EagerModel : IEagerModel
             }
         }
 
-        // The generated logits buffer holds bfloat16 rows; LmHead writes float32 (C1), so half as many rows fit.
-        return new EagerLayout(l.PlanBytes, l.ArenaBytes, offsets, dtypes, l.CapacityTokens / 2);
+        // The generated logits value is F32 (R-035), the dtype LmHead writes (C1), so every token row has room for a logits row.
+        return new EagerLayout(l.PlanBytes, l.ArenaBytes, offsets, dtypes, l.CapacityTokens);
     }
 
     /// <inheritdoc/>
@@ -108,7 +108,14 @@ public sealed class Qwen35EagerModel : IEagerModel
         var layout = new Qwen35Model.ForwardLayout(input.MaxTokens, input.MaxSequences, input.MaxKvBlocks);
         var plan = Qwen35Model.PlanInputs.Bind(input.PlanRegion, layout, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
         var ctx = new Qwen35Model.StepContext(layout, input.Arena, input.Weights, input.State, plan, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
-        Qwen35Model.Forward<Probe<TOps>>(in ctx);
+        if (ProbeState.Recorder is null)
+        {
+            Qwen35Model.Forward<TOps>(in ctx);
+        }
+        else
+        {
+            Qwen35Model.Forward<Probe<TOps>>(in ctx);
+        }
     }
 
     /// <inheritdoc/>

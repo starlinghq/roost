@@ -5,8 +5,8 @@ Source data: r025-cpu-compare-sm86.txt (this directory), produced by run-eager.s
   GPU:       eager worker on CudaOps, RTX 3090 (SM 86, status Experimental), kernel library fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7
              (R-034 build of kernels/manifest.toml at 2ed875c), bf16 weights and activations, float32 recurrent state, deterministic variants.
   Reference: CpuOps (double arithmetic, every op rounded once into its output dtype), the same generated forward, the same locked checkpoint
-             (Qwen/Qwen3.5-0.8B at 2fc06364715b967f1860aea9cf38778875588b17), both with WindowLeft = -1 (see the PR: the generated forward's default
-             of 0 is a defect and is worked around in Probe).
+             (Qwen/Qwen3.5-0.8B at 2fc06364715b967f1860aea9cf38778875588b17), both with WindowLeft = -1 (bound by the generated forward since R-035;
+             before it the forward left WindowLeft at 0, a one-token window, and the harness rewrote it).
   Sample:    3 prompts (5, 6 and 19 tokens), 8 greedy tokens each, teacher-forced with the GPU's tokens; per-op outputs recorded for steps 0 to 2
              of the first prompt only (prefill, then two decode steps): 72 hidden-state rows, 54 recurrent and 54 conv state rows, 24 logits rows.
   NOT covered: transformers fp32/bf16 as the reference (the profile's real reference is R-014's fixtures), contexts beyond 26 keys (the longest sampled context: 19 prompt tokens plus 7 fed tokens at the last step; the per-layer and state tables cover only contexts of 5 to 7 tokens), batch > 1,

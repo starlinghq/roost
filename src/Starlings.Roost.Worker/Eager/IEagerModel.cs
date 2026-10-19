@@ -42,7 +42,7 @@ public readonly record struct EagerStateSlot(string Name, int Group, DType Dtype
 /// <param name="ArenaBytes">Size of the activation arena.</param>
 /// <param name="Offsets">Byte offset of each plan input (Ids, Positions, SlotMapping, QIndptr, KvIndptr, KvIndices, KvLastPageLength, Rows, StateSlots, CuSeqlens).</param>
 /// <param name="Dtypes">Element type of each plan input.</param>
-/// <param name="MaxSelected">The most logits rows the arena can hold (float32 rows; the generated buffer is sized for bfloat16, so half the token capacity).</param>
+/// <param name="MaxSelected">The most logits rows the arena can hold (float32 rows, one per token row of the generated buffer).</param>
 public sealed record EagerLayout(long PlanBytes, long ArenaBytes, IReadOnlyDictionary<string, long> Offsets, IReadOnlyDictionary<string, DType> Dtypes, int MaxSelected);
 
 /// <summary>The memory and counts of one forward call, handed to the model.</summary>

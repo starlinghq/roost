@@ -12,7 +12,7 @@ using Starlings.Roost.Worker.Weights;
 // R-025 CPU phase: replays the GPU phase's prompts on CpuOps (double precision) through the same generated forward,
 // teacher-forced with the GPU's tokens so every step is compared on the same inputs, and writes a text report: greedy
 // agreement, step-0 and per-step logits differences, and per-op max-abs differences for the traced steps.
-//   usage: cpu --ckpt <dir> --lock <lock.toml> --dump <dump> --report <text file> [--keep-window-zero] [--only <prompt index>] [--max-steps N]
+//   usage: cpu --ckpt <dir> --lock <lock.toml> --dump <dump> --report <text file> [--only <prompt index>] [--max-steps N]
 internal static unsafe class DecodeCpu
 {
     private const string Weights = "model.safetensors-00001-of-00001.safetensors";
@@ -32,10 +32,9 @@ internal static unsafe class DecodeCpu
             Console.WriteLine(s);
         }
 
-        ProbeState.KeepWindowZero = args.Contains("--keep-window-zero");
         Line($"CPU phase: CpuOps (double precision), weights {weights.Bytes / 1048576.0:F0} MiB verified sha256 {weights.Verification.Sha256} in {clock.Elapsed.TotalSeconds:F1} s");
         Line($"GPU dump: {dump.Device}, kernel library sha256 {dump.LibrarySha256}");
-        Line($"WindowLeft handling: {(ProbeState.KeepWindowZero ? "generated default 0 kept (CpuOps attends to the current key only)" : "-1 (no window), both backends")}");
+        Line("WindowLeft: -1 (no window) bound by the generated forward (R-035), both backends");
         Line();
 
         const int MaxTokens = 64;
