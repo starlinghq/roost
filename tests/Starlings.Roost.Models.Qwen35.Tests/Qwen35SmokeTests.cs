@@ -11,8 +11,7 @@ namespace Starlings.Roost.Models.Qwen35.Tests;
 /// minute, so it runs only when ROOST_QWEN35_CHECKPOINT names a directory holding
 /// <c>model.safetensors-00001-of-00001.safetensors</c> (the locked file; nothing is copied). It checks that the weight map, state
 /// groups and views work end to end on real data: the forward runs, the logits are finite and distinct, and prefill followed by a
-/// decode step agrees with one longer prefill. It is NOT a parity test: the forward does not compute the checkpoint's function yet
-/// (<see cref="Qwen35Model.NumericallyComplete"/>), and per-layer parity is R-022.
+/// decode step agrees with one longer prefill. It is NOT a parity test (per-layer parity is R-022); its top tokens are development evidence.
 /// </summary>
 public sealed unsafe class Qwen35SmokeTests : IDisposable
 {
@@ -186,6 +185,8 @@ public sealed unsafe class Qwen35SmokeTests : IDisposable
 
         int topWhole = Array.IndexOf(whole, whole.Max());
         int topStepped = Array.IndexOf(stepped, stepped.Max());
+        var top = whole.Select((v, i) => (v, i)).OrderByDescending(x => x.v).Take(10).ToArray();
+        log.Add("top 10 (prefill): " + string.Join(", ", top.Select(x => string.Create(CultureInfo.InvariantCulture, $"{x.i}:{x.v:F3}"))));
         double dot = 0;
         double nw = 0;
         double ns = 0;
