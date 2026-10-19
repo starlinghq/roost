@@ -30,8 +30,13 @@ namespace Starlings.Roost.Models.Qwen35;
 //     bfloat16(1 + w) (Qwen35WeightMap OnePlus, the ADR's loading rule). transformers computes 1 + w in float32, so this drops the
 //     low bits of 1 + w: parity of those norms is to bfloat16 weight rounding, not exact. The gated output norm is not zero-centred.
 //
-// Not modelled: the MTP head (Qwen35WeightMap.Mtp, unused in M0), vision, multimodal rope sections (the checkpoint has mrope_interleaved=true with sections [11,11,10]; that a text-only prompt
-// reduces to plain rotary embedding is expected but NOT checked by any test or reference comparison, and R-022 must check it), YaRN.
+// Not modelled: the MTP head (Qwen35WeightMap.Mtp, unused in M0), vision, YaRN. Multimodal rope (mrope_interleaved=true, sections
+// [11,11,10]) gives every section the same position for a text-only prompt, so it is the plain rotary embedding on the first 64
+// dimensions; R-022 checked this against transformers per layer (docs/m0/roost-r022-cpu-parity.md).
+//
+// ATTENTION WINDOW: PagedAttentionArgs.WindowLeft is a window when it is not negative, and an unbound field is 0, a window of one
+// token. Full attention binds WindowLeft=-1 (R-022 found the forward attending to the current token only). LmHead writes float32
+// logits (C3), so the logits value is declared F32.
 [RoostModel("qwen3.5-0.8b", Dtype = "BF16")]
 [Dim("hidden", 1024)]
 [Dim("inter", 3584)]
@@ -97,7 +102,7 @@ namespace Starlings.Roost.Models.Qwen35;
 [Node("l{i}.qknorm", "QkNorm", "Q=l{i}.q=>l{i}.qn; K=l{i}.k=>l{i}.kn; QWeight=l{i}.q_norm; KWeight=l{i}.k_norm; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; Eps=1e-6", Layers = "0:24%4=3")]
 [Node("l{i}.rope", "Rope", "Q=l{i}.qn=>l{i}.qr; K=l{i}.kn=>l{i}.kr; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; RotaryDim=rotary_dim; Kind=Default; Theta=10000000", Layers = "0:24%4=3")]
 [Node("l{i}.cache", "CacheWrite", "K=l{i}.kr; V=l{i}.v; KCache=s:attn.k; VCache=s:attn.v; Tokens=tokens; KvHeads=kv_heads; HeadDim=head_dim; BlockSize=block_size; KvLayout=PagedNhd", Layers = "0:24%4=3")]
-[Node("l{i}.attn", "PagedAttention", "Q=l{i}.qr; KCache=s:attn.k; VCache=s:attn.v; Output=>l{i}.ao[tokens,q_dim]; Batch=seqs; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; BlockSize=block_size; KvLayout=PagedNhd; Scale=0.0625; Causal=true", Layers = "0:24%4=3")]
+[Node("l{i}.attn", "PagedAttention", "Q=l{i}.qr; KCache=s:attn.k; VCache=s:attn.v; Output=>l{i}.ao[tokens,q_dim]; Batch=seqs; Tokens=tokens; QHeads=heads; KvHeads=kv_heads; HeadDim=head_dim; BlockSize=block_size; KvLayout=PagedNhd; Scale=0.0625; Causal=true; WindowLeft=-1", Layers = "0:24%4=3")]
 [Node("l{i}.ogate", "SigmoidMul", "Input=l{i}.ao; Gate=l{i}.gate; Output=>l{i}.aog[tokens,q_dim]; Rows=tokens; Dim=q_dim", Layers = "0:24%4=3")]
 [Node("l{i}.o_proj", "Gemm", "A=l{i}.aog; B=l{i}.o_proj; D=>l{i}.mix[tokens,hidden]; M=tokens; N=hidden; K=q_dim; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24%4=3")]
 // -- MLP --
@@ -108,13 +113,13 @@ namespace Starlings.Roost.Models.Qwen35;
 [Node("l{i}.down", "Gemm", "A=l{i}.act; B=l{i}.down; D=>l{i}.mlp[tokens,hidden]; M=tokens; N=hidden; K=inter; TransposeB=true; Alpha=1; WeightDType=BF16", Layers = "0:24")]
 [Node("l{i}.mlp_res", "Residual", "A=l{i}.hm; B=l{i}.mlp; Output=>h{i+1}[tokens,hidden]; Elements=tokens*hidden", Layers = "0:24")]
 [Node("final_norm", "RmsNorm", "Input=h24; Weight=final_norm; Output=>final[tokens,hidden]; Rows=tokens; Dim=hidden; Eps=1e-6")]
-[Node("head", "LmHead", "Hidden=final; Weight=embed; Logits=>logits[selected,vocab]; Selected=selected; Dim=hidden; Vocab=vocab; VocabPadded=vocab")]
+[Node("head", "LmHead", "Hidden=final; Weight=embed; Logits=>logits[selected,vocab]:F32; Selected=selected; Dim=hidden; Vocab=vocab; VocabPadded=vocab")]
 [Output("logits")]
 public static partial class Qwen35Model
 {
     /// <summary>
-    /// Whether <see cref="Forward{TOps}"/> computes the checkpoint's function: yes, on contract version 3 (the gating ops). Two
-    /// approximations remain and are named in <see cref="Approximations"/>.
+    /// Whether <see cref="Forward{TOps}"/> computes the checkpoint's function: yes, on contract version 3 (the gating ops), checked per
+    /// layer against transformers fp32 by R-022. One approximation remains and is named in <see cref="Approximations"/>.
     /// </summary>
     public const bool NumericallyComplete = true;
 
@@ -122,6 +127,5 @@ public static partial class Qwen35Model
     public static IReadOnlyList<string> Approximations { get; } =
     [
         "decoder, q/k and final RMS norms: the slots hold bfloat16(1 + w) (ADR); transformers computes 1 + w in float32",
-        "multimodal rope: text-only prompts are assumed to reduce to plain rotary embedding (not yet checked against a reference)",
     ];
 }
