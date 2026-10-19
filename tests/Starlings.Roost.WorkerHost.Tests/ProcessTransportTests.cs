@@ -14,7 +14,7 @@ public sealed class ProcessTransportTests : TransportSuite
     protected override bool CanCrash => true;
 
     internal override Rig NewRig(WorkerTransportOptions? options = null) =>
-        new(new ProcessWorkerTransport(WorkerProcessEntry.Command(), options));
+        new(new ProcessWorkerTransport(WorkerProcessEntry.Command(), TestSegments.Options(options)));
 
     internal override FakeOp Freeze(Rig rig)
     {
@@ -32,7 +32,7 @@ public sealed class ProcessTransportTests : TransportSuite
     [Fact]
     public async Task WorkerThatExitsBeforeAnsweringFailsTheStartWithItsOutput()
     {
-        await using var transport = new ProcessWorkerTransport(WorkerProcessEntry.Command(failOpen: true));
+        await using var transport = new ProcessWorkerTransport(WorkerProcessEntry.Command(failOpen: true), TestSegments.Options());
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
         var ex = await Assert.ThrowsAsync<WorkerStartException>(async () =>
@@ -45,8 +45,7 @@ public sealed class ProcessTransportTests : TransportSuite
     [Fact]
     public async Task WorkerThatAnswersTooSlowlyIsKilledAtTheStartupTimeout()
     {
-        var directory = Path.Combine(Starlings.Roost.Engine.Rings.RingSegment.DefaultDirectory(), $"roost-test-{Guid.NewGuid():N}");
-        _ = Directory.CreateDirectory(directory);
+        var directory = TestSegments.NewDirectory();
         try
         {
             await using var transport = new ProcessWorkerTransport(
@@ -71,7 +70,7 @@ public sealed class ProcessTransportTests : TransportSuite
     [Fact]
     public async Task CancellingTheStartKillsTheWorker()
     {
-        await using var transport = new ProcessWorkerTransport(WorkerProcessEntry.Command(openDelayMs: 30_000));
+        await using var transport = new ProcessWorkerTransport(WorkerProcessEntry.Command(openDelayMs: 30_000), TestSegments.Options());
         using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(300));
 
         _ = await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
@@ -84,7 +83,7 @@ public sealed class ProcessTransportTests : TransportSuite
     [Fact]
     public async Task KilledHostLeavesNoWorkerAndNoSegment()
     {
-        var command = WorkerCommand.ForCurrentProcess(WorkerProcessEntry.HostFlag);
+        var command = WorkerCommand.ForCurrentProcess(WorkerProcessEntry.HostFlag, WorkerProcessEntry.SegmentDirPrefix + TestSegments.Root);
         var info = new ProcessStartInfo(command.FileName) { RedirectStandardOutput = true, UseShellExecute = false };
         foreach (var argument in command.Arguments)
         {
@@ -124,6 +123,29 @@ public sealed class ProcessTransportTests : TransportSuite
 
             harness.Dispose();
         }
+    }
+
+    /// <summary>
+    /// The one test that kills the worker with a real fatal signal (<c>Environment.FailFast</c>: SIGABRT on Linux, a
+    /// fail-fast exit on Windows). The kernel and systemd-coredump record such a death, and a desktop shows it as a crashed
+    /// process, so it runs only where <c>GITHUB_ACTIONS</c> is <c>true</c> (set by GitHub's runners, never by agents or
+    /// developers locally). Every other crash test uses a clean exit with a nonzero code (<see cref="FakeOp.Crash"/>).
+    /// </summary>
+    [Fact]
+    public async Task WorkerKilledByARealFatalSignalIsReportedExited()
+    {
+        Assert.SkipUnless(
+            Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true",
+            "raises a real fatal signal (SIGABRT), which is recorded as a crash by systemd-coredump; runs only on GitHub Actions (GITHUB_ACTIONS=true)");
+        await using var rig = NewRig();
+        _ = await rig.StartAsync();
+
+        _ = rig.Publish(FakeOp.CrashSignal);
+        var seen = rig.Wait(TimeSpan.FromSeconds(30));
+
+        Assert.False(seen.HasResult);
+        Assert.Equal(FaultClass.Exited, seen.Polled);
+        Assert.Equal(RecoveryAction.Respawn, FaultRules.ActionFor(seen.Polled));
     }
 
     [Fact]

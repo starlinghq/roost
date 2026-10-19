@@ -18,7 +18,7 @@ public sealed class InProcessTransportTests : TransportSuite, IDisposable
     protected override bool CanCrash => false;
 
     internal override Rig NewRig(WorkerTransportOptions? options = null) =>
-        new(new InProcessWorkerTransport(() => new FakeExecutor(_hangLatch), options, () => _pauseHeartbeat));
+        new(new InProcessWorkerTransport(() => new FakeExecutor(_hangLatch), TestSegments.Options(options), () => _pauseHeartbeat));
 
     internal override FakeOp Freeze(Rig rig)
     {
@@ -56,7 +56,7 @@ public sealed class InProcessTransportTests : TransportSuite, IDisposable
     [Fact]
     public async Task OpenDeviceThrowingInProcessIsReportedAsAStartFailure()
     {
-        await using var transport = new InProcessWorkerTransport(() => new FakeExecutor(failOpen: true));
+        await using var transport = new InProcessWorkerTransport(() => new FakeExecutor(failOpen: true), TestSegments.Options());
 
         var ex = await Assert.ThrowsAsync<WorkerStartException>(async () =>
             await transport.StartAsync(Rig.DefaultLaunch(), CancellationToken.None));

@@ -20,6 +20,9 @@ internal enum FakeOp : uint
 
     /// <summary>Sleeps <c>SequenceCount</c> milliseconds, then succeeds.</summary>
     Slow = 6,
+
+    /// <summary>Dies with a real fatal signal (<c>Environment.FailFast</c>: SIGABRT on Linux). Only the GITHUB_ACTIONS-gated test publishes it.</summary>
+    CrashSignal = 7,
 }
 
 /// <summary>
@@ -33,6 +36,9 @@ internal sealed unsafe class FakeExecutor : IStepExecutor
     public const int EchoBytes = 64;
     public const int ErrorRecoverable = 11;
     public const int ErrorSticky = 700;
+
+    /// <summary>The exit code of an injected crash: the process ends at once, with no cleanup and no signal, so no core dump is written.</summary>
+    public const int CrashExitCode = 97;
 
     public static readonly ImmutableArray<byte> ManifestDigest = Digest("roost-test-manifest");
     public static readonly ImmutableArray<byte> WeightsDigest = Digest("roost-test-weights");
@@ -112,6 +118,19 @@ internal sealed unsafe class FakeExecutor : IStepExecutor
 
                 return StepOutcome.Sticky(ErrorSticky);
             case FakeOp.Crash:
+                // A crash as the host sees it (the process is gone without a result) but without SIGABRT, which
+                // systemd-coredump records and a desktop reports. Skips managed shutdown the way a crash does.
+                if (OperatingSystem.IsWindows())
+                {
+                    Win32.ExitNow(CrashExitCode);
+                }
+                else
+                {
+                    Libc.Exit(CrashExitCode);
+                }
+
+                return default;
+            case FakeOp.CrashSignal:
                 Environment.FailFast("injected crash");
                 return default;
             case FakeOp.Throw:
