@@ -10,6 +10,9 @@
   <ItemGroup>
     <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <ProjectReference Include="../Starlings.Roost.Cuda/Starlings.Roost.Cuda.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Starlings.Roost.Worker.Tests" />

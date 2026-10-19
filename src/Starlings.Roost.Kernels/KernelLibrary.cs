@@ -422,6 +422,10 @@ public sealed class KernelLibrary : IDisposable
 
     private unsafe string LastError() => LastError(_exports);
 
+    /// <summary>The library's last error text on the calling thread (<c>roost_last_error</c>), for the message of a failed run.</summary>
+    /// <returns>The text, or an empty string.</returns>
+    public unsafe string LastErrorText() => LastError();
+
     private static unsafe string LastError(KernelExports exports)
     {
         var message = exports.LastError();

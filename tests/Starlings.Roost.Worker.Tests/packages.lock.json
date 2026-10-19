@@ -135,12 +135,52 @@
       "starlings.roost.cuda": {
         "type": "Project"
       },
+      "starlings.roost.engine": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.graph": {
+        "type": "Project"
+      },
+      "starlings.roost.kernels": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.models.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Graph": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
       "starlings.roost.worker": {
         "type": "Project",
         "dependencies": {
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Cuda": "[0.0.0-dev, )",
+          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )",
           "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.workerhost": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Engine": "[0.0.0-dev, )"
         }
       },
       "Tomlyn": {
