@@ -1,0 +1,44 @@
+# Excerpts of two local, earlier runs of the R-017 test harness, kept as evidence for design decisions in kernels/README.md.
+# Lines are copied unedited with grep (FAIL lines only); the full logs were never committed. Rejected configurations: FlashInfer Rope (run1) and
+# the first attention criterion, 2^-6 of output RMS (run4). The cuBLASLt split-K figures have no log at all.
+## run1.log (FlashInfer Rope, rejected)
+FAIL Rope BF16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 q   class=elementwise-bf16   n=264192    max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=2.405 violations=5 nonfinite=0
+FAIL Rope BF16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 k   class=elementwise-bf16   n=66048     max_abs=1.56E-002 ref_rms=9.96E-001 utilisation=1.781 violations=1 nonfinite=0
+FAIL Rope BF16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 q class=elementwise-bf16-longpos n=264192    max_abs=7.81E-002 ref_rms=9.99E-001 utilisation=14.123 violations=511 nonfinite=0
+FAIL Rope BF16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 k class=elementwise-bf16-longpos n=66048     max_abs=6.84E-002 ref_rms=1.00E+000 utilisation=8.709 violations=118 nonfinite=0
+FAIL Rope BF16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 q class=elementwise-bf16   n=67584     max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=1.653 violations=3 nonfinite=0
+FAIL Rope BF16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 k class=elementwise-bf16   n=16896     max_abs=1.56E-002 ref_rms=9.91E-001 utilisation=1.487 violations=1 nonfinite=0
+FAIL Rope BF16 interleaved tokens=33 8/2x256 rot=64 maxpos=4096 q class=elementwise-bf16   n=67584     max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=2.327 violations=3 nonfinite=0
+FAIL Rope BF16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 q   class=elementwise-bf16   n=67584     max_abs=1.56E-002 ref_rms=9.93E-001 utilisation=1.934 violations=8 nonfinite=0
+FAIL Rope BF16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 k   class=elementwise-bf16   n=33792     max_abs=1.56E-002 ref_rms=9.97E-001 utilisation=2.520 violations=3 nonfinite=0
+FAIL Rope BF16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 q class=elementwise-bf16   n=33792     max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=4.749 violations=11 nonfinite=0
+FAIL Rope BF16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 k class=elementwise-bf16   n=8448      max_abs=1.56E-002 ref_rms=1.01E+000 utilisation=1.298 violations=3 nonfinite=0
+FAIL Rope BF16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 q class=elementwise-bf16   n=67584     max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=3.767 violations=8 nonfinite=0
+FAIL Rope BF16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 k class=elementwise-bf16   n=16896     max_abs=7.81E-003 ref_rms=9.94E-001 utilisation=3.514 violations=2 nonfinite=0
+FAIL Rope BF16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 q class=elementwise-bf16-longpos n=66560     max_abs=3.91E-002 ref_rms=9.99E-001 utilisation=9.041 violations=162 nonfinite=0
+FAIL Rope BF16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 k class=elementwise-bf16-longpos n=16640     max_abs=3.86E-002 ref_rms=1.01E+000 utilisation=4.382 violations=41 nonfinite=0
+FAIL Rope F16 qwen35 tokens=1 8/2x256 rot=64 maxpos=4096 q      class=elementwise-f16    n=2048      max_abs=9.77E-004 ref_rms=9.91E-001 utilisation=3.841 violations=4 nonfinite=0
+FAIL Rope F16 qwen35 tokens=1 8/2x256 rot=64 maxpos=4096 k      class=elementwise-f16    n=512       max_abs=4.88E-004 ref_rms=1.02E+000 utilisation=2.815 violations=1 nonfinite=0
+FAIL Rope F16 qwen35 tokens=17 8/2x256 rot=64 maxpos=4096 q     class=elementwise-f16    n=34816     max_abs=1.95E-003 ref_rms=9.96E-001 utilisation=7.634 violations=36 nonfinite=0
+FAIL Rope F16 qwen35 tokens=17 8/2x256 rot=64 maxpos=4096 k     class=elementwise-f16    n=8704      max_abs=1.95E-003 ref_rms=9.98E-001 utilisation=6.444 violations=7 nonfinite=0
+FAIL Rope F16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 q    class=elementwise-f16    n=264192    max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=14.814 violations=222 nonfinite=0
+FAIL Rope F16 qwen35 tokens=129 8/2x256 rot=64 maxpos=4096 k    class=elementwise-f16    n=66048     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=10.305 violations=50 nonfinite=0
+FAIL Rope F16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 q class=elementwise-f16-longpos n=264192    max_abs=8.65E-002 ref_rms=1.00E+000 utilisation=149.178 violations=3864 nonfinite=0
+FAIL Rope F16 qwen35-longpos tokens=129 8/2x256 rot=64 maxpos=262144 k class=elementwise-f16-longpos n=66048     max_abs=7.42E-002 ref_rms=1.00E+000 utilisation=111.255 violations=988 nonfinite=0
+FAIL Rope F16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 q class=elementwise-f16    n=67584     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=14.705 violations=268 nonfinite=0
+FAIL Rope F16 full-rotary tokens=33 8/2x256 rot=256 maxpos=4096 k class=elementwise-f16    n=16896     max_abs=1.95E-003 ref_rms=9.93E-001 utilisation=5.838 violations=48 nonfinite=0
+FAIL Rope F16 interleaved tokens=33 8/2x256 rot=64 maxpos=4096 q class=elementwise-f16    n=67584     max_abs=1.95E-003 ref_rms=9.96E-001 utilisation=16.916 violations=68 nonfinite=0
+FAIL Rope F16 interleaved tokens=33 8/2x256 rot=64 maxpos=4096 k class=elementwise-f16    n=16896     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=11.603 violations=20 nonfinite=0
+FAIL Rope F16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 q    class=elementwise-f16    n=67584     max_abs=1.95E-003 ref_rms=9.97E-001 utilisation=13.721 violations=294 nonfinite=0
+FAIL Rope F16 hd128 tokens=33 16/8x128 rot=128 maxpos=4096 k    class=elementwise-f16    n=33792     max_abs=1.95E-003 ref_rms=9.92E-001 utilisation=19.331 violations=146 nonfinite=0
+FAIL Rope F16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 q class=elementwise-f16    n=33792     max_abs=2.93E-003 ref_rms=1.00E+000 utilisation=23.845 violations=283 nonfinite=0
+FAIL Rope F16 llama3-hd128 tokens=33 8/2x128 rot=128 maxpos=8192 k class=elementwise-f16    n=8448      max_abs=2.44E-003 ref_rms=9.88E-001 utilisation=25.387 violations=75 nonfinite=0
+FAIL Rope F16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 q class=elementwise-f16    n=67584     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=15.149 violations=183 nonfinite=0
+FAIL Rope F16 llama3-hd256-rot64 tokens=33 8/2x256 rot=64 maxpos=8192 k class=elementwise-f16    n=16896     max_abs=1.95E-003 ref_rms=9.90E-001 utilisation=13.151 violations=45 nonfinite=0
+FAIL Rope F16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 q class=elementwise-f16-longpos n=66560     max_abs=4.70E-002 ref_rms=1.01E+000 utilisation=58.798 violations=2357 nonfinite=0
+FAIL Rope F16 llama3-longpos tokens=65 8/2x128 rot=128 maxpos=131072 k class=elementwise-f16-longpos n=16640     max_abs=4.20E-002 ref_rms=9.97E-001 utilisation=67.345 violations=570 nonfinite=0
+## run4.log (attention, first criterion; Graph lines are the replay failures)
+FAIL PagedAttention prefill fresh-700 ps64 q=700 kv=700 ws=0KiB class=attention-bf16     n=1433600   max_abs=1.56E-002 ref_rms=1.42E-001 utilisation=1.161 violations=2 nonfinite=0
+FAIL PagedAttention prefill fresh-1024 q=1024 kv=1024 ws=1KiB   class=attention-bf16     n=2097152   max_abs=1.56E-002 ref_rms=1.23E-001 utilisation=1.095 violations=2 nonfinite=0
+FAIL Graph: replay output equals the eager step bitwise         
+FAIL Graph: second replay (state restored) equals the first     

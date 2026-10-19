@@ -71,6 +71,8 @@ public sealed class ContractTypeTests
         Assert.Equal(OpPhase.M0, OpCatalog.PhaseOf(OpId.Sample));
         Assert.Equal(OpPhase.Fused, OpCatalog.PhaseOf(OpId.AddRmsNorm));
         Assert.Equal(OpPhase.M1, OpCatalog.PhaseOf(OpId.GatedDeltaRule));
+        Assert.Equal(OpPhase.M1, OpCatalog.PhaseOf(OpId.GatedDeltaRuleGates));
+        Assert.Equal(OpPhase.M1, OpCatalog.PhaseOf(OpId.SigmoidMul));
         Assert.Equal(OpPhase.M2, OpCatalog.PhaseOf(OpId.FusedMoe));
         Assert.Equal(OpPhase.M3, OpCatalog.PhaseOf(OpId.LoraExpand));
         Assert.Equal(OpPhase.M4, OpCatalog.PhaseOf(OpId.MlaAttention));

@@ -2,6 +2,7 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using Starlings.Roost.Engine.Threading;
 using Starlings.Roost.Transport;
 
 namespace Starlings.Roost.Engine.Rings;
@@ -14,8 +15,27 @@ namespace Starlings.Roost.Engine.Rings;
 /// nothing in it is a pointer.
 /// </summary>
 /// <remarks>
-/// Publication of the segment is not ordered by this class: the creator fills the header before it starts the
-/// worker, and starting the process is the synchronisation. The handshake state (R-069) is the later one.
+/// <para>Publication of the segment is not ordered by this class: the creator fills the header before it starts the
+/// worker, and starting the process is the synchronisation. The handshake state (R-069) is the later one.</para>
+/// <para><b>Lifetime rule.</b> The mapping is released only after every thread this segment knows about has ended. A
+/// thread is known when it was made with <see cref="CreatePoller"/>. Endpoints, rings and spans hold raw pointers
+/// into the view and are valid only while it is mapped; a thread the segment does not know about (a caller's own
+/// thread, another process's mapping is separate) must be stopped and joined by its owner before
+/// <see cref="Close"/> or <see cref="Dispose"/>. <see cref="Close"/> does, in this order:</para>
+/// <list type="number">
+/// <item><description>Under <c>_lock</c>, marks the segment closing and copies the poller list. <see cref="CreatePoller"/>
+/// takes the same lock and refuses a closing segment, so no poller can be added after the copy.</description></item>
+/// <item><description>Calls <see cref="PollingThread.Stop"/> on each poller: <c>Volatile.Write</c> of its stop flag,
+/// which the loop reads with <c>Volatile.Read</c> between polls, then <c>Thread.Join</c> with a bounded timeout. A
+/// join that returns true means the thread has ended, and everything it did to the mapping happened before the join
+/// returned.</description></item>
+/// <item><description>Only if every join returned true: <c>Volatile.Write</c> of the unmapped state (after which
+/// <see cref="Base"/> and <see cref="Header"/> throw <see cref="ObjectDisposedException"/>), then
+/// <c>ReleasePointer</c>, the view and the file. If any join timed out, nothing is released: the view stays mapped
+/// (leaked, if it never ends), the creator's file name is unlinked, and <see cref="Close"/> returns false, because
+/// an unmap under a running poller is an access violation (SIGSEGV on Linux) that kills the process. A later
+/// <see cref="Close"/> tries again.</description></item>
+/// </list>
 /// </remarks>
 public sealed unsafe class RingSegment : IDisposable
 {
@@ -26,8 +46,11 @@ public sealed unsafe class RingSegment : IDisposable
     private readonly MemoryMappedViewAccessor _view;
     private readonly SafeMemoryMappedViewHandle _handle;
     private readonly bool _owner;
+    private readonly Lock _lock = new();
+    private readonly List<PollingThread> _pollers = [];
     private byte* _base;
-    private bool _disposed;
+    private bool _closing;
+    private int _unmapped;
 
     private RingSegment(string path, MemoryMappedFile file, MemoryMappedViewAccessor view, bool owner)
     {
@@ -50,11 +73,14 @@ public sealed unsafe class RingSegment : IDisposable
     /// <summary>The segment header (read-only after creation).</summary>
     public ref readonly SegmentHeader Header => ref Unsafe.AsRef<SegmentHeader>(Base);
 
+    /// <summary>Whether the view is still mapped. False only after a <see cref="Close"/> that joined every poller.</summary>
+    public bool IsMapped => Volatile.Read(ref _unmapped) == 0;
+
     internal byte* Base
     {
         get
         {
-            ObjectDisposedException.ThrowIf(_disposed, this);
+            ObjectDisposedException.ThrowIf(Volatile.Read(ref _unmapped) != 0, this);
             return _base;
         }
     }
@@ -123,29 +149,99 @@ public sealed unsafe class RingSegment : IDisposable
     /// <returns>An endpoint valid until the segment is disposed.</returns>
     public WorkerRingEndpoint OpenWorker() => new(this);
 
-    /// <inheritdoc />
-    public void Dispose()
+    /// <summary>
+    /// Creates a polling thread over this segment, not yet started. <see cref="Close"/> stops and joins it before the
+    /// view is released; see the lifetime rule on <see cref="RingSegment"/>.
+    /// </summary>
+    /// <param name="name">The thread name.</param>
+    /// <param name="poll">Does one unit of work and returns true if it did any.</param>
+    /// <returns>The thread; call <see cref="PollingThread.Start"/> to run it.</returns>
+    /// <exception cref="ObjectDisposedException">The segment is closing or closed.</exception>
+    public PollingThread CreatePoller(string name, Func<bool> poll)
     {
-        if (_disposed)
+        var poller = new PollingThread(name, poll);
+        lock (_lock)
+        {
+            ObjectDisposedException.ThrowIf(_closing, this);
+            _pollers.RemoveAll(p => p.HasExited);
+            _pollers.Add(poller);
+        }
+
+        return poller;
+    }
+
+    /// <summary>
+    /// Stops and joins every poller made by <see cref="CreatePoller"/>, then releases the mapping. If a poller does not
+    /// end within <paramref name="pollerJoinTimeout"/>, the mapping is kept and the result is false.
+    /// </summary>
+    /// <param name="pollerJoinTimeout">How long to wait for each poller.</param>
+    /// <returns>True when the view is released (or already was); false when a poller still runs and the view stays mapped.</returns>
+    public bool Close(TimeSpan pollerJoinTimeout)
+    {
+        PollingThread[] pollers;
+        lock (_lock)
+        {
+            if (Volatile.Read(ref _unmapped) != 0)
+            {
+                return true;
+            }
+
+            _closing = true; // step 1: no poller is added after this copy
+            pollers = [.. _pollers];
+        }
+
+        var allEnded = true;
+        foreach (var poller in pollers)
+        {
+            allEnded &= poller.Stop(pollerJoinTimeout); // step 2: Volatile.Write of the stop flag, then Thread.Join
+        }
+
+        if (!allEnded)
+        {
+            // Step 3 refused: a poller may still read the view, so it stays mapped. The name is unlinked anyway (the
+            // mapping does not need it), so a leaked segment leaves no file behind.
+            DeleteFileIfOwner();
+            return false;
+        }
+
+        lock (_lock)
+        {
+            if (Volatile.Read(ref _unmapped) != 0)
+            {
+                return true;
+            }
+
+            Volatile.Write(ref _unmapped, 1); // step 3: Base throws from here on
+            _base = null;
+            _handle.ReleasePointer();
+            _view.Dispose();
+            _file.Dispose();
+        }
+
+        DeleteFileIfOwner();
+        return true;
+    }
+
+    /// <summary>
+    /// <see cref="Close"/> with <see cref="PollingThread.DefaultJoinTimeout"/>. If a poller does not end in time the
+    /// view stays mapped (see <see cref="IsMapped"/>) rather than being released under it.
+    /// </summary>
+    public void Dispose() => _ = Close(PollingThread.DefaultJoinTimeout);
+
+    private void DeleteFileIfOwner()
+    {
+        if (!_owner)
         {
             return;
         }
 
-        _disposed = true;
-        _base = null;
-        _handle.ReleasePointer();
-        _view.Dispose();
-        _file.Dispose();
-        if (_owner)
+        try
         {
-            try
-            {
-                File.Delete(Path);
-            }
-            catch (IOException)
-            {
-                // Already gone or still open elsewhere; the name is unique per run.
-            }
+            File.Delete(Path);
+        }
+        catch (IOException)
+        {
+            // Already gone or still open elsewhere; the name is unique per run.
         }
     }
 

@@ -557,7 +557,7 @@ public struct GemmParams
     /// <summary>C field <c>beta</c>, documented in the header.</summary>
     public float Beta;
 
-    /// <summary>Plan's shape bucket; selects the pinned algorithm (S2)</summary>
+    /// <summary>Upper bound on m that plan() chose the pinned algorithm for (S2), in rows; 0 means the call's own m. run() refuses a larger m.</summary>
     public uint ShapeBucket;
 
     /// <summary>Reserved; zero.</summary>
@@ -637,7 +637,7 @@ public struct LmHeadParams
     /// <summary>0 disables final logit soft-capping</summary>
     public float SoftCap;
 
-    /// <summary>C field <c>shape_bucket</c>, documented in the header.</summary>
+    /// <summary>Upper bound on selected, as <see cref="GemmParams.ShapeBucket"/> bounds m; 0 means selected.</summary>
     public uint ShapeBucket;
 }
 
@@ -833,4 +833,318 @@ public struct SampleParams
 
     /// <summary>Reserved; zero.</summary>
     public uint Reserved0;
+}
+
+/// <summary>Gated delta rule over packed sequences, with row-strided q, k and v views (ABI 1.1).</summary>
+/// <remarks>
+/// Mirror of <c>RoostGatedDeltaRuleParams</c> in <c>kernels/include/roost_kernels.h</c>. For Qwen3.5, q, k and v are column
+/// slices of the causal conv1d output: q at column 0, k at <c>k_heads * k_dim</c>, v at <c>2 * k_heads * k_dim</c>, each with
+/// the conv output's row width as stride.
+/// </remarks>
+[NativeStruct("RoostGatedDeltaRuleParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct GatedDeltaRuleParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>[tokens, k_heads, k_dim] at q_stride</summary>
+    public DeviceSpan Q;
+
+    /// <summary>[tokens, k_heads, k_dim] at k_stride</summary>
+    public DeviceSpan K;
+
+    /// <summary>[tokens, v_heads, v_dim] at v_stride</summary>
+    public DeviceSpan V;
+
+    /// <summary>[tokens, v_heads] log decay</summary>
+    public DeviceSpan G;
+
+    /// <summary>[tokens, v_heads]</summary>
+    public DeviceSpan Beta;
+
+    /// <summary>[tokens, v_heads, v_dim], contiguous</summary>
+    public DeviceSpan Output;
+
+    /// <summary>Recurrent pool [slots, v_heads, k_dim, v_dim] f32 (C4)</summary>
+    public DeviceSpan State;
+
+    /// <summary>[batch] int32 slot per sequence</summary>
+    public DeviceSpan StateSlots;
+
+    /// <summary>[batch + 1] int32 token offsets</summary>
+    public DeviceSpan CuSeqlens;
+
+    /// <summary>[batch + 1] host copy for plan() (chunk tables, S3); zero when no plan is needed</summary>
+    public nint CuSeqlensHost;
+
+    /// <summary>C field <c>batch</c>, documented in the header.</summary>
+    public uint Batch;
+
+    /// <summary>C field <c>tokens</c>, documented in the header.</summary>
+    public uint Tokens;
+
+    /// <summary>C field <c>k_heads</c>, documented in the header.</summary>
+    public uint KHeads;
+
+    /// <summary>A multiple of k_heads</summary>
+    public uint VHeads;
+
+    /// <summary>C field <c>k_dim</c>, documented in the header.</summary>
+    public uint KDim;
+
+    /// <summary>C field <c>v_dim</c>, documented in the header.</summary>
+    public uint VDim;
+
+    /// <summary>Elements between token rows of q; 0 means k_heads * k_dim</summary>
+    public uint QStride;
+
+    /// <summary>0 means k_heads * k_dim</summary>
+    public uint KStride;
+
+    /// <summary>0 means v_heads * v_dim</summary>
+    public uint VStride;
+
+    /// <summary>Nonzero: start from the slot's state; zero: start from zero</summary>
+    public uint UseInitialState;
+
+    /// <summary>Nonzero: l2-normalise q and k inside the op</summary>
+    public uint L2NormQk;
+
+    /// <summary>Query scale; 0 means 1 / sqrt(k_dim)</summary>
+    public float Scale;
+}
+
+/// <summary>Gated DeltaNet gates: g = -exp(a_log) * softplus(a + dt_bias) and beta = sigmoid(b) (ABI 1.2).</summary>
+/// <remarks>
+/// Mirror of <c>RoostGatedDeltaRuleGatesParams</c> in <c>kernels/include/roost_kernels.h</c>. g is float32 and beta the activation type for Qwen3.5, as transformers 5.20.1 computes them.
+/// </remarks>
+[NativeStruct("RoostGatedDeltaRuleGatesParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct GatedDeltaRuleGatesParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>[tokens, v_heads] at a_stride</summary>
+    public DeviceSpan A;
+
+    /// <summary>[tokens, v_heads] at b_stride</summary>
+    public DeviceSpan B;
+
+    /// <summary>[v_heads]</summary>
+    public DeviceSpan ALog;
+
+    /// <summary>[v_heads]</summary>
+    public DeviceSpan DtBias;
+
+    /// <summary>[tokens, v_heads] output, contiguous</summary>
+    public DeviceSpan G;
+
+    /// <summary>[tokens, v_heads] output, contiguous</summary>
+    public DeviceSpan Beta;
+
+    /// <summary>C field <c>tokens</c>, documented in the header.</summary>
+    public uint Tokens;
+
+    /// <summary>C field <c>v_heads</c>, documented in the header.</summary>
+    public uint VHeads;
+
+    /// <summary>Elements between token rows of a; 0 means v_heads</summary>
+    public uint AStride;
+
+    /// <summary>0 means v_heads</summary>
+    public uint BStride;
+}
+
+/// <summary>Gated RMS norm, norm before gate: out = x * rsqrt(mean(x^2) + eps) * weight * silu(gate), per row (ABI 1.2).</summary>
+/// <remarks>
+/// Mirror of <c>RoostGatedRmsNormParams</c> in <c>kernels/include/roost_kernels.h</c>. Qwen3.5 applies it per value head to the gated delta rule output; the weight is not zero-centred.
+/// </remarks>
+[NativeStruct("RoostGatedRmsNormParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct GatedRmsNormParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>[rows, dim]</summary>
+    public DeviceSpan Input;
+
+    /// <summary>[rows, dim]</summary>
+    public DeviceSpan Gate;
+
+    /// <summary>[dim], its own dtype (f32 for Qwen3.5)</summary>
+    public DeviceSpan Weight;
+
+    /// <summary>[rows, dim]</summary>
+    public DeviceSpan Output;
+
+    /// <summary>C field <c>rows</c>, documented in the header.</summary>
+    public uint Rows;
+
+    /// <summary>C field <c>dim</c>, documented in the header.</summary>
+    public uint Dim;
+
+    /// <summary>C field <c>eps</c>, documented in the header.</summary>
+    public float Eps;
+
+    /// <summary>Reserved; zero.</summary>
+    public uint Reserved0;
+}
+
+/// <summary>Out = input * sigmoid(gate), elementwise (ABI 1.2).</summary>
+/// <remarks>
+/// Mirror of <c>RoostSigmoidMulParams</c> in <c>kernels/include/roost_kernels.h</c>. Qwen3.5's full-attention output gate before o_proj.
+/// </remarks>
+[NativeStruct("RoostSigmoidMulParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct SigmoidMulParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>[rows, dim]</summary>
+    public DeviceSpan Input;
+
+    /// <summary>[rows, dim]</summary>
+    public DeviceSpan Gate;
+
+    /// <summary>[rows, dim]</summary>
+    public DeviceSpan Output;
+
+    /// <summary>C field <c>rows</c>, documented in the header.</summary>
+    public uint Rows;
+
+    /// <summary>C field <c>dim</c>, documented in the header.</summary>
+    public uint Dim;
+}
+
+/// <summary>Depthwise causal convolution over packed sequences with a rolling conv state per slot (ABI 1.2).</summary>
+/// <remarks>
+/// Mirror of <c>RoostCausalConv1dParams</c> in <c>kernels/include/roost_kernels.h</c>. Lifted unchanged from R-034's provisional <c>kernels/src/ops/hybrid_params.h</c>.
+/// </remarks>
+[NativeStruct("RoostCausalConv1dParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct CausalConv1dParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>[tokens, channels]</summary>
+    public DeviceSpan Input;
+
+    /// <summary>[channels, width]</summary>
+    public DeviceSpan Weight;
+
+    /// <summary>Optional [channels]; address zero when unused</summary>
+    public DeviceSpan Bias;
+
+    /// <summary>[tokens, channels]</summary>
+    public DeviceSpan Output;
+
+    /// <summary>Pool [slots, channels, width - 1]</summary>
+    public DeviceSpan ConvState;
+
+    /// <summary>[batch] int32</summary>
+    public DeviceSpan StateSlots;
+
+    /// <summary>[batch + 1] int32</summary>
+    public DeviceSpan CuSeqlens;
+
+    /// <summary>C field <c>batch</c>, documented in the header.</summary>
+    public uint Batch;
+
+    /// <summary>C field <c>tokens</c>, documented in the header.</summary>
+    public uint Tokens;
+
+    /// <summary>C field <c>channels</c>, documented in the header.</summary>
+    public uint Channels;
+
+    /// <summary>C field <c>width</c>, documented in the header.</summary>
+    public uint Width;
+
+    /// <summary>Nonzero: apply SiLU</summary>
+    public uint Silu;
+
+    /// <summary>Reserved; zero.</summary>
+    public uint Reserved0;
+}
+
+/// <summary>Copies recurrent-state slots in pair order (ABI 1.2).</summary>
+/// <remarks>
+/// Mirror of <c>RoostRecurrentStateCopyParams</c> in <c>kernels/include/roost_kernels.h</c>. Lifted unchanged from R-034's provisional <c>kernels/src/ops/hybrid_params.h</c>.
+/// </remarks>
+[NativeStruct("RoostRecurrentStateCopyParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct RecurrentStateCopyParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>C field <c>pool</c>, documented in the header.</summary>
+    public DeviceSpan Pool;
+
+    /// <summary>[count, 2] int32 (source slot, destination slot)</summary>
+    public DeviceSpan Pairs;
+
+    /// <summary>C field <c>slot_bytes</c>, documented in the header.</summary>
+    public ulong SlotBytes;
+
+    /// <summary>C field <c>count</c>, documented in the header.</summary>
+    public uint Count;
+
+    /// <summary>Reserved; zero.</summary>
+    public uint Reserved0;
+}
+
+/// <summary>Writes recurrent-state slots to the snapshot pool, or restores them (ABI 1.2).</summary>
+/// <remarks>
+/// Mirror of <c>RoostRecurrentStateSnapshotParams</c> in <c>kernels/include/roost_kernels.h</c>. Lifted unchanged from R-034's provisional <c>kernels/src/ops/hybrid_params.h</c>.
+/// </remarks>
+[NativeStruct("RoostRecurrentStateSnapshotParams")]
+[StructLayout(LayoutKind.Sequential)]
+public struct RecurrentStateSnapshotParams
+{
+    /// <summary>Size of this struct as the caller sees it (C1 rule).</summary>
+    public uint StructSize;
+
+    /// <summary>C1 ABI minor the caller was built against.</summary>
+    public uint AbiMinor;
+
+    /// <summary>C field <c>pool</c>, documented in the header.</summary>
+    public DeviceSpan Pool;
+
+    /// <summary>C field <c>snapshots</c>, documented in the header.</summary>
+    public DeviceSpan Snapshots;
+
+    /// <summary>[count, 2] int32 (slot, snapshot)</summary>
+    public DeviceSpan Pairs;
+
+    /// <summary>C field <c>slot_bytes</c>, documented in the header.</summary>
+    public ulong SlotBytes;
+
+    /// <summary>C field <c>count</c>, documented in the header.</summary>
+    public uint Count;
+
+    /// <summary>Nonzero copies snapshot to slot</summary>
+    public uint Restore;
 }

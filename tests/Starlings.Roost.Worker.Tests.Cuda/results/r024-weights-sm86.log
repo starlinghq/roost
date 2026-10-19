@@ -1,0 +1,15 @@
+== locked checkpoint ==
+cudart 13030, 1 visible device(s), device 0 is SM 86
+lock: Qwen/Qwen3.5-0.8B @ 2fc06364715b967f1860aea9cf38778875588b17; model.safetensors-00001-of-00001.safetensors 1746942600 bytes sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696
+321 slots (embed_tokens, 24 layers, final norm, tied lm_head), 2013.4 MB of weights
+VERIFIED sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696
+streamed 1746.9 MB read+hashed, 2013.4 MB arena, 4.943 s, 353 MB/s
+slot bytes compared with the file: 2013350592 of 2013350592
+321 slots copied in file order; first 0 also in slot order (first copied: model.language_model.layers.0.linear_attn.A_log)
+PASS
+== substituted copy (one byte flipped in the last tensor) ==
+cudart 13030, 1 visible device(s), device 0 is SM 86
+lock: Qwen/Qwen3.5-0.8B @ 2fc06364715b967f1860aea9cf38778875588b17; model.safetensors-00001-of-00001.safetensors 1746942600 bytes sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696
+321 slots (embed_tokens, 24 layers, final norm, tied lm_head), 2013.4 MB of weights
+refused: asset_mismatch: model.safetensors-00001-of-00001.safetensors has SHA-256 28deb302887b1f4c15bd968e070c53a131baaaf4b2e8dc1d4e4295d7b6bd07a1 but the lock records 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696
+PASS
