@@ -129,9 +129,8 @@ public sealed class AllocationTickTests
         long polls = 0;
         long atWarm = 0;
         long atEnd = -1;
-        var finished = new ManualResetEventSlim();
-        PollingThread? thread = null;
-        thread = new PollingThread("alloc-poll", () =>
+        using var finished = new ManualResetEventSlim();
+        using var thread = new PollingThread("alloc-poll", () =>
         {
             polls++;
             if (polls == Warmup)
@@ -148,7 +147,7 @@ public sealed class AllocationTickTests
         });
         thread.Start();
         Assert.True(finished.Wait(TimeSpan.FromSeconds(60), TestContext.Current.CancellationToken));
-        thread.Dispose();
+        Assert.True(thread.Stop(TimeSpan.FromSeconds(30)));
         Assert.Equal(atWarm, atEnd);
         Assert.Null(thread.Fault);
     }
