@@ -14,7 +14,7 @@ started under `compute-sanitizer --tool <tool> --error-exitcode 99`, restricted 
     <out>/<variant>.<tool>.results.json    the runner's conformance results for that run
 
 and the driver writes <out>/sanitizer.results.json in the stage-results envelope (task kernel-conformance, stage cuda): one case
-per variant and tool with the error count compute-sanitizer reported, and, next to it, whether the conformance cases passed under it (a separate result: a conformance
+per variant and tool with the error count (and, for racecheck, warning count) compute-sanitizer reported, and, next to it, whether the conformance cases passed under it (a separate result: a conformance
 failure is not a sanitizer report).
 
 compute-sanitizer reports errors without crashing the process, so a run that ends in a signal (SIGSEGV, SIGABRT, SIGBUS, ...) is not
@@ -38,6 +38,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 TOOLS = ("memcheck", "racecheck", "synccheck")
 ERROR_SUMMARY = re.compile(r"ERROR SUMMARY: (\d+) error")
+# racecheck's own summary line: hazards displayed (errors, warnings). A warning is a report too.
+RACE_SUMMARY = re.compile(r"RACECHECK SUMMARY: (\d+) hazards displayed \((\d+) errors, (\d+) warnings\)")
 SIGNAL_EXIT = {128 + s for s in (signal.SIGSEGV, signal.SIGABRT, signal.SIGBUS, signal.SIGILL, signal.SIGFPE, signal.SIGTRAP)}
 
 
@@ -104,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--goldens", type=Path)
     ap.add_argument("--variants", help="comma-separated variant ids; default every registered variant")
     ap.add_argument("--commit", help="repository commit recorded in the results")
-    ap.add_argument("--leak-check", action="store_true", help="add --leak-check full to memcheck")
+    ap.add_argument("--no-leak-check", action="store_true", help="memcheck runs with --leak-check full unless this is given")
     args = ap.parse_args(argv)
 
     dll = args.runner / "Starlings.Roost.Conformance.Cuda.dll"
@@ -126,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
             sanitizer_log = Path(f"{stem}.sanitizer.log")
             results = Path(f"{stem}.results.json")
             command = ["compute-sanitizer", "--tool", tool, "--error-exitcode", "99", "--log-file", str(sanitizer_log)]
-            if tool == "memcheck" and args.leak_check:
+            if tool == "memcheck" and not args.no_leak_check:
                 command += ["--leak-check", "full"]
             command += ["dotnet", str(dll), str(args.library), "--variants", variant, "--profile", args.profile, "--results", str(results)]
             if args.goldens:
@@ -140,12 +142,17 @@ def main(argv: list[str] | None = None) -> int:
                 (args.out / "SIGNAL-DEATH.txt").write_text(f"{' '.join(command)}\nstatus {code}\n{text}", encoding="utf-8")
                 return 3
             log_text = sanitizer_log.read_text(encoding="utf-8", errors="replace") if sanitizer_log.exists() else ""
-            m = ERROR_SUMMARY.search(log_text) or ERROR_SUMMARY.search(text)
-            errors = int(m.group(1)) if m else -1
+            reports = f"{log_text}\n{text}"
+            if tool == "racecheck":
+                r = RACE_SUMMARY.search(reports)
+                errors, warnings = (int(r.group(2)), int(r.group(3))) if r else (-1, 0)
+            else:
+                m = ERROR_SUMMARY.search(reports)
+                errors, warnings = (int(m.group(1)), 0) if m else (-1, 0)
             summary = conformance_summary(results)
             # The criterion is compute-sanitizer's: zero reports, from a run that completed. Whether the conformance cases passed
             # under the tool is recorded next to it and is a separate result.
-            ok = errors == 0 and results.exists() and code in (0, 1)
+            ok = errors == 0 and warnings == 0 and results.exists() and code in (0, 1)
             failures += 0 if ok else 1
             cases[f"{op}/{variant}/{tool}"] = {
                 "op": op,
@@ -153,6 +160,7 @@ def main(argv: list[str] | None = None) -> int:
                 "tool": tool,
                 "outcome": "pass" if ok else "fail",
                 "sanitizer_errors": errors,
+                "sanitizer_warnings": warnings,
                 "exit_code": code,
                 "conformance_passed": summary["passed"],
                 "conformance_failed": summary["failed"],
