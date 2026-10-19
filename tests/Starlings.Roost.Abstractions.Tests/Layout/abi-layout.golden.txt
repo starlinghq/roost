@@ -281,6 +281,71 @@ struct RoostGatedDeltaRuleParams size=280 align=8
   use_initial_state 268 4 u32
   l2_norm_qk 272 4 u32
   scale 276 4 f32
+struct RoostGatedDeltaRuleGatesParams size=168 align=8
+  struct_size 0 4 u32
+  abi_minor 4 4 u32
+  a 8 24 RoostDeviceSpan
+  b 32 24 RoostDeviceSpan
+  a_log 56 24 RoostDeviceSpan
+  dt_bias 80 24 RoostDeviceSpan
+  g 104 24 RoostDeviceSpan
+  beta 128 24 RoostDeviceSpan
+  tokens 152 4 u32
+  v_heads 156 4 u32
+  a_stride 160 4 u32
+  b_stride 164 4 u32
+struct RoostGatedRmsNormParams size=120 align=8
+  struct_size 0 4 u32
+  abi_minor 4 4 u32
+  input 8 24 RoostDeviceSpan
+  gate 32 24 RoostDeviceSpan
+  weight 56 24 RoostDeviceSpan
+  output 80 24 RoostDeviceSpan
+  rows 104 4 u32
+  dim 108 4 u32
+  eps 112 4 f32
+  reserved0 116 4 u32
+struct RoostSigmoidMulParams size=88 align=8
+  struct_size 0 4 u32
+  abi_minor 4 4 u32
+  input 8 24 RoostDeviceSpan
+  gate 32 24 RoostDeviceSpan
+  output 56 24 RoostDeviceSpan
+  rows 80 4 u32
+  dim 84 4 u32
+struct RoostCausalConv1dParams size=200 align=8
+  struct_size 0 4 u32
+  abi_minor 4 4 u32
+  input 8 24 RoostDeviceSpan
+  weight 32 24 RoostDeviceSpan
+  bias 56 24 RoostDeviceSpan
+  output 80 24 RoostDeviceSpan
+  conv_state 104 24 RoostDeviceSpan
+  state_slots 128 24 RoostDeviceSpan
+  cu_seqlens 152 24 RoostDeviceSpan
+  batch 176 4 u32
+  tokens 180 4 u32
+  channels 184 4 u32
+  width 188 4 u32
+  silu 192 4 u32
+  reserved0 196 4 u32
+struct RoostRecurrentStateCopyParams size=72 align=8
+  struct_size 0 4 u32
+  abi_minor 4 4 u32
+  pool 8 24 RoostDeviceSpan
+  pairs 32 24 RoostDeviceSpan
+  slot_bytes 56 8 u64
+  count 64 4 u32
+  reserved0 68 4 u32
+struct RoostRecurrentStateSnapshotParams size=96 align=8
+  struct_size 0 4 u32
+  abi_minor 4 4 u32
+  pool 8 24 RoostDeviceSpan
+  snapshots 32 24 RoostDeviceSpan
+  pairs 56 24 RoostDeviceSpan
+  slot_bytes 80 8 u64
+  count 88 4 u32
+  restore 92 4 u32
 struct RoostTableRef size=16 align=8
   offset 0 8 u64
   count 8 4 u32

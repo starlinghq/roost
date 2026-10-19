@@ -48,21 +48,31 @@ if(ROOST_FETCH_UPSTREAMS)
   roost_fetch_all_upstreams()
 endif()
 
+# The M0 ops compile against FlashInfer's headers and link cuBLASLt (R-017), so the fetch cannot be skipped.
+find_package(CUDAToolkit REQUIRED)
+if(NOT DEFINED ROOST_FLASHINFER_DIR OR NOT EXISTS "${ROOST_FLASHINFER_DIR}/include/flashinfer")
+  message(FATAL_ERROR "the M0 ops need the pinned FlashInfer headers: configure with -DROOST_FETCH_UPSTREAMS=ON")
+endif()
+
 # --- Libraries, one per SM -----------------------------------------------------------------------------------------
-set(ROOST_LIBRARY_SOURCES src/registry.cu src/residual.cu)
+set(ROOST_LIBRARY_SOURCES src/registry.cu src/residual.cu src/m0_registry.cu src/m0_ops.cu src/paged_attention.cu src/gemm.cu)
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/RoostHybrid.cmake") # R-034: appends src/ops/*.cu, defines roost_hybrid_attach()
 set(ROOST_TARGETS "")
 foreach(arch IN LISTS ROOST_SM_LIST)
   set(target roost_kernels_sm${arch})
   add_library(${target} SHARED ${ROOST_LIBRARY_SOURCES})
   target_include_directories(${target} PRIVATE include src)
+  # R-017: the M0 ops use FlashInfer's headers (SYSTEM: -Wall -Werror applies to our code, not the upstream's) and cuBLASLt.
+  target_include_directories(${target} SYSTEM PRIVATE "${ROOST_FLASHINFER_DIR}/include")
+  target_link_libraries(${target} PRIVATE CUDA::cublasLt)
   target_compile_definitions(${target} PRIVATE ROOST_SM=${arch} ROOST_BUILDING_LIBRARY=1)
   # SASS for exactly this SM and no PTX: a library for another SM is a different file, so a missing SM is a typed
   # startup failure (R-023) and the digest in the manifest is per SM.
   set_target_properties(${target} PROPERTIES CUDA_ARCHITECTURES "${arch}-real" PREFIX "lib" OUTPUT_NAME ${target})
   target_compile_options(${target} PRIVATE
     $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr -Xcompiler=-Wall,-Werror>
-    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffile-prefix-map=${ROOST_REPO_ROOT}=.>)
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffile-prefix-map=${ROOST_REPO_ROOT}=.>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffile-prefix-map=${ROOST_UPSTREAM_DIR}=upstream>)
   if(UNIX)
     # Same inputs, same bytes: no line info (it records source mtimes), no build id and no local symbols (nvcc names
     # them after the process id), so the digest recorded in the manifest can be reproduced.
@@ -75,7 +85,6 @@ endforeach()
 # --- Registration and stub check (needs a GPU; run through tools/gpu-lease, see kernels/README.md) ------------------
 add_executable(roost_stub_check tests/stub_check.cpp)
 target_include_directories(roost_stub_check PRIVATE include)
-find_package(CUDAToolkit REQUIRED)
 target_link_libraries(roost_stub_check PRIVATE CUDA::cudart ${CMAKE_DL_LIBS})
 set_target_properties(roost_stub_check PROPERTIES BUILD_RPATH "${CUDAToolkit_LIBRARY_DIR}")
 add_dependencies(roost_stub_check ${ROOST_TARGETS})

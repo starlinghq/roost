@@ -274,7 +274,11 @@ public struct GemmArgs
     /// <summary>Scale of C.</summary>
     public float Beta;
 
-    /// <summary>Shape bucket of the step; selects the pinned algorithm.</summary>
+    /// <summary>
+    /// Upper bound on <see cref="M"/> the backend's pinned algorithm is chosen for (S2), in rows, not an index; 0 means
+    /// the call's own M. A backend refuses an M above it. Calls with one bucket, N, K and types share one algorithm, so a
+    /// row's result does not depend on the other rows. The CPU reference ignores it.
+    /// </summary>
     public int ShapeBucket;
 
     /// <summary>Activation element type.</summary>
@@ -748,7 +752,11 @@ public struct GatedDeltaRuleArgs
     /// <summary>Read the slot's state before the first token.</summary>
     public bool UseInitialState;
 
-    /// <summary>Normalise q and k inside the op.</summary>
+    /// <summary>
+    /// Normalise q and k inside the op: each key head's row of KDim elements is multiplied by
+    /// <c>1 / sqrt(sum(x^2) + 1e-6)</c> before <see cref="Scale"/> (contract version 3: this is the only place the l2
+    /// norm happens; Qwen3.5 sets it, as transformers passes <c>use_qk_l2norm_in_kernel=True</c>).
+    /// </summary>
     public bool L2NormQk;
 
     /// <summary>Activation element type.</summary>
@@ -837,6 +845,122 @@ public struct RecurrentStateSnapshotArgs
 
     /// <summary>Snapshot to slot instead of slot to snapshot.</summary>
     public bool Restore;
+}
+
+/// <summary>Arguments of <see cref="IRoostOps.GatedDeltaRuleGates"/>. Qwen3.5 gating, contract version 3.</summary>
+/// <remarks>
+/// <para>Per token t and value head h: <c>G[t, h] = -exp(ALog[h]) * softplus(A[t, h] + DtBias[h])</c> and
+/// <c>Beta[t, h] = sigmoid(B[t, h])</c>, with <c>softplus(x) = log(1 + exp(x))</c>, and x itself above 20 as in
+/// <c>torch.nn.functional.softplus</c> (transformers 5.20.1 <c>Qwen3_5GatedDeltaNet.forward</c>).</para>
+/// <para>A and B are the raw <c>in_proj_a</c> and <c>in_proj_b</c> outputs, read as DType and row-strided like the
+/// GatedDeltaRule views (0 means contiguous). ALog and DtBias are read, and G and Beta written, as their span's Dtype
+/// (DType when the span has none). transformers computes g in float32 and beta in the activation type, so a Qwen3.5
+/// definition writes G as F32 and Beta as the activation type, the types GatedDeltaRule then reads.</para>
+/// </remarks>
+[StructLayout(LayoutKind.Sequential)]
+public struct GatedDeltaRuleGatesArgs
+{
+    /// <summary>[Tokens, VHeads] at <see cref="AStride"/>.</summary>
+    public DeviceSpan A;
+
+    /// <summary>[Tokens, VHeads] at <see cref="BStride"/>.</summary>
+    public DeviceSpan B;
+
+    /// <summary>[VHeads] log of the decay rate (<c>A_log</c>).</summary>
+    public DeviceSpan ALog;
+
+    /// <summary>[VHeads] time-step bias (<c>dt_bias</c>).</summary>
+    public DeviceSpan DtBias;
+
+    /// <summary>[Tokens, VHeads] log decay, contiguous: GatedDeltaRule's G.</summary>
+    public DeviceSpan G;
+
+    /// <summary>[Tokens, VHeads], contiguous: GatedDeltaRule's Beta.</summary>
+    public DeviceSpan Beta;
+
+    /// <summary>Tokens.</summary>
+    public int Tokens;
+
+    /// <summary>Value heads.</summary>
+    public int VHeads;
+
+    /// <summary>Elements between token rows of A; 0 means VHeads.</summary>
+    public int AStride;
+
+    /// <summary>Elements between token rows of B; 0 means VHeads.</summary>
+    public int BStride;
+
+    /// <summary>Activation element type (A and B).</summary>
+    public DType DType;
+}
+
+/// <summary>Arguments of <see cref="IRoostOps.GatedRmsNorm"/>. Qwen3.5 gating, contract version 3.</summary>
+/// <remarks>
+/// <para>Per row of Dim: <c>Output = Input * rsqrt(mean(Input^2) + Eps) * Weight * silu(Gate)</c>, the norm before the
+/// gate, with <c>silu(z) = z * sigmoid(z)</c>. Weight multiplies as stored: it is not zero-centred (transformers 5.20.1
+/// <c>Qwen3_5RMSNormGated</c>, whose weight starts at ones, unlike <c>Qwen3_5RMSNorm</c>'s <c>1 + weight</c>).</para>
+/// <para>Qwen3.5 applies it to the GatedDeltaRule output per value head: Rows = Tokens * VHeads, Dim = VDim,
+/// Gate = the <c>in_proj_z</c> output in the same [Tokens, VHeads, VDim] order, Weight = <c>linear_attn.norm.weight</c>
+/// (float32 in the checkpoint) and Eps = <c>rms_norm_eps</c> (1e-6). Input, Gate and Output are DType; Weight is read as
+/// its span's Dtype (DType when it has none). Input may alias Output.</para>
+/// </remarks>
+[StructLayout(LayoutKind.Sequential)]
+public struct GatedRmsNormArgs
+{
+    /// <summary>[Rows, Dim].</summary>
+    public DeviceSpan Input;
+
+    /// <summary>[Rows, Dim].</summary>
+    public DeviceSpan Gate;
+
+    /// <summary>[Dim].</summary>
+    public DeviceSpan Weight;
+
+    /// <summary>[Rows, Dim].</summary>
+    public DeviceSpan Output;
+
+    /// <summary>Rows (tokens times value heads for Qwen3.5).</summary>
+    public int Rows;
+
+    /// <summary>Row width (value head size for Qwen3.5).</summary>
+    public int Dim;
+
+    /// <summary>Epsilon inside the square root.</summary>
+    public float Eps;
+
+    /// <summary>Activation element type.</summary>
+    public DType DType;
+}
+
+/// <summary>Arguments of <see cref="IRoostOps.SigmoidMul"/>. Qwen3.5 gating, contract version 3.</summary>
+/// <remarks>
+/// <para><c>Output = Input * sigmoid(Gate)</c>, elementwise over [Rows, Dim]. Qwen3.5's full-attention layers gate the
+/// attention output with it before <c>o_proj</c> (transformers 5.20.1 <c>Qwen3_5Attention.forward</c>): Rows = Tokens,
+/// Dim = Heads * HeadDim.</para>
+/// <para><c>q_proj</c> is [Heads * 2 * HeadDim, Hidden] and its output is read per head as HeadDim query columns followed
+/// by HeadDim gate columns, so the gate is not one column slice of the projection; the weight loader splits the rows into a
+/// query projection and a gate projection. Input may alias Output.</para>
+/// </remarks>
+[StructLayout(LayoutKind.Sequential)]
+public struct SigmoidMulArgs
+{
+    /// <summary>[Rows, Dim].</summary>
+    public DeviceSpan Input;
+
+    /// <summary>[Rows, Dim].</summary>
+    public DeviceSpan Gate;
+
+    /// <summary>[Rows, Dim].</summary>
+    public DeviceSpan Output;
+
+    /// <summary>Rows (tokens).</summary>
+    public int Rows;
+
+    /// <summary>Row width.</summary>
+    public int Dim;
+
+    /// <summary>Activation element type.</summary>
+    public DType DType;
 }
 
 /// <summary>Arguments of <see cref="IRoostOps.SlidingWindowAttention"/>. Reserved, M1.</summary>

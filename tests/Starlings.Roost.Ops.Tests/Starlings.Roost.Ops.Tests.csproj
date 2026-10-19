@@ -9,6 +9,10 @@
     <Using Include="Xunit" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Written by Reference/make_qwen35_gating_cases.py from transformers 5.20.1 (GatingReferenceTests). -->
+    <None Include="Reference/qwen35-gating-cases.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <ProjectReference Include="../../src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
   </ItemGroup>
