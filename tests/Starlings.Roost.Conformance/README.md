@@ -166,8 +166,10 @@ leases on device 3090. Suite commit `b18d0da`; base seed 20261019.
   cases show it; decode-mode cases show none. Smallest reproducer: `--case prefill-one-token` (16 errors, 4 warnings). It is upstream
   FlashInfer code at the manifest's pinned SHA; whether it is a true race or a racecheck limitation with the kernel's `cp.async` and
   warp-synchronous code is not established. The same variant is clean under memcheck and synccheck, and its outputs match `CpuOps`.
-- **CPU half** (`results/r019-cpu-*.results.json`): see the files; the oracle against `CpuOps` over the full profile, and `CpuOps`
-  against the 57 upstream goldens (all pass, largest utilisation 0.43).
+- **CPU half** (`results/r019-cpu-oracle.results.json`, `r019-cpu-cpuops-goldens.results.json`, `r019-cpu.out`, `full` profile): the
+  independent oracle against `CpuOps` passes 469 of 469 cases (largest utilisation 0.49, the elementwise classes), and `CpuOps`
+  against the 57 upstream goldens passes 57 of 57 (largest utilisation 0.43, f16 elementwise). The goldens file digest is
+  `99b07260…`, as in the lock.
 
 ## Not done
 

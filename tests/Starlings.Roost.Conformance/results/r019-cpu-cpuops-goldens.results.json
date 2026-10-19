@@ -1,0 +1,1814 @@
+{
+  "format": "roost.stage-results",
+  "format_version": 3,
+  "task": "kernel-conformance",
+  "profile": "kernels/cpuops",
+  "stage": "cpu",
+  "candidate": "CpuOps against the upstream goldens",
+  "producer": {
+    "name": "Starlings.Roost.Conformance",
+    "repository_commit": "b18d0da7412f64b79bb4aab9fd410dd8cb9a7a76"
+  },
+  "environment": {
+    "machine": "omarchy",
+    "provider": "cpu",
+    "provider_options": {
+      "case_profile": "full",
+      "dotnet": "10.0.12"
+    }
+  },
+  "assets": [
+    {
+      "path": "op-class-tolerances.proposal.json",
+      "sha256": "08b1fb85f49f44e08521106f3b360887ef120c586e368199b0da5e8ede361f6d"
+    },
+    {
+      "path": "roost-conformance-goldens.safetensors",
+      "sha256": "99b0726085266d8b003f29fa87087b15f7c82a6b1c5d3b4fcb9122cd91e1eeb4"
+    }
+  ],
+  "cases": {
+    "RmsNorm/cpu-reference/golden-RmsNorm-BF16-1x1024": {
+      "op": "RmsNorm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "18101158094338450050",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 1024,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0281615102642412,
+          "scale": 1.0281615102642412
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "RmsNorm/cpu-reference/golden-RmsNorm-BF16-7x1024": {
+      "op": "RmsNorm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "12267703536596943363",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 7168,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0100791760919805,
+          "scale": 1.0100791760919805
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "RmsNorm/cpu-reference/golden-RmsNorm-BF16-3x3584": {
+      "op": "RmsNorm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "6647762869726409009",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 10752,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0173575999882063,
+          "scale": 1.0173575999882063
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "RmsNorm/cpu-reference/golden-RmsNorm-F16-1x1024": {
+      "op": "RmsNorm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "6145741724080426461",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 1024,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0167608735927132,
+          "scale": 1.0167608735927132
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "RmsNorm/cpu-reference/golden-RmsNorm-F16-7x1024": {
+      "op": "RmsNorm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "11747422575479248886",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 7168,
+          "max_abs": 0.00048828125,
+          "max_utilisation": 0.4336360524947536,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.022301107577021,
+          "scale": 1.022301107577021
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "RmsNorm/cpu-reference/golden-RmsNorm-F16-3x3584": {
+      "op": "RmsNorm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "5095804943588453061",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 10752,
+          "max_abs": 0.0009765625,
+          "max_utilisation": 0.4088011674479109,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0276629523138867,
+          "scale": 1.0276629523138867
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "QkNorm/cpu-reference/golden-QkNorm-BF16-t1": {
+      "op": "QkNorm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "3946317641735281090",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 2048,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0192268398536362,
+          "scale": 1.0192268398536362
+        },
+        {
+          "name": "k",
+          "count": 512,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.027575837133666,
+          "scale": 1.027575837133666
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "QkNorm/cpu-reference/golden-QkNorm-BF16-t5": {
+      "op": "QkNorm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "18367897710626720052",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 10240,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0252737836209633,
+          "scale": 1.0252737836209633
+        },
+        {
+          "name": "k",
+          "count": 2560,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0261208058924605,
+          "scale": 1.0261208058924605
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "QkNorm/cpu-reference/golden-QkNorm-F16-t1": {
+      "op": "QkNorm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "2907716325286967927",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 2048,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0385265774148076,
+          "scale": 1.0385265774148076
+        },
+        {
+          "name": "k",
+          "count": 512,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0213172174655476,
+          "scale": 1.0213172174655476
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "QkNorm/cpu-reference/golden-QkNorm-F16-t5": {
+      "op": "QkNorm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "17665316939970450060",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 10240,
+          "max_abs": 0.00048828125,
+          "max_utilisation": 0.4217481858376764,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0311648778592752,
+          "scale": 1.0311648778592752
+        },
+        {
+          "name": "k",
+          "count": 2560,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.029987436879894,
+          "scale": 1.029987436879894
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Rope/cpu-reference/golden-Rope-BF16-pos4096-t17": {
+      "op": "Rope",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "8405012141541104688",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 34816,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.000886612287643,
+          "scale": 1.000886612287643
+        },
+        {
+          "name": "k",
+          "count": 8704,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.001648716937269,
+          "scale": 1.001648716937269
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Rope/cpu-reference/golden-Rope-BF16-pos262144-t17": {
+      "op": "Rope",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "3801999956955123374",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 34816,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9999174092991137,
+          "scale": 0.9999174092991137
+        },
+        {
+          "name": "k",
+          "count": 8704,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0079908279966352,
+          "scale": 1.0079908279966352
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Rope/cpu-reference/golden-Rope-BF16-pos2e31-t17": {
+      "op": "Rope",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "1506603419630704402",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 34816,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0037857438372442,
+          "scale": 1.0037857438372442
+        },
+        {
+          "name": "k",
+          "count": 8704,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.999843014250136,
+          "scale": 0.999843014250136
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Rope/cpu-reference/golden-Rope-F16-pos4096-t17": {
+      "op": "Rope",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "3104899510827890968",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 34816,
+          "max_abs": 0.0001220703125,
+          "max_utilisation": 0.2540217910046474,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9966805669708021,
+          "scale": 0.9966805669708021
+        },
+        {
+          "name": "k",
+          "count": 8704,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0125964723669156,
+          "scale": 1.0125964723669156
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Rope/cpu-reference/golden-Rope-F16-pos262144-t17": {
+      "op": "Rope",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "1394548456532543244",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 34816,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9986969864909132,
+          "scale": 0.9986969864909132
+        },
+        {
+          "name": "k",
+          "count": 8704,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9947202648160169,
+          "scale": 0.9947202648160169
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Rope/cpu-reference/golden-Rope-F16-pos2e31-t17": {
+      "op": "Rope",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "10304600224988262081",
+      "outputs": [
+        {
+          "name": "q",
+          "count": 34816,
+          "max_abs": 3.814697265625E-06,
+          "max_utilisation": 0.09212706379377929,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0013529574605216,
+          "scale": 1.0013529574605216
+        },
+        {
+          "name": "k",
+          "count": 8704,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.002611139484851,
+          "scale": 1.002611139484851
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "PagedAttention/cpu-reference/golden-PagedAttention-BF16-decode-mixed4": {
+      "op": "PagedAttention",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "attention-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "5980456709407087856",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 8192,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.4076092386672685,
+          "scale": 5.15625
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "PagedAttention/cpu-reference/golden-PagedAttention-BF16-decode-mixed4-hnd-ps64": {
+      "op": "PagedAttention",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "attention-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "10788007156604590125",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 8192,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.36480011768311443,
+          "scale": 4.84375
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "PagedAttention/cpu-reference/golden-PagedAttention-BF16-prefill-fresh-100": {
+      "op": "PagedAttention",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "attention-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "15066936388845083500",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 204800,
+          "max_abs": 0.001953125,
+          "max_utilisation": 0.0974124809741248,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.3070136461865202,
+          "scale": 4.40625
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "PagedAttention/cpu-reference/golden-PagedAttention-BF16-prefill-chunk-64-of-300-hnd-ps32": {
+      "op": "PagedAttention",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "attention-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "13048306551677919989",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 131072,
+          "max_abs": 0.00048828125,
+          "max_utilisation": 0.025733815842380377,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.09953549886622191,
+          "scale": 4.625
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "PagedAttention/cpu-reference/golden-PagedAttention-BF16-prefill-multi-seq": {
+      "op": "PagedAttention",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "attention-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "17130881812643887507",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 167936,
+          "max_abs": 0.0009765625,
+          "max_utilisation": 0.04996096799375488,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.2550903478171342,
+          "scale": 4.59375
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "PagedAttention/cpu-reference/golden-PagedAttention-BF16-prefill-non-causal-32-of-200": {
+      "op": "PagedAttention",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "attention-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "13782350779190565012",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 65536,
+          "max_abs": 6.103515625E-05,
+          "max_utilisation": 0.0032755002814883055,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.11579107495267807,
+          "scale": 4.75
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "SiluAndMul/cpu-reference/golden-SiluAndMul-BF16-1x3584": {
+      "op": "SiluAndMul",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "4910090275643520315",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 3584,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.5836001293991795,
+          "scale": 2.5836001293991795
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "SiluAndMul/cpu-reference/golden-SiluAndMul-BF16-8x3584": {
+      "op": "SiluAndMul",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "7005476430393348495",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 28672,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.6225850240330866,
+          "scale": 2.6225850240330866
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "SiluAndMul/cpu-reference/golden-SiluAndMul-BF16-3x1001": {
+      "op": "SiluAndMul",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "18230566967285971405",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 3003,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.5951565406333597,
+          "scale": 2.5951565406333597
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "SiluAndMul/cpu-reference/golden-SiluAndMul-F16-1x3584": {
+      "op": "SiluAndMul",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "3439356875694963358",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 3584,
+          "max_abs": 1.52587890625E-05,
+          "max_utilisation": 0.1194199832394415,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.6576070789009263,
+          "scale": 2.6576070789009263
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "SiluAndMul/cpu-reference/golden-SiluAndMul-F16-8x3584": {
+      "op": "SiluAndMul",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "14505372191737776333",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 28672,
+          "max_abs": 0.001953125,
+          "max_utilisation": 0.36443351596032414,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.6150222115346673,
+          "scale": 2.6150222115346673
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "SiluAndMul/cpu-reference/golden-SiluAndMul-F16-3x1001": {
+      "op": "SiluAndMul",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "11020615030907126632",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 3003,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.673980772670898,
+          "scale": 2.673980772670898
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-BF16-o_proj-1x1024x2048": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "16508820059486903966",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 1024,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9778652670587906,
+          "scale": 0.9778652670587906
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-BF16-o_proj-17x1024x2048": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "8891361155661000876",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 17408,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9950414323869562,
+          "scale": 0.9950414323869562
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-BF16-k_proj-3x512x1024": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "15944744180174102013",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 1536,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0251135349720382,
+          "scale": 1.0251135349720382
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-BF16-down-nontransposed-17x1024x3584": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "18367922200370839349",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 17408,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.00564953039233,
+          "scale": 1.00564953039233
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-BF16-bias-17x1024x2048": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "11158187114692490507",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 17408,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.1191920860524367,
+          "scale": 1.1191920860524367
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-BF16-alpha-beta-c-bias-bucket64-5x512x1024": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "7893603935281996124",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 2560,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.2527603237535105,
+          "scale": 2.2527603237535105
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-F16-o_proj-1x1024x2048": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "7023054175622578767",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 1024,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9875988592305013,
+          "scale": 0.9875988592305013
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-F16-o_proj-17x1024x2048": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "6596468575461199778",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 17408,
+          "max_abs": 0.00048828125,
+          "max_utilisation": 0.3169090303382156,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9906468244015019,
+          "scale": 0.9906468244015019
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-F16-k_proj-3x512x1024": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "14158402568786296144",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 1536,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.0226552655462462,
+          "scale": 1.0226552655462462
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-F16-down-nontransposed-17x1024x3584": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "2653941650950015691",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 17408,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.9915600036047615,
+          "scale": 0.9915600036047615
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-F16-bias-17x1024x2048": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "7072860228667883438",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 17408,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.1198380408220907,
+          "scale": 1.1198380408220907
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/cpu-reference/golden-Gemm-F16-alpha-beta-c-bias-bucket64-5x512x1024": {
+      "op": "Gemm",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "12276384889431758666",
+      "outputs": [
+        {
+          "name": "d",
+          "count": 2560,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 2.262070063094574,
+          "scale": 2.262070063094574
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Embedding/cpu-reference/golden-Embedding-BF16-v2048-d1024-t33": {
+      "op": "Embedding",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "1025706990762571521",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 33792,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Embedding/cpu-reference/golden-Embedding-F16-v2048-d1024-t33": {
+      "op": "Embedding",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "12453247710092778759",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 33792,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Embedding/cpu-reference/golden-Embedding-F32-v2048-d1024-t33": {
+      "op": "Embedding",
+      "variant": "cpu-reference",
+      "dtype": "F32",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "8728172796923746873",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 33792,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "LmHead/cpu-reference/golden-LmHead-BF16-v4096-d1024-sel1-cap0.0": {
+      "op": "LmHead",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "lm-head-f32",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "9099127064992292369",
+      "outputs": [
+        {
+          "name": "logits",
+          "count": 4096,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.5283852237325226,
+          "scale": 1.5283852237325226
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "LmHead/cpu-reference/golden-LmHead-BF16-v4000-d1024-sel5-cap30.0": {
+      "op": "LmHead",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "lm-head-f32",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "18058410282788207440",
+      "outputs": [
+        {
+          "name": "logits",
+          "count": 20000,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.6010961834917647,
+          "scale": 1.6010961834917647
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "LmHead/cpu-reference/golden-LmHead-F16-v4096-d1024-sel2-cap0.0": {
+      "op": "LmHead",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "lm-head-f32",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "17003467742383723877",
+      "outputs": [
+        {
+          "name": "logits",
+          "count": 8192,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.536989650434359,
+          "scale": 1.536989650434359
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Residual/cpu-reference/golden-Residual-F32-n1024": {
+      "op": "Residual",
+      "variant": "cpu-reference",
+      "dtype": "F32",
+      "source": "golden",
+      "class": "elementwise-f32",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "9214692905379511400",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 1024,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.3947105828799138,
+          "scale": 1.3947105828799138
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Residual/cpu-reference/golden-Residual-F32-n7168": {
+      "op": "Residual",
+      "variant": "cpu-reference",
+      "dtype": "F32",
+      "source": "golden",
+      "class": "elementwise-f32",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "6798386444877589812",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 7168,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.4024194839474189,
+          "scale": 1.4024194839474189
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Residual/cpu-reference/golden-Residual-BF16-n1024": {
+      "op": "Residual",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "5444207952955491444",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 1024,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.412642560167523,
+          "scale": 1.412642560167523
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Residual/cpu-reference/golden-Residual-BF16-n7168": {
+      "op": "Residual",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "elementwise-bf16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "16717950907464879699",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 7168,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.4158087962808357,
+          "scale": 1.4158087962808357
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Residual/cpu-reference/golden-Residual-F16-n1024": {
+      "op": "Residual",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "11064667156402260250",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 1024,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.4458348647961208,
+          "scale": 1.4458348647961208
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "Residual/cpu-reference/golden-Residual-F16-n7168": {
+      "op": "Residual",
+      "variant": "cpu-reference",
+      "dtype": "F16",
+      "source": "golden",
+      "class": "elementwise-f16",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "236640289240206844",
+      "outputs": [
+        {
+          "name": "out",
+          "count": 7168,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 1.4065539909511209,
+          "scale": 1.4065539909511209
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "CacheWrite/cpu-reference/golden-CacheWrite-BF16-layout2-ps16-t37": {
+      "op": "CacheWrite",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "11871184941212009313",
+      "outputs": [
+        {
+          "name": "k_cache",
+          "count": 327680,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        },
+        {
+          "name": "v_cache",
+          "count": 327680,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "CacheWrite/cpu-reference/golden-CacheWrite-BF16-layout3-ps64-t37": {
+      "op": "CacheWrite",
+      "variant": "cpu-reference",
+      "dtype": "BF16",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "8872457193015683795",
+      "outputs": [
+        {
+          "name": "k_cache",
+          "count": 1310720,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        },
+        {
+          "name": "v_cache",
+          "count": 1310720,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "CacheWrite/cpu-reference/golden-CacheWrite-F32-layout2-ps16-t9": {
+      "op": "CacheWrite",
+      "variant": "cpu-reference",
+      "dtype": "F32",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "14062370927648114857",
+      "outputs": [
+        {
+          "name": "k_cache",
+          "count": 327680,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        },
+        {
+          "name": "v_cache",
+          "count": 327680,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "CacheCopy/cpu-reference/golden-CacheCopy-bb4096-one-pool": {
+      "op": "CacheCopy",
+      "variant": "cpu-reference",
+      "dtype": "U8",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "16779919930817712125",
+      "outputs": [
+        {
+          "name": "dst",
+          "count": 98304,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    },
+    "CacheCopy/cpu-reference/golden-CacheCopy-bb4096-two-pools": {
+      "op": "CacheCopy",
+      "variant": "cpu-reference",
+      "dtype": "U8",
+      "source": "golden",
+      "class": "exact",
+      "outcome": "pass",
+      "reference": "golden",
+      "seed": "9339371495533177133",
+      "outputs": [
+        {
+          "name": "dst",
+          "count": 98304,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0,
+          "scale": 0
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "n/a",
+      "checks": [],
+      "detail": ""
+    }
+  },
+  "sections": {
+    "summary": {
+      "backend": "CpuOps",
+      "case_profile": "full",
+      "base_seed": "20261019",
+      "random_cases_per_op_and_dtype": 12,
+      "passed": 57,
+      "failed": 0,
+      "errors": 0,
+      "not_run": 0,
+      "green": true,
+      "determinism_checked": true,
+      "batch_invariance_checked": true,
+      "goldens_given": true,
+      "goldens_sha256": "99b0726085266d8b003f29fa87087b15f7c82a6b1c5d3b4fcb9122cd91e1eeb4",
+      "tolerance_file_sha256": "08b1fb85f49f44e08521106f3b360887ef120c586e368199b0da5e8ede361f6d",
+      "tolerance_file_status": "proposal"
+    },
+    "classes": {
+      "attention-bf16": {
+        "cases": 6,
+        "max_utilisation": 0.0974124809741248,
+        "max_abs": 0.001953125,
+        "violations": 0
+      },
+      "elementwise-bf16": {
+        "cases": 13,
+        "max_utilisation": 0,
+        "max_abs": 0,
+        "violations": 0
+      },
+      "elementwise-f16": {
+        "cases": 13,
+        "max_utilisation": 0.4336360524947536,
+        "max_abs": 0.001953125,
+        "violations": 0
+      },
+      "elementwise-f32": {
+        "cases": 2,
+        "max_utilisation": 0,
+        "max_abs": 0,
+        "violations": 0
+      },
+      "exact": {
+        "cases": 8,
+        "max_utilisation": 0,
+        "max_abs": 0,
+        "violations": 0
+      },
+      "gemm-bf16": {
+        "cases": 6,
+        "max_utilisation": 0,
+        "max_abs": 0,
+        "violations": 0
+      },
+      "gemm-f16": {
+        "cases": 6,
+        "max_utilisation": 0.3169090303382156,
+        "max_abs": 0.00048828125,
+        "violations": 0
+      },
+      "lm-head-f32": {
+        "cases": 3,
+        "max_utilisation": 0,
+        "max_abs": 0,
+        "violations": 0
+      }
+    },
+    "variants": [
+      {
+        "op": "RmsNorm",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 6,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "QkNorm",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 4,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "Rope",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 6,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "PagedAttention",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 6,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "SiluAndMul",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 6,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "Gemm",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 12,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "Embedding",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 3,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "LmHead",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 3,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "Residual",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 6,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "CacheWrite",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 3,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "CacheCopy",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 2,
+        "failed": 0,
+        "not_run": 0,
+        "abi_probe": "n/a"
+      }
+    ]
+  }
+}
