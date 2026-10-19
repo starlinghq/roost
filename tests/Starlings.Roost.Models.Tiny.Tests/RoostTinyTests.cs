@@ -91,6 +91,52 @@ public sealed class RoostTinyTests : IDisposable
     }
 
     [Fact]
+    public void EveryAttentionNodeBindsAnUnboundedWindow()
+    {
+        // An unbound PagedAttentionArgs.WindowLeft is 0, which CpuOps reads as a one-token window (R-022); -1 means no window.
+        var nodes = RoostTiny.BuildGraph().Nodes.Where(n => n.Op == "PagedAttention").ToArray();
+        Assert.Equal(C.Layers, nodes.Length);
+        Assert.All(nodes, n => Assert.Equal("-1", n.Attributes["arg.WindowLeft"]));
+    }
+
+    [Fact]
+    public void AttentionReadsEarlierPositions()
+    {
+        // With a one-token window every query attends only to itself and the self-consistency tests below agree trivially. Here
+        // the token at position 1 is fixed and position 0 changes: only attention carries position 0 into position 1's output.
+        int[] a = [3, 7, 11];
+        int[] b = [4, 7, 11];
+        float[] la = _runner.Step((new TinyRunner.Sequence(), a))[0];
+        float[] lb = _runner.Step((new TinyRunner.Sequence(), b))[0];
+        double worst = 0;
+        for (int i = 0; i < la.Length; i++)
+        {
+            worst = Math.Max(worst, Math.Abs(la[i] - lb[i]));
+        }
+
+        // Decode one position at a time too: position 1 alone, after position 0.
+        float[] pa = StepSecond(a);
+        float[] pb = StepSecond(b);
+        double worstDecode = 0;
+        for (int i = 0; i < pa.Length; i++)
+        {
+            worstDecode = Math.Max(worstDecode, Math.Abs(pa[i] - pb[i]));
+        }
+
+        TestContext.Current.SendDiagnosticMessage($"MEASURED attention history dense: logits differ by {worst:E3} (prefill of 3), {worstDecode:E3} (position 1 decoded)");
+        Assert.True(worst > 1e-3, $"changing token 0 moved the logits by only {worst}");
+        Assert.True(worstDecode > 1e-3, $"changing token 0 moved position 1's logits by only {worstDecode}");
+    }
+
+    private static float[] StepSecond(int[] tokens)
+    {
+        using var runner = new TinyRunner();
+        var seq = new TinyRunner.Sequence();
+        runner.Step((seq, tokens[..1]));
+        return runner.Step((seq, tokens[1..2]))[0];
+    }
+
+    [Fact]
     public void PrefillLogitsMatchTheIndependentReference()
     {
         int[] prompt = Prompt(20, 1);
