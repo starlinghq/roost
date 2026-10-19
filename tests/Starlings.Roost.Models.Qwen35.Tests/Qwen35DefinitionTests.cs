@@ -139,10 +139,15 @@ public class Qwen35DefinitionTests
         Assert.Equal("0.0625", attn.Attributes["arg.Scale"]);
         Assert.Equal("PagedNhd", attn.Attributes["arg.KvLayout"]);
         Assert.Equal("BF16", attn.Attributes["arg.KvDType"]);
+        // Full attention: an unbound WindowLeft is 0, a window of one token (R-022 found the forward attending to the current
+        // token only); -1 disables the window.
+        Assert.All(g.Nodes.Where(n => n.Op == "PagedAttention"), n => Assert.Equal("-1", n.Attributes["arg.WindowLeft"]));
         var q = g.Values.Single(v => v.Name == "l3.q");
         Assert.Equal(2048, q.Shape[1].Size);
         // The head is tied: LmHead reads the embedding slot.
         var head = g.Nodes[^1];
+        // LmHead writes float32 logits (C3); the value is declared F32 so that Output_logits and the arena agree.
+        Assert.Equal(GraphDType.F32, g.Values[head.Outputs[0]].DType);
         Assert.Equal("embed", g.Values[head.Inputs[Array.IndexOf(head.Attributes["in"].Split(','), "Weight")]].Name);
     }
 
