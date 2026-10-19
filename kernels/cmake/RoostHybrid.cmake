@@ -1,4 +1,4 @@
-# Hybrid ops (R-034): CausalConv1d and the recurrent state ops always; GatedDeltaRule when a Triton AOT interpreter is given.
+# Hybrid ops (R-034): CausalConv1d, the recurrent state ops and the Qwen3.5 gating ops always; GatedDeltaRule when a Triton AOT interpreter is given.
 # Appends the op sources to ROOST_LIBRARY_SOURCES and defines roost_hybrid_attach(<target> <sm>), called once per SM
 # target by kernels/CMakeLists.txt.
 #
@@ -12,7 +12,7 @@
 # Run that build through tools/gpu-lease: the AOT step is a GPU process.
 
 list(APPEND ROOST_LIBRARY_SOURCES
-  src/ops/hybrid_entries.cu src/ops/causal_conv1d.cu src/ops/recurrent_state.cu)
+  src/ops/hybrid_entries.cu src/ops/causal_conv1d.cu src/ops/recurrent_state.cu src/ops/gating.cu)
 
 set(ROOST_TRITON_PYTHON "" CACHE FILEPATH "Python with Triton and torch for the GatedDeltaRule AOT kernels (empty: build without them)")
 set(ROOST_FLA_DIR "" CACHE PATH "flash-linear-attention checkout at the manifest's SHA (default: the fetched upstream)")

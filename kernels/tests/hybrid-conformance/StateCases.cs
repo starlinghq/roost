@@ -77,7 +77,7 @@ internal static unsafe class StateCases
         var gpu = new CausalConv1dParams
         {
             StructSize = (uint)sizeof(CausalConv1dParams),
-            AbiMinor = 1,
+            AbiMinor = 2,
             Input = input.DevSpan(),
             Weight = weight.DevSpan(),
             Bias = biasBuf?.DevSpan() ?? default,
@@ -123,7 +123,7 @@ internal static unsafe class StateCases
             pool.ToDevice();
             pairBuf.ToDevice();
             CpuOps.RecurrentStateCopy(new RecurrentStateCopyArgs { Pool = pool.HostSpan(), Pairs = pairBuf.HostSpan(), SlotBytes = slotBytes, Count = pairs.Length / 2 });
-            lib.Run(entry, new RecurrentStateCopyParams { StructSize = (uint)sizeof(RecurrentStateCopyParams), AbiMinor = 1, Pool = pool.DevSpan(), Pairs = pairBuf.DevSpan(), SlotBytes = (ulong)slotBytes, Count = (uint)(pairs.Length / 2) }, null, stream);
+            lib.Run(entry, new RecurrentStateCopyParams { StructSize = (uint)sizeof(RecurrentStateCopyParams), AbiMinor = 2, Pool = pool.DevSpan(), Pairs = pairBuf.DevSpan(), SlotBytes = (ulong)slotBytes, Count = (uint)(pairs.Length / 2) }, null, stream);
             Cuda.Sync(stream);
             bool ok = pool.FromDevice().AsSpan().SequenceEqual(pool.HostBytes());
             r.Check(ok, $"state-copy/slot_bytes={slotBytes}", $"pairs={pairs.Length / 2} chain 0>1>2 included; bit_exact={ok}");
@@ -149,7 +149,7 @@ internal static unsafe class StateCases
             snaps.ToDevice();
             pairBuf.ToDevice();
             CpuOps.RecurrentStateSnapshot(new RecurrentStateSnapshotArgs { Pool = pool.HostSpan(), Snapshots = snaps.HostSpan(), Pairs = pairBuf.HostSpan(), SlotBytes = slotBytes, Count = pairs.Length / 2, Restore = restore });
-            lib.Run(entry, new RecurrentStateSnapshotParams { StructSize = (uint)sizeof(RecurrentStateSnapshotParams), AbiMinor = 1, Pool = pool.DevSpan(), Snapshots = snaps.DevSpan(), Pairs = pairBuf.DevSpan(), SlotBytes = (ulong)slotBytes, Count = (uint)(pairs.Length / 2), Restore = restore ? 1u : 0u }, null, stream);
+            lib.Run(entry, new RecurrentStateSnapshotParams { StructSize = (uint)sizeof(RecurrentStateSnapshotParams), AbiMinor = 2, Pool = pool.DevSpan(), Snapshots = snaps.DevSpan(), Pairs = pairBuf.DevSpan(), SlotBytes = (ulong)slotBytes, Count = (uint)(pairs.Length / 2), Restore = restore ? 1u : 0u }, null, stream);
             Cuda.Sync(stream);
             bool ok = pool.FromDevice().AsSpan().SequenceEqual(pool.HostBytes()) && snaps.FromDevice().AsSpan().SequenceEqual(snaps.HostBytes());
             r.Check(ok, $"state-snapshot/{(restore ? "restore" : "save")}/slot_bytes={slotBytes}", $"pairs={pairs.Length / 2}; bit_exact={ok}");

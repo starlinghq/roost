@@ -64,6 +64,12 @@ extern "C" RoostStatus roost_recurrent_state_copy_run(RoostContext* ctx, const v
 extern "C" RoostStatus roost_recurrent_state_snapshot_run(RoostContext* ctx, const void* params,
                                                           const RoostWorkspace* ws, void* stream);
 
+extern "C" RoostStatus roost_gated_delta_rule_gates_run(RoostContext* ctx, const void* params, const RoostWorkspace* ws,
+                                                         void* stream);
+extern "C" RoostStatus roost_gated_rms_norm_run(RoostContext* ctx, const void* params, const RoostWorkspace* ws,
+                                                 void* stream);
+extern "C" RoostStatus roost_sigmoid_mul_run(RoostContext* ctx, const void* params, const RoostWorkspace* ws, void* stream);
+
 extern "C" RoostStatus roost_gdn_chunk_workspace(RoostContext* ctx, const void* params, RoostWorkspaceSizes* sizes);
 extern "C" RoostStatus roost_gdn_chunk_plan(RoostContext* ctx, const void* params, const RoostWorkspace* ws, void* stream);
 extern "C" RoostStatus roost_gdn_chunk_run(RoostContext* ctx, const void* params, const RoostWorkspace* ws, void* stream);

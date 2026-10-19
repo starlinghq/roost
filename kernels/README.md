@@ -5,7 +5,7 @@ CUDA C++ behind the C1 ABI (`kernels/include/roost_kernels.h`, frozen). One shar
 Each library exports `roost_abi_version`, `roost_last_error`, `roost_register` (the registration table),
 `roost_context_create` and `roost_context_destroy`. The table holds the `residual-stub` variant of `Residual` (R-016: a
 correct, unoptimised op that proves the build, registration and run path), the ten M0 attention-side variants of R-017
-(next section) and the hybrid ops of R-034 (Hybrid ops).
+(next section) and the hybrid ops of R-034 (Hybrid ops), all against C1 ABI 1.2 (contract version 3).
 
 ## Files
 
@@ -36,6 +36,9 @@ up to 16 (4 for Qwen3.5), bf16 activations and float32 recurrent state; anything
 | `gated-delta-rule-recurrent-aot` | GatedDeltaRule, any length (decode, short continuations) | S3 AOT `fused_recurrent` cubin | graph capturable, deterministic, batch invariant |
 | `causal-conv1d-cuda` | CausalConv1d | CUDA C++ (S3 did not cover it) | graph capturable, deterministic, batch invariant |
 | `recurrent-state-copy-cuda`, `recurrent-state-snapshot-cuda` | RecurrentStateCopy, RecurrentStateSnapshot | CUDA C++ | graph capturable, deterministic, batch invariant |
+| `gated-delta-rule-gates-cuda` | GatedDeltaRuleGates (contract v3, op 133) | CUDA C++ | graph capturable, deterministic, batch invariant |
+| `gated-rms-norm-cuda` | GatedRmsNorm (contract v3, op 134) | CUDA C++ | graph capturable, deterministic, batch invariant |
+| `sigmoid-mul-cuda` | SigmoidMul (contract v3, op 135) | CUDA C++ | graph capturable, deterministic, batch invariant |
 
 - **Strided views.** q, k and v are read through their row strides (`q_stride`, `k_stride`, `v_stride`, 6144 for the
   conv1d output of Qwen3.5-0.8B). The stock FLA cubins read dense tensors, so each call first gathers the views into
@@ -59,7 +62,17 @@ up to 16 (4 for Qwen3.5), bf16 activations and float32 recurrent state; anything
   sequences ride on grid x; channel blocks on y, which is capped at 65535 blocks of 128); beyond that it returns
   `ROOST_STATUS_INVALID_ARGUMENT`. `GatedDeltaRule` takes up to 2^24 tokens and 2^20 sequences (sequences ride on grid x
   in the state gather and scatter). The harness runs a 70000-token conv sequence.
-- **Graph capture.** The `GRAPH_CAPTURABLE` ops (recurrent GatedDeltaRule, CausalConv1d and the two state ops) are
+- **Gating ops (`src/ops/gating.cu`).** The formulas and dtypes are the ADR's v3 entry and `roost_kernels.h`; `CpuOps` is the
+  definition. Every element is computed in float and rounded once to its span's type (bf16 or float32; each span carries its
+  own dtype, so Qwen3.5's float32 `A_log`, `g` and norm weight sit beside bf16 activations). GatedDeltaRuleGates:
+  `g = -exp(a_log) * softplus(a + dt_bias)` with torch's threshold of 20, `beta = sigmoid(b)`, `a` and `b` row-strided so they
+  may be views of a fused projection. GatedRmsNorm: per row, `x * rsqrt(mean(x^2) + eps) * weight * silu(gate)`, one block per
+  row with a fixed-order reduction, so a row's result does not depend on the other rows. SigmoidMul: `input * sigmoid(gate)`,
+  a grid-stride loop (the stride path past 2^20 blocks, 268 million elements, is not exercised). `input` may alias `output`
+  (same start address) for GatedRmsNorm and SigmoidMul; any other overlap is `INVALID_ARGUMENT`. Other dtypes are
+  `UNSUPPORTED`. The softplus is `log1pf(expf(x))` in float, where the reference uses `log(1 + exp(x))` in double.
+  `GatedDeltaRule` still normalises q and k itself (`l2_norm_qk`, eps 1e-6, before the query scale), as the v3 header says.
+- **Graph capture.** The `GRAPH_CAPTURABLE` ops (recurrent GatedDeltaRule, CausalConv1d, the two state ops and the three gating ops) are
   captured into a CUDA graph and replayed once by the harness (`graph/*` checks: the same cases as the direct runs, with
   `run()` captured by `cudaStreamBeginCapture` and launched through `cudaGraphLaunch`). Replaying a graph many times
   while the caller changes the device inputs between replays is not exercised.
@@ -69,7 +82,7 @@ up to 16 (4 for Qwen3.5), bf16 activations and float32 recurrent state; anything
   missing op). Pass the Python of the manifest's `[triton_aot]` closure and run the build through `tools/gpu-lease`:
 
 ```sh
-cmake -S kernels -B <build> -G Ninja -DROOST_SM_LIST=86 -DROOST_FETCH_UPSTREAMS=OFF \
+cmake -S kernels -B <build> -G Ninja -DROOST_SM_LIST=86 -DROOST_UPSTREAM_DIR=<cache dir> \
   -DROOST_TRITON_PYTHON=<venv>/bin/python -DROOST_FLA_DIR=<flash-linear-attention checkout at the manifest's SHA>
 tools/gpu-lease run --device 3090 --need-mib 500 --stream C -- cmake --build <build> -j2
 dotnet build -c Release kernels/tests/hybrid-conformance -o <harness dir>
@@ -80,6 +93,34 @@ tools/gpu-lease run --device 3090 --need-mib 6000 --stream C -- dotnet <harness 
 Conformance (`kernels/results/r034-*`) compares each op with `CpuOps` (double precision) on random inputs: the chunk
 variant against S3's measured bf16 rounding of the chunk path, the recurrent variant and the CUDA ops much tighter.
 The tolerances are development limits inside the harness, not a tolerance file; the maintainer sets the real ones (R-019).
+
+### Proposed tolerances (for the maintainer; not written to any tolerance file)
+
+Measured on the RTX 3090 (SM 86) by the harness, against `CpuOps` in double on random inputs of the Qwen3.5-0.8B shapes
+(`kernels/results/r034-hybrid-conformance-sm86.log`, 112 checks). The metric is the worst `|got - ref| / (|ref| + floor)`
+over the output, with the floor named in the table; the GatedDeltaRule rows use `|got - ref|` over the reference maximum.
+A bf16 output can differ from the double reference by one bf16 step, which is 2^-8 to 2^-7 relative to the result
+(0.0039 to 0.0078), so the proposed bf16 limit is 2^-7 = 7.8e-3; a float32 output differs by float rounding only.
+
+| Op, output | Metric (floor) | Worst measured | Dev limit in harness | Proposed |
+| --- | --- | --- | --- | --- |
+| GatedDeltaRule chunk, o (bf16) | rel to max | 5.81e-3 | 1.6e-2 | 1.6e-2 (2.8x; S3 measured 5.6e-3 against fp32) |
+| GatedDeltaRule chunk, state (f32) | rel to max | 4.40e-3 | 1.0e-2 | 1.0e-2 (2.3x; S3 measured 3.5e-3) |
+| GatedDeltaRule recurrent, o (bf16) | rel to max | 4.47e-4 | 8e-3 | 2e-3 (4.5x) |
+| GatedDeltaRule recurrent, state (f32) | rel to max | 1.22e-7 | 1e-4 | 1e-5 (80x; sequences up to 200 tokens measured) |
+| CausalConv1d, bf16 output | scaled (1e-3) | 7.57e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| CausalConv1d, f32 output | scaled (0.1) | 1.7e-6 | 2e-5 | 1e-5 |
+| CausalConv1d state, RecurrentStateCopy, RecurrentStateSnapshot | bytes | identical | identical | identical (0) |
+| GatedDeltaRuleGates, g (f32) | scaled (1e-3) | 2.7e-7 | 1e-5 | 1e-5 (37x) |
+| GatedDeltaRuleGates, beta (bf16) | scaled (1e-3) | 0 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| GatedRmsNorm, bf16 output | scaled (1e-2) | 6.32e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| GatedRmsNorm, f32 output | scaled (1e-6) | 3.2e-7 | 1e-5 | 1e-5 (31x) |
+| SigmoidMul, bf16 output | scaled (1e-3) | 5.21e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| SigmoidMul, f32 output | scaled (1e-6) | 2.3e-7 | 1e-5 | 1e-5 (43x) |
+
+Caveats: random inputs, not real activations; one GPU (SM 86); sequences of at most 1500 tokens for the chunk variant and 200
+for the recurrent one. The numbers for the chunk variant are bf16 rounding of FLA's own intermediates, so they do not tighten
+with this library's code. R-019 should confirm them on real Qwen3.5 activations once R-022 runs the model.
 
 ## Build
 
@@ -190,18 +231,19 @@ The group stays opt-in (`--filter graph`), and no R-017 variant claims `graph_ca
 
 ## Reproducibility and digests
 
-Builds are byte-identical per SM when made from the same checkout path (the same path twice; the CI job compares two builds per SM at one path).
-They are **not** path independent: a build from another checkout gives other bytes. R-017 measured 576 differing bytes in SM 86, all nvcc
-`_INTERNAL_<hash>_<file>_cu_...` symbol names whose hash derives from the source path (they come from `cuda::std` entities in the headers, so a named
-namespace in our sources does not remove them), and R-034's reviewer saw the same kind of difference on the AOT library (`5ebfa478...` against
-`d48830e9...`, 12 bytes in every nvcc-compiled object, with the generated C++ and all 7 Triton cubins identical). The manifest digests are therefore
-reproducible only from the checkout path they were recorded at (`/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for
-example a fixed build path in CI) is open and belongs to the release pipeline (R-060). Linking needs no line info (it records source mtimes), no build
-id and no local symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1). The digests are
-of the Triton AOT build (SM 86 through the 3090 lease); the GPU-less CI build has no GatedDeltaRule and so other bytes. Only SM 86 has run on
-hardware. The CI job
-reports, and does not fail on, a difference from them; the release workflow (R-060) records the digests of the pinned
-container build and publishes the libraries.
+Builds of the same sources are byte-identical per SM when made from the same checkout path: two AOT builds of SM 86 into different build
+directories (R-034, after the contract v3 merge) gave the same library (`sha256` prefix `615a3dbd`), and the CI job compares two no-AOT builds per SM
+at one path. Nothing shows a path-independent build. R-017 measured 576 differing bytes in SM 86 between two checkout paths, all nvcc
+`_INTERNAL_<hash>_<file>_cu_...` symbol names whose hash derives from the source path (they come from `cuda::std` entities in the headers, so a
+named namespace in our sources does not remove them), and R-034's reviewer saw the same kind of difference on the AOT library (12 bytes in every
+nvcc-compiled object, while the generated C++ and all 7 Triton cubins were identical). The manifest digests therefore reproduce only from the
+checkout path they were recorded at (`/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for example a fixed build path
+in CI) is open and belongs to the release pipeline (R-060). Linking needs no line info (it records source mtimes), no build id and no local
+symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
+
+The manifest's six digests are one AOT build each, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
+other bytes. Only SM 86 has run on hardware. The CI job reports, and does not fail on, a difference from the digests; the release workflow
+(R-060) records the digests of the pinned container build and publishes the libraries.
 
 ## Not done
 
@@ -211,7 +253,10 @@ container build and publishes the libraries.
   from the C1 header and no POSIX types, and `stub_check.cpp` has a `LoadLibrary` path, but none of it has been compiled with
   MSVC.
 - Triton AOT: built by R-034 (above) for SM 80 to 120; only SM 86 has run on hardware, the others are `untested`.
-  A GPU-less CI build does not compile the AOT cubins. Retiring Triton for a CUDA C++ port is an M3 item (decision 23).
+  A GPU-less CI build does not compile the AOT cubins. `kernels/ci/build-all-sm.sh` (the CI path) still builds
+  all six SMs twice byte-identically and passes the registration check on the merged tree without a GPU
+  (`kernels/results/r034-ci-noaot-build.log`, a local run; the GitHub Actions job itself has not run), but its libraries carry no GatedDeltaRule.
+  The release pipeline needs a GPU build host for the AOT step or the cubins as a pre-built input (R-060). Retiring Triton for a CUDA C++ port is an M3 item (decision 23).
 - CUTLASS and vLLM are fetched and verified by SHA; no op compiles against them (FlashInfer is used by R-017; cuBLASLt serves Gemm).
 
 ## Open before merge
