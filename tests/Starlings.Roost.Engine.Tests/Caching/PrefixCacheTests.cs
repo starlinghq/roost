@@ -120,6 +120,23 @@ public sealed class PrefixCacheTests
         AssertSameOutputs(Run(() => Attention(12), Off, waves), cached);
     }
 
+    [Theory]
+    [InlineData(false, 1)]
+    [InlineData(false, 2)]
+    [InlineData(true, 1)]
+    [InlineData(true, 2)]
+    public void ForkedBranchesWithTheCacheOnMatchTheUncachedRun(bool hybrid, int inFlight)
+    {
+        var parent = Req(1, Seq(0, 22), maxTokens: 12);
+        var child = Req(2, Seq(0, 22), maxTokens: 12);
+        Request[] later = [Req(3, Seq(0, 22).Concat(Seq(60, 4)), maxTokens: 3), Req(4, Seq(0, 10), maxTokens: 3)];
+        var plain = RunWithFork(() => hybrid ? Hybrid(60, 6, 0) : Attention(60), Off, parent, child, later, inFlight);
+        var cached = RunWithFork(() => hybrid ? Hybrid(60, 6, 24) : Attention(60), On, parent, child, later, inFlight);
+        AssertSameOutputs(plain, cached);
+        Assert.Contains(2UL, cached.Outputs.Keys);
+        Assert.True(cached.Stats!.Value.Hits >= 2, $"hits {cached.Stats.Value.Hits}");
+    }
+
     [Fact]
     public void ReplayIsDeterministicWithTheCacheOn()
     {
