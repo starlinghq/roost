@@ -4,8 +4,8 @@ CUDA C++ behind the C1 ABI (`kernels/include/roost_kernels.h`, frozen). One shar
 `libroost_kernels_sm<N>.so`, so the digest of every release asset is per SM and a missing SM is a missing file.
 Each library exports `roost_abi_version`, `roost_last_error`, `roost_register` (the registration table),
 `roost_context_create` and `roost_context_destroy`. The table holds the `residual-stub` variant of `Residual` (R-016: a
-correct, unoptimised op that proves the build, registration and run path) and the ten M0 attention-side variants of R-017
-(next section). R-034 adds the hybrid ops.
+correct, unoptimised op that proves the build, registration and run path), the ten M0 attention-side variants of R-017
+(next section) and the hybrid ops of R-034 (Hybrid ops), all against C1 ABI 1.2 (contract version 3).
 
 ## Files
 
@@ -16,11 +16,131 @@ correct, unoptimised op that proves the build, registration and run path) and th
 | `src/` | `registry.cu` (C1 exports and the table), `residual.cu` (the stub), `m0_registry.cu` (the R-017 entries and their constraints), `m0_ops.cu` (RmsNorm, QkNorm, Rope, SiluAndMul, Embedding, CacheWrite, CacheCopy), `paged_attention.cu`, `gemm.cu` (Gemm and LmHead), `op_common.h` (validation shared by the ops). |
 | `tests/stub_check.cpp` | The host program that loads a library by its exports and runs the Residual stub. |
 | `tests/ops-cuda/` | R-017's GPU conformance (`Roost.KernelOps.Tests.Cuda`, local only, not in `Roost.slnx`): loads a built library through its C1 exports and compares every M0 op with `CpuOps` on random inputs and on real Qwen3.5-0.8B weights. |
+| `src/ops/`, `cmake/RoostHybrid.cmake` | The hybrid ops of R-034 (below): one file per op family, their registration entries (`hybrid_entries.cu`) and their CMake hook. |
+| `aot/` | Triton AOT, build time only (decision 23): `capture_specs.py` records the specialisations from live FLA launches, `gdn_specs.json` is its output, `build_gdn.py` compiles them to a C++ file of cubins per SM. |
+| `tests/hybrid-conformance/` | Local .NET harness (not in `Roost.slnx`): the hybrid ops against `CpuOps` on random inputs, through the C ABI. |
 | `tools/manifest_cmake.py` | Manifest to CMake variables. |
 | `tools/record_digests.py` | SHA-256 of the built libraries; `--write` records them in the manifest, `--check` compares. |
 | `tools/check_provenance.py` | Fails a pin or patch-set change that does not change `PROVENANCE.md` and `THIRD-PARTY-NOTICES.md` (and any tree where the manifest and those files disagree). |
 | `ci/build-all-sm.sh` | What the CI `kernels` job runs: every SM, built twice, byte-compared, registration table checked without a GPU. |
 | `results/` | Raw text logs of GPU runs (`r016-stub-sm86.log`, `r017-ops-sm86.log`, `r017-graph-sm86.log`, `r017-stub-check-sm86.log`) and one excerpt (`r017-rejected-configs-sm86.log`). |
+
+## Hybrid ops (R-034)
+
+Qwen3.5-0.8B has 18 Gated DeltaNet layers (decision 15). Specialised for 16 key and value heads, head size 128, conv width
+up to 16 (4 for Qwen3.5), bf16 activations and float32 recurrent state; anything else is `ROOST_STATUS_UNSUPPORTED`.
+
+| Variant id | Op | Source | Flags |
+| --- | --- | --- | --- |
+| `gated-delta-rule-chunk-aot` | GatedDeltaRule, chunked prefill | S3 Triton AOT cubins of FLA at the manifest's SHA | deterministic, batch invariant, needs plan |
+| `gated-delta-rule-recurrent-aot` | GatedDeltaRule, any length (decode, short continuations) | S3 AOT `fused_recurrent` cubin | graph capturable, deterministic, batch invariant |
+| `causal-conv1d-cuda` | CausalConv1d | CUDA C++ (S3 did not cover it) | graph capturable, deterministic, batch invariant |
+| `recurrent-state-copy-cuda`, `recurrent-state-snapshot-cuda` | RecurrentStateCopy, RecurrentStateSnapshot | CUDA C++ | graph capturable, deterministic, batch invariant |
+| `gated-delta-rule-gates-cuda` | GatedDeltaRuleGates (contract v3, op 133) | CUDA C++ | graph capturable, deterministic, batch invariant |
+| `gated-rms-norm-cuda` | GatedRmsNorm (contract v3, op 134) | CUDA C++ | graph capturable, deterministic, batch invariant |
+| `sigmoid-mul-cuda` | SigmoidMul (contract v3, op 135) | CUDA C++ | graph capturable, deterministic, batch invariant |
+
+- **Strided views.** q, k and v are read through their row strides (`q_stride`, `k_stride`, `v_stride`, 6144 for the
+  conv1d output of Qwen3.5-0.8B). The stock FLA cubins read dense tensors, so each call first gathers the views into
+  workspace (l2-normalising q and k on the chunk path, as FLA's `l2norm` kernel does) and the recurrent kernel normalises
+  its own copy. The recurrent state is gathered from the pool slots into a dense tensor and scattered back. That costs
+  about 2 MiB of state traffic per sequence and layer in each direction; a kernel patch that reads the views and slots
+  directly is the follow-up, and the reason the AOT inputs are specs rather than a patch set.
+- **Which variant.** The chunk variant is the prefill path (`plan()` builds FLA's chunk tables from `cu_seqlens_host`;
+  run it on the host side of the step, never inside a graph). The recurrent variant takes any sequence lengths; the
+  recurrent kernel is serial over tokens, so the loader should pick it for decode and short continuations. The choice is
+  the caller's: the params carry no mode.
+- **Workspace.** `workspace` gives the device bytes (`plan_bytes` 16 and `pinned_host_bytes` for the chunk tables on the
+  chunk variant), bounded by shape only (chunks at most `tokens / 64 + batch`). The caller keeps the pinned buffer alive
+  until the copy `plan()` queues has run. Nothing allocates inside a call; cubins load when the context is created.
+- **Slots.** Slot indices are device data and are not range-checked. A sequence of zero tokens leaves its slot untouched,
+  as `CpuOps` does. A negative slot on a sequence with tokens is outside the contract (`CpuOps` throws
+  `ArgumentException`); the library does not fault on it: that sequence starts from a zero state (the dense initial state
+  is zeroed before the gather, so `use_initial_state` makes no difference) and its final state is not written back.
+  The harness checks this (`gdn/negative-slot/*`), so the DETERMINISTIC flag holds for that input too.
+- **Limits.** `CausalConv1d` takes up to 2^31 - 1 tokens or sequences and up to 8,388,480 channels in one call (tokens and
+  sequences ride on grid x; channel blocks on y, which is capped at 65535 blocks of 128); beyond that it returns
+  `ROOST_STATUS_INVALID_ARGUMENT`. `GatedDeltaRule` takes up to 2^24 tokens and 2^20 sequences (sequences ride on grid x
+  in the state gather and scatter). The harness runs a 70000-token conv sequence.
+- **Gating ops (`src/ops/gating.cu`).** The formulas and dtypes are the ADR's v3 entry and `roost_kernels.h`; `CpuOps` is the
+  definition. Every element is computed in float and rounded once to its span's type (bf16 or float32; each span carries its
+  own dtype, so Qwen3.5's float32 `A_log`, `g` and norm weight sit beside bf16 activations). GatedDeltaRuleGates:
+  `g = -exp(a_log) * softplus(a + dt_bias)` with torch's threshold of 20, `beta = sigmoid(b)`, `a` and `b` row-strided so they
+  may be views of a fused projection. GatedRmsNorm: per row, `x * rsqrt(mean(x^2) + eps) * weight * silu(gate)`, one block per
+  row with a fixed-order reduction, so a row's result does not depend on the other rows. SigmoidMul: `input * sigmoid(gate)`,
+  a grid-stride loop (the stride path past 2^20 blocks, 268 million elements, is not exercised). `input` may alias `output`
+  (same start address) for GatedRmsNorm and SigmoidMul; any other overlap is `INVALID_ARGUMENT`. GatedDeltaRuleGates has no
+  in-place form: `g` and `beta` may not overlap each other or `a`, `b`, `a_log`, `dt_bias` at all, same start address included
+  (element sizes and strides differ between the spans, so a shared start address races). Other dtypes are
+  `UNSUPPORTED`. The softplus is `log1pf(expf(x))` in float, where the reference uses `log(1 + exp(x))` in double.
+  `GatedDeltaRule` still normalises q and k itself (`l2_norm_qk`, eps 1e-6, before the query scale), as the v3 header says.
+- **Graph capture.** The `GRAPH_CAPTURABLE` ops (recurrent GatedDeltaRule, CausalConv1d, the two state ops and the three gating ops) are
+  captured into a CUDA graph and replayed once by the harness (`graph/*` checks: the same cases as the direct runs, with
+  `run()` captured by `cudaStreamBeginCapture` and launched through `cudaGraphLaunch`). Replaying a graph many times
+  while the caller changes the device inputs between replays is not exercised.
+- **Digest reproducibility.** See "Reproducibility and digests" below: the digests hold at the recorded checkout path only.
+- **Build.** The AOT step needs a visible CUDA device (S3; importing FLA queries `torch.cuda`), so it is opt-in and a
+  GPU-less build compiles the library without `GatedDeltaRule` (it is then not registered, which the loader reports as a
+  missing op). Pass the Python of the manifest's `[triton_aot]` closure and run the build through `tools/gpu-lease`:
+
+```sh
+cmake -S kernels -B <build> -G Ninja -DROOST_SM_LIST=86 -DROOST_UPSTREAM_DIR=<cache dir> \
+  -DROOST_TRITON_PYTHON=<venv>/bin/python -DROOST_FLA_DIR=<flash-linear-attention checkout at the manifest's SHA>
+tools/gpu-lease run --device 3090 --need-mib 500 --stream C -- cmake --build <build> -j2
+dotnet build -c Release kernels/tests/hybrid-conformance -o <harness dir>
+tools/gpu-lease run --device 3090 --need-mib 6000 --stream C -- dotnet <harness dir>/Roost.HybridConformance.dll \
+  <build>/libroost_kernels_sm86.so --log kernels/results/r034-hybrid-conformance-sm86.log
+```
+
+Conformance (`kernels/results/r034-*`) compares each op with `CpuOps` (double precision) on random inputs: the chunk
+variant against S3's measured bf16 rounding of the chunk path, the recurrent variant and the CUDA ops much tighter.
+The tolerances are development limits inside the harness, not a tolerance file; the maintainer sets the real ones (R-019).
+
+### Proposed tolerances (for the maintainer; not written to any tolerance file)
+
+Measured on the RTX 3090 (SM 86) by the harness, against `CpuOps` in double on random inputs of the Qwen3.5-0.8B shapes
+(`kernels/results/r034-hybrid-conformance-sm86.log`, 117 checks). The metric is the worst `|got - ref| / (|ref| + floor)`
+over the output, with the floor named in the table. For the GatedDeltaRule rows the floor is the reference maximum
+(`refMax`, the largest `|ref|` over that output or the whole state pool, as in `GdnCases.cs` and `Compare.Errors`), so the
+metric is `|got - ref| / (|ref| + refMax)`, not `|got - ref| / refMax`. It sits between 0.5x and 1x of the latter (the
+denominator runs from `refMax` to `2 * refMax`), so a figure here is not comparable with one taken as error over reference
+max. A tolerance file and the harness must use this same formula; a limit written for one metric and applied with the other
+is off by up to a factor of two.
+A bf16 output can differ from the double reference by one bf16 step, which is 2^-8 to 2^-7 relative to the result
+(0.0039 to 0.0078), so the proposed bf16 limit is 2^-7 = 7.8e-3; a float32 output differs by float rounding only.
+
+| Op, output | Metric (floor) | Worst measured | Dev limit in harness | Proposed |
+| --- | --- | --- | --- | --- |
+| GatedDeltaRule chunk, o (bf16) | scaled (floor = ref max) | 5.81e-3 | 1.6e-2 | 1.6e-2 (2.8x) |
+| GatedDeltaRule chunk, state (f32) | scaled (floor = ref max) | 4.40e-3 | 1.0e-2 | 1.0e-2 (2.3x) |
+| GatedDeltaRule recurrent, o (bf16) | scaled (floor = ref max) | 4.47e-4 | 8e-3 | 2e-3 (4.5x) |
+| GatedDeltaRule recurrent, state (f32) | scaled (floor = ref max) | 1.22e-7 | 1e-4 | 1e-5 (82x; sequences up to 200 tokens measured) |
+| CausalConv1d, bf16 output | scaled (1e-3) | 7.57e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| CausalConv1d, f32 output | scaled (0.1) | 1.7e-6 | 2e-5 | 1e-5 |
+| CausalConv1d state, RecurrentStateCopy, RecurrentStateSnapshot | bytes | identical | identical | identical (0) |
+| GatedDeltaRuleGates, g (f32) | scaled (1e-3) | 2.7e-7 | 1e-5 | 1e-5 (37x) |
+| GatedDeltaRuleGates, beta (bf16) | scaled (1e-3) | 0 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| GatedRmsNorm, bf16 output | scaled (1e-2) | 6.32e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| GatedRmsNorm, f32 output | scaled (1e-6) | 3.2e-7 | 1e-5 | 1e-5 (31x) |
+| SigmoidMul, bf16 output | scaled (1e-3) | 5.21e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
+| SigmoidMul, f32 output | scaled (1e-6) | 2.3e-7 | 1e-5 | 1e-5 (43x) |
+
+Open points for the maintainer, who owns the final values: (1) the floors differ between rows (1e-3 for most, 1e-2 for
+GatedRmsNorm bf16, 0.1 for CausalConv1d f32, 1e-6 for the f32 norm and SigmoidMul) and were chosen per row to sit below the
+smallest typical output of that op, not from a common rule; with floor 0.1 the conv f32 figure is effectively an absolute error
+for outputs below 0.1, and floor 1e-2 hides relative error on small GatedRmsNorm outputs. (2) The CausalConv1d bf16 proposal
+(7.8e-3 against 7.57e-3 measured) is one bf16 step against a reference rounded to bf16, so it allows no two-step disagreement.
+(3) The recurrent GatedDeltaRule proposal (o 2e-3, state 1e-5) is tighter than the limits the harness asserts (8e-3, 1e-4), so
+no committed run enforces the proposed values; the log shows the measured maxima (4.47e-4, 1.22e-7) only.
+
+The headroom ratio is proposed limit over worst measured value, both under the metric above (1.6e-2 / 5.81e-3, 1.0e-2 /
+4.40e-3, 2e-3 / 4.47e-4, 1e-5 / 1.22e-7). S3 (`docs/m0/roost-s3-triton-aot-gdn.md`) reported its chunk figures (5.0e-4 on `o`,
+3.3e-3 on state, against an fp32 reference) as max error over reference max, a different metric from the one here, so those
+numbers are not a comparison for the rows above and are not used to size the limits.
+
+Caveats: random inputs, not real activations; one GPU (SM 86); sequences of at most 1500 tokens for the chunk variant and 200
+for the recurrent one. The numbers for the chunk variant are bf16 rounding of FLA's own intermediates, so they do not tighten
+with this library's code. R-019 should confirm them on real Qwen3.5 activations once R-022 runs the model.
 
 ## Build
 
@@ -131,16 +251,19 @@ The group stays opt-in (`--filter graph`), and no R-017 variant claims `graph_ca
 
 ## Reproducibility and digests
 
-Builds are byte-identical per SM when made from the same checkout path (the same path twice; the CI job compares two builds per SM at one path).
-They are **not** path independent: a review build of this branch from another checkout gave sha256 14856fad... for SM 86 against 0f707ae0... in the
-manifest. Sizes are equal and all 576 differing bytes are nvcc `_INTERNAL_<hash>_<file>_cu_...` symbol names, whose hash derives from the source
-path (they come from `cuda::std` entities in the headers, so a named namespace in our sources does not remove them). The earlier statement that two
-paths agree was wrong for this tree. The manifest digests are reproducible only from `/home/mark/Projects/roost-wave4/R-017`; making the build path
-independent (for example a fixed build path in CI) is open. Linking needs no line info (it records source mtimes), no build id and no local symbols
-(nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
-The manifest's SM 86 digests were re-recorded after the C1 ABI 1.1 header (one build, the development host's); the digests of SM 80, 89, 90, 100 and 120 are still those of the ABI 1.0 build and are stale until CI or the release workflow records them. Only SM 86 has run on hardware. The CI job
-reports, and does not fail on, a difference from them; the release workflow (R-060) records the digests of the pinned
-container build and publishes the libraries.
+Builds of the same sources are byte-identical per SM when made from the same checkout path: two AOT builds of SM 86 into different build
+directories (R-034, after the contract v3 merge) gave the same library (`sha256` prefix `615a3dbd`), and the CI job compares two no-AOT builds per SM
+at one path. Nothing shows a path-independent build. R-017 measured 576 differing bytes in SM 86 between two checkout paths, all nvcc
+`_INTERNAL_<hash>_<file>_cu_...` symbol names whose hash derives from the source path (they come from `cuda::std` entities in the headers, so a
+named namespace in our sources does not remove them), and R-034's reviewer saw the same kind of difference on the AOT library (12 bytes in every
+nvcc-compiled object, while the generated C++ and all 7 Triton cubins were identical). The manifest digests therefore reproduce only from the
+checkout path they were recorded at (`/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for example a fixed build path
+in CI) is open and belongs to the release pipeline (R-060). Linking needs no line info (it records source mtimes), no build id and no local
+symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
+
+The manifest's six digests are one AOT build each, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
+other bytes. Only SM 86 has run on hardware. The CI job reports, and does not fail on, a difference from the digests; the release workflow
+(R-060) records the digests of the pinned container build and publishes the libraries.
 
 ## Not done
 
@@ -149,8 +272,11 @@ container build and publishes the libraries.
 - MSVC kernel build: GitHub-hosted Windows runners ship no CUDA toolkit, so it is not built. The sources use `ROOST_API`
   from the C1 header and no POSIX types, and `stub_check.cpp` has a `LoadLibrary` path, but none of it has been compiled with
   MSVC.
-- Triton AOT: the manifest pins the Python closure and the seven kernel configs from S3 (six in `pins.json`, the seventh from S3's capture log and report), and CMake fetches the
-  flash-linear-attention source by SHA, but the AOT compile (which needs a visible CUDA device) is R-034's.
+- Triton AOT: built by R-034 (above) for SM 80 to 120; only SM 86 has run on hardware, the others are `untested`.
+  A GPU-less CI build does not compile the AOT cubins. `kernels/ci/build-all-sm.sh` (the CI path) still builds
+  all six SMs twice byte-identically and passes the registration check on the merged tree without a GPU
+  (`kernels/results/r034-ci-noaot-build.log`, a local run; the GitHub Actions job itself has not run), but its libraries carry no GatedDeltaRule.
+  The release pipeline needs a GPU build host for the AOT step or the cubins as a pre-built input (R-060). Retiring Triton for a CUDA C++ port is an M3 item (decision 23).
 - CUTLASS and vLLM are fetched and verified by SHA; no op compiles against them (FlashInfer is used by R-017; cuBLASLt serves Gemm).
 
 ## Open before merge

@@ -1,0 +1,298 @@
+# kernels/ci/build-all-sm.sh on the contract v3 merge, run locally (not in GitHub Actions), CUDA_VISIBLE_DEVICES empty, no Triton AOT: every SM built twice, byte-identical, registration table checked without a GPU
+SM list: 80;86;89;90;100;120
+Cuda compilation tools, release 13.3, V13.3.73
+Build cuda_13.3.r13.3/compiler.38244171_0
+-- The CXX compiler identification is GNU 16.2.1
+-- The CUDA compiler identification is NVIDIA 13.3.73 with host compiler GNU 15.3.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Detecting CUDA compiler ABI info
+-- Detecting CUDA compiler ABI info - done
+-- Check for working CUDA compiler: /opt/cuda/bin/nvcc - skipped
+-- Detecting CUDA compile features
+-- Detecting CUDA compile features - done
+-- Found Python3: /home/mark/Projects/roost-wave4/envs/R-034/buildtools/bin/python3.13 (found suitable version "3.13.15", minimum required is "3.11") found components: Interpreter
+-- Found Git: /usr/bin/git (found version "2.55.0")
+-- roost: flashinfer d84335d8c54e0c8f9f7e22faa15c7e34a58abf94 -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/flashinfer-d84335d8c54e0c8f9f7e22faa15c7e34a58abf94
+-- roost: cutlass 098de2a652cf8f00fd70b2df54051c7eccbb855a -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/cutlass-098de2a652cf8f00fd70b2df54051c7eccbb855a
+-- roost: vllm 7879f3687b5b6a4be4754242e70b9c21cf7b4183 -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/vllm-7879f3687b5b6a4be4754242e70b9c21cf7b4183
+-- roost: flash-linear-attention 329b534245d3d7bb27cc03a99e87bdc51fb28d06 -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/flash-linear-attention-329b534245d3d7bb27cc03a99e87bdc51fb28d06
+-- Found CUDAToolkit: /opt/cuda/targets/x86_64-linux/include;/opt/cuda/targets/x86_64-linux/include/cccl (found version "13.3.73")
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- roost: SM list 80;86;89;90;100;120; CUDA 13.3.73
+-- Configuring done (8.3s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/mark/Projects/roost-wave5/envs/R-034/ci/a
+-- The CXX compiler identification is GNU 16.2.1
+-- The CUDA compiler identification is NVIDIA 13.3.73 with host compiler GNU 15.3.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Detecting CUDA compiler ABI info
+-- Detecting CUDA compiler ABI info - done
+-- Check for working CUDA compiler: /opt/cuda/bin/nvcc - skipped
+-- Detecting CUDA compile features
+-- Detecting CUDA compile features - done
+-- Found Python3: /home/mark/Projects/roost-wave4/envs/R-034/buildtools/bin/python3.13 (found suitable version "3.13.15", minimum required is "3.11") found components: Interpreter
+-- Found Git: /usr/bin/git (found version "2.55.0")
+-- roost: flashinfer d84335d8c54e0c8f9f7e22faa15c7e34a58abf94 -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/flashinfer-d84335d8c54e0c8f9f7e22faa15c7e34a58abf94
+-- roost: cutlass 098de2a652cf8f00fd70b2df54051c7eccbb855a -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/cutlass-098de2a652cf8f00fd70b2df54051c7eccbb855a
+-- roost: vllm 7879f3687b5b6a4be4754242e70b9c21cf7b4183 -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/vllm-7879f3687b5b6a4be4754242e70b9c21cf7b4183
+-- roost: flash-linear-attention 329b534245d3d7bb27cc03a99e87bdc51fb28d06 -> /home/mark/Projects/roost-wave5/envs/R-034/ci/upstream/flash-linear-attention-329b534245d3d7bb27cc03a99e87bdc51fb28d06
+-- Found CUDAToolkit: /opt/cuda/targets/x86_64-linux/include;/opt/cuda/targets/x86_64-linux/include/cccl (found version "13.3.73")
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- roost: SM list 80;86;89;90;100;120; CUDA 13.3.73
+-- Configuring done (14.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: /home/mark/Projects/roost-wave5/envs/R-034/ci/b
+library roost-kernels-sm80, abi 1.2, 17 entries
+  op 10 variant residual-stub flags 0x7 sm_min 80
+  op 1 variant rms-norm-flashinfer flags 0x6 sm_min 80
+  op 2 variant qk-norm-flashinfer flags 0x6 sm_min 80
+  op 3 variant rope-roost flags 0x6 sm_min 80
+  op 5 variant silu-and-mul-flashinfer flags 0x6 sm_min 80
+  op 8 variant embedding-roost flags 0x6 sm_min 80
+  op 11 variant cache-write-roost flags 0x6 sm_min 80
+  op 12 variant cache-copy-roost flags 0x6 sm_min 80
+  op 4 variant paged-attention-flashinfer-fa2 flags 0xa sm_min 80
+  op 7 variant gemm-cublaslt flags 0x1e sm_min 80
+  op 9 variant lm-head-cublaslt flags 0x1e sm_min 80
+  op 129 variant causal-conv1d-cuda flags 0x7 sm_min 80
+  op 130 variant recurrent-state-copy-cuda flags 0x7 sm_min 80
+  op 131 variant recurrent-state-snapshot-cuda flags 0x7 sm_min 80
+  op 133 variant gated-delta-rule-gates-cuda flags 0x7 sm_min 80
+  op 134 variant gated-rms-norm-cuda flags 0x7 sm_min 80
+  op 135 variant sigmoid-mul-cuda flags 0x7 sm_min 80
+registration table OK (no GPU)
+library roost-kernels-sm86, abi 1.2, 17 entries
+  op 10 variant residual-stub flags 0x7 sm_min 80
+  op 1 variant rms-norm-flashinfer flags 0x6 sm_min 80
+  op 2 variant qk-norm-flashinfer flags 0x6 sm_min 80
+  op 3 variant rope-roost flags 0x6 sm_min 80
+  op 5 variant silu-and-mul-flashinfer flags 0x6 sm_min 80
+  op 8 variant embedding-roost flags 0x6 sm_min 80
+  op 11 variant cache-write-roost flags 0x6 sm_min 80
+  op 12 variant cache-copy-roost flags 0x6 sm_min 80
+  op 4 variant paged-attention-flashinfer-fa2 flags 0xa sm_min 80
+  op 7 variant gemm-cublaslt flags 0x1e sm_min 80
+  op 9 variant lm-head-cublaslt flags 0x1e sm_min 80
+  op 129 variant causal-conv1d-cuda flags 0x7 sm_min 80
+  op 130 variant recurrent-state-copy-cuda flags 0x7 sm_min 80
+  op 131 variant recurrent-state-snapshot-cuda flags 0x7 sm_min 80
+  op 133 variant gated-delta-rule-gates-cuda flags 0x7 sm_min 80
+  op 134 variant gated-rms-norm-cuda flags 0x7 sm_min 80
+  op 135 variant sigmoid-mul-cuda flags 0x7 sm_min 80
+registration table OK (no GPU)
+library roost-kernels-sm89, abi 1.2, 17 entries
+  op 10 variant residual-stub flags 0x7 sm_min 80
+  op 1 variant rms-norm-flashinfer flags 0x6 sm_min 80
+  op 2 variant qk-norm-flashinfer flags 0x6 sm_min 80
+  op 3 variant rope-roost flags 0x6 sm_min 80
+  op 5 variant silu-and-mul-flashinfer flags 0x6 sm_min 80
+  op 8 variant embedding-roost flags 0x6 sm_min 80
+  op 11 variant cache-write-roost flags 0x6 sm_min 80
+  op 12 variant cache-copy-roost flags 0x6 sm_min 80
+  op 4 variant paged-attention-flashinfer-fa2 flags 0xa sm_min 80
+  op 7 variant gemm-cublaslt flags 0x1e sm_min 80
+  op 9 variant lm-head-cublaslt flags 0x1e sm_min 80
+  op 129 variant causal-conv1d-cuda flags 0x7 sm_min 80
+  op 130 variant recurrent-state-copy-cuda flags 0x7 sm_min 80
+  op 131 variant recurrent-state-snapshot-cuda flags 0x7 sm_min 80
+  op 133 variant gated-delta-rule-gates-cuda flags 0x7 sm_min 80
+  op 134 variant gated-rms-norm-cuda flags 0x7 sm_min 80
+  op 135 variant sigmoid-mul-cuda flags 0x7 sm_min 80
+registration table OK (no GPU)
+library roost-kernels-sm90, abi 1.2, 17 entries
+  op 10 variant residual-stub flags 0x7 sm_min 80
+  op 1 variant rms-norm-flashinfer flags 0x6 sm_min 80
+  op 2 variant qk-norm-flashinfer flags 0x6 sm_min 80
+  op 3 variant rope-roost flags 0x6 sm_min 80
+  op 5 variant silu-and-mul-flashinfer flags 0x6 sm_min 80
+  op 8 variant embedding-roost flags 0x6 sm_min 80
+  op 11 variant cache-write-roost flags 0x6 sm_min 80
+  op 12 variant cache-copy-roost flags 0x6 sm_min 80
+  op 4 variant paged-attention-flashinfer-fa2 flags 0xa sm_min 80
+  op 7 variant gemm-cublaslt flags 0x1e sm_min 80
+  op 9 variant lm-head-cublaslt flags 0x1e sm_min 80
+  op 129 variant causal-conv1d-cuda flags 0x7 sm_min 80
+  op 130 variant recurrent-state-copy-cuda flags 0x7 sm_min 80
+  op 131 variant recurrent-state-snapshot-cuda flags 0x7 sm_min 80
+  op 133 variant gated-delta-rule-gates-cuda flags 0x7 sm_min 80
+  op 134 variant gated-rms-norm-cuda flags 0x7 sm_min 80
+  op 135 variant sigmoid-mul-cuda flags 0x7 sm_min 80
+registration table OK (no GPU)
+library roost-kernels-sm100, abi 1.2, 17 entries
+  op 10 variant residual-stub flags 0x7 sm_min 80
+  op 1 variant rms-norm-flashinfer flags 0x6 sm_min 80
+  op 2 variant qk-norm-flashinfer flags 0x6 sm_min 80
+  op 3 variant rope-roost flags 0x6 sm_min 80
+  op 5 variant silu-and-mul-flashinfer flags 0x6 sm_min 80
+  op 8 variant embedding-roost flags 0x6 sm_min 80
+  op 11 variant cache-write-roost flags 0x6 sm_min 80
+  op 12 variant cache-copy-roost flags 0x6 sm_min 80
+  op 4 variant paged-attention-flashinfer-fa2 flags 0xa sm_min 80
+  op 7 variant gemm-cublaslt flags 0x1e sm_min 80
+  op 9 variant lm-head-cublaslt flags 0x1e sm_min 80
+  op 129 variant causal-conv1d-cuda flags 0x7 sm_min 80
+  op 130 variant recurrent-state-copy-cuda flags 0x7 sm_min 80
+  op 131 variant recurrent-state-snapshot-cuda flags 0x7 sm_min 80
+  op 133 variant gated-delta-rule-gates-cuda flags 0x7 sm_min 80
+  op 134 variant gated-rms-norm-cuda flags 0x7 sm_min 80
+  op 135 variant sigmoid-mul-cuda flags 0x7 sm_min 80
+registration table OK (no GPU)
+library roost-kernels-sm120, abi 1.2, 17 entries
+  op 10 variant residual-stub flags 0x7 sm_min 80
+  op 1 variant rms-norm-flashinfer flags 0x6 sm_min 80
+  op 2 variant qk-norm-flashinfer flags 0x6 sm_min 80
+  op 3 variant rope-roost flags 0x6 sm_min 80
+  op 5 variant silu-and-mul-flashinfer flags 0x6 sm_min 80
+  op 8 variant embedding-roost flags 0x6 sm_min 80
+  op 11 variant cache-write-roost flags 0x6 sm_min 80
+  op 12 variant cache-copy-roost flags 0x6 sm_min 80
+  op 4 variant paged-attention-flashinfer-fa2 flags 0xa sm_min 80
+  op 7 variant gemm-cublaslt flags 0x1e sm_min 80
+  op 9 variant lm-head-cublaslt flags 0x1e sm_min 80
+  op 129 variant causal-conv1d-cuda flags 0x7 sm_min 80
+  op 130 variant recurrent-state-copy-cuda flags 0x7 sm_min 80
+  op 131 variant recurrent-state-snapshot-cuda flags 0x7 sm_min 80
+  op 133 variant gated-delta-rule-gates-cuda flags 0x7 sm_min 80
+  op 134 variant gated-rms-norm-cuda flags 0x7 sm_min 80
+  op 135 variant sigmoid-mul-cuda flags 0x7 sm_min 80
+registration table OK (no GPU)
+sm_80  14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d  2602880 bytes
+sm_86  6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953  2602880 bytes
+sm_89  5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b  2602880 bytes
+sm_90  fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158  2754432 bytes
+sm_100  05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584  3581824 bytes
+sm_120  f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb  3647360 bytes
+sm_80  14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d  2602880 bytes
+sm_86  6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953  2602880 bytes
+sm_89  5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b  2602880 bytes
+sm_90  fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158  2754432 bytes
+sm_100  05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584  3581824 bytes
+sm_120  f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb  3647360 bytes
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_80: built 14d300751872bb5bf7b4fffc56f14179e22bc1cdef4adfde171dd894887a512d but the manifest records 215c8fbf43d075d76b8ccf811cee39f4916dc5712a25d195045a02059d0c75c5
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_86: built 6c55a1255fd36e22e2a6ee9a300e59be7a1d988678a0c5bde00cb0316aa1e953 but the manifest records 615a3dbdf525b378838cc18f8b46b8a2f5828323199e4ec79585a643e218d1f8
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_89: built 5f8c8563007843ab6db1b21467e100d7b010bc629b8e99fda02c6cd9de58ca0b but the manifest records 5341887ae858c6519018ed7ea63eba21cae94dfdd76145af0b4f9786adb33a75
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_90: built fdaf8a458d8f7780e631cc6bbad74d08b49930d984fc7830edf9e14ea6cd9158 but the manifest records 7a884ce4a45639e42d126c4b84d7f2ba3bc0b1a6708781f6b421303c8504dc32
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_100: built 05a293ac9de53387e79dc283713007c5f9398bc461f94c36a61b8d8ff489d584 but the manifest records 7f00266dbe66e6688b1168cf09e28846b01ae32e9206392024b218b96210c87a
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+sm_120: built f3d269fa8c90c61b6ec599df8c23659dbddf48d445a19a2c997e19d2e3b549bb but the manifest records dbf233ab9274b19cc5a321f8e3d22dcf9147051415c0595c8d7448d661227ebd
+note: digests differ from the manifest's (see kernels/manifest.toml)
+done rc=0
