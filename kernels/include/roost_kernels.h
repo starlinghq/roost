@@ -1,7 +1,8 @@
 /*
  * roost_kernels.h: the kernel library C ABI and registration table (contract C1, build plan section 5).
  *
- * ABI major 1, minor 0. Frozen as contract v0 by R-004; the ADR is the "Contracts" section of README.md.
+ * ABI major 1, minor 1. Frozen as contract v0 by R-004 (1.0); 1.1 adds RoostGatedDeltaRuleParams with row strides for
+ * q, k and v (2026-10-19). The ADR is the "Contracts" section of README.md.
  *
  * Rules (the ADR gives the reasons):
  *   - Fixed-width integer types, float, double and pointers only. No size_t, long, bool, enum-typed fields or POSIX
@@ -21,8 +22,9 @@
  *     streams and graphs pass between them.
  *   - Batch invariance and determinism are registration flags and context options, never environment variables (S2).
  *
- * Only M0 ops have params structs here. Op ids for later phases are reserved below so their numbering never moves;
- * their params structs are added, never changed, when their items land.
+ * Params structs exist for the M0 ops and for GatedDeltaRule (moved into M0 with Qwen3.5-0.8B, decision 15). Op ids for
+ * later phases are reserved below so their numbering never moves; their params structs are added, never changed, when
+ * their items land.
  */
 #ifndef ROOST_KERNELS_H_
 #define ROOST_KERNELS_H_
@@ -48,7 +50,7 @@ extern "C" {
 /* ---- Versions ------------------------------------------------------------------------------------------------ */
 
 #define ROOST_ABI_MAJOR 1
-#define ROOST_ABI_MINOR 0
+#define ROOST_ABI_MINOR 1
 /* roost_abi_version() returns (major << 16) | minor. */
 #define ROOST_ABI_VERSION ((ROOST_ABI_MAJOR << 16) | ROOST_ABI_MINOR)
 
@@ -510,6 +512,45 @@ typedef struct RoostSampleParams {
   uint32_t stride;
   uint32_t reserved0;
 } RoostSampleParams;
+
+/* ---- Hybrid (recurrent) params, ABI 1.1 ---------------------------------------------------------------------- */
+
+/* Gated delta rule over packed sequences (contract C3 GatedDeltaRule; CpuOps.GatedDeltaRule is the exact definition).
+ * Per sequence b (tokens cu_seqlens[b] to cu_seqlens[b + 1]) and value head h, with key head h / (v_heads / k_heads)
+ * and state S [k_dim, v_dim] from slot state_slots[b]: q and k are l2-normalised when l2_norm_qk is set, q is scaled,
+ * S = S * exp(g_t), S = S + k (outer) (beta_t * (v_t - S^T k)), o_t = S^T q; S is written back to the slot.
+ *
+ * q, k and v are row-strided views: row t of q starts at element t * q_stride of the q span (likewise k and v), and the
+ * heads of a row are contiguous. A stride of 0 means a contiguous tensor (k_heads * k_dim, or v_heads * v_dim). For
+ * Qwen3.5 the three views are column slices of the causal conv1d output [tokens, 2 * k_heads * k_dim + v_heads * v_dim]:
+ * q at column 0, k at column k_heads * k_dim, v at column 2 * k_heads * k_dim, all with that row width as stride (6144
+ * for Qwen3.5-0.8B). Output, g and beta are contiguous. */
+typedef struct RoostGatedDeltaRuleParams {
+  uint32_t struct_size;
+  uint32_t abi_minor;
+  RoostDeviceSpan q;           /* [tokens, k_heads, k_dim] at q_stride */
+  RoostDeviceSpan k;           /* [tokens, k_heads, k_dim] at k_stride */
+  RoostDeviceSpan v;           /* [tokens, v_heads, v_dim] at v_stride */
+  RoostDeviceSpan g;           /* [tokens, v_heads] log decay */
+  RoostDeviceSpan beta;        /* [tokens, v_heads] */
+  RoostDeviceSpan output;      /* [tokens, v_heads, v_dim], contiguous */
+  RoostDeviceSpan state;       /* recurrent pool [slots, v_heads, k_dim, v_dim] f32 (C4) */
+  RoostDeviceSpan state_slots; /* [batch] int32 slot per sequence */
+  RoostDeviceSpan cu_seqlens;  /* [batch + 1] int32 token offsets */
+  const int32_t* cu_seqlens_host; /* [batch + 1] host copy for plan() (chunk tables, S3); NULL when no plan is needed */
+  uint32_t batch;
+  uint32_t tokens;
+  uint32_t k_heads;
+  uint32_t v_heads;            /* a multiple of k_heads */
+  uint32_t k_dim;
+  uint32_t v_dim;
+  uint32_t q_stride;           /* elements between token rows of q; 0 means k_heads * k_dim */
+  uint32_t k_stride;           /* 0 means k_heads * k_dim */
+  uint32_t v_stride;           /* 0 means v_heads * v_dim */
+  uint32_t use_initial_state;  /* nonzero: start from the slot's state; zero: start from zero */
+  uint32_t l2_norm_qk;         /* nonzero: l2-normalise q and k inside the op */
+  float scale;                 /* query scale; 0 means 1 / sqrt(k_dim) */
+} RoostGatedDeltaRuleParams;
 
 /* ---- Exports ------------------------------------------------------------------------------------------------- */
 
