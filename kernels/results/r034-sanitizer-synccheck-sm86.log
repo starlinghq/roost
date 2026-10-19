@@ -1,4 +1,4 @@
-# compute-sanitizer --tool synccheck over Roost.HybridConformance on libroost_kernels_sm86.so (RTX 3090, tools/gpu-lease, CUDA 13.3.73)
+# compute-sanitizer --tool synccheck over Roost.HybridConformance on libroost_kernels_sm86.so (RTX 3090, tools/gpu-lease, CUDA 13.3.73); rerun after the fix round (65 checks: negative slots, 70000-token conv, graph capture)
 # sanitizer report:
 ========= COMPUTE-SANITIZER
 ========= ERROR SUMMARY: 0 errors
@@ -12,6 +12,7 @@ PASS conv/qwen35 one 1-token sequence: tokens=1 batch=1 channels=6144 width=4 ou
 PASS conv/bf16 act f32 state, bias, no silu: tokens=21 batch=3 channels=1000 width=4 out max_abs=3.81E-006 max_scaled=2.22E-003 (tol 7.81E-003) state_bit_exact=True
 PASS conv/f32 width 7: tokens=51 batch=3 channels=333 width=7 out max_abs=4.77E-007 max_scaled=4.50E-007 (tol 2.00E-005) state_bit_exact=True
 PASS conv/f32 width 16: tokens=85 batch=3 channels=130 width=16 out max_abs=9.54E-007 max_scaled=1.66E-006 (tol 2.00E-005) state_bit_exact=True
+PASS conv/one sequence of 70000 tokens: tokens=70000 batch=1 channels=64 width=4 out max_abs=1.95E-003 max_scaled=7.57E-003 (tol 7.81E-003) state_bit_exact=True
 PASS conv/f32 width 1 (no state): tokens=8 batch=2 channels=64 width=1 out max_abs=5.96E-008 max_scaled=9.62E-008 (tol 2.00E-005) state_bit_exact=True
 PASS state-copy/slot_bytes=1048576: pairs=6 chain 0>1>2 included; bit_exact=True
 PASS state-copy/slot_bytes=12: pairs=6 chain 0>1>2 included; bit_exact=True
@@ -36,6 +37,8 @@ PASS gdn/recurrent/one sequence of 200 tokens, strided, strong decay: tokens=200
 PASS gdn/recurrent/32 sequences x 1 token (serving-size decode batch): tokens=32 batch=32 o: max_abs=3.05E-005 rel_to_max=4.47E-004 (tol 8.0E-003, ref max 0.061); state: max_abs=2.38E-007 rel_to_max=1.22E-007 (tol 1.0E-004, ref max 1.116); other slots untouched=True
 PASS gdn/batch-invariance/chunk: sequence 0 alone (333 tokens) equals sequence 0 in a batch of 3, output and state bit-identical=True
 PASS gdn/batch-invariance/recurrent: sequence 0 alone (1 tokens) equals sequence 0 in a batch of 3, output and state bit-identical=True
+PASS gdn/negative-slot/chunk: slot -1 with initial state runs from zero state, output bit-identical to use_initial_state=0: True; no other slot touched: True
+PASS gdn/negative-slot/recurrent: slot -1 with initial state runs from zero state, output bit-identical to use_initial_state=0: True; no other slot touched: True
 PASS gdn/reject/stride below the row width: status 1 (want 1): GatedDeltaRule: a q, k or v stride is smaller than the row width
 PASS gdn/reject/view span shorter than its reach: status 1 (want 1): GatedDeltaRule: q, k and v must be bf16 spans reaching (tokens - 1) * stride + 2048 elements
 PASS gdn/reject/8 key heads: status 2 (want 2): GatedDeltaRule: this library is specialised for 16 key heads, 16 value heads and head size 128 (Qwen3.5-0.8B)
@@ -47,4 +50,23 @@ PASS gdn/reject/struct_size too small: status 5 (want 5): GatedDeltaRule: params
 PASS gdn/reject/state pool of a partial slot: status 1 (want 1): GatedDeltaRule: state must be a float32 pool of whole [16, 128, 128] slots
 PASS gdn/reject/run without plan: status 8 (want 8 NOT_PLANNED): GatedDeltaRule: plan() has not run for these tokens and sequences
 PASS gdn/reject/workspace too small: status 7 (want 7 WORKSPACE_TOO_SMALL): GatedDeltaRule: workspace or plan is missing or too small
-43 checks, 0 failed
+PASS graph/conv/qwen35 prefill packed: tokens=175 batch=6 channels=6144 width=4 out max_abs=9.77E-004 max_scaled=6.28E-003 (tol 7.81E-003) state_bit_exact=True
+PASS graph/conv/qwen35 decode 8 x 1 token: tokens=8 batch=8 channels=6144 width=4 out max_abs=0.00E+000 max_scaled=0.00E+000 (tol 7.81E-003) state_bit_exact=True
+PASS graph/conv/qwen35 one 2-token sequence: tokens=2 batch=1 channels=6144 width=4 out max_abs=0.00E+000 max_scaled=0.00E+000 (tol 7.81E-003) state_bit_exact=True
+PASS graph/conv/qwen35 one 1-token sequence: tokens=1 batch=1 channels=6144 width=4 out max_abs=0.00E+000 max_scaled=0.00E+000 (tol 7.81E-003) state_bit_exact=True
+PASS graph/conv/bf16 act f32 state, bias, no silu: tokens=21 batch=3 channels=1000 width=4 out max_abs=3.81E-006 max_scaled=2.22E-003 (tol 7.81E-003) state_bit_exact=True
+PASS graph/conv/f32 width 7: tokens=51 batch=3 channels=333 width=7 out max_abs=4.77E-007 max_scaled=4.50E-007 (tol 2.00E-005) state_bit_exact=True
+PASS graph/conv/f32 width 16: tokens=85 batch=3 channels=130 width=16 out max_abs=9.54E-007 max_scaled=1.66E-006 (tol 2.00E-005) state_bit_exact=True
+PASS graph/conv/one sequence of 70000 tokens: tokens=70000 batch=1 channels=64 width=4 out max_abs=1.95E-003 max_scaled=7.57E-003 (tol 7.81E-003) state_bit_exact=True
+PASS graph/conv/f32 width 1 (no state): tokens=8 batch=2 channels=64 width=1 out max_abs=5.96E-008 max_scaled=9.62E-008 (tol 2.00E-005) state_bit_exact=True
+PASS graph/state-copy/slot_bytes=1048576: pairs=6 chain 0>1>2 included; bit_exact=True
+PASS graph/state-copy/slot_bytes=12: pairs=6 chain 0>1>2 included; bit_exact=True
+PASS graph/state-copy/slot_bytes=7: pairs=6 chain 0>1>2 included; bit_exact=True
+PASS graph/state-snapshot/save/slot_bytes=1048576: pairs=4; bit_exact=True
+PASS graph/state-snapshot/save/slot_bytes=12: pairs=4; bit_exact=True
+PASS graph/state-snapshot/restore/slot_bytes=1048576: pairs=4; bit_exact=True
+PASS graph/state-snapshot/restore/slot_bytes=12: pairs=4; bit_exact=True
+PASS graph/gdn/recurrent/decode 4 x 1 token, strided views, initial state: tokens=4 batch=4 o: max_abs=9.54E-007 rel_to_max=2.22E-005 (tol 8.0E-003, ref max 0.043); state: max_abs=1.79E-007 rel_to_max=1.14E-007 (tol 1.0E-004, ref max 0.885); other slots untouched=True
+PASS graph/gdn/recurrent/packed [5,1,1], contiguous views: tokens=7 batch=3 o: max_abs=0.00E+000 rel_to_max=0.00E+000 (tol 8.0E-003, ref max 0.055); state: max_abs=1.19E-007 rel_to_max=9.37E-008 (tol 1.0E-004, ref max 1.033); other slots untouched=True
+PASS graph/gdn/recurrent/32 sequences x 1 token (serving-size decode batch): tokens=32 batch=32 o: max_abs=3.05E-005 rel_to_max=4.47E-004 (tol 8.0E-003, ref max 0.061); state: max_abs=2.38E-007 rel_to_max=1.22E-007 (tol 1.0E-004, ref max 1.116); other slots untouched=True
+65 checks, 0 failed

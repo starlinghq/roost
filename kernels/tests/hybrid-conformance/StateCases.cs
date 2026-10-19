@@ -18,6 +18,8 @@ internal static unsafe class StateCases
         Conv(lib, r, stream, "conv/bf16 act f32 state, bias, no silu", DType.BF16, DType.F32, [17, 3, 1], 1000, 4, bias: true, silu: false, slots: 5, order: [4, 0, 2], seed: 5);
         Conv(lib, r, stream, "conv/f32 width 7", DType.F32, DType.F32, [40, 2, 9], 333, 7, bias: true, silu: true, slots: 4, order: [3, 1, 0], seed: 6);
         Conv(lib, r, stream, "conv/f32 width 16", DType.F32, DType.F32, [64, 1, 20], 130, 16, bias: false, silu: false, slots: 3, order: [2, 0, 1], seed: 7);
+        // More tokens than the 65535 a grid dimension y allows: one long prefill in a single call.
+        Conv(lib, r, stream, "conv/one sequence of 70000 tokens", DType.BF16, DType.BF16, [70000], 64, 4, bias: false, silu: true, slots: 2, order: [1], seed: 9);
         Conv(lib, r, stream, "conv/f32 width 1 (no state)", DType.F32, DType.F32, [5, 3], 64, 1, bias: true, silu: true, slots: 2, order: [1, 0], seed: 8);
 
         Copy(lib, r, stream);

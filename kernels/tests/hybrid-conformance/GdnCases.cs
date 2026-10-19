@@ -54,7 +54,61 @@ internal static unsafe class GdnCases
         Case(lib, r, stream, x, "recurrent/32 sequences x 1 token (serving-size decode batch)", Enumerable.Repeat(1, 32).ToArray(), strided: true, init: true, decay: 0.2, seed: 26);
         BatchInvariance(lib, r, stream, c, "chunk");
         BatchInvariance(lib, r, stream, x, "recurrent");
+        NegativeSlot(lib, r, stream, c, "chunk");
+        NegativeSlot(lib, r, stream, x, "recurrent");
         Rejections(lib, r, stream, c, x);
+    }
+
+    /// <summary>The recurrent variant is GRAPH_CAPTURABLE: its cases again with run() captured into a graph.</summary>
+    public static void RunGraph(Library lib, Report r, nint stream)
+    {
+        var recurrent = lib.Find("gated-delta-rule-recurrent-aot");
+        if (recurrent is null)
+        {
+            r.Check(false, "gdn/registered", "recurrent variant missing");
+            return;
+        }
+
+        var x = recurrent.Value;
+        Case(lib, r, stream, x, "recurrent/decode 4 x 1 token, strided views, initial state", [1, 1, 1, 1], strided: true, init: true, decay: 0.2, seed: 21);
+        Case(lib, r, stream, x, "recurrent/packed [5,1,1], contiguous views", [5, 1, 1], strided: false, init: true, decay: 0.2, seed: 22);
+        Case(lib, r, stream, x, "recurrent/32 sequences x 1 token (serving-size decode batch)", Enumerable.Repeat(1, 32).ToArray(), strided: true, init: true, decay: 0.2, seed: 26);
+    }
+
+    // A negative slot with tokens is outside the contract (CpuOps throws), but the library must stay deterministic: the
+    // sequence runs from a zero state whatever use_initial_state says, and its state is not written back. Compare the
+    // sequence with slot -1 and use_initial_state = 1 against the same inputs with use_initial_state = 0, bit for bit.
+    private static void NegativeSlot(Library lib, Report r, nint stream, in OpEntry e, string label)
+    {
+        const int PoolSlots = 9;
+        int[] lens = label == "chunk" ? [100, 70] : [1, 1];
+        using var neg = Make(lens, true, 0.2, 51, PoolSlots, [-1, 3]);
+        using var zero = Make(lens, true, 0.2, 51, PoolSlots, [-1, 3]);
+        var poolBefore = neg.Pool.HostBytes();
+        foreach (var (d, init) in new[] { (neg, true), (zero, false) })
+        {
+            foreach (var b in new[] { d.Fused, d.G, d.Beta, d.Pool, d.Slots, d.Cu })
+            {
+                b.ToDevice();
+            }
+
+            Cuda.Fill(d.Output.Device, 0xFF, d.Output.Bytes);
+            Execute(lib, e, GpuParams(d, init), stream);
+        }
+
+        int n0 = lens[0];
+        bool same = neg.Output.FromDevice().AsSpan(0, n0 * Row * 2).SequenceEqual(zero.Output.FromDevice().AsSpan(0, n0 * Row * 2));
+        bool unwritten = true;
+        var after = neg.Pool.FromDevice();
+        for (int s = 0; s < PoolSlots; s++)
+        {
+            if (s != 3)
+            {
+                unwritten &= after.AsSpan((int)(s * StateElems * 4), (int)(StateElems * 4)).SequenceEqual(poolBefore.AsSpan((int)(s * StateElems * 4), (int)(StateElems * 4)));
+            }
+        }
+
+        r.Check(same && unwritten, $"gdn/negative-slot/{label}", $"slot -1 with initial state runs from zero state, output bit-identical to use_initial_state=0: {same}; no other slot touched: {unwritten}");
     }
 
     private sealed class Data : IDisposable

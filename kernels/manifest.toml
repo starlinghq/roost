@@ -91,38 +91,38 @@ min_alignment = 4
 
 # Digests of the per-SM libraries (libroost_kernels_sm<N>.so). Written by kernels/tools/record_digests.py; do not
 # edit by hand. All six entries are from the development host (CUDA 13.3.73, gcc 16.2.1), one build each; only SM 86 has run on
-# hardware. They do not depend on the source checkout path (checked at two paths). The release workflow (R-060) replaces
+# hardware. They were reproduced at the recorded checkout path only; another path gave other bytes (see README, Hybrid ops). The release workflow (R-060) replaces
 # these with the digests of the pinned CI container build and publishes the files as release assets.
 # BEGIN binaries residual-stub
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "a3a85531d773ffdc5b8bf909ba08b8f29e79dbb198e739d4587693ed604f495a"
-bytes = 48088
+sha256 = "68fcd43b77b4ff86434f4a7fa7636d65254e7c24727959e4306a18239fe4561a"
+bytes = 884040
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "bf2384c7951898deac68116209cba93989a39e82e84ecde22f07c5fb16bf1bf5"
-bytes = 48088
+sha256 = "a0046520022507f3efbbc86bf65e6b7a0e9d6f3d7689e1d0e85f31d131b73932"
+bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 89
-sha256 = "a44d45016389ec7e5628a68100f53bdde6e81cbee6d9f7e1f0136e709d649d32"
-bytes = 48088
+sha256 = "2e053ef97d22a7ec0bf74f35105fee46271158c431f20177af4a1d67110aaad7"
+bytes = 867656
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "1cf405dfed9843334e98a01ce9f8220e826168ab2374a2c85e2e6b5b9a49969e"
-bytes = 48088
+sha256 = "1e564d0c4f46f95c49ab0e3f9ce7f08fc562121b6ee261943ea1c85b47a35b62"
+bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "afeb0a7349befdeead945ea6b1a7791ea2e446301c551eaede9000dd9f6f6c58"
-bytes = 52184
+sha256 = "23db5fee83e82177ddaac8e7673b44e3d5c6b9655917424620c1a27121ceeb1d"
+bytes = 1076552
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "c9db863fdb577500c8192065f91218a93cf48eb8f3c06e0a0e87f5d2e00cfa4a"
-bytes = 52184
+sha256 = "cfd1469dde151680f1c6fac6d94723133c8e926863d1d5332c49bf95a2e5be87"
+bytes = 1072456
 # END binaries residual-stub
 
 # R-034: the hybrid ops of Qwen3.5-0.8B (decision 15). CausalConv1d and the recurrent state ops are plain CUDA C++ (S3 did
@@ -148,33 +148,33 @@ min_alignment = 4
 # BEGIN binaries causal-conv1d-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+sha256 = "68fcd43b77b4ff86434f4a7fa7636d65254e7c24727959e4306a18239fe4561a"
 bytes = 884040
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+sha256 = "a0046520022507f3efbbc86bf65e6b7a0e9d6f3d7689e1d0e85f31d131b73932"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 89
-sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+sha256 = "2e053ef97d22a7ec0bf74f35105fee46271158c431f20177af4a1d67110aaad7"
 bytes = 867656
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+sha256 = "1e564d0c4f46f95c49ab0e3f9ce7f08fc562121b6ee261943ea1c85b47a35b62"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
-bytes = 1080648
+sha256 = "23db5fee83e82177ddaac8e7673b44e3d5c6b9655917424620c1a27121ceeb1d"
+bytes = 1076552
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
-bytes = 1076552
+sha256 = "cfd1469dde151680f1c6fac6d94723133c8e926863d1d5332c49bf95a2e5be87"
+bytes = 1072456
 # END binaries causal-conv1d-cuda
 
 [[ops]]
@@ -193,33 +193,33 @@ min_alignment = 1
 # BEGIN binaries recurrent-state-copy-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+sha256 = "68fcd43b77b4ff86434f4a7fa7636d65254e7c24727959e4306a18239fe4561a"
 bytes = 884040
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+sha256 = "a0046520022507f3efbbc86bf65e6b7a0e9d6f3d7689e1d0e85f31d131b73932"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 89
-sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+sha256 = "2e053ef97d22a7ec0bf74f35105fee46271158c431f20177af4a1d67110aaad7"
 bytes = 867656
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+sha256 = "1e564d0c4f46f95c49ab0e3f9ce7f08fc562121b6ee261943ea1c85b47a35b62"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
-bytes = 1080648
+sha256 = "23db5fee83e82177ddaac8e7673b44e3d5c6b9655917424620c1a27121ceeb1d"
+bytes = 1076552
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
-bytes = 1076552
+sha256 = "cfd1469dde151680f1c6fac6d94723133c8e926863d1d5332c49bf95a2e5be87"
+bytes = 1072456
 # END binaries recurrent-state-copy-cuda
 
 [[ops]]
@@ -238,33 +238,33 @@ min_alignment = 1
 # BEGIN binaries recurrent-state-snapshot-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+sha256 = "68fcd43b77b4ff86434f4a7fa7636d65254e7c24727959e4306a18239fe4561a"
 bytes = 884040
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+sha256 = "a0046520022507f3efbbc86bf65e6b7a0e9d6f3d7689e1d0e85f31d131b73932"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 89
-sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+sha256 = "2e053ef97d22a7ec0bf74f35105fee46271158c431f20177af4a1d67110aaad7"
 bytes = 867656
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+sha256 = "1e564d0c4f46f95c49ab0e3f9ce7f08fc562121b6ee261943ea1c85b47a35b62"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
-bytes = 1080648
+sha256 = "23db5fee83e82177ddaac8e7673b44e3d5c6b9655917424620c1a27121ceeb1d"
+bytes = 1076552
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
-bytes = 1076552
+sha256 = "cfd1469dde151680f1c6fac6d94723133c8e926863d1d5332c49bf95a2e5be87"
+bytes = 1072456
 # END binaries recurrent-state-snapshot-cuda
 
 [[ops]]
@@ -293,33 +293,33 @@ min_alignment = 16
 # BEGIN binaries gated-delta-rule-chunk-aot
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+sha256 = "68fcd43b77b4ff86434f4a7fa7636d65254e7c24727959e4306a18239fe4561a"
 bytes = 884040
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+sha256 = "a0046520022507f3efbbc86bf65e6b7a0e9d6f3d7689e1d0e85f31d131b73932"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 89
-sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+sha256 = "2e053ef97d22a7ec0bf74f35105fee46271158c431f20177af4a1d67110aaad7"
 bytes = 867656
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+sha256 = "1e564d0c4f46f95c49ab0e3f9ce7f08fc562121b6ee261943ea1c85b47a35b62"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
-bytes = 1080648
+sha256 = "23db5fee83e82177ddaac8e7673b44e3d5c6b9655917424620c1a27121ceeb1d"
+bytes = 1076552
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
-bytes = 1076552
+sha256 = "cfd1469dde151680f1c6fac6d94723133c8e926863d1d5332c49bf95a2e5be87"
+bytes = 1072456
 # END binaries gated-delta-rule-chunk-aot
 
 [[ops.variants]]
@@ -339,33 +339,33 @@ min_alignment = 16
 # BEGIN binaries gated-delta-rule-recurrent-aot
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "d787a9029d0cf2232af2bf8c401d9a14ff6da633ffb377c990f35bf2fff5b759"
+sha256 = "68fcd43b77b4ff86434f4a7fa7636d65254e7c24727959e4306a18239fe4561a"
 bytes = 884040
 
 [[ops.variants.binaries]]
 arch = 86
-sha256 = "d48830e938cc91dcd9a71ce2f064b6b782121cc0268bdd4de3d9b0e70e178e1e"
+sha256 = "a0046520022507f3efbbc86bf65e6b7a0e9d6f3d7689e1d0e85f31d131b73932"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 89
-sha256 = "e4bfdeca2a81531a69c3d649b5282e422a2b8a66568d9161278a71bd77f6ca8b"
+sha256 = "2e053ef97d22a7ec0bf74f35105fee46271158c431f20177af4a1d67110aaad7"
 bytes = 867656
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "ac7d231fdf61c10dd02ea66a9364b712c6b2c51f7897f31c698b18788adc9875"
+sha256 = "1e564d0c4f46f95c49ab0e3f9ce7f08fc562121b6ee261943ea1c85b47a35b62"
 bytes = 871752
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "75bf71addd8c4fa1f2a4b9b9e13dd48d25f2905ed483351bd3f79d53a17bac83"
-bytes = 1080648
+sha256 = "23db5fee83e82177ddaac8e7673b44e3d5c6b9655917424620c1a27121ceeb1d"
+bytes = 1076552
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "d069016a87e75bc88b1111538b6c9605b27bcb7ce65f89a0a12dc8267a8026b5"
-bytes = 1076552
+sha256 = "cfd1469dde151680f1c6fac6d94723133c8e926863d1d5332c49bf95a2e5be87"
+bytes = 1072456
 # END binaries gated-delta-rule-recurrent-aot
 
 # Build-time Python closure for the Triton AOT kernels of the hybrid ops (decision 23, S3). Python is never a runtime

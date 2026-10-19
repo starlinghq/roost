@@ -29,6 +29,12 @@ internal static unsafe partial class Cuda
     [LibraryImport(Lib)] private static partial int cudaSetDevice(int device);
     [LibraryImport(Lib)] private static partial int cudaDeviceSynchronize();
     [LibraryImport(Lib)] private static partial int cudaGetLastError();
+    [LibraryImport(Lib)] private static partial int cudaStreamBeginCapture(nint stream, int mode);
+    [LibraryImport(Lib)] private static partial int cudaStreamEndCapture(nint stream, out nint graph);
+    [LibraryImport(Lib)] private static partial int cudaGraphInstantiate(out nint exec, nint graph, ulong flags);
+    [LibraryImport(Lib)] private static partial int cudaGraphLaunch(nint exec, nint stream);
+    [LibraryImport(Lib)] private static partial int cudaGraphExecDestroy(nint exec);
+    [LibraryImport(Lib)] private static partial int cudaGraphDestroy(nint graph);
     [LibraryImport(Lib)] private static partial nint cudaGetErrorString(int error);
 
     private static void Check(int rc, string what)
@@ -72,6 +78,28 @@ internal static unsafe partial class Cuda
     public static void DestroyStream(nint s) => Check(cudaStreamDestroy(s), "cudaStreamDestroy");
 
     public static void Sync(nint stream) => Check(cudaStreamSynchronize(stream), "cudaStreamSynchronize");
+
+    /// <summary>Captures what <paramref name="enqueue"/> queues on the stream into a CUDA graph, instantiates it, launches it once
+    /// and waits. Nothing runs during capture, so the op's result appears only if the capture holds the whole op. Returns the
+    /// status the enqueue produced.</summary>
+    public static int RunGraphed(nint stream, Func<int> enqueue)
+    {
+        Check(cudaStreamBeginCapture(stream, 1), "cudaStreamBeginCapture"); // cudaStreamCaptureModeThreadLocal
+        var rc = enqueue();
+        var end = cudaStreamEndCapture(stream, out var graph);
+        if (end != 0 || graph == 0)
+        {
+            throw new InvalidOperationException($"cudaStreamEndCapture failed ({end}): the op's launches were not capturable");
+        }
+
+        var inst = cudaGraphInstantiate(out var exec, graph, 0);
+        var launch = inst == 0 ? cudaGraphLaunch(exec, stream) : inst;
+        var sync = launch == 0 ? cudaStreamSynchronize(stream) : launch;
+        var freed = (inst == 0 ? cudaGraphExecDestroy(exec) : 0) | cudaGraphDestroy(graph);
+        Check(sync, "graph instantiate, launch and sync");
+        Check(freed, "graph destroy");
+        return rc;
+    }
 
     public static void SyncDevice() => Check(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
 }

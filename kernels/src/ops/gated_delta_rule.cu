@@ -169,30 +169,30 @@ __global__ void GatherViewsKernel(Views views, uint32_t tokens) {
 }
 
 // dense[b] = pool[slots[b]] for sequences with tokens (empty or negative-slot sequences are skipped: their slot may be
-// unset). blockIdx.y is the sequence.
+// unset). blockIdx.x is the sequence (x allows 2^31 - 1 sequences, y only 65535); blockIdx.y strides the state.
 __global__ void GatherStateKernel(const float4* pool, const int32_t* slots, const int32_t* cu, float4* dense) {
-  const int b = blockIdx.y;
+  const int b = blockIdx.x;
   const int32_t slot = slots[b];
   if (cu[b + 1] <= cu[b] || slot < 0) {
     return;
   }
   const uint64_t n = kStateElems / 4;
-  for (uint64_t i = static_cast<uint64_t>(blockIdx.x) * blockDim.x + threadIdx.x; i < n;
-       i += static_cast<uint64_t>(gridDim.x) * blockDim.x) {
+  for (uint64_t i = static_cast<uint64_t>(blockIdx.y) * blockDim.x + threadIdx.x; i < n;
+       i += static_cast<uint64_t>(gridDim.y) * blockDim.x) {
     dense[static_cast<uint64_t>(b) * n + i] = pool[static_cast<uint64_t>(slot) * n + i];
   }
 }
 
 // pool[slots[b]] = dense[b], same skip rule.
 __global__ void ScatterStateKernel(const float4* dense, const int32_t* slots, const int32_t* cu, float4* pool) {
-  const int b = blockIdx.y;
+  const int b = blockIdx.x;
   const int32_t slot = slots[b];
   if (cu[b + 1] <= cu[b] || slot < 0) {
     return;
   }
   const uint64_t n = kStateElems / 4;
-  for (uint64_t i = static_cast<uint64_t>(blockIdx.x) * blockDim.x + threadIdx.x; i < n;
-       i += static_cast<uint64_t>(gridDim.x) * blockDim.x) {
+  for (uint64_t i = static_cast<uint64_t>(blockIdx.y) * blockDim.x + threadIdx.x; i < n;
+       i += static_cast<uint64_t>(gridDim.y) * blockDim.x) {
     pool[static_cast<uint64_t>(slot) * n + i] = dense[static_cast<uint64_t>(b) * n + i];
   }
 }
@@ -303,7 +303,7 @@ RoostStatus GatherViews(const RoostGatedDeltaRuleParams& p, __nv_bfloat16* q, __
 
 RoostStatus StateMove(bool scatter, const void* a, const RoostGatedDeltaRuleParams& p, const int32_t* cu, void* b,
                       cudaStream_t stream) {
-  const dim3 grid(256, p.batch);
+  const dim3 grid(p.batch, 256);
   const auto* slots = static_cast<const int32_t*>(p.state_slots.address);
   if (scatter) {
     ScatterStateKernel<<<grid, 256, 0, stream>>>(static_cast<const float4*>(a), slots, cu, static_cast<float4*>(b));
@@ -333,6 +333,9 @@ RoostStatus roost_hybrid_context_init(RoostContext* ctx) {
     if (std::strcmp(k.signature, kExpectedSignature[i]) != 0) {
       roost_set_error((std::string("GatedDeltaRule: the AOT table's argument list for ") + k.role +
                        " differs from the launcher's: " + k.signature).c_str());
+      for (int j = 0; j < i; ++j) {
+        cudaLibraryUnload(loaded->library[j]);
+      }
       roost_hybrid_context_release(ctx);
       delete loaded;
       return ROOST_STATUS_INTERNAL;
@@ -487,6 +490,8 @@ extern "C" RoostStatus roost_gdn_chunk_run(RoostContext* ctx, const void* params
   // The fused kkt+solve kernel writes only the lower-triangular blocks of A and relies on zeroed memory (S3).
   ROOST_CHECK_CUDA(cudaMemsetAsync(a, 0, uint64_t{p.tokens} * kHeads * kChunk * 2, stream_));
   ROOST_CHECK(GatherViews(p, qn, kn, vc, true, stream_));
+  // h0 is zeroed first so a sequence the gather skips (negative slot) starts from a zero state, deterministically.
+  ROOST_CHECK_CUDA(cudaMemsetAsync(h0, 0, uint64_t{p.batch} * kStateElems * 4, stream_));
   if (p.use_initial_state != 0) {
     ROOST_CHECK(StateMove(false, p.state.address, p, cu, h0, stream_));
   }
@@ -620,10 +625,9 @@ extern "C" RoostStatus roost_gdn_recurrent_run(RoostContext* ctx, const void* pa
   ROOST_CHECK_CUDA(cudaMemcpyAsync(cu, p.cu_seqlens.address, 4 * (uint64_t{p.batch} + 1), cudaMemcpyDeviceToDevice, stream_));
   // The recurrent kernel normalises q and k itself: the views are copied raw.
   ROOST_CHECK(GatherViews(p, q, k, v, false, stream_));
+  ROOST_CHECK_CUDA(cudaMemsetAsync(h0, 0, uint64_t{p.batch} * kStateElems * 4, stream_));
   if (p.use_initial_state != 0) {
     ROOST_CHECK(StateMove(false, p.state.address, p, cu, h0, stream_));
-  } else {
-    ROOST_CHECK_CUDA(cudaMemsetAsync(h0, 0, uint64_t{p.batch} * kStateElems * 4, stream_));
   }
   float scale_arg = Scale(p);
   const int32_t t = static_cast<int32_t>(p.tokens);

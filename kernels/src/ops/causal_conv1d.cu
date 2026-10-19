@@ -50,8 +50,8 @@ template <typename T, typename S>
 __global__ void OutputKernel(const T* input, const T* weight, const T* bias, T* output, const S* conv_state,
                              const int32_t* slots, const int32_t* cu, int batch, int tokens, int channels, int width,
                              int silu) {
-  const int c = blockIdx.x * blockDim.x + threadIdx.x;
-  const int t = blockIdx.y;
+  const int c = blockIdx.y * blockDim.x + threadIdx.x;
+  const int t = blockIdx.x;
   if (c >= channels || t >= tokens) {
     return;
   }
@@ -72,8 +72,8 @@ __global__ void OutputKernel(const T* input, const T* weight, const T* bias, T* 
 template <typename T, typename S>
 __global__ void StateKernel(const T* input, S* conv_state, const int32_t* slots, const int32_t* cu, int batch,
                             int channels, int width) {
-  const int c = blockIdx.x * blockDim.x + threadIdx.x;
-  const int b = blockIdx.y;
+  const int c = blockIdx.y * blockDim.x + threadIdx.x;
+  const int b = blockIdx.x;
   if (c >= channels || b >= batch) {
     return;
   }
@@ -97,7 +97,8 @@ template <typename T, typename S>
 RoostStatus Launch(const RoostCausalConv1dParams& p, cudaStream_t stream) {
   const T* bias = static_cast<const T*>(p.bias.address);
   dim3 block(128);
-  dim3 grid(roost_hybrid::CeilDiv(p.channels, block.x), p.tokens);
+  // Tokens and sequences go on grid x (up to 2^31 - 1); channel blocks go on y, which Validate bounds.
+  dim3 grid(p.tokens, roost_hybrid::CeilDiv(p.channels, block.x));
   OutputKernel<T, S><<<grid, block, 0, stream>>>(
       static_cast<const T*>(p.input.address), static_cast<const T*>(p.weight.address), bias,
       static_cast<T*>(p.output.address), static_cast<const S*>(p.conv_state.address),
@@ -108,7 +109,7 @@ RoostStatus Launch(const RoostCausalConv1dParams& p, cudaStream_t stream) {
   if (err != cudaSuccess) {
     return roost_hybrid::CudaFail(err);
   }
-  dim3 sgrid(roost_hybrid::CeilDiv(p.channels, block.x), p.batch);
+  dim3 sgrid(p.batch, roost_hybrid::CeilDiv(p.channels, block.x));
   StateKernel<T, S><<<sgrid, block, 0, stream>>>(
       static_cast<const T*>(p.input.address), static_cast<S*>(p.conv_state.address),
       static_cast<const int32_t*>(p.state_slots.address), static_cast<const int32_t*>(p.cu_seqlens.address),
@@ -135,6 +136,9 @@ extern "C" RoostStatus roost_causal_conv1d_run(RoostContext* ctx, const void* pa
   }
   if (p.width < 1 || p.width > roost_hybrid_conv::kMaxWidth || p.channels == 0) {
     return Fail(ROOST_STATUS_INVALID_ARGUMENT, "CausalConv1d: width must be in [1, 16] and channels non-zero");
+  }
+  if (p.channels > 65535u * 128u || p.tokens > 0x7fffffffu || p.batch > 0x7fffffffu) {
+    return Fail(ROOST_STATUS_INVALID_ARGUMENT, "CausalConv1d: too many channels, tokens or sequences for one call");
   }
   if (p.batch == 0 || p.tokens == 0) {
     return ROOST_STATUS_OK;
