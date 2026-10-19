@@ -112,7 +112,7 @@ public sealed class KernelLibrary : IDisposable
 
         if (!File.Exists(path))
         {
-            throw new ProfileUnsupportedException(FirstOp(options.Manifest), options.Sm, $"no kernel library file at {path}");
+            throw new ProfileUnsupportedException(OpId.None, options.Sm, $"no kernel library file at {path}");
         }
 
         VerifyFile(path, expected);
@@ -353,18 +353,17 @@ public sealed class KernelLibrary : IDisposable
         }
 
         var entry = manifest.Sms.FirstOrDefault(s => s.Arch == options.Sm);
-        var op = FirstOp(manifest);
         if (entry is null)
         {
             var built = string.Join(", ", manifest.Sms.Select(s => s.Arch));
-            throw new ProfileUnsupportedException(op, options.Sm, $"the manifest builds no library for SM {options.Sm} (built: {built})");
+            throw new ProfileUnsupportedException(OpId.None, options.Sm, $"the manifest builds no library for SM {options.Sm} (built: {built})");
         }
 
         return entry.Status switch
         {
-            SmStatus.Unsupported => throw new ProfileUnsupportedException(op, options.Sm, "the manifest marks the SM unsupported"),
+            SmStatus.Unsupported => throw new ProfileUnsupportedException(OpId.None, options.Sm, "the manifest marks the SM unsupported"),
             SmStatus.Untested when !options.AllowUntested =>
-                throw new ProfileUnsupportedException(op, options.Sm, "the SM has no hardware evidence (status untested); opt in with AllowUntested"),
+                throw new ProfileUnsupportedException(OpId.None, options.Sm, "the SM has no hardware evidence (status untested); opt in with AllowUntested"),
             var s => s,
         };
     }
@@ -375,7 +374,7 @@ public sealed class KernelLibrary : IDisposable
         var binaries = manifest.Variants.SelectMany(v => v.Binaries).Where(b => b.Arch == options.Sm).ToList();
         if (binaries.Count == 0)
         {
-            throw new ProfileUnsupportedException(FirstOp(manifest), options.Sm, $"no variant has a library digest for SM {options.Sm}");
+            throw new ProfileUnsupportedException(OpId.None, options.Sm, $"no variant has a library digest for SM {options.Sm}");
         }
 
         // One library per SM holds every variant, so every variant's entry for the SM names the same file.
@@ -408,8 +407,6 @@ public sealed class KernelLibrary : IDisposable
                 $"kernel library digest mismatch for {path}: manifest {expected.Sha256}, file {actual}");
         }
     }
-
-    private static OpId FirstOp(KernelManifest manifest) => manifest.Variants.Count > 0 ? manifest.Variants[0].Op : OpId.None;
 
     private static nint Export(nint handle, string name)
     {
