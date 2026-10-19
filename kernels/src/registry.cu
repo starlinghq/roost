@@ -55,13 +55,16 @@ const RoostOpEntry kEntries[] = {
     },
 };
 
-// The table the library registers: the R-016 stub followed by each item's group of entries (R-017: m0_registry.cu).
+// The table the library registers: the R-016 stub, then each item's group of entries (R-017: m0_registry.cu; R-034: the
+// hybrid ops, hybrid_entries.cu), built once.
 const std::vector<RoostOpEntry>& AllEntries() {
   static const std::vector<RoostOpEntry> all = [] {
     std::vector<RoostOpEntry> v(std::begin(kEntries), std::end(kEntries));
     uint32_t count = 0;
     const RoostOpEntry* m0 = roost_m0_entries(&count);
     v.insert(v.end(), m0, m0 + count);
+    const RoostOpEntry* hybrid = roost_hybrid_entries(&count);
+    v.insert(v.end(), hybrid, hybrid + count);
     return v;
   }();
   return all;
@@ -115,7 +118,13 @@ ROOST_API RoostStatus roost_context_create(const RoostContextCreateParams* param
     roost_set_error("roost_context_create: out of host memory");
     return ROOST_STATUS_OUT_OF_MEMORY;
   }
-  const RoostStatus status = roost_gemm_context_init(*out);
+  RoostStatus status = roost_gemm_context_init(*out);
+  if (status == ROOST_STATUS_OK) {
+    status = roost_hybrid_context_init(*out);  // R-034
+    if (status != ROOST_STATUS_OK) {
+      roost_gemm_context_release(*out);
+    }
+  }
   if (status != ROOST_STATUS_OK) {
     delete *out;
     *out = nullptr;
@@ -125,6 +134,9 @@ ROOST_API RoostStatus roost_context_create(const RoostContextCreateParams* param
 }
 
 ROOST_API RoostStatus roost_context_destroy(RoostContext* ctx) {
+  if (ctx != nullptr) {
+    roost_hybrid_context_release(ctx);  // R-034
+  }
   roost_gemm_context_release(ctx);
   delete ctx;
   return ROOST_STATUS_OK;
