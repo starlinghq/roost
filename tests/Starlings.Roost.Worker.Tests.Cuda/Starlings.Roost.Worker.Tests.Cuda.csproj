@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Local only, not in Roost.slnx (AGENTS.md): streams the locked Qwen3.5-0.8B checkpoint to a GPU (R-024). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Cuda/Starlings.Roost.Cuda.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
+  </ItemGroup>
+</Project>
