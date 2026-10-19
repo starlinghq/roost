@@ -90,7 +90,7 @@ prompts because no forward's argmax differed.
 | `silu(z)` dropped from the gated norm | 41.5 failed, layer 0 | 12.3 failed, layer 1 | 45.3 failed, layer 1 | 34.9 |
 | RMS norm eps 1e-5 instead of 1e-6 | 37.7 failed, layer 6 | 4.47 failed, layer 1 | 18.2 failed, layer 1 | 7.41 |
 
-Every defect exceeds every bound by 13x or more. The attribution is right for the gate perturbations and wrong for the window defect
+Every defect exceeds the hidden, recurrent and conv bounds by 13x or more (the maximum over cases, not every case: `nan_or_inf` passes in every negative run, and the window defect's capital case still has an equal step-0 argmax; the drop-attention-gate, drop-z-gate and norm-eps runs covered 2 of 5 cases, capital and long-context). The attribution is right for the gate perturbations and wrong for the window defect
 on the hidden key (the defect enters at layer 3, but its absolute size there, 0.61 at most, is below 2.0); the state keys point at
 the first linear layer after the defect. A row-relative hidden bound of 0.1 (fixed definition 0.067; defects 1.41 to 11.3) attributes
 every one to the layer where it enters (`docs/m0/r022/relative-attribution.txt`).
