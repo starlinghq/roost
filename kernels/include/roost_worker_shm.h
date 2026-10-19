@@ -58,6 +58,10 @@ typedef struct RoostStepPlanHeader {
   uint32_t flags;          /* ROOST_PLAN_FLAG_* */
   uint64_t step_id;
   uint64_t total_bytes;    /* bytes of this buffer in use, header included */
+  /* The step's padded token count: an upper bound on token_count (and so on every Gemm m and LmHead selected count in
+   * the step) that graphs are captured and Gemm algorithms pinned for; 0 means no bucket (eager, exact shapes). It is
+   * a row count, not an index, and the worker passes it as RoostGemmParams.shape_bucket and
+   * RoostLmHeadParams.shape_bucket (contract version 3 clarification; no layout change). */
   uint32_t shape_bucket;
   uint32_t math_mode;      /* ROOST_MATH_* */
   uint32_t sequence_count;

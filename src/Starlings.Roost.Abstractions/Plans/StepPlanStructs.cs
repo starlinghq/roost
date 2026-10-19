@@ -46,7 +46,7 @@ public struct StepPlanHeader
     /// <summary>Bytes of this buffer in use, header included</summary>
     public ulong TotalBytes;
 
-    /// <summary>C field <c>shape_bucket</c>, documented in the header.</summary>
+    /// <summary>The step's padded token count, an upper bound on <c>token_count</c> that graphs and pinned Gemm algorithms are made for; 0 means no bucket. A row count, not an index.</summary>
     public uint ShapeBucket;
 
     /// <summary>ROOST_MATH_*</summary>
