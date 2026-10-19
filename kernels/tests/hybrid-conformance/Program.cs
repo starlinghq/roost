@@ -23,19 +23,40 @@ if (!File.Exists(args[0]))
 
 // An exception escaping Main would abort the process with SIGABRT (a core dump on the maintainer's desktop), so every
 // failure is caught and reported as a failed check.
-Cuda.SetDevice(0);
-var stream = Cuda.CreateStream();
+// That includes the device setup (no visible device, a card that cannot create a context), the library load and saving the log.
+int Finish(int code)
+{
+    try
+    {
+        report.Save(Arg("--log"));
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine($"could not write the log: {ex.Message}");
+        return 1;
+    }
+
+    return code;
+}
+
+nint stream = 0;
 Library? libOrNull = null;
 try
 {
+    Cuda.SetDevice(0);
+    stream = Cuda.CreateStream();
     libOrNull = Library.Load(args[0], 0);
 }
 catch (Exception ex)
 {
-    report.Check(false, "harness/load", ex.ToString());
-    Cuda.DestroyStream(stream);
-    report.Save(Arg("--log"));
-    return 1;
+    report.Check(false, "harness/setup", ex.ToString());
+    Console.Error.WriteLine(ex.Message);
+    if (stream != 0)
+    {
+        try { Cuda.DestroyStream(stream); } catch (Exception) { /* already reported */ }
+    }
+
+    return Finish(1);
 }
 
 using var lib = libOrNull;
@@ -76,12 +97,18 @@ catch (Exception ex)
 }
 finally
 {
-    Cuda.DestroyStream(stream);
+    try
+    {
+        Cuda.DestroyStream(stream);
+    }
+    catch (Exception ex)
+    {
+        report.Check(false, "harness/destroy-stream", ex.Message);
+    }
 }
 
 report.Line($"{report.Checks} checks, {report.Failures} failed");
-report.Save(Arg("--log"));
-return report.Failures == 0 ? 0 : 1;
+return Finish(report.Failures == 0 ? 0 : 1);
 
 internal static class Verify
 {

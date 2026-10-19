@@ -69,7 +69,9 @@ up to 16 (4 for Qwen3.5), bf16 activations and float32 recurrent state; anything
   may be views of a fused projection. GatedRmsNorm: per row, `x * rsqrt(mean(x^2) + eps) * weight * silu(gate)`, one block per
   row with a fixed-order reduction, so a row's result does not depend on the other rows. SigmoidMul: `input * sigmoid(gate)`,
   a grid-stride loop (the stride path past 2^20 blocks, 268 million elements, is not exercised). `input` may alias `output`
-  (same start address) for GatedRmsNorm and SigmoidMul; any other overlap is `INVALID_ARGUMENT`. Other dtypes are
+  (same start address) for GatedRmsNorm and SigmoidMul; any other overlap is `INVALID_ARGUMENT`. GatedDeltaRuleGates has no
+  in-place form: `g` and `beta` may not overlap each other or `a`, `b`, `a_log`, `dt_bias` at all, same start address included
+  (element sizes and strides differ between the spans, so a shared start address races). Other dtypes are
   `UNSUPPORTED`. The softplus is `log1pf(expf(x))` in float, where the reference uses `log(1 + exp(x))` in double.
   `GatedDeltaRule` still normalises q and k itself (`l2_norm_qk`, eps 1e-6, before the query scale), as the v3 header says.
 - **Graph capture.** The `GRAPH_CAPTURABLE` ops (recurrent GatedDeltaRule, CausalConv1d, the two state ops and the three gating ops) are
@@ -97,7 +99,7 @@ The tolerances are development limits inside the harness, not a tolerance file; 
 ### Proposed tolerances (for the maintainer; not written to any tolerance file)
 
 Measured on the RTX 3090 (SM 86) by the harness, against `CpuOps` in double on random inputs of the Qwen3.5-0.8B shapes
-(`kernels/results/r034-hybrid-conformance-sm86.log`, 112 checks). The metric is the worst `|got - ref| / (|ref| + floor)`
+(`kernels/results/r034-hybrid-conformance-sm86.log`, 117 checks). The metric is the worst `|got - ref| / (|ref| + floor)`
 over the output, with the floor named in the table; the GatedDeltaRule rows use `|got - ref|` over the reference maximum.
 A bf16 output can differ from the double reference by one bf16 step, which is 2^-8 to 2^-7 relative to the result
 (0.0039 to 0.0078), so the proposed bf16 limit is 2^-7 = 7.8e-3; a float32 output differs by float rounding only.
@@ -117,6 +119,14 @@ A bf16 output can differ from the double reference by one bf16 step, which is 2^
 | GatedRmsNorm, f32 output | scaled (1e-6) | 3.2e-7 | 1e-5 | 1e-5 (31x) |
 | SigmoidMul, bf16 output | scaled (1e-3) | 5.21e-3 | 7.8e-3 | 7.8e-3 (one bf16 step) |
 | SigmoidMul, f32 output | scaled (1e-6) | 2.3e-7 | 1e-5 | 1e-5 (43x) |
+
+Open points for the maintainer, who owns the final values: (1) the floors differ between rows (1e-3 for most, 1e-2 for
+GatedRmsNorm bf16, 0.1 for CausalConv1d f32, 1e-6 for the f32 norm and SigmoidMul) and were chosen per row to sit below the
+smallest typical output of that op, not from a common rule; with floor 0.1 the conv f32 figure is effectively an absolute error
+for outputs below 0.1, and floor 1e-2 hides relative error on small GatedRmsNorm outputs. (2) The CausalConv1d bf16 proposal
+(7.8e-3 against 7.57e-3 measured) is one bf16 step against a reference rounded to bf16, so it allows no two-step disagreement.
+(3) The recurrent GatedDeltaRule proposal (o 2e-3, state 1e-5) is tighter than the limits the harness asserts (8e-3, 1e-4), so
+no committed run enforces the proposed values; the log shows the measured maxima (4.47e-4, 1.22e-7) only.
 
 Caveats: random inputs, not real activations; one GPU (SM 86); sequences of at most 1500 tokens for the chunk variant and 200
 for the recurrent one. The numbers for the chunk variant are bf16 rounding of FLA's own intermediates, so they do not tighten

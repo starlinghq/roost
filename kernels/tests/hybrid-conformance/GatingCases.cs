@@ -308,6 +308,21 @@ internal static unsafe class GatingCases
         p1.Beta.Address = p1.A.Address + 2;
         ExpectGates("beta overlapping a", p1, 1);
         p1 = good;
+        p1.G.Address = p1.A.Address;
+        ExpectGates("g f32 at the same address as a bf16", p1, 1);
+        p1 = good;
+        p1.Beta.Address = p1.B.Address;
+        ExpectGates("beta at the same address as b", p1, 1);
+        p1 = good;
+        p1.G.Address = p1.ALog.Address;
+        ExpectGates("g at the same address as a_log", p1, 1);
+        p1 = good;
+        p1.Beta.Address = p1.DtBias.Address;
+        ExpectGates("beta at the same address as dt_bias", p1, 1);
+        p1 = good;
+        p1.Beta.Address = p1.G.Address;
+        ExpectGates("beta at the same address as g", p1, 1);
+        p1 = good;
         p1.G.Address += 2;
         ExpectGates("g not aligned to f32", p1, 1);
 
