@@ -54,6 +54,66 @@ public sealed class GatedDeltaRuleViewTests
         Assert.Contains(viewOut.ReadF64(), x => x != 0);
     }
 
+    // Q, K and V as views of three different buffers with three different row strides and three different starting
+    // columns, so reading any operand with another operand's stride or offset changes the result. Row widths are 6 (q, k:
+    // 2 key heads x 3) and 8 (v: 4 value heads x 2); the strides 9, 11 and 13 and the columns 1, 2 and 3 are all distinct.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void QKAndVWithDistinctStridesAndOffsetsEqualContiguousCopies(bool l2)
+    {
+        const int kh = 2;
+        const int vh = 4;
+        const int kd = 3;
+        const int vd = 2;
+        const int qw = kh * kd;
+        const int vw = vh * vd;
+        const int qStride = 9;
+        const int kStride = 11;
+        const int vStride = 13;
+        const int qCol = 1;
+        const int kCol = 2;
+        const int vCol = 3;
+        int[] lens = [5, 3];
+        int tokens = lens.Sum();
+        var rng = new Random(17);
+        double[] Rand(int n) => Enumerable.Range(0, n).Select(_ => (rng.NextDouble() * 2) - 1).ToArray();
+        double[] qBuf = Rand(tokens * qStride);
+        double[] kBuf = Rand(tokens * kStride);
+        double[] vBuf = Rand(tokens * vStride);
+        double[] g = Enumerable.Range(0, tokens * vh).Select(_ => -rng.NextDouble()).ToArray();
+        double[] beta = Enumerable.Range(0, tokens * vh).Select(_ => rng.NextDouble()).ToArray();
+        float[] pool = Enumerable.Range(0, 4 * vh * kd * vd).Select(_ => (float)((rng.NextDouble() * 2) - 1)).ToArray();
+
+        using var f = new Bag();
+        var qm = f.Add(Mem.F64(qBuf));
+        var km = f.Add(Mem.F64(kBuf));
+        var vm = f.Add(Mem.F64(vBuf));
+        var gm = f.Add(Mem.F64(g));
+        var bm = f.Add(Mem.F64(beta));
+        var slots = f.Add(Mem.I32(3, 1));
+        var cu = f.Add(Mem.I32(0, 5, 8));
+
+        var viewOut = f.Add(Mem.Zeros(DType.F64, tokens * vw));
+        var viewState = f.Add(Mem.F32(pool));
+        var views = Args(View(qm, qCol), View(km, kCol), View(vm, vCol), gm, bm, viewOut, viewState, slots, cu, 2, tokens, kh, vh, kd, vd, l2);
+        views.QStride = qStride;
+        views.KStride = kStride;
+        views.VStride = vStride;
+        CpuOps.GatedDeltaRule(views);
+
+        var q = f.Add(Mem.F64(Columns(qBuf, tokens, qStride, qCol, qw)));
+        var k = f.Add(Mem.F64(Columns(kBuf, tokens, kStride, kCol, qw)));
+        var v = f.Add(Mem.F64(Columns(vBuf, tokens, vStride, vCol, vw)));
+        var copyOut = f.Add(Mem.Zeros(DType.F64, tokens * vw));
+        var copyState = f.Add(Mem.F32(pool));
+        CpuOps.GatedDeltaRule(Args(q.Span, k.Span, v.Span, gm, bm, copyOut, copyState, slots, cu, 2, tokens, kh, vh, kd, vd, l2));
+
+        Assert.Equal(copyOut.ReadF64(), viewOut.ReadF64());
+        Assert.Equal(copyState.ReadF32(), viewState.ReadF32());
+        Assert.Contains(viewOut.ReadF64(), x => x != 0);
+    }
+
     // The Qwen3.5-0.8B linear-attention shape: CausalConv1d over all 6144 channels of the fused projection, then
     // GatedDeltaRule on views of the conv output (stride 6144) against the same op on split copies.
     [Fact]
