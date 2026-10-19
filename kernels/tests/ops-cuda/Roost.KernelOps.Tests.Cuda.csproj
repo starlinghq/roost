@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Local only, not in Roost.slnx (AGENTS.md): R-017's GPU conformance of the M0 attention-side ops. It loads a built
+    libroost_kernels_sm<N>.so through its C1 exports, runs each op on random inputs and compares with CpuOps (R-018).
+    Run it through tools/gpu-lease; see kernels/README.md.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Roost.KernelOps.Tests.Cuda</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- A console harness, not a library: no XML docs, no localisation, plain loops and exceptions. -->
+    <NoWarn>$(NoWarn);CA1303;CA1304;CA1305;CA1307;CA1309;CA1310;CA1707;CA1812;CA1822;CA1031;CA1051;CA1861;CA2000;CA5394;CS1591;IDE0058;IDE0010;IDE0011;IDE0045;IDE0046;IDE0072;IDE0305;IDE0300;IDE0301;IDE0090;CA1002;CA1819;CA1815;CA1034;CA1720;CA1711;CA1716;CA1008;CA1027</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../../src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+  </ItemGroup>
+</Project>
