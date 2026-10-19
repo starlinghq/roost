@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
+using System.Runtime.InteropServices;
 using Starlings.Roost.Engine.Blocks;
+using Starlings.Roost.Engine.Caching;
 using Starlings.Roost.Plans;
 using Starlings.Roost.Requests;
 using Starlings.Roost.State;
@@ -89,6 +91,7 @@ public sealed class StepPlanner
     private readonly List<long> _pendingPins = [];
     private readonly List<PlannerNotice> _notices = [];
     private readonly int[] _need;
+    private readonly PrefixCache? _cache;
     private long _arrival;
     private ulong _lastStep;
 
@@ -125,6 +128,11 @@ public sealed class StepPlanner
                     throw new NotSupportedException($"State group kind {g.Kind} (group {g.Name}) is not supported by the planner.");
             }
         }
+
+        if (options.PrefixCache is { } cacheOptions)
+        {
+            _cache = new PrefixCache(blocks, cacheOptions, key => _named.ContainsKey(key));
+        }
     }
 
     /// <summary>Live sequences (waiting and resident).</summary>
@@ -135,6 +143,9 @@ public sealed class StepPlanner
 
     /// <summary>Blocks and slots held back from their pools until an uncompleted plan that names them completes.</summary>
     public int ParkedBlocks => _parked.Count;
+
+    /// <summary>The prefix cache (R-030), or null when <see cref="PlannerOptions.PrefixCache"/> is not set.</summary>
+    public PrefixCache? PrefixCache => _cache;
 
     /// <summary>Queues a request.</summary>
     /// <param name="request">The request. Its id value is the sequence handle.</param>
@@ -382,6 +393,8 @@ public sealed class StepPlanner
                 Preempt(s);
             }
         }
+
+        _cache?.Clear(); // the restarted worker holds none of the cached blocks or snapshots
     }
 
     /// <summary>
@@ -426,6 +439,19 @@ public sealed class StepPlanner
             Bump(expected, k);
         }
 
+        if (_cache is not null)
+        {
+            _cache.CheckInvariants();
+            _cache.CountReferences(expected);
+            foreach (var s in _seqs)
+            {
+                if (s.PendingSnapshot >= 0)
+                {
+                    Bump(expected, SnapKey(_recurrentGroup, s.PendingSnapshot));
+                }
+            }
+        }
+
         foreach (var g in _blocks.Groups)
         {
             var pool = _blocks.GetPool(g.Index);
@@ -436,6 +462,20 @@ public sealed class StepPlanner
                 if (pool.RefCount(b) != want)
                 {
                     throw new InvalidOperationException($"Group {g.Index} block {b}: count {pool.RefCount(b)}, planner state names it {want} times.");
+                }
+            }
+
+            if (g.Kind == StateGroupKind.Recurrent)
+            {
+                var snapshots = _blocks.GetSnapshotPool(g.Index);
+                snapshots.CheckInvariants();
+                for (var b = 0; b < snapshots.Capacity; b++)
+                {
+                    expected.TryGetValue(SnapKey(g.Index, b), out var want);
+                    if (snapshots.RefCount(b) != want)
+                    {
+                        throw new InvalidOperationException($"Group {g.Index} snapshot {b}: count {snapshots.RefCount(b)}, planner state names it {want} times.");
+                    }
                 }
             }
         }
@@ -451,7 +491,9 @@ public sealed class StepPlanner
 
     private static void Bump(Dictionary<long, int> map, long key) => map[key] = map.GetValueOrDefault(key) + 1;
 
-    private static long Key(int group, int id) => ((long)group << 32) | (uint)id;
+    private static long Key(int group, int id) => BlockKey.Live(group, id);
+
+    private static long SnapKey(int group, int id) => BlockKey.Snapshot(group, id);
 
     private static int CeilDiv(int a, int b) => (a + b - 1) / b;
 
@@ -487,11 +529,23 @@ public sealed class StepPlanner
                 continue; // waits for its sampled token, or for the plan that still names its old state
             }
 
+            var attached = _cache is not null && !s.Resident && s.Computed == 0 && AttachPrefix(s);
             var n = Math.Min(Math.Min(s.Tokens.Count - s.Computed, budget), _options.MaxChunkTokens);
+            n = CapAtSnapshotBoundary(s, n);
             if (!TryReserve(s, n, order, i, ops, pins))
             {
+                if (attached)
+                {
+                    DetachPrefix(s);
+                }
+
                 stalledHead ??= s;
                 continue;
+            }
+
+            if (_cache is not null)
+            {
+                SnapshotAtRowStart(s, ops, pins);
             }
 
             rows.Add((s, s.Computed, n));
@@ -504,12 +558,30 @@ public sealed class StepPlanner
             return null;
         }
 
+        if (_cache is not null)
+        {
+            // Nodes for the blocks this plan completes are added only now, so no row of this plan reuses a block that the
+            // same forward is still writing; every later plan runs after this one.
+            foreach (var (s, _, _) in rows)
+            {
+                if (!s.CacheStuck)
+                {
+                    s.CacheStuck = !_cache.Sync(CollectionsMarshal.AsSpan(s.Tokens), s.Computed, s.Request.Lora.Value, s.Tables, s.Nodes);
+                }
+            }
+        }
+
         return Finish(rows, ops, pins);
     }
 
     private bool TryReserve(SchedSeq s, int n, List<SchedSeq> order, int index, List<PlanCacheOp> ops, List<long> pins)
     {
         ComputeNeed(s, n);
+        if (!Satisfied())
+        {
+            EvictCachedFor();
+        }
+
         if (!Satisfied())
         {
             if (!Feasible(order, index))
@@ -523,6 +595,7 @@ public sealed class StepPlanner
                 if (v.Resident && v.InFlight == 0)
                 {
                     Preempt(v);
+                    EvictCachedFor(); // the victim's blocks may now be held by the cache alone
                 }
             }
 
@@ -542,6 +615,16 @@ public sealed class StepPlanner
                     Span<int> one = [0];
                     pool.TryAllocate(one);
                     s.Slot = one[0];
+                    if (s.PendingSnapshot >= 0)
+                    {
+                        // Restore the cached state into the new slot before this plan's forward. The plan names the
+                        // snapshot until it completes, so the sequence's own reference can go back to the cache now.
+                        ops.Add(_blocks.Restore(g.Index, s.PendingSnapshot, s.Slot));
+                        Pin(pins, Key(g.Index, s.Slot));
+                        Pin(pins, SnapKey(g.Index, s.PendingSnapshot));
+                        ReleaseSnapshot(g.Index, s.PendingSnapshot);
+                        s.PendingSnapshot = -1;
+                    }
                 }
 
                 continue;
@@ -637,6 +720,11 @@ public sealed class StepPlanner
                 {
                     potential += _blocks.Groups[g].Kind == StateGroupKind.Recurrent ? 1 : v.Tables[g].Count(b => b != BlockPool.NullBlock);
                 }
+            }
+
+            if (_cache is not null && _blocks.Groups[g].Kind != StateGroupKind.Recurrent)
+            {
+                potential += _cache.EvictableNodes();
             }
 
             if (potential < _need[g])
@@ -799,6 +887,14 @@ public sealed class StepPlanner
             table.Clear();
         }
 
+        if (s.PendingSnapshot >= 0)
+        {
+            ReleaseSnapshot(_recurrentGroup, s.PendingSnapshot);
+            s.PendingSnapshot = -1;
+        }
+
+        s.Nodes.Clear();
+        s.CacheStuck = false;
         s.Slot = -1;
         s.Resident = false;
     }
@@ -816,13 +912,126 @@ public sealed class StepPlanner
         }
     }
 
+    private void ReleaseSnapshot(int group, int id)
+    {
+        var key = SnapKey(group, id);
+        if (_named.ContainsKey(key))
+        {
+            _parked.Add(key);
+        }
+        else
+        {
+            _blocks.GetSnapshotPool(group).Release([id]);
+        }
+    }
+
     private void QueueOp(in PlanCacheOp op)
     {
         _pendingOps.Add(op);
         for (var k = 0; k < (int)op.Count; k++)
         {
-            Pin(_pendingPins, Key((int)op.Group, (int)op.Src + k));
-            Pin(_pendingPins, Key((int)op.Group, (int)op.Dst + k));
+            Pin(_pendingPins, op.Kind == CacheOpKind.SnapshotRestore ? SnapKey((int)op.Group, (int)op.Src + k) : Key((int)op.Group, (int)op.Src + k));
+            Pin(_pendingPins, op.Kind == CacheOpKind.SnapshotWrite ? SnapKey((int)op.Group, (int)op.Dst + k) : Key((int)op.Group, (int)op.Dst + k));
+        }
+    }
+
+    // Prefix cache (R-030).
+
+    /// <summary>Reuses the longest cached prefix of a sequence that is not resident. Returns whether any was reused.</summary>
+    private bool AttachPrefix(SchedSeq s)
+    {
+        if (!_cache!.TryAttach(CollectionsMarshal.AsSpan(s.Tokens), s.Request.Lora.Value, s.Tables, s.Nodes, out var computed, out var snapshot))
+        {
+            return false;
+        }
+
+        s.Computed = computed;
+        s.PendingSnapshot = snapshot;
+        return true;
+    }
+
+    /// <summary>Gives back what <see cref="AttachPrefix"/> took when the sequence could not be made resident.</summary>
+    private void DetachPrefix(SchedSeq s)
+    {
+        foreach (var g in _blocks.Groups)
+        {
+            if (g.Kind == StateGroupKind.Recurrent)
+            {
+                continue;
+            }
+
+            foreach (var b in s.Tables[g.Index])
+            {
+                if (b != BlockPool.NullBlock)
+                {
+                    ReleaseBlock(g.Index, b);
+                }
+            }
+
+            s.Tables[g.Index].Clear();
+        }
+
+        if (s.PendingSnapshot >= 0)
+        {
+            ReleaseSnapshot(_recurrentGroup, s.PendingSnapshot);
+            s.PendingSnapshot = -1;
+        }
+
+        s.Nodes.Clear();
+        s.Computed = 0;
+    }
+
+    /// <summary>
+    /// With a recurrent group, a chunk ends no later than the next snapshot boundary: a snapshot copies the state a
+    /// finished plan left, so it can only be taken where a chunk ended.
+    /// </summary>
+    private int CapAtSnapshotBoundary(SchedSeq s, int n)
+    {
+        if (_cache is null || _recurrentGroup < 0)
+        {
+            return n;
+        }
+
+        var stride = _cache.SnapshotStrideTokens;
+        return Math.Min(n, (((s.Computed / stride) + 1) * stride) - s.Computed);
+    }
+
+    /// <summary>
+    /// If the sequence's state sits exactly on a snapshot boundary and the node there has no snapshot, writes one. The
+    /// op runs before this plan's forward and after every earlier plan, so the slot holds the state after
+    /// <c>Computed</c> tokens however many plans are in flight.
+    /// </summary>
+    private void SnapshotAtRowStart(SchedSeq s, List<PlanCacheOp> ops, List<long> pins)
+    {
+        if (_recurrentGroup < 0 || s.Computed == 0 || s.Computed % _cache!.SnapshotStrideTokens != 0)
+        {
+            return;
+        }
+
+        var index = (s.Computed / _cache.BlockSize) - 1;
+        if (index >= s.Nodes.Count || s.Nodes[index].Dead || s.Nodes[index].Snapshot >= 0)
+        {
+            return;
+        }
+
+        if (_cache.TrySnapshot(s.Nodes[index], s.Slot, out var write))
+        {
+            ops.Add(write);
+            Pin(pins, Key(_recurrentGroup, s.Slot));
+            Pin(pins, SnapKey(_recurrentGroup, (int)write.Dst));
+        }
+    }
+
+    /// <summary>Evicts least-recently-used cache nodes until the current need is met or none can go.</summary>
+    private void EvictCachedFor()
+    {
+        if (_cache is null)
+        {
+            return;
+        }
+
+        while (!Satisfied() && _cache.EvictOne())
+        {
         }
     }
 
@@ -852,7 +1061,8 @@ public sealed class StepPlanner
             }
             else
             {
-                _blocks.GetPool((int)(k >> 32)).Release([(int)(k & 0xFFFFFFFF)]);
+                var pool = BlockKey.IsSnapshot(k) ? _blocks.GetSnapshotPool(BlockKey.Group(k)) : _blocks.GetPool(BlockKey.Group(k));
+                pool.Release([BlockKey.Id(k)]);
             }
         }
 
@@ -883,6 +1093,15 @@ public sealed class StepPlanner
         public bool Resident { get; set; }
 
         public int Slot { get; set; } = -1;
+
+        /// <summary>A snapshot id this sequence holds until its restore op is in a plan (prefix cache), or -1.</summary>
+        public int PendingSnapshot { get; set; } = -1;
+
+        /// <summary>The cache nodes of this sequence's full blocks, in order (prefix cache).</summary>
+        public List<PrefixCache.Node> Nodes { get; } = [];
+
+        /// <summary>A hash collision stopped this sequence's chain; it adds no more nodes.</summary>
+        public bool CacheStuck { get; set; }
 
         public int InFlight { get; set; }
 
