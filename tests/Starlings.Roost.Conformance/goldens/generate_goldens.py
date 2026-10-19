@@ -1,11 +1,14 @@
 """Upstream golden tensors for the Roost kernel conformance suite (build plan R-019).
 
-    uv run --project tests/Starlings.Roost.Conformance/goldens --locked roost-conformance-goldens --out <dir> [--lock <file>]
-    uv run --project tests/Starlings.Roost.Conformance/goldens --locked roost-conformance-goldens --verify <file> --lock <file>
+    uv run --project tests/Starlings.Roost.Conformance/goldens --locked \
+        roost-conformance-goldens --out <dir> [--lock <file>]
+    uv run --project tests/Starlings.Roost.Conformance/goldens --locked \
+        roost-conformance-goldens --verify <file> --lock <file>
 
-Each golden case is one op call on seeded random inputs of the Qwen3.5-0.8B full-attention layer's shapes (Qwen/Qwen3.5-0.8B at
-2fc06364715b967f1860aea9cf38778875588b17: hidden 1024, 8 query heads over 2 KV heads, head_dim 256, 64 rotary dimensions,
-rope_theta 1e7, MLP 3584), plus the result of the *upstream* definition of that op, evaluated in float64:
+Each golden case is one op call on seeded random inputs of the Qwen3.5-0.8B full-attention layer's shapes
+(Qwen/Qwen3.5-0.8B at 2fc06364715b967f1860aea9cf38778875588b17: hidden 1024, 8 query heads over 2 KV heads,
+head_dim 256, 64 rotary dimensions, rope_theta 1e7, MLP 3584), plus the result of the *upstream* definition of
+that op, evaluated in float64:
 
     RmsNorm, QkNorm    transformers.models.qwen3_5.modeling_qwen3_5.Qwen3_5RMSNorm._norm, times the weight
                        (the (1 + weight) convention of Qwen3_5RMSNorm.forward is model definition, not the op)
@@ -16,9 +19,10 @@ rope_theta 1e7, MLP 3584), plus the result of the *upstream* definition of that 
     CacheWrite/Copy    torch indexing (bit-exact data movement)
     Residual           torch.add
 
-The transformers (5.20.1) and torch (2.9.1) versions are the ones the evidence pipeline pins for its reference runner. Output is
-one safetensors file, a release asset that is never committed; `--lock` writes (or, with `--verify`, checks) the small lock file
-that is committed and pins the asset by SHA-256. The same script and seed give the same bytes.
+The transformers (5.20.1) and torch (2.9.1) versions are the ones the evidence pipeline pins for its reference runner.
+Output is one safetensors file, a release asset that is never committed; `--lock` writes (or, with `--verify`,
+checks) the small lock file that is committed and pins the asset by SHA-256. The same script and seed give the same
+bytes.
 """
 
 from __future__ import annotations
@@ -92,7 +96,9 @@ class Builder:
         )
 
 
-def randn(rng: np.random.Generator, shape: tuple[int, ...], dtype: str, std: float = 1.0, mean: float = 0.0) -> torch.Tensor:
+def randn(
+    rng: np.random.Generator, shape: tuple[int, ...], dtype: str, std: float = 1.0, mean: float = 0.0
+) -> torch.Tensor:
     return torch.from_numpy(mean + std * rng.standard_normal(shape)).to(TORCH_DTYPES[dtype])
 
 
@@ -149,7 +155,9 @@ def qk_norm_cases(b: Builder) -> None:
             )
 
 
-def rope_reference(q: torch.Tensor, k: torch.Tensor, pos: torch.Tensor, rotary: int, theta: float) -> tuple[torch.Tensor, torch.Tensor]:
+def rope_reference(
+    q: torch.Tensor, k: torch.Tensor, pos: torch.Tensor, rotary: int, theta: float
+) -> tuple[torch.Tensor, torch.Tensor]:
     inv_freq = 1.0 / (theta ** (torch.arange(0, rotary, 2, dtype=torch.float64) / rotary))
     freqs = pos.double()[:, None] * inv_freq[None, :]
     emb = torch.cat((freqs, freqs), dim=-1)
@@ -193,6 +201,16 @@ def rope_cases(b: Builder) -> None:
             )
 
 
+def gather_pages(
+    pool: torch.Tensor, indices: np.ndarray, kv_indptr: np.ndarray, layout: int, seq: int, kv_len: int
+) -> torch.Tensor:
+    """One sequence's keys or values from a paged pool, as [kv, kv_heads, head_dim] in float64."""
+    pages = torch.from_numpy(indices[kv_indptr[seq] : kv_indptr[seq + 1]].astype(np.int64))
+    seg = pool[pages].double()
+    seg = seg if layout == 2 else seg.permute(0, 2, 1, 3)
+    return seg.reshape(-1, KV_HEADS, HEAD_DIM)[:kv_len]
+
+
 def attention_cases(b: Builder) -> None:
     module = types.SimpleNamespace(num_key_value_groups=Q_HEADS // KV_HEADS, training=False)
     # (label, mode 0 decode / 1 prefill, [(q_len, kv_len)], page size, layout 2 NHD / 3 HND, causal)
@@ -220,17 +238,11 @@ def attention_cases(b: Builder) -> None:
         q = randn(rng, (tokens, Q_HEADS, HEAD_DIM), "BF16")
         kc, vc = randn(rng, pool_shape, "BF16"), randn(rng, pool_shape, "BF16")
 
-        def gather(pool: torch.Tensor, seq: int, kv_len: int) -> torch.Tensor:
-            pages = torch.from_numpy(indices[kv_indptr[seq] : kv_indptr[seq + 1]].astype(np.int64))
-            seg = pool[pages].double()
-            seg = seg if layout == 2 else seg.permute(0, 2, 1, 3)
-            return seg.reshape(-1, KV_HEADS, HEAD_DIM)[:kv_len]  # [kv, kv_heads, head_dim]
-
         out = torch.zeros(tokens, Q_HEADS, HEAD_DIM, dtype=torch.float64)
         for s, (n, kv_len) in enumerate(seqs):
             qs = q[q_indptr[s] : q_indptr[s + 1]].double().permute(1, 0, 2)[None]  # [1, heads, n, hd]
-            ks = gather(kc, s, kv_len).permute(1, 0, 2)[None]
-            vs = gather(vc, s, kv_len).permute(1, 0, 2)[None]
+            ks = gather_pages(kc, indices, kv_indptr, layout, s, kv_len).permute(1, 0, 2)[None]
+            vs = gather_pages(vc, indices, kv_indptr, layout, s, kv_len).permute(1, 0, 2)[None]
             mask = None
             if causal and mode == 1:
                 visible = torch.arange(kv_len)[None, :] <= (kv_len - n + torch.arange(n))[:, None]
@@ -498,9 +510,15 @@ def lock_document(asset: Path, case_count: int) -> dict[str, Any]:
         "release": {
             "repository": "starlinghq/roost",
             "tag": None,
-            "note": "A release asset, not committed. The tag is set when the asset is uploaded; the digest above is what binds it.",
+            "note": (
+                "A release asset, not committed. The tag is set when the asset is uploaded; "
+                "the digest above is what binds it."
+            ),
         },
-        "generator": {"path": "tests/Starlings.Roost.Conformance/goldens/generate_goldens.py", "sha256": sha256_file(Path(__file__))},
+        "generator": {
+            "path": "tests/Starlings.Roost.Conformance/goldens/generate_goldens.py",
+            "sha256": sha256_file(Path(__file__)),
+        },
         "case_count": case_count,
         "base_seed": BASE_SEED,
         "versions": {
@@ -535,7 +553,11 @@ def write_safetensors(path: Path, tensors: dict[str, torch.Tensor], metadata: di
     for name in sorted(tensors):
         t = tensors[name].contiguous()
         raw = t.reshape(-1).view(torch.uint8).numpy().tobytes() if t.numel() else b""
-        header[name] = {"dtype": SAFETENSORS_DTYPES[t.dtype], "shape": list(t.shape), "data_offsets": [offset, offset + len(raw)]}
+        header[name] = {
+            "dtype": SAFETENSORS_DTYPES[t.dtype],
+            "shape": list(t.shape),
+            "data_offsets": [offset, offset + len(raw)],
+        }
         blobs.append(raw)
         offset += len(raw)
     encoded = json.dumps(header, separators=(",", ":")).encode("utf-8")

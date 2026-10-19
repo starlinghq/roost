@@ -1,0 +1,61 @@
+library roost-kernels-sm86 abi 0x10000, 11 variants; device sm_86; 2026-10-19T17:54:37.9935658Z
+PASS    gemm-cublaslt fixed-k_proj-BF16-1x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-k_proj-BF16-3x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-k_proj-BF16-17x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-BF16-1x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-o_proj-BF16-3x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.001 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-BF16-17x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.398 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-nontransposed-BF16-17x256x512-tb0-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-bias-BF16-17x256x512-tb1-bias1-ab1.0-bucket0 class=gemm-bf16 utilisation=0.167 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-alpha-beta-c-BF16-17x256x512-tb1-bias0-ab0.5.0.25-bucket0 class=gemm-bf16 utilisation=0.421 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-alpha-beta-c-bias-bucket64-BF16-5x128x256-tb0-bias1-ab2.1-bucket64 class=gemm-bf16 utilisation=0.544 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-small-k8-BF16-4x64x8-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.0-bucket0 class=gemm-bf16 utilisation=0.293 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.1-bucket0 class=gemm-bf16 utilisation=0.294 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.0-bucket49 class=gemm-bf16 utilisation=0.020 violations=0 det=pass inv=pass
+FAIL    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket49 class=gemm-bf16 utilisation=1.095 violations=3 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.1-bucket49 class=gemm-bf16 utilisation=0.191 violations=0 det=pass inv=pass
+FAIL    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket49 class=gemm-bf16 utilisation=1.103 violations=1 det=pass inv=pass
+PASS    gemm-cublaslt random-0-BF16-64x136x440-tb1-bias1-ab1.0-bucket0 class=gemm-bf16 utilisation=0.383 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt random-1-BF16-26x296x192-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+FAIL    gemm-cublaslt random-2-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket49 class=gemm-bf16 utilisation=1.421 violations=2 det=pass inv=pass
+PASS    gemm-cublaslt fixed-k_proj-F16-1x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.029 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-k_proj-F16-3x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-k_proj-F16-17x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.239 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-F16-1x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.248 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-o_proj-F16-3x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.234 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-F16-17x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.379 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-nontransposed-F16-17x256x512-tb0-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.357 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-bias-F16-17x256x512-tb1-bias1-ab1.0-bucket0 class=gemm-f16 utilisation=0.357 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-alpha-beta-c-F16-17x256x512-tb1-bias0-ab0.5.0.25-bucket0 class=gemm-f16 utilisation=0.287 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-alpha-beta-c-bias-bucket64-F16-5x128x256-tb0-bias1-ab2.1-bucket64 class=gemm-f16 utilisation=0.123 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-small-k8-F16-4x64x8-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.0-bucket0 class=gemm-f16 utilisation=0.253 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab1.1-bucket0 class=gemm-f16 utilisation=0.172 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.1-bucket0 class=gemm-f16 utilisation=0.165 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.1-bucket0 class=gemm-f16 utilisation=0.324 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.0-bucket49 class=gemm-f16 utilisation=0.436 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab1.1-bucket49 class=gemm-f16 utilisation=0.371 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.1-bucket49 class=gemm-f16 utilisation=0.270 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.1-bucket49 class=gemm-f16 utilisation=0.328 violations=0 det=pass inv=pass
+FAIL    gemm-cublaslt random-0-F16-27x104x80-tb1-bias1-ab0.5.0.25-bucket54 class=gemm-f16 utilisation=1.266 violations=4 det=pass inv=pass
+PASS    gemm-cublaslt random-1-F16-35x88x232-tb0-bias0-ab2.0-bucket38 class=gemm-f16 utilisation=0.008 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt random-2-F16-65x56x224-tb0-bias1-ab0.5.0.25-bucket0 class=gemm-f16 utilisation=0.318 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt golden-Gemm-BF16-o_proj-1x1024x2048 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-o_proj-17x1024x2048 class=gemm-bf16 utilisation=0.001 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-k_proj-3x512x1024 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-down-nontransposed-17x1024x3584 class=gemm-bf16 utilisation=0.257 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-bias-17x1024x2048 class=gemm-bf16 utilisation=0.090 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-alpha-beta-c-bias-bucket64-5x512x1024 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-o_proj-1x1024x2048 class=gemm-f16 utilisation=0.361 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-o_proj-17x1024x2048 class=gemm-f16 utilisation=0.450 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-k_proj-3x512x1024 class=gemm-f16 utilisation=0.297 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-down-nontransposed-17x1024x3584 class=gemm-f16 utilisation=0.457 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-bias-17x1024x2048 class=gemm-f16 utilisation=0.436 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-alpha-beta-c-bias-bucket64-5x512x1024 class=gemm-f16 utilisation=0.131 violations=0 det=pass inv=n/a
+roost-kernels-sm86: 52 passed, 4 failed, 0 errors, 0 not run
+  Gemm            gemm-cublaslt                      pass=52   fail=4   not_run=0   abi=pass
+results: ../envs/R-019/final/sanitizer/gemm-cublaslt.memcheck.results.json
+=== NOT green

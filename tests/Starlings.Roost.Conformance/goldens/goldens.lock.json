@@ -10,7 +10,7 @@
   "format_version": 1,
   "generator": {
     "path": "tests/Starlings.Roost.Conformance/goldens/generate_goldens.py",
-    "sha256": "82525d3c04dfde1a933cbdd768de3275a103d3903c3cb859779a04265a9d6aac"
+    "sha256": "cc5ec030c98149ae9d5a4a9920e14a833ec6d1caeff9e425c48a144c7781695a"
   },
   "model": {
     "id": "Qwen/Qwen3.5-0.8B",

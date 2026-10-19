@@ -1,0 +1,19 @@
+library roost-kernels-sm86 abi 0x10000, 11 variants; device sm_86; 2026-10-19T17:54:50.1066005Z
+PASS    cache-write-roost fixed-BF16-PagedNhd-ps16-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost fixed-BF16-PagedNhd-ps32-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost fixed-BF16-PagedNhd-ps64-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost fixed-BF16-PagedHnd-ps16-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost fixed-BF16-PagedHnd-ps32-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost fixed-BF16-PagedHnd-ps64-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost fixed-F32-PagedNhd-ps16-t9 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost fixed-F16-PagedHnd-ps32-t12 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost random-0-F32-PagedHnd-ps16-t59 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost random-1-BF16-PagedHnd-ps64-t68 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost random-2-F32-PagedHnd-ps16-t11 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost golden-CacheWrite-BF16-layout2-ps16-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost golden-CacheWrite-BF16-layout3-ps64-t37 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    cache-write-roost golden-CacheWrite-F32-layout2-ps16-t9 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+roost-kernels-sm86: 14 passed, 0 failed, 0 errors, 0 not run
+  CacheWrite      cache-write-roost                  pass=14   fail=0   not_run=0   abi=pass
+results: ../envs/R-019/final/sanitizer/cache-write-roost.memcheck.results.json
+=== green
