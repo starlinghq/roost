@@ -9,6 +9,7 @@
     <Project Path="src/Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" />
     <Project Path="src/Starlings.Roost.ModelCompiler/Starlings.Roost.ModelCompiler.csproj" />
     <Project Path="src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <Project Path="src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Starlings.Roost.Abstractions.Tests/Starlings.Roost.Abstractions.Tests.csproj" />
@@ -17,6 +18,7 @@
     <Project Path="tests/Starlings.Roost.Kernels.Tests/Starlings.Roost.Kernels.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.ModelCompiler.Tests/Starlings.Roost.ModelCompiler.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Ops.Tests/Starlings.Roost.Ops.Tests.csproj" />
+    <Project Path="tests/Starlings.Roost.Worker.Tests/Starlings.Roost.Worker.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.WorkerHost.Tests/Starlings.Roost.WorkerHost.Tests.csproj" />
   </Folder>
 </Solution>
