@@ -34,7 +34,7 @@ internal sealed unsafe class Library : IDisposable
         var abi = (delegate* unmanaged[Cdecl]<uint>)NativeLibrary.GetExport(h, "roost_abi_version");
         var reg = (delegate* unmanaged[Cdecl]<OpTable*, int>)NativeLibrary.GetExport(h, "roost_register");
         var version = abi();
-        var table = new OpTable { StructSize = (uint)sizeof(OpTable), AbiMinor = 1 };
+        var table = new OpTable { StructSize = (uint)sizeof(OpTable), AbiMinor = 2 };
         var rc = reg(&table);
         if (rc != 0)
         {
@@ -59,7 +59,7 @@ internal sealed unsafe class Library : IDisposable
         }
 
         var create = (delegate* unmanaged[Cdecl]<ContextCreateParams*, nint*, int>)NativeLibrary.GetExport(h, "roost_context_create");
-        var p = new ContextCreateParams { StructSize = (uint)sizeof(ContextCreateParams), AbiMinor = 1, Device = device };
+        var p = new ContextCreateParams { StructSize = (uint)sizeof(ContextCreateParams), AbiMinor = 2, Device = device };
         nint ctx;
         rc = create(&p, &ctx);
         if (rc != 0)
@@ -95,7 +95,7 @@ internal sealed unsafe class Library : IDisposable
     public WorkspaceSizes QueryWorkspace<T>(in OpEntry e, in T p)
         where T : unmanaged
     {
-        var sizes = new WorkspaceSizes { StructSize = (uint)sizeof(WorkspaceSizes), AbiMinor = 1 };
+        var sizes = new WorkspaceSizes { StructSize = (uint)sizeof(WorkspaceSizes), AbiMinor = 2 };
         if (e.Workspace == 0)
         {
             return sizes;

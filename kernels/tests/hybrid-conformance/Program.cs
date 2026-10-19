@@ -1,12 +1,13 @@
+using Starlings.Roost.Abi;
 using System.Runtime.InteropServices;
 using Roost.HybridConformance;
 
 // R-034 conformance of the hybrid GPU ops against CpuOps (R-018).
-//   Roost.HybridConformance <libroost_kernels_sm*.so> [--only state|gdn|graph] [--log file]
+//   Roost.HybridConformance <libroost_kernels_sm*.so> [--only state|gating|gdn|graph] [--log file]
 // Run through tools/gpu-lease (the lease sets CUDA_VISIBLE_DEVICES, so the device is ordinal 0).
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("usage: Roost.HybridConformance <library> [--only state|gdn|graph] [--log file]");
+    Console.Error.WriteLine("usage: Roost.HybridConformance <library> [--only state|gating|gdn|graph] [--log file]");
     return 2;
 }
 
@@ -14,9 +15,30 @@ string? Arg(string name) => Array.IndexOf(args, name) is var at and >= 0 && at +
 
 var only = Arg("--only");
 var report = new Report();
+if (!File.Exists(args[0]))
+{
+    Console.Error.WriteLine($"no such library: {args[0]}");
+    return 2;
+}
+
+// An exception escaping Main would abort the process with SIGABRT (a core dump on the maintainer's desktop), so every
+// failure is caught and reported as a failed check.
 Cuda.SetDevice(0);
 var stream = Cuda.CreateStream();
-using var lib = Library.Load(args[0], 0);
+Library? libOrNull = null;
+try
+{
+    libOrNull = Library.Load(args[0], 0);
+}
+catch (Exception ex)
+{
+    report.Check(false, "harness/load", ex.ToString());
+    Cuda.DestroyStream(stream);
+    report.Save(Arg("--log"));
+    return 1;
+}
+
+using var lib = libOrNull;
 report.Line($"library {lib.Name} abi {lib.AbiMajor}.{lib.AbiMinor}; entries: {string.Join(", ", lib.Entries.Select(e => Library.VariantId(e)))}");
 report.Check(Verify.ParamsSizes(lib), "registration/params_struct_size", "hybrid entries report the struct sizes of the harness mirrors");
 try
@@ -24,6 +46,11 @@ try
     if (only is null or "state")
     {
         StateCases.Run(lib, report, stream);
+    }
+
+    if (only is null or "gating")
+    {
+        GatingCases.Run(lib, report, stream);
     }
 
     if (only is null or "gdn")
@@ -37,10 +64,15 @@ try
         lib.GraphMode = true;
         report.Prefix = "graph/";
         StateCases.Run(lib, report, stream);
+        GatingCases.Run(lib, report, stream);
         GdnCases.RunGraph(lib, report, stream);
         lib.GraphMode = false;
         report.Prefix = "";
     }
+}
+catch (Exception ex)
+{
+    report.Check(false, "harness/exception", ex.ToString());
 }
 finally
 {
@@ -56,15 +88,19 @@ internal static class Verify
     public static bool ParamsSizes(Library lib)
     {
         var ok = true;
-        void Expect(string variant, int size)
+        void Expect(string variant, int size, int adr)
         {
             var e = lib.Find(variant);
-            ok &= e is not null && e.Value.ParamsStructSize == (uint)size;
+            ok &= e is not null && e.Value.ParamsStructSize == (uint)size && size == adr;
         }
 
-        Expect("causal-conv1d-cuda", Marshal.SizeOf<CausalConv1dParams>());
-        Expect("recurrent-state-copy-cuda", Marshal.SizeOf<RecurrentStateCopyParams>());
-        Expect("recurrent-state-snapshot-cuda", Marshal.SizeOf<RecurrentStateSnapshotParams>());
+        // Sizes pinned by the ADR and the abi-layout golden: 200, 72, 96 (lifted unchanged from R-034's draft) and 168, 120, 88.
+        Expect("causal-conv1d-cuda", Marshal.SizeOf<CausalConv1dParams>(), 200);
+        Expect("recurrent-state-copy-cuda", Marshal.SizeOf<RecurrentStateCopyParams>(), 72);
+        Expect("recurrent-state-snapshot-cuda", Marshal.SizeOf<RecurrentStateSnapshotParams>(), 96);
+        Expect("gated-delta-rule-gates-cuda", Marshal.SizeOf<GatedDeltaRuleGatesParams>(), 168);
+        Expect("gated-rms-norm-cuda", Marshal.SizeOf<GatedRmsNormParams>(), 120);
+        Expect("sigmoid-mul-cuda", Marshal.SizeOf<SigmoidMulParams>(), 88);
         return ok;
     }
 }

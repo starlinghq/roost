@@ -193,7 +193,7 @@ internal static unsafe class GdnCases
         var p = new GatedDeltaRuleParams
         {
             StructSize = (uint)sizeof(GatedDeltaRuleParams),
-            AbiMinor = 1,
+            AbiMinor = 2,
             G = d.G.DevSpan(),
             Beta = d.Beta.DevSpan(),
             Output = d.Output.DevSpan(),
@@ -270,7 +270,7 @@ internal static unsafe class GdnCases
     private static void Execute(Library lib, in OpEntry e, in GatedDeltaRuleParams p, nint stream)
     {
         var sizes = lib.QueryWorkspace(e, p);
-        var ws = new Workspace { StructSize = (uint)sizeof(Workspace), AbiMinor = 1 };
+        var ws = new Workspace { StructSize = (uint)sizeof(Workspace), AbiMinor = 2 };
         nint dev = 0, pinned = 0, plan = 0;
         try
         {
@@ -443,7 +443,7 @@ internal static unsafe class GdnCases
         var sizes = lib.QueryWorkspace(chunk, good);
         var dev = Cuda.Malloc((long)sizes.DeviceBytes);
         var plan = (nint)NativeMemory.AllocZeroed((nuint)sizes.PlanBytes);
-        var ws = new Workspace { StructSize = (uint)sizeof(Workspace), AbiMinor = 1, Device = dev, DeviceBytes = sizes.DeviceBytes, Plan = plan, PlanBytes = sizes.PlanBytes };
+        var ws = new Workspace { StructSize = (uint)sizeof(Workspace), AbiMinor = 2, Device = dev, DeviceBytes = sizes.DeviceBytes, Plan = plan, PlanBytes = sizes.PlanBytes };
         var rc = lib.RunRaw(chunk, good, &ws, stream);
         r.Check(rc == 8, "gdn/reject/run without plan", $"status {rc} (want 8 NOT_PLANNED): {lib.LastError()}");
         var small = ws;

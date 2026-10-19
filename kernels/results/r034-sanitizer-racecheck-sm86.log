@@ -1,9 +1,9 @@
-# compute-sanitizer --tool racecheck over Roost.HybridConformance on libroost_kernels_sm86.so (RTX 3090, tools/gpu-lease, CUDA 13.3.73); rerun after the fix round (65 checks: negative slots, 70000-token conv, graph capture)
+# compute-sanitizer --tool racecheck over Roost.HybridConformance (112 checks, contract v3 build with the gating ops) on libroost_kernels_sm86.so (RTX 3090, tools/gpu-lease, CUDA 13.3.73)
 # sanitizer report:
 ========= COMPUTE-SANITIZER
 ========= RACECHECK SUMMARY: 0 hazards displayed (0 errors, 0 warnings)
 # harness output under the sanitizer:
-library roost-kernels-sm86 abi 1.1; entries: residual-stub, gated-delta-rule-chunk-aot, gated-delta-rule-recurrent-aot, causal-conv1d-cuda, recurrent-state-copy-cuda, recurrent-state-snapshot-cuda
+library roost-kernels-sm86 abi 1.2; entries: residual-stub, rms-norm-flashinfer, qk-norm-flashinfer, rope-roost, silu-and-mul-flashinfer, embedding-roost, cache-write-roost, cache-copy-roost, paged-attention-flashinfer-fa2, gemm-cublaslt, lm-head-cublaslt, gated-delta-rule-chunk-aot, gated-delta-rule-recurrent-aot, causal-conv1d-cuda, recurrent-state-copy-cuda, recurrent-state-snapshot-cuda, gated-delta-rule-gates-cuda, gated-rms-norm-cuda, sigmoid-mul-cuda
 PASS registration/params_struct_size: hybrid entries report the struct sizes of the harness mirrors
 PASS conv/qwen35 prefill packed: tokens=175 batch=6 channels=6144 width=4 out max_abs=9.77E-004 max_scaled=6.28E-003 (tol 7.81E-003) state_bit_exact=True
 PASS conv/qwen35 decode 8 x 1 token: tokens=8 batch=8 channels=6144 width=4 out max_abs=0.00E+000 max_scaled=0.00E+000 (tol 7.81E-003) state_bit_exact=True
@@ -21,6 +21,39 @@ PASS state-snapshot/save/slot_bytes=1048576: pairs=4; bit_exact=True
 PASS state-snapshot/save/slot_bytes=12: pairs=4; bit_exact=True
 PASS state-snapshot/restore/slot_bytes=1048576: pairs=4; bit_exact=True
 PASS state-snapshot/restore/slot_bytes=12: pairs=4; bit_exact=True
+PASS gates/qwen35 prefill 37 tokens, contiguous: tokens=37 g max_scaled=2.67E-007 (limit 1.00E-005) max_abs=7.63E-006; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS gates/qwen35 prefill 300 tokens, a and b halves of a [tokens, 32] view: tokens=300 g max_scaled=2.31E-007 (limit 1.00E-005) max_abs=7.63E-006; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS gates/qwen35 decode 1 token: tokens=1 g max_scaled=1.09E-007 (limit 1.00E-005) max_abs=4.77E-007; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS gates/qwen35 softplus above the threshold (a up to 40): tokens=64 g max_scaled=1.96E-007 (limit 1.00E-005) max_abs=6.10E-005; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS gates/f32 activations, bf16 A_log and g, f32 beta, strided: tokens=41 g max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000; beta max_scaled=1.31E-007 (limit 1.00E-005) max_abs=5.96E-008
+PASS norm/qwen35 prefill 37 tokens: rows=592 dim=128 in_place=False max_scaled=3.93E-003 (limit 7.81E-003) max_abs=3.91E-003
+PASS norm/qwen35 decode 1 token: rows=16 dim=128 in_place=False max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS norm/qwen35 300 tokens in place: rows=4800 dim=128 in_place=True max_scaled=6.32E-003 (limit 7.81E-003) max_abs=1.56E-002
+PASS norm/f32 activations, bf16 weight, dim 100: rows=33 dim=100 in_place=False max_scaled=3.17E-007 (limit 1.00E-005) max_abs=1.43E-006
+PASS norm/f32 dim 3000 (row wider than a block): rows=9 dim=3000 in_place=True max_scaled=3.14E-007 (limit 1.00E-005) max_abs=1.43E-006
+PASS sigmoid-mul/qwen35 prefill 37 tokens: rows=37 dim=2048 in_place=False max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS sigmoid-mul/qwen35 decode 1 token: rows=1 dim=2048 in_place=False max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS sigmoid-mul/qwen35 300 tokens in place: rows=300 dim=2048 in_place=True max_scaled=5.21E-003 (limit 7.81E-003) max_abs=9.77E-004
+PASS sigmoid-mul/f32 odd size: rows=7 dim=1001 in_place=False max_scaled=2.29E-007 (limit 1.00E-005) max_abs=2.38E-007
+PASS gating/reject/gates struct_size too small: status 5 (want 5): GatedDeltaRuleGates: params struct_size or abi_minor is not supported by this library
+PASS gating/reject/gates a_stride below v_heads: status 1 (want 1): GatedDeltaRuleGates: a_stride or b_stride is below v_heads
+PASS gating/reject/gates a shorter than its reach: status 1 (want 1): GatedDeltaRuleGates: a span is too short, has a NULL address or reserved0 set
+PASS gating/reject/gates g shorter than tokens * v_heads: status 1 (want 1): GatedDeltaRuleGates: a span is too short, has a NULL address or reserved0 set
+PASS gating/reject/gates f16 A_log: status 2 (want 2): GatedDeltaRuleGates: every span must be bf16 or f32
+PASS gating/reject/gates beta overlapping a: status 1 (want 1): GatedDeltaRuleGates: g and beta must not overlap each other or the inputs
+PASS gating/reject/gates g not aligned to f32: status 1 (want 1): GatedDeltaRuleGates: a span is not aligned to its element size
+PASS gating/reject/norm eps NaN: status 1 (want 1): GatedRmsNorm: eps must be finite and non-negative
+PASS gating/reject/norm negative eps: status 1 (want 1): GatedRmsNorm: eps must be finite and non-negative
+PASS gating/reject/norm dim 0: status 1 (want 1): GatedRmsNorm: dim must be in [1, 2^31 - 1] and rows at most 2^31 - 1
+PASS gating/reject/norm weight shorter than dim: status 1 (want 1): GatedRmsNorm: a span has the wrong dtype, is too short, has a NULL address or reserved0 set
+PASS gating/reject/norm gate dtype differs from input: status 1 (want 1): GatedRmsNorm: a span has the wrong dtype, is too short, has a NULL address or reserved0 set
+PASS gating/reject/norm f16 activations: status 2 (want 2): GatedRmsNorm: activations and weight must be bf16 or f32
+PASS gating/reject/norm output partially overlapping input: status 1 (want 1): GatedRmsNorm: output may alias input or gate only from the same address
+PASS gating/reject/norm struct_size too small: status 5 (want 5): GatedRmsNorm: params struct_size or abi_minor is not supported by this library
+PASS gating/reject/sigmoid-mul output shorter than rows * dim: status 1 (want 1): SigmoidMul: a span has the wrong dtype, is too short, has a NULL address or reserved0 set
+PASS gating/reject/sigmoid-mul NULL gate: status 1 (want 1): SigmoidMul: a span has the wrong dtype, is too short, has a NULL address or reserved0 set
+PASS gating/reject/sigmoid-mul output partially overlapping gate: status 1 (want 1): SigmoidMul: output may alias input or gate only from the same address
+PASS gating/reject/sigmoid-mul struct_size too small: status 5 (want 5): SigmoidMul: params struct_size or abi_minor is not supported by this library
 PASS gdn/registered: both GatedDeltaRule variants are in the table
 PASS gdn/params_struct_size: sizeof(RoostGatedDeltaRuleParams) = 280
 PASS gdn/flags: chunk=Deterministic, BatchInvariant, NeedsPlan recurrent=GraphCapturable, Deterministic, BatchInvariant
@@ -66,7 +99,21 @@ PASS graph/state-snapshot/save/slot_bytes=1048576: pairs=4; bit_exact=True
 PASS graph/state-snapshot/save/slot_bytes=12: pairs=4; bit_exact=True
 PASS graph/state-snapshot/restore/slot_bytes=1048576: pairs=4; bit_exact=True
 PASS graph/state-snapshot/restore/slot_bytes=12: pairs=4; bit_exact=True
+PASS graph/gates/qwen35 prefill 37 tokens, contiguous: tokens=37 g max_scaled=2.67E-007 (limit 1.00E-005) max_abs=7.63E-006; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS graph/gates/qwen35 prefill 300 tokens, a and b halves of a [tokens, 32] view: tokens=300 g max_scaled=2.31E-007 (limit 1.00E-005) max_abs=7.63E-006; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS graph/gates/qwen35 decode 1 token: tokens=1 g max_scaled=1.09E-007 (limit 1.00E-005) max_abs=4.77E-007; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS graph/gates/qwen35 softplus above the threshold (a up to 40): tokens=64 g max_scaled=1.96E-007 (limit 1.00E-005) max_abs=6.10E-005; beta max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS graph/gates/f32 activations, bf16 A_log and g, f32 beta, strided: tokens=41 g max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000; beta max_scaled=1.31E-007 (limit 1.00E-005) max_abs=5.96E-008
+PASS graph/norm/qwen35 prefill 37 tokens: rows=592 dim=128 in_place=False max_scaled=3.93E-003 (limit 7.81E-003) max_abs=3.91E-003
+PASS graph/norm/qwen35 decode 1 token: rows=16 dim=128 in_place=False max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS graph/norm/qwen35 300 tokens in place: rows=4800 dim=128 in_place=True max_scaled=6.32E-003 (limit 7.81E-003) max_abs=1.56E-002
+PASS graph/norm/f32 activations, bf16 weight, dim 100: rows=33 dim=100 in_place=False max_scaled=3.17E-007 (limit 1.00E-005) max_abs=1.43E-006
+PASS graph/norm/f32 dim 3000 (row wider than a block): rows=9 dim=3000 in_place=True max_scaled=3.14E-007 (limit 1.00E-005) max_abs=1.43E-006
+PASS graph/sigmoid-mul/qwen35 prefill 37 tokens: rows=37 dim=2048 in_place=False max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS graph/sigmoid-mul/qwen35 decode 1 token: rows=1 dim=2048 in_place=False max_scaled=0.00E+000 (limit 7.81E-003) max_abs=0.00E+000
+PASS graph/sigmoid-mul/qwen35 300 tokens in place: rows=300 dim=2048 in_place=True max_scaled=5.21E-003 (limit 7.81E-003) max_abs=9.77E-004
+PASS graph/sigmoid-mul/f32 odd size: rows=7 dim=1001 in_place=False max_scaled=2.29E-007 (limit 1.00E-005) max_abs=2.38E-007
 PASS graph/gdn/recurrent/decode 4 x 1 token, strided views, initial state: tokens=4 batch=4 o: max_abs=9.54E-007 rel_to_max=2.22E-005 (tol 8.0E-003, ref max 0.043); state: max_abs=1.79E-007 rel_to_max=1.14E-007 (tol 1.0E-004, ref max 0.885); other slots untouched=True
 PASS graph/gdn/recurrent/packed [5,1,1], contiguous views: tokens=7 batch=3 o: max_abs=0.00E+000 rel_to_max=0.00E+000 (tol 8.0E-003, ref max 0.055); state: max_abs=1.19E-007 rel_to_max=9.37E-008 (tol 1.0E-004, ref max 1.033); other slots untouched=True
 PASS graph/gdn/recurrent/32 sequences x 1 token (serving-size decode batch): tokens=32 batch=32 o: max_abs=3.05E-005 rel_to_max=4.47E-004 (tol 8.0E-003, ref max 0.061); state: max_abs=2.38E-007 rel_to_max=1.22E-007 (tol 1.0E-004, ref max 1.116); other slots untouched=True
-65 checks, 0 failed
+112 checks, 0 failed
