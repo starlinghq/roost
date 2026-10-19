@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost kernel library loader (stream F, R-023): loads a kernel library by its C1 exports, applies the ABI major and minor rule, checks the manifest and library digests, and reports a missing specialisation or SM as a typed ProfileUnsupported failure. Worker-side: never loads ONNX Runtime.</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Tomlyn" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Starlings.Roost.Kernels.Tests" />
+    <InternalsVisibleTo Include="Starlings.Roost.Kernels.Tests.Cuda" />
+  </ItemGroup>
+</Project>
