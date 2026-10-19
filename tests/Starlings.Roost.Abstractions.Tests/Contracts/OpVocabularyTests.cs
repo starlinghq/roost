@@ -24,6 +24,9 @@ public sealed class OpVocabularyTests
         "PatchEmbed", "BidirectionalAttention", "MelSpectrogram", "AudioConvSubsample", "DequantizeGguf",
     ];
 
+    // Added by contract version 3 for Qwen3.5-0.8B (decision 15), numbered in the hybrid block; not in section 5's table.
+    private static readonly string[] s_qwen35 = ["GatedDeltaRuleGates", "GatedRmsNorm", "SigmoidMul"];
+
     private static readonly string[] s_fused =
         ["AddRmsNorm", "AddRmsNormQuant", "SiluMulQuant", "QkvQkNormRopeCacheWrite", "GemmLoraEpilogue"];
 
@@ -35,8 +38,8 @@ public sealed class OpVocabularyTests
     public void EveryNameInSection5IsAMember()
     {
         var names = OpMethods().Select(m => m.Name).ToHashSet(StringComparer.Ordinal);
-        Assert.All(s_m0.Concat(s_reserved).Concat(s_fused), n => Assert.Contains(n, names));
-        Assert.Equal(s_m0.Length + s_reserved.Length + s_fused.Length, names.Count);
+        Assert.All(s_m0.Concat(s_reserved).Concat(s_qwen35).Concat(s_fused), n => Assert.Contains(n, names));
+        Assert.Equal(s_m0.Length + s_reserved.Length + s_qwen35.Length + s_fused.Length, names.Count);
     }
 
     [Fact]

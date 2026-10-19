@@ -4,15 +4,17 @@ using static Starlings.Roost.Ops.CpuElements;
 namespace Starlings.Roost.Ops;
 
 /// <summary>
-/// The CPU reference backend (R-018): every M0 op of <see cref="IRoostOps"/> plus GatedDeltaRule, CausalConv1d and the
-/// recurrent-state copies, written as the plainest correct definition. Buffers are host addresses.
+/// The CPU reference backend (R-018): every M0 op of <see cref="IRoostOps"/> plus GatedDeltaRule, CausalConv1d, the
+/// recurrent-state copies and the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul), written as the
+/// plainest correct definition. Buffers are host addresses.
 /// </summary>
 /// <remarks>
 /// <para>
 /// Precision: each element is read as a double (bf16, fp16 and fp32 inputs are upcast exactly, integers are read
 /// exactly), all arithmetic is in double, and each result is rounded once, to nearest even, into the output element
 /// type of its span. Element types are taken from the DType fields of the arguments; a span's own Dtype is used
-/// only where the arguments name no type for it (GatedDeltaRule G and Beta, CausalConv1d state).
+/// only where the arguments name no type for it (GatedDeltaRule G and Beta, CausalConv1d state, GatedDeltaRuleGates ALog,
+/// DtBias, G and Beta, GatedRmsNorm Weight).
 /// </para>
 /// <para>
 /// Allocation: calls allocate no managed memory. Small scratch is on the stack; scratch that scales with a model
@@ -27,10 +29,11 @@ public readonly partial struct CpuOps : IRoostOps
     private const int MaxHeadDim = 1024;
 
     /// <inheritdoc cref="IRoostOps.Supports(OpId)"/>
-    /// <remarks>The M0 ops plus the four recurrent-hybrid ops of Qwen3.5-0.8B.</remarks>
+    /// <remarks>The M0 ops plus the seven hybrid and gating ops of Qwen3.5-0.8B.</remarks>
     public static bool Supports(OpId op) =>
         OpCatalog.IsM0(op)
-        || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot;
+        || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
+            or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul;
 
     /// <inheritdoc/>
     /// <remarks>Per row: <c>mean = sum(x^2) / Dim</c>, <c>Output = x / sqrt(mean + Eps) * Weight</c>, in double. Input may alias Output.</remarks>
