@@ -677,17 +677,24 @@ public struct GemmLoraEpilogueArgs
     public DType DType;
 }
 
-/// <summary>Arguments of <see cref="IRoostOps.GatedDeltaRule"/>. Reserved, M1.</summary>
+/// <summary>Arguments of <see cref="IRoostOps.GatedDeltaRule"/>. Reserved, M1 (moved into M0 by decision 15).</summary>
+/// <remarks>
+/// Q, K and V are row-strided views (contract version 2): row t of Q starts at element <c>t * QStride</c> of the Q span, and
+/// the heads of a row are contiguous; a stride of 0 means a contiguous tensor. For Qwen3.5 the three spans start at
+/// columns 0, <c>KHeads * KDim</c> and <c>2 * KHeads * KDim</c> of the causal conv1d output, whose row width
+/// (<c>2 * KHeads * KDim + VHeads * VDim</c>, 6144 for Qwen3.5-0.8B) is the stride of all three. A view's span need only
+/// reach the end of its last row: <c>(Tokens - 1) * stride + heads * dim</c> elements. Output, G and Beta are contiguous.
+/// </remarks>
 [StructLayout(LayoutKind.Sequential)]
 public struct GatedDeltaRuleArgs
 {
-    /// <summary>[Tokens, KHeads, KDim].</summary>
+    /// <summary>[Tokens, KHeads, KDim] at <see cref="QStride"/>.</summary>
     public DeviceSpan Q;
 
-    /// <summary>[Tokens, KHeads, KDim].</summary>
+    /// <summary>[Tokens, KHeads, KDim] at <see cref="KStride"/>.</summary>
     public DeviceSpan K;
 
-    /// <summary>[Tokens, VHeads, VDim].</summary>
+    /// <summary>[Tokens, VHeads, VDim] at <see cref="VStride"/>.</summary>
     public DeviceSpan V;
 
     /// <summary>[Tokens, VHeads] log decay.</summary>
@@ -725,6 +732,15 @@ public struct GatedDeltaRuleArgs
 
     /// <summary>Value head size.</summary>
     public int VDim;
+
+    /// <summary>Elements between token rows of Q; 0 means KHeads * KDim.</summary>
+    public int QStride;
+
+    /// <summary>Elements between token rows of K; 0 means KHeads * KDim.</summary>
+    public int KStride;
+
+    /// <summary>Elements between token rows of V; 0 means VHeads * VDim.</summary>
+    public int VStride;
 
     /// <summary>Query scale.</summary>
     public float Scale;

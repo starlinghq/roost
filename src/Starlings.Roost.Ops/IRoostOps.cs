@@ -125,7 +125,7 @@ public interface IRoostOps
     /// <exception cref="NotSupportedException">The backend does not provide the fused form.</exception>
     static virtual void GemmLoraEpilogue(in GemmLoraEpilogueArgs a) => throw new NotSupportedException(nameof(GemmLoraEpilogue));
 
-    /// <summary>Reserved, M1: Gated delta rule, chunked (prefill) or recurrent (decode), with indexed recurrent-state slots (S3).</summary>
+    /// <summary>Reserved, M1: Gated delta rule, chunked (prefill) or recurrent (decode), with indexed recurrent-state slots (S3) and row-strided q, k and v views.</summary>
     /// <param name="a">Arguments.</param>
     /// <exception cref="NotSupportedException">Until the backend implements it.</exception>
     static virtual void GatedDeltaRule(in GatedDeltaRuleArgs a) => throw new NotSupportedException(nameof(GatedDeltaRule));
