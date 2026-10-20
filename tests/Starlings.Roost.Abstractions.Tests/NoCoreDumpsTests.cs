@@ -14,7 +14,7 @@ public sealed class NoCoreDumpsTests
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "PR_SET_DUMPABLE is Linux only.");
         Assert.SkipWhen(
-            Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true",
+            (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true" && Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT") == "github-hosted"),
             "GitHub's runners keep normal crash behaviour so real fatal-signal tests run there.");
 
         Assert.Equal(0, Prctl(PrGetDumpable, 0, 0, 0, 0));

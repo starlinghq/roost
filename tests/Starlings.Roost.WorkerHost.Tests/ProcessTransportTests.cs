@@ -128,15 +128,15 @@ public sealed class ProcessTransportTests : TransportSuite
     /// <summary>
     /// The one test that kills the worker with a real fatal signal (<c>Environment.FailFast</c>: SIGABRT on Linux, a
     /// fail-fast exit on Windows). The kernel and systemd-coredump record such a death, and a desktop shows it as a crashed
-    /// process, so it runs only where <c>GITHUB_ACTIONS</c> is <c>true</c> (set by GitHub's runners, never by agents or
+    /// process, so it runs only on GitHub-hosted runners (<c>GITHUB_ACTIONS</c> is <c>true</c> and <c>RUNNER_ENVIRONMENT</c> is <c>github-hosted</c>; a self-hosted runner may be a developer's desktop, never by agents or
     /// developers locally). Every other crash test uses a clean exit with a nonzero code (<see cref="FakeOp.Crash"/>).
     /// </summary>
     [Fact]
     public async Task WorkerKilledByARealFatalSignalIsReportedExited()
     {
         Assert.SkipUnless(
-            Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true",
-            "raises a real fatal signal (SIGABRT), which is recorded as a crash by systemd-coredump; runs only on GitHub Actions (GITHUB_ACTIONS=true)");
+            (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true" && Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT") == "github-hosted"),
+            "raises a real fatal signal (SIGABRT), which is recorded as a crash by systemd-coredump; runs only on GitHub-hosted runners (GITHUB_ACTIONS=true and RUNNER_ENVIRONMENT=github-hosted)");
         await using var rig = NewRig();
         _ = await rig.StartAsync();
 

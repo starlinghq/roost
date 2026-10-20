@@ -21,7 +21,7 @@ internal enum FakeOp : uint
     /// <summary>Sleeps <c>SequenceCount</c> milliseconds, then succeeds.</summary>
     Slow = 6,
 
-    /// <summary>Dies with a real fatal signal (<c>Environment.FailFast</c>: SIGABRT on Linux). Only the GITHUB_ACTIONS-gated test publishes it.</summary>
+    /// <summary>Dies with a real fatal signal (<c>Environment.FailFast</c>: SIGABRT on Linux). Only the test gated on GitHub-hosted runners publishes it.</summary>
     CrashSignal = 7,
 }
 
