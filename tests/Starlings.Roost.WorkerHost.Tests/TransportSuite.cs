@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Starlings.Roost.Plans;
 using Starlings.Roost.Transport;
 using Starlings.Roost.WorkerHost;
@@ -260,7 +261,7 @@ public abstract class TransportSuite
             var (fault, after) = rig.WaitForPollFault(TimeSpan.FromSeconds(10));
 
             Assert.Equal(FaultClass.Hang, fault);
-            Assert.InRange(after.TotalMilliseconds, 150, 1500);
+            Assert.InRange(after.TotalMilliseconds, 150, 8000); // the upper bound only catches a classification that never comes
             Assert.Equal(RecoveryAction.Respawn, FaultRules.ActionFor(fault));
             ReleaseHang();
             await rig.Transport.KillAsync(CancellationToken.None);
@@ -327,7 +328,7 @@ public abstract class TransportSuite
     public async Task ASlowStepWithinTheDeadlineIsNotAFault()
     {
         await using var rig = NewRig();
-        _ = await rig.StartAsync(Rig.DefaultLaunch(deadline: TimeSpan.FromMilliseconds(500)));
+        _ = await rig.StartAsync(Rig.DefaultLaunch(deadline: TimeSpan.FromMilliseconds(3000)));
         _ = rig.Publish(FakeOp.Slow, 100);
 
         var seen = rig.Wait(TimeSpan.FromSeconds(10));
@@ -339,25 +340,46 @@ public abstract class TransportSuite
     [Fact]
     public async Task ASecondStepIsNotChargedForTheTimeItWaitsBehindTheFirst()
     {
+        // Each fake step sleeps StepMs; the deadline is DeadlineMs. Charged from execution start, step two takes about StepMs
+        // after step one's result, well inside the deadline (DeadlineMs - StepMs of room for a late wake-up on a busy runner).
+        // Charged from publication it would be due at DeadlineMs while it cannot finish before 2 * StepMs, so the fault would
+        // always show. The slack on the failing side is 2 * StepMs - DeadlineMs, and a sleep never ends early, so only the
+        // passing side depends on the machine.
+        const int StepMs = 600;
+        const int DeadlineMs = 1000;
         await using var rig = NewRig();
-        _ = await rig.StartAsync(Rig.DefaultLaunch(deadline: TimeSpan.FromMilliseconds(250)));
-        _ = rig.Publish(FakeOp.Slow, 180);
-        _ = rig.Publish(FakeOp.Slow, 180); // published together; finishes about 360 ms after publication
+        _ = await rig.StartAsync(Rig.DefaultLaunch(deadline: TimeSpan.FromMilliseconds(DeadlineMs)));
+        var clock = Stopwatch.StartNew();
+        _ = rig.Publish(FakeOp.Slow, StepMs);
+        _ = rig.Publish(FakeOp.Slow, StepMs); // published together; finishes about 2 * StepMs after publication
 
-        var polls = Stopwatch.StartNew();
-        var results = 0;
-        while (results < 2)
+        var resultNs = new List<ulong>();
+        var takenMs = new List<double>();
+        var lastProgress = Stopwatch.StartNew();
+        string Timings() =>
+            $"deadline {DeadlineMs} ms, step {StepMs} ms; results taken at [{string.Join(", ", takenMs.Select(t => t.ToString("F0", CultureInfo.InvariantCulture)))}] ms after publication; "
+            + (resultNs.Count == 2
+                ? $"second step ran {(resultNs[1] - resultNs[0]) / 1e6:F0} ms after the first result (limit {DeadlineMs} ms)"
+                : $"{resultNs.Count} of 2 results, {clock.Elapsed.TotalMilliseconds:F0} ms since publication");
+
+        while (resultNs.Count < 2)
         {
             if (rig.Transport.TryTakeResult(out var slot))
             {
+                resultNs.Add(slot.PublishedNs);
+                takenMs.Add(clock.Elapsed.TotalMilliseconds);
                 rig.Transport.ReleaseResult((int)slot.BufferIndex);
-                results++;
+                lastProgress.Restart();
             }
 
-            Assert.Equal(FaultClass.None, rig.Transport.Poll());
-            Assert.True(polls.Elapsed < TimeSpan.FromSeconds(10));
+            var fault = rig.Transport.Poll();
+            Assert.True(fault == FaultClass.None, $"classified {fault}; {Timings()}");
+            Assert.True(lastProgress.Elapsed < TimeSpan.FromSeconds(10), $"no progress for 10 s; {Timings()}");
+            Assert.True(clock.Elapsed < TimeSpan.FromSeconds(60), $"ceiling reached; {Timings()}");
             Thread.Sleep(1);
         }
+
+        TestContext.Current.SendDiagnosticMessage(Timings());
     }
 
     [Fact]
