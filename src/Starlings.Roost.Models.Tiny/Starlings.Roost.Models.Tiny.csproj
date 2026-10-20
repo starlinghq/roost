@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost tiny CI models (R-021): roost-tiny (Qwen3-shaped) and roost-tiny-hybrid (Qwen3.5-shaped) as model-compiler definitions, with seeded weights generated at run time. Test and CI use only; never packed.</Description>
+    <IsPackable>false</IsPackable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- The generated model members are public and carry no XML docs; the hand-written files here document theirs. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <ProjectReference Include="../Starlings.Roost.ModelCompiler/Starlings.Roost.ModelCompiler.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+</Project>
