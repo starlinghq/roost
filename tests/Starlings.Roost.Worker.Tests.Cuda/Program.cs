@@ -9,9 +9,15 @@ using Starlings.Roost.Worker.Weights;
 // With --expect-mismatch the file is a substituted copy: the run passes only if the load fails with AssetMismatch,
 // the arena is discarded and no address is handed out. Everything here returns statuses or throws managed exceptions;
 // nothing raises a signal. Run it through tools/gpu-lease so CUDA_VISIBLE_DEVICES selects the leased device (ordinal 0).
+if (args.Length >= 1 && args[0] is "gpu" or "cpu")
+{
+    return args[0] == "gpu" ? DecodeGpu.Run(args[1..]) : DecodeCpu.Run(args[1..]);
+}
+
 if (args.Length < 2)
 {
     Console.Error.WriteLine("usage: weights-check <checkpoint-file> <lock.toml> [--expect-mismatch]");
+    Console.Error.WriteLine("       gpu <options>  eager greedy decode on the GPU (R-025); cpu <options>  CpuOps comparison of its dump");
     return 2;
 }
 

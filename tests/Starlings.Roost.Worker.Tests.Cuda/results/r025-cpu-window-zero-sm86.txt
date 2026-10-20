@@ -1,0 +1,98 @@
+CPU phase: CpuOps (double precision), weights 1435 MiB verified sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696 in 6.6 s
+GPU dump: SM 86, kernel library sha256 fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7
+WindowLeft handling: generated default 0 kept (CpuOps attends to the current key only)
+
+== prompt capital-of-france: ids [760 6511 314 9338 369], GPU greedy tokens [11751 13 198 760 6511 314 9338 369]
+  step  0 ( 5 tok, 10.3 s): GPU  11751 CPU    279 DIFFER   logits max|d| 2.4348 (logit range 26.5) cos 0.9941943; top-2 margin GPU 0.241 CPU 0.829
+  greedy: 0 of 1 tokens agree; first divergence 0
+
+== summary: 0 of 1 greedy tokens agree across 3 prompts; worst step-0 logits max|d| 2.4348
+
+== per-layer hidden state (Residual 'layer' output h{i+1}), traced steps; scale = max|CPU|, rel = max|d| / scale
+   step layer   max|d|   scale     rel     cos
+      0     0 0.001953   0.5078  0.00385 0.9999975
+      0     1 0.001953   0.6719  0.00291 0.9999872
+      0     2  0.01172    1.383  0.00847 0.9999747
+      0     3  0.08203   0.7852    0.104 0.9855709
+      0     4  0.04883   0.7266   0.0672 0.9891396
+      0     5  0.05078   0.8164   0.0622 0.9925372
+      0     6   0.0625    4.031   0.0155 0.9991562
+      0     7  0.07031    2.062   0.0341 0.9943139
+      0     8  0.08594    2.016   0.0426 0.9946757
+      0     9  0.07812    1.969   0.0397 0.9950070
+      0    10  0.07422    2.141   0.0347 0.9963355
+      0    11   0.1016   0.9766    0.104 0.9877571
+      0    12  0.09766   0.9062    0.108 0.9873155
+      0    13   0.1016    1.055   0.0963 0.9886182
+      0    14  0.08984    4.344   0.0207 0.9985988
+      0    15    0.125    1.344    0.093 0.9842131
+      0    16   0.1406    1.414   0.0994 0.9869251
+      0    17   0.1641    1.742   0.0942 0.9884790
+      0    18   0.2812    3.219   0.0874 0.9907514
+      0    19   0.2812    3.234    0.087 0.9872439
+      0    20   0.3281    4.156   0.0789 0.9892569
+      0    21   0.2812    4.594   0.0612 0.9895269
+      0    22   0.3516    5.375   0.0654 0.9906230
+      0    23   0.7031    6.156    0.114 0.9881556
+
+== recurrent and convolution state after the step (first slot), per linear layer, traced steps
+   step layer what    max|d|   scale     rel
+      0     0 conv   0.01562    28.25 0.000553
+      0     0 delta 8.087E-05     1.43 5.66E-05
+      0     1 conv   0.03125    10.94  0.00286
+      0     1 delta 0.004192    1.856  0.00226
+      0     2 conv    0.0625    11.88  0.00526
+      0     2 delta 0.005305    2.076  0.00256
+      0     4 conv     1.625    17.12   0.0949
+      0     4 delta   0.2145    13.45   0.0159
+      0     5 conv     1.562    12.62    0.124
+      0     5 delta   0.1055    3.313   0.0319
+      0     6 conv    0.8701    12.75   0.0682
+      0     6 delta  0.06487    1.871   0.0347
+      0     8 conv     2.294    13.75    0.167
+      0     8 delta   0.1596    3.411   0.0468
+      0     9 conv      1.75    13.62    0.128
+      0     9 delta  0.09784     1.44   0.0679
+      0    10 conv     1.344    11.44    0.117
+      0    10 delta   0.0969   0.7673    0.126
+      0    12 conv     1.781    15.38    0.116
+      0    12 delta     0.11    4.398    0.025
+      0    13 conv      1.54    14.56    0.106
+      0    13 delta  0.06874   0.5601    0.123
+      0    14 conv     1.199    12.88   0.0931
+      0    14 delta   0.1291    1.447   0.0892
+      0    16 conv     2.031    14.38    0.141
+      0    16 delta   0.2828    1.458    0.194
+      0    17 conv     1.453    24.88   0.0584
+      0    17 delta   0.1248    2.497     0.05
+      0    18 conv     1.805    20.62   0.0875
+      0    18 delta   0.1327    5.735   0.0231
+      0    20 conv     1.438    23.88   0.0602
+      0    20 delta   0.2621    5.137    0.051
+      0    21 conv         2       28   0.0714
+      0    21 delta  0.09304    2.023    0.046
+      0    22 conv     1.531    18.25   0.0839
+      0    22 delta   0.0776    1.951   0.0398
+
+== per op class over all traced steps and layers: worst max|d|, worst rel (max|d| / max|CPU| of that output), worst mean|d| / mean|CPU|
+   op.output                      outputs   worst max|d|  worst rel   worst meanrel
+   CausalConv1d.out                    18          0.875      0.178         0.138
+   CausalConv1d.state                  18          2.294      0.167         0.198
+   Embedding.out                        1              0          0             0
+   GatedDeltaRule.out                  18        0.04004      0.301         0.146
+   GatedDeltaRule.state                18         0.2828      0.194         0.218
+   GatedDeltaRuleGates.beta            18         0.1094      0.109        0.0331
+   GatedDeltaRuleGates.g               18         0.2085      0.121        0.0844
+   GatedRmsNorm.out                    18          1.641      0.658         0.296
+   Gemm.d                             168          2.294      0.445         0.438
+   LmHead.logits                        1          2.435      0.162         0.104
+   PagedAttention.out                   6          37.81       1.02         0.777
+   QkNorm.k                             6          1.188     0.0969         0.126
+   QkNorm.q                             6          1.812      0.122         0.132
+   Residual.layer                      24         0.7031      0.114         0.183
+   Residual.mix                        24         0.4062     0.0957         0.227
+   RmsNorm.out                         49          3.125      0.131         0.238
+   Rope.k                               6          1.188     0.0969         0.126
+   Rope.q                               6           1.75      0.127         0.132
+   SigmoidMul.out                       6         0.8828      0.382         0.506
+   SiluAndMul.out                      24          1.688      0.396         0.306
