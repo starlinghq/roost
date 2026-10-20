@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using Starlings.Roost.Engine.Caching;
 using Starlings.Roost.Plans;
 
 namespace Starlings.Roost.Engine.Scheduling;
@@ -25,8 +26,16 @@ public sealed record PlannerOptions
     /// <summary>Math mode stamped on every plan.</summary>
     public MathMode MathMode { get; init; } = MathMode.Default;
 
+    /// <summary>
+    /// The prefix cache (R-030). Null, the default, means no cache and plans exactly as before R-030. Setting it makes
+    /// the planner reuse cached blocks and snapshots when a sequence gains residency, and for a hybrid model cap every
+    /// prefill chunk at the next snapshot boundary (see <see cref="PrefixCacheOptions.SnapshotStrideBlocks"/>).
+    /// </summary>
+    public PrefixCacheOptions? PrefixCache { get; init; }
+
     internal void Validate()
     {
+        PrefixCache?.Validate();
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaxTokensPerStep);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaxSequencesPerStep);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MaxChunkTokens);
