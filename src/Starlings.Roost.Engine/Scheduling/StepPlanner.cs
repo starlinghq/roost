@@ -74,7 +74,7 @@ public enum ForkResult
 /// <para><b>Not supported yet</b> (reported by <see cref="AddResult.Unsupported"/> or a constructor exception): LoRA,
 /// grammar, multimodal input, pooling and decision rows, speculation, more than one recurrent group, and the cross,
 /// draft, adapter, expert and encoder-output group kinds. Prefix-cache hits start a sequence at a nonzero computed
-/// count in R-030; admission refusals are R-031.</para>
+/// count in R-030; admission refusals live in AdmissionController and AdmittedPlanner (R-031), above this class.</para>
 /// </remarks>
 public sealed class StepPlanner
 {

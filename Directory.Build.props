@@ -32,8 +32,10 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
-  <!-- Every test process is non-dumpable on Linux so a crash leaves no core dump or desktop alert (tests/Shared/NoCoreDumps.cs). -->
-  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) or $(MSBuildProjectName.EndsWith('.Tests.Cuda'))">
+  <!-- Every test or harness process is non-dumpable on Linux so a crash leaves no core dump or desktop alert
+       (tests/Shared/NoCoreDumps.cs): projects named *.Tests or *.Tests.Cuda, and any project under a tests/ folder
+       (for example kernels/tests/hybrid-conformance). -->
+  <ItemGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) or $(MSBuildProjectName.EndsWith('.Tests.Cuda')) or $([System.String]::Copy('$(MSBuildProjectDirectory)').Replace('\','/').Contains('/tests/'))">
     <Compile Include="$(MSBuildThisFileDirectory)tests/Shared/NoCoreDumps.cs" Link="Shared/NoCoreDumps.cs" Visible="false" />
   </ItemGroup>
 </Project>
