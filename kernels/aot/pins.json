@@ -1,0 +1,41 @@
+{
+ "l2norm_fwd_kernel": {
+  "kwargs": {
+   "BT": 16
+  },
+  "num_warps": 2,
+  "num_stages": 3
+ },
+ "chunk_local_cumsum_scalar_kernel": {
+  "kwargs": {},
+  "num_warps": 1,
+  "num_stages": 3
+ },
+ "chunk_gated_delta_rule_fwd_kkt_solve_kernel": {
+  "kwargs": {
+   "BK": 64
+  },
+  "num_warps": 1,
+  "num_stages": 3
+ },
+ "recompute_w_u_fwd_kernel": {
+  "kwargs": {},
+  "num_warps": 2,
+  "num_stages": 2
+ },
+ "chunk_gated_delta_rule_fwd_kernel_h_blockdim64": {
+  "kwargs": {
+   "BV": 32
+  },
+  "num_warps": 2,
+  "num_stages": 2
+ },
+ "chunk_fwd_kernel_o": {
+  "kwargs": {
+   "BK": 32,
+   "BV": 32
+  },
+  "num_warps": 2,
+  "num_stages": 3
+ }
+}

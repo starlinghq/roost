@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Models.Tiny/Starlings.Roost.Models.Tiny.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Test support shared with the model compiler tests (same stream): native buffers, the allocation probe, and the recording and stub backends. -->
+    <Compile Include="../Starlings.Roost.ModelCompiler.Tests/Support/Native.cs" Link="Support/Native.cs" />
+    <Compile Include="../Starlings.Roost.ModelCompiler.Tests/Support/AllocationProbe.cs" Link="Support/AllocationProbe.cs" />
+    <Compile Include="../Starlings.Roost.ModelCompiler.Tests/Support/StubOps.cs" Link="Support/StubOps.cs" />
+  </ItemGroup>
+</Project>

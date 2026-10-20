@@ -1,0 +1,3 @@
+# tools/gpu-lease run --device 4060 --need-mib 6000 --wait 5 --stream C -- true  (2026-10-19; SM 89 conformance not run)
+gpu-lease: NVIDIA GeForce RTX 4060 Ti has 231 MiB free, the job needs 6000 MiB
+exit 75
