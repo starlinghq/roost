@@ -175,7 +175,7 @@ public sealed class AttentionTests
     }
 
     [Fact]
-    public void WindowZeroKeepsOnlyTheNewestKeyAndNoPagesGiveZeros()
+    public void AWindowOfOneAndNoPagesGiveZeros()
     {
         using var q = Mem.F64(1);
         using var kc = Mem.F64(1, 1);
@@ -185,12 +185,12 @@ public sealed class AttentionTests
         using var ki = Mem.I32(0, 1);
         using var idx = Mem.I32(0);
         using var last = Mem.I32(2);
-        // Window 0 keeps only the key at the query's own position.
+        // Window 1 keeps the query's own key and the one before it (both hold 5 here).
         CpuOps.PagedAttention(new PagedAttentionArgs
         {
             Q = q.Span, Output = o.Span, KCache = kc.Span, VCache = vc.Span, QIndptr = qi.Span, KvIndptr = ki.Span, KvIndices = idx.Span, KvLastPageLength = last.Span,
             Mode = AttentionMode.Decode, Batch = 1, Tokens = 1, QHeads = 1, KvHeads = 1, HeadDim = 1, BlockSize = 2, KvLayout = TensorLayout.PagedNhd,
-            WindowLeft = 0, Causal = true, KvDType = DType.F64, DType = DType.F64,
+            WindowLeft = 1, Causal = true, KvDType = DType.F64, DType = DType.F64,
         });
         Assert.Equal(5.0, o.ReadF64()[0], 1e-13);
         // No pages at all: zero keys, zeros out.
@@ -224,6 +224,28 @@ public sealed class AttentionTests
             Mode = AttentionMode.Decode, Batch = 1, Tokens = 1, QHeads = 1, KvHeads = 1, HeadDim = 1, BlockSize = 2, KvLayout = TensorLayout.PagedNhd,
             WindowLeft = -1, Causal = true, KvDType = DType.F64, DType = DType.F64,
         }));
+        Assert.Equal(99.0, o.ReadF64()[0]);
+    }
+
+    [Fact]
+    public void AWindowOfZeroThrowsNamingTheOpAndLeavesTheOutputUntouched()
+    {
+        using var q = Mem.F64(1);
+        using var kc = Mem.F64(1, 1);
+        using var vc = Mem.F64(5, 5);
+        using var o = Mem.F64(99);
+        using var qi = Mem.I32(0, 1);
+        using var ki = Mem.I32(0, 1);
+        using var idx = Mem.I32(0);
+        using var last = Mem.I32(2);
+        var ex = Assert.Throws<ArgumentException>(() => CpuOps.PagedAttention(new PagedAttentionArgs
+        {
+            Q = q.Span, Output = o.Span, KCache = kc.Span, VCache = vc.Span, QIndptr = qi.Span, KvIndptr = ki.Span, KvIndices = idx.Span, KvLastPageLength = last.Span,
+            Mode = AttentionMode.Decode, Batch = 1, Tokens = 1, QHeads = 1, KvHeads = 1, HeadDim = 1, BlockSize = 2, KvLayout = TensorLayout.PagedNhd,
+            WindowLeft = 0, Causal = true, KvDType = DType.F64, DType = DType.F64,
+        }));
+        Assert.Contains("PagedAttention", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("WindowLeft", ex.Message, StringComparison.Ordinal);
         Assert.Equal(99.0, o.ReadF64()[0]);
     }
 }

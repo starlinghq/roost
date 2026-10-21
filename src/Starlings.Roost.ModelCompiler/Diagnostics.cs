@@ -38,4 +38,6 @@ internal static class Diagnostics
 
     public static readonly DiagnosticDescriptor UnusedWeight = new DiagnosticDescriptor(
         "ROOST014", "Weight slot is never read", "{0}", Category, DiagnosticSeverity.Warning, isEnabledByDefault: true);
+
+    public static readonly DiagnosticDescriptor UnboundWindowLeft = Error("ROOST015", "PagedAttention does not bind WindowLeft");
 }

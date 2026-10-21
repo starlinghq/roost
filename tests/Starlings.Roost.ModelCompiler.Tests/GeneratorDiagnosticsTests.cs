@@ -177,6 +177,29 @@ public class GeneratorDiagnosticsTests
         Assert.Contains("'SiluMulQuant'", d.Msg(), StringComparison.Ordinal);
     }
 
+    private static string Attention(string window) =>
+        "[Node(\"attn\", \"PagedAttention\", \"Q=q; KCache=h; VCache=h; Output=>ao[tokens,d]; Batch=1; Tokens=tokens; QHeads=1; KvHeads=1; HeadDim=d; BlockSize=16; Causal=true" + window + "\")]";
+
+    [Fact]
+    public void AnUnboundPagedAttentionWindowLeftIsAnErrorNamingTheNodeAndSayingToBindMinusOne()
+    {
+        var r = Run(Model(Attention(string.Empty)));
+        var d = Single(r, "ROOST015");
+        Assert.Equal(DiagnosticSeverity.Error, d.Severity);
+        Assert.Contains("'attn'", d.Msg(), StringComparison.Ordinal);
+        Assert.Contains("WindowLeft=-1", d.Msg(), StringComparison.Ordinal);
+        Assert.DoesNotContain(r.Sources, s => s.Contains("Forward<TOps>", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("; WindowLeft=-1")]
+    [InlineData("; WindowLeft=128")]
+    public void ABoundPagedAttentionWindowLeftRaisesNoWindowDiagnostic(string window)
+    {
+        var r = Run(Model(Attention(window)));
+        Assert.DoesNotContain(r.Generator, d => d.Id == "ROOST015");
+    }
+
     [Fact]
     public void AReservedWeightNothingReadsGetsNoWarningButStillHasASlot()
     {
