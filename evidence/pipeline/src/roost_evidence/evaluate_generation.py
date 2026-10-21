@@ -20,8 +20,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from roost_evidence import generation_reference, stage_results
+from roost_evidence import generation_reference, metrics, stage_results
 from roost_evidence.manifest import load_text
+from roost_evidence.metrics import RELATIVE_METRICS
 
 PASSED, FAILED, NOT_RUN = "passed", "failed", "not_run"
 NOT_APPLICABLE = "not_applicable"
@@ -50,6 +51,26 @@ TOLERANCE_KEYS: dict[str, str] = {
     "float.layer_hidden_max_abs": "number; max abs difference of any stage output, any position, any forward",
     "float.recurrent_state_max_abs": "number; Gated DeltaNet recurrent state after each captured forward",
     "float.conv_state_max_abs": "number; Gated DeltaNet convolution state after each captured forward",
+    # Relative and cosine metrics (maintainer's choice of 2026-10-20), alternatives to the absolute keys above. Each
+    # family (layer_hidden, recurrent_state, conv_state, step0_logprob) is checked by the keys the tolerance file
+    # names; a family with no key at all keeps its absolute check, reported not_run. Definitions: metrics.py.
+    #   *_rel_l2        upper bound: ||candidate - reference|| / ||reference||, per position for a hidden state, per
+    #                   tensor for a state (one row per layer and forward) and per vector for step 0
+    #   *_max_abs_rel   upper bound: max |candidate - reference| / max |reference| over one whole tensor (every
+    #                   position of one stage output of one forward; one state; the step-0 vector)
+    #   *_cosine_min    LOWER bound: the cosine similarity of the same rows must be at least this (not at most)
+    "float.layer_hidden_rel_l2": "number; upper bound on the per-position relative L2 error of any stage output",
+    "float.layer_hidden_max_abs_rel": "number; upper bound on max abs diff / max abs reference per stage output tensor",
+    "float.layer_hidden_cosine_min": "number; LOWER bound on the cosine similarity of any stage output position",
+    "float.recurrent_state_rel_l2": "number; upper bound on the relative L2 error of each recurrent state",
+    "float.recurrent_state_max_abs_rel": "number; upper bound on max abs diff / max abs reference per recurrent state",
+    "float.recurrent_state_cosine_min": "number; LOWER bound on the cosine similarity of each recurrent state",
+    "float.conv_state_rel_l2": "number; upper bound on the relative L2 error of each convolution state",
+    "float.conv_state_max_abs_rel": "number; upper bound on max abs diff / max abs reference per convolution state",
+    "float.conv_state_cosine_min": "number; LOWER bound on the cosine similarity of each convolution state",
+    "float.step0_logprob_rel_l2": "number; upper bound on the relative L2 error of the step-0 vector, mean-centred",
+    "float.step0_logprob_max_abs_rel": "number; upper bound on max abs diff / max abs reference of the step-0 vector",
+    "float.step0_logprob_cosine_min": "number; LOWER bound on the cosine similarity of the step-0 vector, mean-centred",
 }
 _GREEDY_RULE = re.compile(
     r"^(?:exact_except_listed_margin_below_|equal_until_first_divergence_at_margin_below_)"
@@ -79,6 +100,10 @@ class Check:
             "detail": self.detail,
             "metrics": self.metrics,
         }
+
+
+def _is_number(value: Any) -> bool:
+    return isinstance(value, int | float) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def flatten(node: dict[str, Any], prefix: str = "") -> dict[str, Any]:
@@ -132,6 +157,7 @@ class _Evaluation:
         self.tol = tolerances
         self.ref_vectors = reference_vectors.vectors if reference_vectors else {}
         self.checks: list[Check] = []
+        self.unconfigured: list[str] = []
         self.divergences: list[dict[str, Any]] = []
         self.template = run.template.cases
         self.dotnet = run.dotnet.cases
@@ -260,6 +286,21 @@ class _Evaluation:
         argmax = self.check("generation.step0_argmax", "discrete.step0_argmax")
         top5 = self.check("generation.step0_top5_logprob", "float.step0_top5_logprob_max_abs")
         full = self.check("generation.step0_logprob", "float.step0_logprob_max_abs")
+        # Relative and cosine metrics of the whole vector: checked when the tolerance file names their key. Once it
+        # names any of them and not the absolute key, the absolute check is dropped (the file chose the other metrics).
+        relative = {
+            m.name: self.check(f"generation.step0_logprob_{m.name}", f"float.step0_logprob_{m.name}")
+            for m in RELATIVE_METRICS
+            if f"float.step0_logprob_{m.name}" in self.tol
+        }
+        if relative and full.key not in self.tol:
+            self.checks.remove(full)
+            self.unconfigured.append(full.id)
+        self.unconfigured += [
+            f"generation.step0_logprob_{m.name}" for m in RELATIVE_METRICS if relative and m.name not in relative
+        ]
+        rel_fail: dict[str, list[str]] = {name: [] for name in relative}
+        rel_worst: dict[str, float | None] = {m.name: None for m in RELATIVE_METRICS}
         nan_fail: list[str] = []
         argmax_fail: list[str] = []
         top5_fail: list[str] = []
@@ -281,6 +322,8 @@ class _Evaluation:
                 argmax_fail.append(note)
                 top5_fail.append(note)
                 full_fail.append(note)
+                for fails in rel_fail.values():
+                    fails.append(note)
                 continue
             ref_top = [(int(t), float(lp)) for t, lp in ref["step0_top"]]
             if vector is not None:
@@ -309,7 +352,25 @@ class _Evaluation:
             if vector is None:
                 full_gap.append(f"{name}: no step-0 sidecar")
             elif ref_vector is not None:
-                worst = max(abs(a - b) for a, b in zip(vector, ref_vector, strict=True))
+                stats = metrics.compare(vector, ref_vector, center=True)
+                observed = {
+                    "rel_l2": stats.rel_l2,
+                    "max_abs_rel": metrics.ratio(stats.max_abs, stats.max_ref),
+                    "cosine_min": stats.cosine,
+                }
+                for m in RELATIVE_METRICS:
+                    value = observed[m.name]
+                    pick = min if m.lower_is_worse else max
+                    rel_worst[m.name] = value if rel_worst[m.name] is None else pick(rel_worst[m.name], value)
+                    bound = relative[m.name].bound if m.name in relative else None
+                    if (
+                        m.name in relative
+                        and self.active(relative[m.name])
+                        and _is_number(bound)
+                        and m.violates(value, bound)
+                    ):
+                        rel_fail[m.name].append(f"{name}: {value:.3g}")
+                worst = stats.max_abs
                 full_max = max(full_max, worst)
                 if self.active(full) and isinstance(full.bound, int | float) and worst > full.bound:
                     full_fail.append(f"{name}: {worst:.3g}")
@@ -329,6 +390,16 @@ class _Evaluation:
                 self.settle(nan, [f"non-finite step-0 values in {nan_fail}"] if nan_fail else lacking, [])
         if self.active(argmax):
             self.settle(argmax, argmax_fail + lacking, [])
+        for m in RELATIVE_METRICS:
+            if m.name not in relative:
+                continue
+            c = relative[m.name]
+            c.metrics = {m.summary: rel_worst[m.name]}
+            if self.active(c):
+                if not _is_number(c.bound):
+                    c.detail = f"bound {c.bound!r} is not a number"
+                else:
+                    self.settle(c, rel_fail[m.name] + lacking, full_gap)
         for c, fails, gaps, worst in ((top5, top5_fail, top5_gap, top5_max), (full, full_fail, full_gap, full_max)):
             c.metrics = {"max_abs": worst}
             if self.active(c):
@@ -482,6 +553,7 @@ def evaluate(
         "profile": run.profile,
         "status": overall(evaluation.checks),
         "checks": [c.as_json() for c in evaluation.checks],
+        "unconfigured_checks": evaluation.unconfigured,
         "divergences": evaluation.divergences,
         "inputs": inputs,
     }
