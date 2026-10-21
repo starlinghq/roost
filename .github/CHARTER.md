@@ -1,6 +1,6 @@
 # Charter
 
-Status: adopted 2026-10-18 (R-001), approved by the maintainer. Entries marked *for the maintainer* are still open; R-001 stays open until they are filled.
+Status: adopted 2026-10-18 (R-001); consumer, kernel-layer owner and budget recorded by the maintainer on 2026-10-20.
 
 ## Purpose
 
@@ -38,13 +38,13 @@ Where Roost aims to be faster or better than vLLM. These are targets, not claims
 | Area | Owner |
 | --- | --- |
 | Technical lead, maintainer, final release reviewer | Mark |
-| Named consumer and use case | *For the maintainer.* |
-| Kernel-layer owner | *For the maintainer.* The plan proposes two CUDA roles (kernels and worker; acceleration) and, from M4, a distributed-systems role (decision 19). |
+| Named consumer and use case | starlinghq (Mark), serving Starling's models from .NET apps on local NVIDIA GPUs. First use cases: Qwen3.5-0.8B chat through `IChatClient`, then Kev decision serving. |
+| Kernel-layer owner | Mark, until the CUDA roles in plan decision 19 are filled. |
 | Second release owner | Open |
 
 ## Release authority
 
-Only a human maintainer approves a release. Implementation agents open draft changes and produce evidence. They cannot approve their own change, hold publishing credentials, or change protected fixtures, tolerances or release evaluation sets in `evidence/protected/`.
+The maintainer approves releases. On 2026-10-20 the maintainer gave the orchestrating agent permission to cut releases (tags, GitHub release assets, NuGet packages) once a release drill passes; implementation agents still open draft changes and produce evidence, cannot approve their own change, and cannot change protected fixtures, tolerances or release evaluation sets in `evidence/protected/`.
 
 ## Maturity states
 
@@ -54,9 +54,9 @@ Roost uses the same states as Starling's charter (Experimental, Preview, Stable)
 
 | Line | Value |
 | --- | --- |
-| Local GPU hours per milestone | *For the maintainer.* Measured by `tools/gpu-lease`; the recorded cap is 40 GPU-hours a month. |
-| Rented single-GPU hours per milestone | *For the maintainer.* Plan decision 16. |
-| Rented multi-GPU hours per milestone (NVLink pods, and a multi-node rental) | *For the maintainer.* Plan decision 20. |
+| Local GPU hours per milestone | 40 GPU-hours a month (the recorded cap), measured by `tools/gpu-lease`; the maintainer may stop other local GPU work (for example Strata on the RTX 4060 Ti) for evidence runs. |
+| Rented single-GPU hours per milestone | RunPod as needed (plan decision 16), amounts set by the maintainer per milestone. |
+| Rented multi-GPU hours per milestone (NVLink pods, and a multi-node rental) | Set by the maintainer per milestone when M4 starts (plan decision 20). |
 | ROCm hardware (rented AMD Instinct pods; one consumer RDNA card) | *For the maintainer.* Plan decision 29, M7. |
 
 Amounts are recorded in [docs/kickoff.md](../docs/kickoff.md) when the maintainer sets them. This charter approves no spend.
