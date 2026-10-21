@@ -39,6 +39,12 @@ A NaN or infinity in a candidate is never a pass. Beyond the comparison, per var
 - **ABI**: a call with a `struct_size` 8 bytes short must return `ABI_MISMATCH` before any launch.
 - **Plan**: a `NEEDS_PLAN` variant run before `plan()` must return `NOT_PLANNED`.
 - **Padding**: elements between strided rows (RmsNorm, QkNorm, LmHead) must be untouched.
+- **Registered refusals** (`Suite/Refusals.cs`): a combination a variant is registered to refuse (today bf16 `gemm-cublaslt` with `beta != 0` and a bias, R-019)
+  must return the rule's typed status (`UNSUPPORTED`) from `plan()`; the outcome is `refused`, which is neither a pass nor a failure, is counted separately,
+  and keeps the run green. Serving the combination, another status, or a refusal no rule predicts is a failure.
+- **Prefill batch composition** (PagedAttention, prefill, more than one sequence): the first, middle and last sequence run alone over the same K/V pool must
+  return, byte for byte, the rows they have in the batch. The variant is not registered batch invariant (decode split-KV depends on the batch); this is
+  the evidence the racecheck exception of the FA2 prefill kernel needs (below).
 
 Refusal paths that would have to launch something unsafe are not exercised here (R-017's harness has the typed-refusal checks).
 The suite never injects a fault: it launches nothing outside a variant's registered constraints and passes only valid pointers.
@@ -173,13 +179,24 @@ goldens bytes still match the lock), with no change to the suite C# code. The GP
   against the 57 upstream goldens passes 57 of 57 (largest utilisation 0.43, f16 elementwise). The goldens file digest is
   `99b07260…`, as in the lock.
 
+## R-019 close-out decisions
+
+- **Gemm bf16 with C and bias**: no generated forward uses it (`NoGeneratedModelForwardUsesGemmWithBetaOrBias`), so the class stays tight and the variant
+  refuses the combination at plan time (`kernels/README.md`, "Gemm: bf16 with C and bias is refused"). Kernel-fix follow-up recorded there.
+- **`paged-attention-flashinfer-fa2` prefill**: R-025 does use it. `CudaOps.PagedAttention` selects prefill whenever the step has more tokens than sequences,
+  which every prompt does (5, 6 and 19 tokens in `tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm86.log`), and it is the only PagedAttention
+  variant. So the variant is **not** marked experimental. A documented exception needs (a) the hazards on known racecheck false-positive patterns
+  (`cp.async`, `ldmatrix`, warp-synchronous), which needs the kernel built with `-lineinfo` and the hazards mapped to source lines, and (b) bit-identical output
+  across repeated runs (held in every committed run: determinism passes for all 23 cases) and across batch compositions (the new composition check). Neither (a)
+  nor the GPU run of (b) was done; see "Not done".
+
 ## Not done
 
 - Open decisions and requests (deferred, not guessed):
-  - `paged-attention-flashinfer-fa2` is not racecheck-clean, so the criterion "zero reports" is not met. It needs a maintainer decision:
-    a kernel or patch fix (stream D), a documented racecheck limitation, or an approved exception.
-  - The five `gemm-cublaslt` bf16 failures (beta != 0 with bias) need a kernel fix (stream D) or a maintainer decision on the `gemm-bf16`
-    class. Conformance is not green on SM 86 until then.
+  - `paged-attention-flashinfer-fa2` prefill is not racecheck-clean and is in use (above). Still open: the lineinfo racecheck run that maps the hazards to
+    source, and the GPU run of the composition check. If the hazards are not on known false-positive patterns, or composition is not bit-identical, the
+    options are a patch set in `kernels/upstream/flashinfer.patches/` (with `PROVENANCE.md`) or an approved exception.
+  - The five `gemm-cublaslt` bf16 cases are now refused by design, not fixed; the kernel fix is a follow-up (`kernels/README.md`). The SM 86 numbers above predate the refusal.
   - `evidence/schemas/stage-results.schema.json` does not accept `task: kernel-conformance`; stream B2 must extend it.
   - The maintainer must approve or amend `op-class-tolerances.proposal.json` and place it in `evidence/protected/`.
   - A filtered rerun (`--ops Gemm --case fixed-epilogue`) printed "1 not run" in the review; the full committed run has 0. Not investigated.

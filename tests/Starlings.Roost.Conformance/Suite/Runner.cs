@@ -37,6 +37,9 @@ public sealed class RunOptions
 
     /// <summary>Receives one line per case.</summary>
     public Action<string>? Log { get; init; }
+
+    /// <summary>Combinations a variant must refuse on purpose; a case that matches is expected to return the rule's status from plan, and is neither compared nor counted a pass.</summary>
+    public IReadOnlyList<RefusalRule> Refusals { get; init; } = RefusalRules.Registered;
 }
 
 /// <summary>Statistics of one output of a case.</summary>
@@ -68,7 +71,7 @@ public sealed class CaseResult
     /// <summary>Tolerance class.</summary>
     public required string Class { get; init; }
 
-    /// <summary>"pass", "fail", "error" or "not_run".</summary>
+    /// <summary>"pass", "fail", "error", "not_run" or "refused" (the variant refused a combination it is registered to refuse, with the typed status).</summary>
     public required string Outcome { get; init; }
 
     /// <summary>What the outputs were compared with: "CpuOps" or "golden".</summary>
@@ -114,7 +117,7 @@ public sealed class ConformanceReport
     public List<VariantReport> Variants { get; } = [];
 
     /// <summary>Whether no case failed or errored. Cases not run do not count as passes or failures.</summary>
-    public bool Green => Results.All(r => r.Outcome is "pass" or "not_run") && Variants.All(v => v.AbiProbe != "fail");
+    public bool Green => Results.All(r => r.Outcome is "pass" or "not_run" or "refused") && Variants.All(v => v.AbiProbe != "fail");
 
     /// <summary>Count of results with an outcome.</summary>
     /// <param name="outcome">The outcome.</param>
@@ -182,7 +185,8 @@ public static class ConformanceRunner
                         abi = s is null ? "n/a" : (s == (int)KernelStatus.AbiMismatch ? "pass" : "fail");
                     }
 
-                    CaseResult r = RunCase(candidate, reference, v, c, options);
+                    RefusalRule? rule = options.Refusals.FirstOrDefault(x => x.Variant == v.Id && x.Applies(c));
+                    CaseResult r = rule is not null ? RunRefusal(candidate, v, c, rule) : RunCase(candidate, reference, v, c, options);
                     report.Results.Add(r);
                     options.Log?.Invoke($"{r.Outcome.ToUpperInvariant(),-7} {v.Id} {c.Id} {Summary(r)}");
                 }
@@ -337,7 +341,56 @@ public static class ConformanceRunner
                 pass &= inv;
             }
 
+            if (c.Op == OpId.PagedAttention && c.IOr("mode", -1) == (int)AttentionMode.Prefill && c.IOr("batch", 0) > 1 && c.Buffers.TryGetValue("q_indptr", out HostBuf? qIndptrBuf))
+            {
+                // Prefill is not registered batch invariant, but a sequence's output must not depend on who else is in the batch
+                // (R-019: the racecheck exception of the FA2 prefill kernel is accepted only with this bit-for-bit evidence).
+                int batch = c.I("batch");
+                int[] qIndptr = qIndptrBuf.As<int>().ToArray();
+                int width = c.I("q_heads") * c.I("head_dim") * Elem.Size(c.Dtype);
+                foreach (int seq in new[] { 0, batch - 1, batch / 2 }.Distinct())
+                {
+                    using OpCase one = CaseCatalog.AttentionSequence(c, seq);
+                    using ExecResult alone = candidate.Execute(v.Id, one);
+                    bool same = alone.Status == 0
+                        && got.Outputs["out"].Raw().Slice(qIndptr[seq] * width, (qIndptr[seq + 1] - qIndptr[seq]) * width).SequenceEqual(alone.Outputs["out"].Raw());
+                    r.Checks.Add(new BackendCheck($"prefill batch composition: sequence {seq} alone equals its rows in the batch (bytes)", same, same ? string.Empty : $"status {alone.Status}"));
+                    pass &= same;
+                }
+            }
+
             return Finish(r, pass ? "pass" : "fail", string.Empty);
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            return Finish(r, "error", e.GetType().Name + ": " + e.Message);
+        }
+    }
+
+    private static CaseResult RunRefusal(IKernelBackend candidate, VariantInfo v, OpCase c, RefusalRule rule)
+    {
+        var r = new CaseResult
+        {
+            Variant = v.Id,
+            Case = c.Id,
+            Op = c.Op,
+            Dtype = c.Dtype,
+            Source = c.Source,
+            Seed = c.Seed,
+            Class = c.ToleranceClass,
+            Outcome = "refused",
+            Reference = string.Empty,
+        };
+        try
+        {
+            using ExecResult got = candidate.Execute(v.Id, c);
+            if (got.Status == (int)rule.Status)
+            {
+                return Finish(r, "refused", $"{rule.Status} from plan, as registered: {rule.Reason}");
+            }
+
+            string what = got.Status == 0 ? "the variant served a combination it is registered to refuse" : $"status {got.Status} ({got.Message}) instead of {rule.Status}";
+            return Finish(r, "fail", $"expected a typed refusal: {what}");
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {

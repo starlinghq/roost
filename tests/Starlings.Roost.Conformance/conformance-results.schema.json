@@ -78,7 +78,7 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["op", "variant", "flags", "passed", "failed", "not_run", "abi_probe"],
+            "required": ["op", "variant", "flags", "passed", "failed", "not_run", "refused", "abi_probe"],
             "properties": {
               "op": { "type": "string" },
               "variant": { "type": "string" },
@@ -86,6 +86,7 @@
               "passed": { "type": "integer", "minimum": 0 },
               "failed": { "type": "integer", "minimum": 0 },
               "not_run": { "type": "integer", "minimum": 0 },
+              "refused": { "type": "integer", "minimum": 0 },
               "abi_probe": { "enum": ["pass", "fail", "n/a"] }
             }
           }
@@ -105,7 +106,7 @@
         "dtype": { "type": "string" },
         "source": { "enum": ["fixed", "random", "golden", "none"] },
         "class": { "type": "string" },
-        "outcome": { "enum": ["pass", "fail", "error", "not_run"] },
+        "outcome": { "enum": ["pass", "fail", "error", "not_run", "refused"] },
         "reference": { "enum": ["CpuOps", "golden", ""] },
         "seed": { "type": "string", "pattern": "^[0-9]+$" },
         "outputs": {

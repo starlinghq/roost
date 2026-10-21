@@ -173,7 +173,7 @@ mrope sections are model definition (R-035), not ops.
 | Rope | `rope-roost` | Roost (see below) | bf16, f16; default and llama3; NeoX and interleaved; `rotary_dim` <= `head_dim`; head_dim 64, 128, 256 registered | deterministic, batch invariant | none |
 | PagedAttention | `paged-attention-flashinfer-fa2` | FlashInfer FA2 batch decode and batch prefill | bf16 Q, KV and output; head_dim 256; 4 query heads per KV head; NHD and HND; page sizes 16, 32, 64 registered; causal or not; no sliding window, no soft cap | deterministic, needs plan | query: int and float scheduler buffers (0 to 8.2 MiB in the tested batches), pinned staging, plan record |
 | SiluAndMul | `silu-and-mul-flashinfer` | FlashInfer `act_and_mul_kernel`, launcher written here | bf16, f16; any `dim` | deterministic, batch invariant | none |
-| Gemm | `gemm-cublaslt` | cuBLASLt, algorithm pinned per shape bucket | bf16, f16 with fp32 accumulation; B as `[k,n]` or `[n,k]`; alpha, beta, C, bias | deterministic, batch invariant, needs plan, plan per shape | 8 MiB cuBLASLt scratch, plan record |
+| Gemm | `gemm-cublaslt` | cuBLASLt, algorithm pinned per shape bucket | bf16, f16 with fp32 accumulation; B as `[k,n]` or `[n,k]`; alpha, beta, C, bias (bf16 with both beta != 0 and a bias is refused with `UNSUPPORTED`, below) | deterministic, batch invariant, needs plan, plan per shape | 8 MiB cuBLASLt scratch, plan record |
 | Embedding | `embedding-roost` | Roost gather | bf16, f16, f32 tables | deterministic, batch invariant | none |
 | LmHead | `lm-head-cublaslt` | gather of the selected rows, then cuBLASLt with fp32 logits and `ldd = vocab_padded`, then optional soft cap | bf16, f16 hidden and weight | deterministic, batch invariant, needs plan, plan per shape | gathered rows plus 8 MiB scratch, plan record |
 | CacheWrite | `cache-write-roost` | Roost (C1's `slot_mapping` form does not match FlashInfer's append API) | bf16, f16, f32, same type as the activations; NHD and HND | deterministic, batch invariant | none |
@@ -286,3 +286,18 @@ other bytes. Only SM 86 has run on hardware. The CI job reports, and does not fa
 - The patch-set check has never run on a real patch (there are none yet).
 - `toolkit.min_driver = "580"` is unverified; only driver 610.57 was tested.
 - SM 80, 89, 90, 100 and 120 are built and registration-checked only; none ran on hardware.
+
+## Gemm: bf16 with C and bias is refused (R-019)
+
+The R-019 conformance run on SM 86 found five bf16 `gemm-cublaslt` cases outside the `gemm-bf16` class (utilisation 1.09 to 1.95, 44
+elements), all with a C input (`beta != 0`) and a bias together; f16, and bf16 with alpha, C or bias alone, pass. The decision was taken
+from data. Every `Gemm` node of Qwen3.5-0.8B, roost-tiny and roost-tiny-hybrid passes `A, B, D, M, N, K, TransposeB, Alpha, WeightDType` and
+nothing else, and the model compiler adds no C, Beta or Bias (`NoGeneratedModelForwardUsesGemmWithBetaOrBias` scans the node definitions and
+fails if one appears). So the class was not widened: `ValidateGemm` returns the typed `ROOST_STATUS_UNSUPPORTED` for bf16 with
+`beta != 0` and a bias, from `plan()` and from `run()`, before any launch. `RoostConstraints` has no field for an epilogue, so the refusal
+is not a manifest constraint; adding one (an `epilogue_mask`) is a C1 change for stream A, proposed and not made.
+
+**Follow-up (kernel fix, not done):** find why the pinned algorithms round differently with C and bias in bf16 (the README of the
+conformance suite holds the hypothesis, a rounding of the 16-bit output between the C and bias terms, unconfirmed), fix or re-pin, then
+remove the refusal and `RefusalRules.GemmBf16CWithBias` together. `kernels/tests/ops-cuda` checks the refusal (`Gemm bf16 with C (beta != 0)
+and bias -> UNSUPPORTED from plan and from run, D untouched`) and keeps the f16 combination as a served case.

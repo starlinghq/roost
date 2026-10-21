@@ -260,6 +260,15 @@ RoostStatus ValidateGemm(const RoostGemmParams& p, Mm* mm) {
   const bool use_c = p.beta != 0.0f;
   const bool bias = p.bias.address != nullptr;
   const uint32_t dt = p.a.dtype;
+  // R-019 finding: for bf16 the pinned algorithms exceed the gemm-bf16 class (1.09 to 1.95 of the limit, 44 elements in 5 conformance
+  // cases) when a C input (beta != 0) and a bias are both present; f16 and every other combination are within it. No generated forward
+  // (Qwen3.5-0.8B, roost-tiny, roost-tiny-hybrid) uses the combination, so it is refused rather than served out of class. The check sits in
+  // ValidateGemm so plan() and run() both return the typed ROOST_STATUS_UNSUPPORTED before any launch. RoostConstraints has no field for an
+  // epilogue (a C1 change, stream A), hence no manifest constraint; kernels/README.md records the kernel-fix follow-up.
+  if (dt == ROOST_DTYPE_BF16 && use_c && bias) {
+    return Fail(ROOST_STATUS_UNSUPPORTED,
+                "Gemm: bf16 with both a C input (beta != 0) and a bias is outside the gemm-bf16 tolerance class and is refused");
+  }
   const uint64_t a_len = (p.m - 1) * lda + p.k;
   const uint64_t b_rows = p.transpose_b ? p.n : p.k;
   const uint64_t b_len = (b_rows - 1) * ldb + (p.transpose_b ? p.k : p.n);

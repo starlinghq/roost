@@ -37,7 +37,8 @@ internal static unsafe class GemmCases
         Gemm(c, DType.BF16, "down-nontransposed", 17, 1024, 3584, false, false, 1f, 0f, 0);
         Gemm(c, DType.BF16, "bias", 17, 1024, 2048, true, true, 1f, 0f, 0);
         Gemm(c, DType.BF16, "alpha-beta-c", 17, 1024, 2048, true, false, 0.5f, 0.25f, 0);
-        Gemm(c, DType.BF16, "alpha-beta-c-bias", 5, 512, 1024, false, true, 2f, 1f, 64);
+        // bf16 with both a C input and a bias is refused (R-019 finding, see Rejections); the f16 combination is served and checked.
+        Gemm(c, DType.F16, "alpha-beta-c-bias", 5, 512, 1024, false, true, 2f, 1f, 64);
         Gemm(c, DType.F16, "bias", 17, 1024, 2048, true, true, 1f, 0f, 0);
         Gemm(c, DType.BF16, "small-k8", 4, 64, 8, true, false, 1f, 0f, 0);
         Pinning(c);
@@ -296,6 +297,33 @@ internal static unsafe class GemmCases
         var small = good;
         small.D.Length = 10;
         c.Check("Gemm short d -> INVALID_ARGUMENT", c.Lib.TryRunWith("gemm-cublaslt", ref small, ws, c.Stream) == (int)KernelStatus.InvalidArgument);
+        // R-019: bf16 with beta != 0 and a bias is outside the gemm-bf16 class on the pinned algorithms; plan() and run() both return the typed
+        // UNSUPPORTED before any launch, and D is not written. The same call in f16 is planned.
+        using var cBuf = new Buf(DType.BF16, 16 * 64);
+        using var biasBuf = new Buf(DType.BF16, 64);
+        cBuf.Up();
+        biasBuf.Up();
+        d.FillDevice(0xAB);
+        var cb = good;
+        cb.C = cBuf.DevSpan;
+        cb.Beta = 1f;
+        cb.Bias = biasBuf.DevSpan;
+        int cbRun = c.Lib.TryRunWith("gemm-cublaslt", ref cb, ws, c.Stream);
+        int cbPlan;
+        fixed (Workspace* w = &ws.Value)
+        {
+            cbPlan = c.Lib.Plan("gemm-cublaslt", &cb, w, c.Stream);
+        }
+
+        Cuda.Sync(c.Stream);
+        using var untouched = Ctx.Fetch(d);
+        bool unwritten = true;
+        foreach (byte x in untouched.As<byte>())
+        {
+            unwritten &= x == 0xAB;
+        }
+
+        c.Check("Gemm bf16 with C (beta != 0) and bias -> UNSUPPORTED from plan and from run, D untouched", cbPlan == (int)KernelStatus.Unsupported && cbRun == (int)KernelStatus.Unsupported && unwritten, $"plan {cbPlan}, run {cbRun}, d untouched {unwritten}");
         var tiny = new WorkspaceSet(new WorkspaceSizes { DeviceBytes = 1024, PlanBytes = 4 });
         int tooSmall;
         fixed (Workspace* w = &tiny.Value)

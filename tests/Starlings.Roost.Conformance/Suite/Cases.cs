@@ -357,6 +357,50 @@ public static class CaseCatalog
         }
     }
 
+    /// <summary>
+    /// One sequence of a multi-sequence attention case as a call of its own: its query rows, its page list and last page length,
+    /// over the same K/V pool, so the same bytes of cache are read. Used for the batch-composition check of prefill.
+    /// </summary>
+    /// <param name="c">A PagedAttention case.</param>
+    /// <param name="s">Sequence index.</param>
+    /// <returns>The single-sequence case.</returns>
+    public static OpCase AttentionSequence(OpCase c, int s)
+    {
+        int[] qIndptr = c.Buffers["q_indptr"].As<int>().ToArray();
+        int[] kvIndptr = c.Buffers["kv_indptr"].As<int>().ToArray();
+        int[] pages = c.Buffers["kv_indices"].As<int>().Slice(kvIndptr[s], kvIndptr[s + 1] - kvIndptr[s]).ToArray();
+        int last = c.Buffers["last_page_len"].As<int>()[s];
+        int tokens = qIndptr[s + 1] - qIndptr[s];
+        int width = QHeads * HeadDim;
+        var one = new OpCase
+        {
+            Id = c.Id + $"-seq{s}",
+            Op = OpId.PagedAttention,
+            Dtype = c.Dtype,
+            ToleranceClass = c.ToleranceClass,
+            Source = c.Source,
+            Seed = c.Seed,
+            ScaleBuffer = c.ScaleBuffer,
+        };
+        foreach (KeyValuePair<string, double> kv in c.Num)
+        {
+            one.Num[kv.Key] = kv.Value;
+        }
+
+        one.Num["batch"] = 1;
+        one.Num["tokens"] = tokens;
+        one.Buffers["q"] = CopyRows(c.Buffers["q"], qIndptr[s], tokens, width);
+        one.Buffers["k_cache"] = c.Buffers["k_cache"].Clone();
+        one.Buffers["v_cache"] = c.Buffers["v_cache"].Clone();
+        one.Buffers["q_indptr"] = HostBuf.Ints(0, tokens);
+        one.Buffers["kv_indptr"] = HostBuf.Ints(0, pages.Length);
+        one.Buffers["kv_indices"] = HostBuf.Ints(pages);
+        one.Buffers["last_page_len"] = HostBuf.Ints(last);
+        one.Buffers["out"] = new HostBuf(c.Dtype, (long)tokens * width);
+        one.Outputs.Add("out");
+        return one;
+    }
+
     private static Seq[] Decode(params int[] kvLens) => kvLens.Select(l => new Seq(1, l)).ToArray();
 
     private static OpCase Attention(string label, AttentionMode mode, Seq[] seqs, int ps, TensorLayout layout, bool causal, ulong baseSeed)

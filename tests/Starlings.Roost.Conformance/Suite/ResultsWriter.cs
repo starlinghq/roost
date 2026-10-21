@@ -187,6 +187,7 @@ public static class ResultsWriter
         w.WriteNumber("failed", report.Count("fail"));
         w.WriteNumber("errors", report.Count("error"));
         w.WriteNumber("not_run", report.Count("not_run"));
+        w.WriteNumber("refused", report.Count("refused"));
         w.WriteBoolean("green", report.Green);
         w.WriteBoolean("determinism_checked", o.Determinism);
         w.WriteBoolean("batch_invariance_checked", o.Invariance);
@@ -225,6 +226,7 @@ public static class ResultsWriter
             w.WriteNumber("passed", mine.Count(r => r.Outcome == "pass"));
             w.WriteNumber("failed", mine.Count(r => r.Outcome is "fail" or "error"));
             w.WriteNumber("not_run", mine.Count(r => r.Outcome == "not_run"));
+            w.WriteNumber("refused", mine.Count(r => r.Outcome == "refused"));
             w.WriteString("abi_probe", v.AbiProbe);
             w.WriteEndObject();
         }
@@ -239,11 +241,11 @@ public static class ResultsWriter
     /// <returns>Lines.</returns>
     public static IEnumerable<string> Summary(ConformanceReport report)
     {
-        yield return $"{report.Backend}: {report.Count("pass")} passed, {report.Count("fail")} failed, {report.Count("error")} errors, {report.Count("not_run")} not run";
+        yield return $"{report.Backend}: {report.Count("pass")} passed, {report.Count("fail")} failed, {report.Count("error")} errors, {report.Count("not_run")} not run, {report.Count("refused")} refused as registered";
         foreach (VariantReport v in report.Variants)
         {
             var mine = report.Results.Where(r => r.Variant == v.Info.Id && r.Op == v.Info.Op).ToList();
-            yield return $"  {v.Info.Op,-15} {v.Info.Id,-34} pass={mine.Count(r => r.Outcome == "pass"),-4} fail={mine.Count(r => r.Outcome is "fail" or "error"),-3} not_run={mine.Count(r => r.Outcome == "not_run"),-3} abi={v.AbiProbe}";
+            yield return $"  {v.Info.Op,-15} {v.Info.Id,-34} pass={mine.Count(r => r.Outcome == "pass"),-4} fail={mine.Count(r => r.Outcome is "fail" or "error"),-3} not_run={mine.Count(r => r.Outcome == "not_run"),-3} refused={mine.Count(r => r.Outcome == "refused"),-3} abi={v.AbiProbe}";
         }
     }
 }
