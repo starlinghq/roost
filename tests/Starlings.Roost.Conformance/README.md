@@ -189,6 +189,14 @@ goldens bytes still match the lock), with no change to the suite C# code. The GP
   (`cp.async`, `ldmatrix`, warp-synchronous), which needs the kernel built with `-lineinfo` and the hazards mapped to source lines, and (b) bit-identical output
   across repeated runs (held in every committed run: determinism passes for all 23 cases) and across batch compositions (the new composition check). Neither (a)
   nor the GPU run of (b) was done; see "Not done".
+  What the machine code says (`cuobjdump -sass -arch sm_86` of the R-019 SM 86 library, sha256 `0f707ae0…`, kernel
+  `BatchPrefillWithPagedKVCacheKernel<MaskMode 1, CTA_TILE_Q 16, warps 1x4, head_dim 256>`): the read site in the racecheck log (`+0x5300`) is a plain `LDS.128` and the
+  write sites (`+0x9670` to `+0x9bf0`, 32 hazards each) are plain 32-bit `STS`. They are not `LDGSTS` (cp.async) or `LDSM` (ldmatrix), the patterns the
+  maintainer's rule names; all 80 `LDGSTS` in the function sit before `+0x4330`, behind `DEPBAR`/`BAR.SYNC`. Read and writes lie in one barrier interval (the single
+  `BAR.SYNC.DEFER_BLOCKING` at `+0x4d40` to the `BAR.SYNC` at `+0xaa20`). Reading `include/flashinfer/attention/prefill.cuh` at the manifest's SHA, the merge of the four
+  KV warps (`threadblock_sync_mdo_states`, `cta_sync_o_smem` reused across the head-dim 256 VO tiles) is the code that writes and reads that region, with `__syncthreads()`
+  after the loop and at the end of each tile, which does not by itself explain a hazard. So the hazards are **not shown to be a known false-positive pattern**, and the
+  exception is not granted; the variant stays registered, not experimental, until the `-lineinfo` racecheck run attributes them to source lines.
 
 ## Not done
 
