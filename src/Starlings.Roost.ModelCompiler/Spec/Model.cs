@@ -62,7 +62,7 @@ internal sealed record LocationInfo(string Path, TextSpan Span, LinePositionSpan
 
 internal sealed record DimSpec(string Name, string Value, LocationInfo? Location);
 
-internal sealed record WeightSpec(string Name, string Shape, string? Dtype, string? Source, string? Layers, LocationInfo? Location);
+internal sealed record WeightSpec(string Name, string Shape, string? Dtype, string? Source, string? Layers, LocationInfo? Location, bool Reserved = false);
 
 internal sealed record GroupSpec(
     string Name,

@@ -7,9 +7,9 @@ namespace Starlings.Roost.Tests;
 public sealed class ContractVersionTests
 {
     [Fact]
-    public void ContractsAreFrozenAtVersionOneStageV0()
+    public void ContractsAreAtVersionThreeStageV0()
     {
-        Assert.Equal(1, ContractVersion.Current);
+        Assert.Equal(3, ContractVersion.Current);
         Assert.Equal("v0", ContractVersion.Stage);
     }
 
@@ -18,7 +18,7 @@ public sealed class ContractVersionTests
     {
         Assert.Equal<long>(KernelAbi.Major, NativeLayout.Defines["ROOST_ABI_MAJOR"]);
         Assert.Equal<long>(KernelAbi.Minor, NativeLayout.Defines["ROOST_ABI_MINOR"]);
-        Assert.Equal((1u << 16) | 0u, KernelAbi.Version);
+        Assert.Equal((1u << 16) | 2u, KernelAbi.Version);
     }
 
     [Fact]
@@ -33,7 +33,9 @@ public sealed class ContractVersionTests
     }
 
     [Theory]
-    [InlineData(0x0001_0000u, true)]
+    [InlineData(0x0001_0000u, false)]
+    [InlineData(0x0001_0001u, false)]
+    [InlineData(0x0001_0002u, true)]
     [InlineData(0x0001_0003u, true)]
     [InlineData(0x0002_0000u, false)]
     [InlineData(0x0000_0009u, false)]

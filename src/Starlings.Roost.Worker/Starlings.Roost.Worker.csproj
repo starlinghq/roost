@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost worker library (stream F, R-024): streams a locked safetensors checkpoint to device memory in slot order, verifying its SHA-256 as it is read, so a substituted file fails before the first forward. Worker-side: never loads ONNX Runtime.</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Tomlyn" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Cuda/Starlings.Roost.Cuda.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Starlings.Roost.Worker.Tests" />
+    <InternalsVisibleTo Include="Starlings.Roost.Worker.Tests.Cuda" />
+  </ItemGroup>
+</Project>

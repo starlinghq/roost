@@ -225,7 +225,7 @@ public readonly struct RecordingOps : IRoostOps
 
     public static void Reset() => _count = 0;
 
-    public static bool Supports(OpId op) => op is OpId.GatedDeltaRule or OpId.CausalConv1d || OpCatalog.IsM0(op);
+    public static bool Supports(OpId op) => op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul || OpCatalog.IsM0(op);
 
     private static void Log(OpId op, in DeviceSpan first, in DeviceSpan second = default)
     {
@@ -272,4 +272,10 @@ public readonly struct RecordingOps : IRoostOps
     public static void GatedDeltaRule(in GatedDeltaRuleArgs a) => Log(OpId.GatedDeltaRule, a.Q, a.State);
 
     public static void CausalConv1d(in CausalConv1dArgs a) => Log(OpId.CausalConv1d, a.Input, a.ConvState);
+
+    public static void GatedDeltaRuleGates(in GatedDeltaRuleGatesArgs a) => Log(OpId.GatedDeltaRuleGates, a.A, a.ALog);
+
+    public static void GatedRmsNorm(in GatedRmsNormArgs a) => Log(OpId.GatedRmsNorm, a.Input, a.Gate);
+
+    public static void SigmoidMul(in SigmoidMulArgs a) => Log(OpId.SigmoidMul, a.Input, a.Gate);
 }

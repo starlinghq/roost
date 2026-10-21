@@ -1,9 +1,9 @@
 # R-017 M0 attention-side ops: kernels/tests/ops-cuda against CpuOps (R-018, double precision), RTX 3090 (SM 86)
-# 2026-10-19T16:25Z host: nvcc 13.3.73 ; gcc 16.2.1 ; driver 610.57.04 ; library sha256 0f707ae048eeead789591284bcded3a56f5441f21cad587fb6ddc0eade198220
+# 2026-10-19T18:39Z host: nvcc 13.3.73 ; gcc 16.2.1 ; driver 610.57.04 ; library sha256 fcba2ad963e2b9fbdda3ac7e742104298bc27c59669009b1cb9d7bf6e6e59a73 (built against the C1 ABI 1.1 header)
 # tools/gpu-lease run --device 3090 --need-mib 6000 --stream C --wait 3600 -- dotnet Roost.KernelOps.Tests.Cuda.dll libroost_kernels_sm86.so --log <this file>
 # Groups run: norm rope data invariance gemm attention real. The graph group is NOT in this log (kernels/README.md, 'Signal death during R-017').
 # Random inputs come from fixed per-group seeds. The 'real' group reads the locked Qwen3.5-0.8B checkpoint in place.
-library roost-kernels-sm86 abi 0x10000 entries 11; device sm_86; 2026-10-19T16:24:19.7588594Z
+library roost-kernels-sm86 abi 0x10001 entries 11; device sm_86; 2026-10-19T18:39:21.9018357Z
 --- norm
 PASS RmsNorm BF16 rows=1 dim=1024 strides=1024/1024             class=elementwise-bf16   n=1024      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
 PASS RmsNorm BF16 rows=7 dim=1024 strides=1024/1024             class=elementwise-bf16   n=7168      max_abs=0.00E+000 ref_rms=1.01E+000 utilisation=0.000 violations=0 nonfinite=0

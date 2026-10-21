@@ -5,11 +5,12 @@ namespace Starlings.Roost.ModelCompiler.Tests.Models;
 // A Qwen3.5-shaped tiny hybrid: four layers, three Gated DeltaNet layers (0, 1, 2) and one full-attention layer (3),
 // a pattern that yields 6 attention and 18 recurrent layers when repeated to 24 (the counts Qwen3.5-0.8B has, decision 15), with a sandbox-sized width. Two state groups: paged
 // K and V for the attention layer, recurrent state and convolution state for the others. The recurrent block uses
-// separate q, k, v, g and beta projections because the C3 GatedDeltaRule takes contiguous q, k, v, g and beta (no strides),
-// and every buffer has the extent the op's scalar arguments imply (q and k [tokens, k_heads*k_dim], v [tokens, v_heads*v_dim],
-// g and beta [tokens, v_heads]; HybridModelTests.RecurrentOpBuffersMatchTheirScalarArguments checks it). Only v goes through
-// the convolution here: the real Qwen3.5 block convolves the fused q/k/v projection before splitting it, which needs a split
-// or strided views the frozen v0 ops do not have (a stream A decision); the real definition is R-035.
+// separate q, k, v, g and beta projections with contiguous buffers (strides left 0), and every buffer has the extent the
+// op's scalar arguments imply (q and k [tokens, k_heads*k_dim], v [tokens, v_heads*v_dim], g and beta [tokens, v_heads];
+// HybridModelTests.RecurrentOpBuffersMatchTheirScalarArguments checks it). Only v goes through the convolution here: the
+// real Qwen3.5 block convolves the fused q/k/v projection and reads q, k and v as row-strided column views of the conv
+// output (GatedDeltaRuleArgs QStride, KStride, VStride, contract version 2); FusedHybridModel does that with the view binding
+// (value[start:end]) and is the one that runs numerically on CpuOps, and Starlings.Roost.Models.Qwen35 is the real definition (R-035).
 [RoostModel("tiny-hybrid", Dtype = "BF16")]
 [Dim("hidden", 64)]
 [Dim("inter", 128)]

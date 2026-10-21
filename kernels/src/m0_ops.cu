@@ -132,8 +132,10 @@ RoostStatus QkNormRun(RoostContext*, const void* params, const RoostWorkspace*, 
 // ---- Rope ----------------------------------------------------------------------------------------------------------
 
 // Roost's own kernel, not FlashInfer's BatchQKApplyRotaryPosIds: that one forms the angle as float(pos) * powf-based
-// frequency and calls the __sincosf intrinsic, which does no range reduction, so its error grows with the position (measured
-// in kernels/results/r017-ops-sm86.log: 8% of the output at positions near 2^18, several bf16 ulps already below 4096). Here the
+// frequency and calls the __sincosf intrinsic, which does no range reduction, so its error grows with the position. The
+// error figures (7.8e-2 absolute on outputs of RMS 1 at positions up to 2^18, 1.6e-2 at positions up to 4096) are FAIL lines
+// excerpted unedited in kernels/results/r017-rejected-configs-sm86.log, an excerpt of an earlier run whose full log was not
+// committed; kernels/results/r017-ops-sm86.log has only the passing rope-roost lines. Here the
 // frequency and angle are formed in double (as CpuOps does), the angle is reduced modulo 2 pi in double, and sincosf of the
 // reduced angle gives cos and sin to about one fp32 ulp. The cost is a few double operations per (token, pair); the kernel is
 // memory-bound.

@@ -1,0 +1,1640 @@
+{
+ "fla_sha": "329b534245d3d7bb27cc03a99e87bdc51fb28d06",
+ "pinned_autotuners": 11,
+ "specs": [
+  {
+   "arg_names": [
+    "q",
+    "k",
+    "v",
+    "h",
+    "g",
+    "g_gamma",
+    "o",
+    "cu_seqlens",
+    "chunk_indices",
+    "scale",
+    "T",
+    "H",
+    "HV",
+    "K",
+    "V",
+    "BT",
+    "BK",
+    "BV",
+    "USE_G",
+    "USE_G_GAMMA",
+    "STATE_V_FIRST",
+    "IS_VARLEN"
+   ],
+   "attrs": [
+    [
+     [
+      0
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      1
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      2
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      3
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      4
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      5
+     ],
+     []
+    ],
+    [
+     [
+      6
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      7
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      8
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      11
+     ],
+     []
+    ],
+    [
+     [
+      12
+     ],
+     []
+    ],
+    [
+     [
+      13
+     ],
+     []
+    ],
+    [
+     [
+      14
+     ],
+     []
+    ],
+    [
+     [
+      15
+     ],
+     []
+    ],
+    [
+     [
+      16
+     ],
+     []
+    ],
+    [
+     [
+      17
+     ],
+     []
+    ],
+    [
+     [
+      18
+     ],
+     []
+    ],
+    [
+     [
+      19
+     ],
+     []
+    ],
+    [
+     [
+      20
+     ],
+     []
+    ],
+    [
+     [
+      21
+     ],
+     []
+    ]
+   ],
+   "constexprs": {
+    "BK": 32,
+    "BT": 64,
+    "BV": 32,
+    "H": 16,
+    "HV": 16,
+    "IS_VARLEN": true,
+    "K": 128,
+    "STATE_V_FIRST": false,
+    "USE_G": true,
+    "USE_G_GAMMA": false,
+    "V": 128,
+    "g_gamma": null
+   },
+   "kernel": "chunk_fwd_kernel_o",
+   "module": "fla.ops.common.chunk_o",
+   "num_stages": 3,
+   "num_warps": 2,
+   "shared": 20480,
+   "signature": {
+    "BK": "constexpr",
+    "BT": "constexpr",
+    "BV": "constexpr",
+    "H": "constexpr",
+    "HV": "constexpr",
+    "IS_VARLEN": "constexpr",
+    "K": "constexpr",
+    "STATE_V_FIRST": "constexpr",
+    "T": "i32",
+    "USE_G": "constexpr",
+    "USE_G_GAMMA": "constexpr",
+    "V": "constexpr",
+    "chunk_indices": "*i32",
+    "cu_seqlens": "*i32",
+    "g": "*fp32",
+    "g_gamma": "constexpr",
+    "h": "*bf16",
+    "k": "*bf16",
+    "o": "*bf16",
+    "q": "*bf16",
+    "scale": "fp32",
+    "v": "*bf16"
+   }
+  },
+  {
+   "arg_names": [
+    "k",
+    "v",
+    "w",
+    "v_new",
+    "g",
+    "gk",
+    "h",
+    "h0",
+    "ht",
+    "cu_seqlens",
+    "chunk_offsets",
+    "T",
+    "H",
+    "HV",
+    "K",
+    "V",
+    "BT",
+    "BV",
+    "USE_G",
+    "USE_GK",
+    "USE_INITIAL_STATE",
+    "STORE_FINAL_STATE",
+    "SAVE_NEW_VALUE",
+    "STATE_V_FIRST",
+    "IS_VARLEN"
+   ],
+   "attrs": [
+    [
+     [
+      0
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      1
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      2
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      3
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      4
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      5
+     ],
+     []
+    ],
+    [
+     [
+      6
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      7
+     ],
+     []
+    ],
+    [
+     [
+      8
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      9
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      10
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      12
+     ],
+     []
+    ],
+    [
+     [
+      13
+     ],
+     []
+    ],
+    [
+     [
+      14
+     ],
+     []
+    ],
+    [
+     [
+      15
+     ],
+     []
+    ],
+    [
+     [
+      16
+     ],
+     []
+    ],
+    [
+     [
+      17
+     ],
+     []
+    ],
+    [
+     [
+      18
+     ],
+     []
+    ],
+    [
+     [
+      19
+     ],
+     []
+    ],
+    [
+     [
+      20
+     ],
+     []
+    ],
+    [
+     [
+      21
+     ],
+     []
+    ],
+    [
+     [
+      22
+     ],
+     []
+    ],
+    [
+     [
+      23
+     ],
+     []
+    ],
+    [
+     [
+      24
+     ],
+     []
+    ]
+   ],
+   "constexprs": {
+    "BT": 64,
+    "BV": 32,
+    "H": 16,
+    "HV": 16,
+    "IS_VARLEN": true,
+    "K": 128,
+    "SAVE_NEW_VALUE": true,
+    "STATE_V_FIRST": false,
+    "STORE_FINAL_STATE": true,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_INITIAL_STATE": false,
+    "V": 128,
+    "gk": null,
+    "h0": null
+   },
+   "kernel": "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "module": "fla.ops.common.chunk_delta_h",
+   "num_stages": 2,
+   "num_warps": 2,
+   "shared": 47364,
+   "signature": {
+    "BT": "constexpr",
+    "BV": "constexpr",
+    "H": "constexpr",
+    "HV": "constexpr",
+    "IS_VARLEN": "constexpr",
+    "K": "constexpr",
+    "SAVE_NEW_VALUE": "constexpr",
+    "STATE_V_FIRST": "constexpr",
+    "STORE_FINAL_STATE": "constexpr",
+    "T": "i32",
+    "USE_G": "constexpr",
+    "USE_GK": "constexpr",
+    "USE_INITIAL_STATE": "constexpr",
+    "V": "constexpr",
+    "chunk_offsets": "*i64",
+    "cu_seqlens": "*i32",
+    "g": "*fp32",
+    "gk": "constexpr",
+    "h": "*bf16",
+    "h0": "constexpr",
+    "ht": "*fp32",
+    "k": "*bf16",
+    "v": "*bf16",
+    "v_new": "*bf16",
+    "w": "*bf16"
+   }
+  },
+  {
+   "arg_names": [
+    "k",
+    "v",
+    "w",
+    "v_new",
+    "g",
+    "gk",
+    "h",
+    "h0",
+    "ht",
+    "cu_seqlens",
+    "chunk_offsets",
+    "T",
+    "H",
+    "HV",
+    "K",
+    "V",
+    "BT",
+    "BV",
+    "USE_G",
+    "USE_GK",
+    "USE_INITIAL_STATE",
+    "STORE_FINAL_STATE",
+    "SAVE_NEW_VALUE",
+    "STATE_V_FIRST",
+    "IS_VARLEN"
+   ],
+   "attrs": [
+    [
+     [
+      0
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      1
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      2
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      3
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      4
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      5
+     ],
+     []
+    ],
+    [
+     [
+      6
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      7
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      8
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      9
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      10
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      12
+     ],
+     []
+    ],
+    [
+     [
+      13
+     ],
+     []
+    ],
+    [
+     [
+      14
+     ],
+     []
+    ],
+    [
+     [
+      15
+     ],
+     []
+    ],
+    [
+     [
+      16
+     ],
+     []
+    ],
+    [
+     [
+      17
+     ],
+     []
+    ],
+    [
+     [
+      18
+     ],
+     []
+    ],
+    [
+     [
+      19
+     ],
+     []
+    ],
+    [
+     [
+      20
+     ],
+     []
+    ],
+    [
+     [
+      21
+     ],
+     []
+    ],
+    [
+     [
+      22
+     ],
+     []
+    ],
+    [
+     [
+      23
+     ],
+     []
+    ],
+    [
+     [
+      24
+     ],
+     []
+    ]
+   ],
+   "constexprs": {
+    "BT": 64,
+    "BV": 32,
+    "H": 16,
+    "HV": 16,
+    "IS_VARLEN": true,
+    "K": 128,
+    "SAVE_NEW_VALUE": true,
+    "STATE_V_FIRST": false,
+    "STORE_FINAL_STATE": true,
+    "USE_G": true,
+    "USE_GK": false,
+    "USE_INITIAL_STATE": true,
+    "V": 128,
+    "gk": null
+   },
+   "kernel": "chunk_gated_delta_rule_fwd_kernel_h_blockdim64",
+   "module": "fla.ops.common.chunk_delta_h",
+   "num_stages": 2,
+   "num_warps": 2,
+   "shared": 47364,
+   "signature": {
+    "BT": "constexpr",
+    "BV": "constexpr",
+    "H": "constexpr",
+    "HV": "constexpr",
+    "IS_VARLEN": "constexpr",
+    "K": "constexpr",
+    "SAVE_NEW_VALUE": "constexpr",
+    "STATE_V_FIRST": "constexpr",
+    "STORE_FINAL_STATE": "constexpr",
+    "T": "i32",
+    "USE_G": "constexpr",
+    "USE_GK": "constexpr",
+    "USE_INITIAL_STATE": "constexpr",
+    "V": "constexpr",
+    "chunk_offsets": "*i64",
+    "cu_seqlens": "*i32",
+    "g": "*fp32",
+    "gk": "constexpr",
+    "h": "*bf16",
+    "h0": "*fp32",
+    "ht": "*fp32",
+    "k": "*bf16",
+    "v": "*bf16",
+    "v_new": "*bf16",
+    "w": "*bf16"
+   }
+  },
+  {
+   "arg_names": [
+    "k",
+    "g",
+    "beta",
+    "A",
+    "cu_seqlens",
+    "chunk_indices",
+    "T",
+    "H",
+    "HV",
+    "K",
+    "BT",
+    "BC",
+    "BK",
+    "USE_G",
+    "IS_VARLEN"
+   ],
+   "attrs": [
+    [
+     [
+      0
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      1
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      2
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      3
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      4
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      5
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      7
+     ],
+     []
+    ],
+    [
+     [
+      8
+     ],
+     []
+    ],
+    [
+     [
+      9
+     ],
+     []
+    ],
+    [
+     [
+      10
+     ],
+     []
+    ],
+    [
+     [
+      11
+     ],
+     []
+    ],
+    [
+     [
+      12
+     ],
+     []
+    ],
+    [
+     [
+      13
+     ],
+     []
+    ],
+    [
+     [
+      14
+     ],
+     []
+    ]
+   ],
+   "constexprs": {
+    "BC": 16,
+    "BK": 64,
+    "BT": 64,
+    "H": 16,
+    "HV": 16,
+    "IS_VARLEN": true,
+    "K": 128,
+    "USE_G": true
+   },
+   "kernel": "chunk_gated_delta_rule_fwd_kkt_solve_kernel",
+   "module": "fla.ops.gated_delta_rule.chunk_fwd",
+   "num_stages": 3,
+   "num_warps": 1,
+   "shared": 9216,
+   "signature": {
+    "A": "*bf16",
+    "BC": "constexpr",
+    "BK": "constexpr",
+    "BT": "constexpr",
+    "H": "constexpr",
+    "HV": "constexpr",
+    "IS_VARLEN": "constexpr",
+    "K": "constexpr",
+    "T": "i32",
+    "USE_G": "constexpr",
+    "beta": "*bf16",
+    "chunk_indices": "*i32",
+    "cu_seqlens": "*i32",
+    "g": "*fp32",
+    "k": "*bf16"
+   }
+  },
+  {
+   "arg_names": [
+    "s",
+    "o",
+    "scale",
+    "cu_seqlens",
+    "chunk_indices",
+    "T",
+    "B",
+    "H",
+    "BT",
+    "REVERSE",
+    "HAS_SCALE",
+    "IS_VARLEN",
+    "USE_GRAPH"
+   ],
+   "attrs": [
+    [
+     [
+      0
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      1
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      3
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      4
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      6
+     ],
+     []
+    ],
+    [
+     [
+      7
+     ],
+     []
+    ],
+    [
+     [
+      8
+     ],
+     []
+    ],
+    [
+     [
+      9
+     ],
+     []
+    ],
+    [
+     [
+      10
+     ],
+     []
+    ],
+    [
+     [
+      11
+     ],
+     []
+    ],
+    [
+     [
+      12
+     ],
+     []
+    ]
+   ],
+   "constexprs": {
+    "B": 1,
+    "BT": 64,
+    "H": 16,
+    "HAS_SCALE": true,
+    "IS_VARLEN": true,
+    "REVERSE": false,
+    "USE_GRAPH": false
+   },
+   "kernel": "chunk_local_cumsum_scalar_kernel",
+   "module": "fla.ops.utils.cumsum",
+   "num_stages": 3,
+   "num_warps": 1,
+   "shared": 0,
+   "signature": {
+    "B": "constexpr",
+    "BT": "constexpr",
+    "H": "constexpr",
+    "HAS_SCALE": "constexpr",
+    "IS_VARLEN": "constexpr",
+    "REVERSE": "constexpr",
+    "T": "i32",
+    "USE_GRAPH": "constexpr",
+    "chunk_indices": "*i32",
+    "cu_seqlens": "*i32",
+    "o": "*fp32",
+    "s": "*fp32",
+    "scale": "fp32"
+   }
+  },
+  {
+   "arg_names": [
+    "q",
+    "k",
+    "v",
+    "g",
+    "gk",
+    "gv",
+    "beta",
+    "A_log",
+    "dt_bias",
+    "o",
+    "h0",
+    "ht",
+    "cu_seqlens",
+    "scale",
+    "T",
+    "H",
+    "HV",
+    "K",
+    "V",
+    "BK",
+    "BV",
+    "USE_G",
+    "USE_GK",
+    "USE_GV",
+    "USE_QK_L2NORM_IN_KERNEL",
+    "IS_BETA_HEADWISE",
+    "USE_INITIAL_STATE",
+    "STORE_FINAL_STATE",
+    "STATE_V_FIRST",
+    "IS_VARLEN",
+    "USE_GATE_IN_KERNEL",
+    "HAS_DT_BIAS",
+    "APPLY_BETA_SIGMOID",
+    "ALLOW_NEG_EIGVAL"
+   ],
+   "attrs": [
+    [
+     [
+      0
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      1
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      2
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      3
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      4
+     ],
+     []
+    ],
+    [
+     [
+      5
+     ],
+     []
+    ],
+    [
+     [
+      6
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      7
+     ],
+     []
+    ],
+    [
+     [
+      8
+     ],
+     []
+    ],
+    [
+     [
+      9
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      10
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      11
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      12
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      15
+     ],
+     []
+    ],
+    [
+     [
+      16
+     ],
+     []
+    ],
+    [
+     [
+      17
+     ],
+     []
+    ],
+    [
+     [
+      18
+     ],
+     []
+    ],
+    [
+     [
+      19
+     ],
+     []
+    ],
+    [
+     [
+      20
+     ],
+     []
+    ],
+    [
+     [
+      21
+     ],
+     []
+    ],
+    [
+     [
+      22
+     ],
+     []
+    ],
+    [
+     [
+      23
+     ],
+     []
+    ],
+    [
+     [
+      24
+     ],
+     []
+    ],
+    [
+     [
+      25
+     ],
+     []
+    ],
+    [
+     [
+      26
+     ],
+     []
+    ],
+    [
+     [
+      27
+     ],
+     []
+    ],
+    [
+     [
+      28
+     ],
+     []
+    ],
+    [
+     [
+      29
+     ],
+     []
+    ],
+    [
+     [
+      30
+     ],
+     []
+    ],
+    [
+     [
+      31
+     ],
+     []
+    ],
+    [
+     [
+      32
+     ],
+     []
+    ],
+    [
+     [
+      33
+     ],
+     []
+    ]
+   ],
+   "constexprs": {
+    "ALLOW_NEG_EIGVAL": false,
+    "APPLY_BETA_SIGMOID": false,
+    "A_log": null,
+    "BK": 128,
+    "BV": 8,
+    "H": 16,
+    "HAS_DT_BIAS": false,
+    "HV": 16,
+    "IS_BETA_HEADWISE": true,
+    "IS_VARLEN": true,
+    "K": 128,
+    "STATE_V_FIRST": false,
+    "STORE_FINAL_STATE": true,
+    "USE_G": true,
+    "USE_GATE_IN_KERNEL": false,
+    "USE_GK": false,
+    "USE_GV": false,
+    "USE_INITIAL_STATE": true,
+    "USE_QK_L2NORM_IN_KERNEL": true,
+    "V": 128,
+    "dt_bias": null,
+    "gk": null,
+    "gv": null
+   },
+   "kernel": "fused_recurrent_gated_delta_rule_fwd_kernel",
+   "module": "fla.ops.gated_delta_rule.fused_recurrent",
+   "num_stages": 3,
+   "num_warps": 1,
+   "shared": 512,
+   "signature": {
+    "ALLOW_NEG_EIGVAL": "constexpr",
+    "APPLY_BETA_SIGMOID": "constexpr",
+    "A_log": "constexpr",
+    "BK": "constexpr",
+    "BV": "constexpr",
+    "H": "constexpr",
+    "HAS_DT_BIAS": "constexpr",
+    "HV": "constexpr",
+    "IS_BETA_HEADWISE": "constexpr",
+    "IS_VARLEN": "constexpr",
+    "K": "constexpr",
+    "STATE_V_FIRST": "constexpr",
+    "STORE_FINAL_STATE": "constexpr",
+    "T": "i32",
+    "USE_G": "constexpr",
+    "USE_GATE_IN_KERNEL": "constexpr",
+    "USE_GK": "constexpr",
+    "USE_GV": "constexpr",
+    "USE_INITIAL_STATE": "constexpr",
+    "USE_QK_L2NORM_IN_KERNEL": "constexpr",
+    "V": "constexpr",
+    "beta": "*bf16",
+    "cu_seqlens": "*i32",
+    "dt_bias": "constexpr",
+    "g": "*fp32",
+    "gk": "constexpr",
+    "gv": "constexpr",
+    "h0": "*fp32",
+    "ht": "*fp32",
+    "k": "*bf16",
+    "o": "*bf16",
+    "q": "*bf16",
+    "scale": "fp32",
+    "v": "*bf16"
+   }
+  },
+  {
+   "arg_names": [
+    "k",
+    "v",
+    "beta",
+    "w",
+    "u",
+    "A",
+    "g",
+    "cu_seqlens",
+    "chunk_indices",
+    "T",
+    "H",
+    "HV",
+    "K",
+    "V",
+    "BT",
+    "BK",
+    "BV",
+    "USE_G",
+    "IS_VARLEN"
+   ],
+   "attrs": [
+    [
+     [
+      0
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      1
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      2
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      3
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      4
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      5
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      6
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      7
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      8
+     ],
+     [
+      [
+       "tt.divisibility",
+       16
+      ]
+     ]
+    ],
+    [
+     [
+      10
+     ],
+     []
+    ],
+    [
+     [
+      11
+     ],
+     []
+    ],
+    [
+     [
+      12
+     ],
+     []
+    ],
+    [
+     [
+      13
+     ],
+     []
+    ],
+    [
+     [
+      14
+     ],
+     []
+    ],
+    [
+     [
+      15
+     ],
+     []
+    ],
+    [
+     [
+      16
+     ],
+     []
+    ],
+    [
+     [
+      17
+     ],
+     []
+    ],
+    [
+     [
+      18
+     ],
+     []
+    ]
+   ],
+   "constexprs": {
+    "BK": 64,
+    "BT": 64,
+    "BV": 64,
+    "H": 16,
+    "HV": 16,
+    "IS_VARLEN": true,
+    "K": 128,
+    "USE_G": true,
+    "V": 128
+   },
+   "kernel": "recompute_w_u_fwd_kernel",
+   "module": "fla.ops.gated_delta_rule.wy_fast",
+   "num_stages": 2,
+   "num_warps": 2,
+   "shared": 20480,
+   "signature": {
+    "A": "*bf16",
+    "BK": "constexpr",
+    "BT": "constexpr",
+    "BV": "constexpr",
+    "H": "constexpr",
+    "HV": "constexpr",
+    "IS_VARLEN": "constexpr",
+    "K": "constexpr",
+    "T": "i32",
+    "USE_G": "constexpr",
+    "V": "constexpr",
+    "beta": "*bf16",
+    "chunk_indices": "*i32",
+    "cu_seqlens": "*i32",
+    "g": "*fp32",
+    "k": "*bf16",
+    "u": "*bf16",
+    "v": "*bf16",
+    "w": "*bf16"
+   }
+  }
+ ],
+ "torch": "2.14.1+cu130",
+ "triton": "3.8.0"
+}

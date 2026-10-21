@@ -125,7 +125,7 @@ public interface IRoostOps
     /// <exception cref="NotSupportedException">The backend does not provide the fused form.</exception>
     static virtual void GemmLoraEpilogue(in GemmLoraEpilogueArgs a) => throw new NotSupportedException(nameof(GemmLoraEpilogue));
 
-    /// <summary>Reserved, M1: Gated delta rule, chunked (prefill) or recurrent (decode), with indexed recurrent-state slots (S3).</summary>
+    /// <summary>Reserved, M1: Gated delta rule, chunked (prefill) or recurrent (decode), with indexed recurrent-state slots (S3) and row-strided q, k and v views.</summary>
     /// <param name="a">Arguments.</param>
     /// <exception cref="NotSupportedException">Until the backend implements it.</exception>
     static virtual void GatedDeltaRule(in GatedDeltaRuleArgs a) => throw new NotSupportedException(nameof(GatedDeltaRule));
@@ -149,6 +149,27 @@ public interface IRoostOps
     /// <param name="a">Arguments.</param>
     /// <exception cref="NotSupportedException">Until the backend implements it.</exception>
     static virtual void SlidingWindowAttention(in SlidingWindowAttentionArgs a) => throw new NotSupportedException(nameof(SlidingWindowAttention));
+
+    /// <summary>
+    /// Qwen3.5 gating (contract version 3): Gated DeltaNet gates from the raw a and b projections,
+    /// <c>G = -exp(ALog) * softplus(A + DtBias)</c> and <c>Beta = sigmoid(B)</c>, per token and value head.
+    /// </summary>
+    /// <param name="a">Arguments.</param>
+    /// <exception cref="NotSupportedException">Until the backend implements it.</exception>
+    static virtual void GatedDeltaRuleGates(in GatedDeltaRuleGatesArgs a) => throw new NotSupportedException(nameof(GatedDeltaRuleGates));
+
+    /// <summary>
+    /// Qwen3.5 gating (contract version 3): RMS norm before a SiLU gate,
+    /// <c>Output = Input * rsqrt(mean(Input^2) + Eps) * Weight * silu(Gate)</c>, per row.
+    /// </summary>
+    /// <param name="a">Arguments.</param>
+    /// <exception cref="NotSupportedException">Until the backend implements it.</exception>
+    static virtual void GatedRmsNorm(in GatedRmsNormArgs a) => throw new NotSupportedException(nameof(GatedRmsNorm));
+
+    /// <summary>Qwen3.5 gating (contract version 3): the attention output gate, <c>Output = Input * sigmoid(Gate)</c>.</summary>
+    /// <param name="a">Arguments.</param>
+    /// <exception cref="NotSupportedException">Until the backend implements it.</exception>
+    static virtual void SigmoidMul(in SigmoidMulArgs a) => throw new NotSupportedException(nameof(SigmoidMul));
 
     /// <summary>Reserved, M2: Rotary embedding with YaRN, longrope or dynamic NTK scaling.</summary>
     /// <param name="a">Arguments.</param>
