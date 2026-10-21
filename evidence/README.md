@@ -79,13 +79,15 @@ The state targets use `float.recurrent_state_<suffix>` and `float.conv_state_<su
 
 A tolerance file chooses its metrics by naming keys. A target with no key keeps its absolute check, reported `not_run`, so absolute-only files evaluate exactly as before. Once a target names any key, only the named metrics are checked, and the report lists the rest under `unconfigured_checks` (they do not block). Mark a key `not_applicable` to record that a metric is deliberately not used. A non-finite candidate value makes every error infinite and every cosine `-inf`; a zero reference row has relative error 0 only when the candidate row is zero too.
 
-The report holds, per case, the worst value of every metric per stage (`hidden_max_abs`, `hidden_rel_l2`, `hidden_max_abs_rel`, `hidden_cosine_min`, and `recurrent_state_*`, `conv_state_*`) and the first divergence of every metric (`first_divergent` for the absolute hidden metric, then `first_divergent_<metric>` and `first_divergent_<state>[_<metric>]`): the earliest forward in which a stage violates the bound, the first stage in model order within it, and for the per-position metrics the first position. An absolute bound must be loose enough for the final norm, which is about ten times the layers' scale, so it can blame a late layer for a defect that entered early; the relative metrics do not have that scale problem (R-022 and R-025 report the measurements). The stage-results schema is unchanged: no new input is needed.
+The report holds, per case, the worst value of every metric per stage (`hidden_max_abs`, `hidden_rel_l2`, `hidden_max_abs_rel`, `hidden_cosine_min`, and `recurrent_state_*`, `conv_state_*`) and the first divergence of every metric (`first_divergent` for the absolute hidden metric, then `first_divergent_<metric>` and `first_divergent_<state>[_<metric>]`): the earliest forward in which a stage violates the bound, the first stage in model order within it, and for the per-position metrics the first position. An absolute bound must be loose enough for the final norm, which is about ten times the layers' scale, so it can blame a late layer for a defect that entered early; the relative metrics do not have that scale problem. This is shown on a synthetic capture only (`test_relative_metrics.py`); no real capture has been evaluated with them yet. The stage-results schema is unchanged: no new input is needed.
 
 ## Test the pipeline
 
 ```sh
 uv run --project evidence/pipeline --locked pytest -q evidence/pipeline/tests
 ```
+
+Outside `uv run --project`, a plain `pytest evidence/pipeline/tests` fails on a missing `roost_evidence` import unless `PYTHONPATH=evidence/pipeline/src` is set (the suite also needs `jsonschema` and `pyyaml`).
 
 Tests that need torch (`test_reference_runner.py`, `test_layer_capture_runner.py`) skip unless the `reference` extra is installed: add `--extra reference` and point `UV_PROJECT_ENVIRONMENT` outside the repository to run them.
 
