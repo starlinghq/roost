@@ -1,0 +1,6 @@
+capital: 25 tokens; text equal True; ids equal True
+system-haiku: 44 tokens; text equal True; ids equal True
+multi-turn: 69 tokens; text equal True; ids equal True
+code: 31 tokens; text equal True; ids equal True
+long-context: 134 tokens; text equal True; ids equal True
+transformers 5.20.1

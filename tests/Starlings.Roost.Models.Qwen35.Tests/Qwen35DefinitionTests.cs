@@ -152,6 +152,13 @@ public class Qwen35DefinitionTests
     }
 
     [Fact]
+    public void LogitsArenaIsSizedForFloat32()
+    {
+        // R-022: declaring the logits F32 raised PerTokenBytes from 498688 (BF16 logits) by vocab 248320 x 2 extra bytes.
+        Assert.Equal(498688L + 248320L * 2, Qwen35Model.ForwardLayout.PerTokenBytes);
+    }
+
+    [Fact]
     public void WeightSlotsFollowLayersAndHoldTheChosenDtypes()
     {
         var slots = Qwen35Model.WeightSlots;
