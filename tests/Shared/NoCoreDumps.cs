@@ -9,7 +9,7 @@ namespace Starlings.Roost.Testing;
 /// <summary>
 /// Marks every Roost test process, and every worker process a test re-enters through the same assembly, as non-dumpable on
 /// Linux, so a process that dies by a signal leaves no core and no systemd-coredump record on a developer machine. The
-/// process still dies and the test still fails. GitHub's runners (GITHUB_ACTIONS=true) keep normal crash behaviour, so real
+/// process still dies and the test still fails. GitHub-hosted runners (GITHUB_ACTIONS=true and RUNNER_ENVIRONMENT=github-hosted) keep normal crash behaviour; self-hosted runners, which may run on a developer's desktop, do not, so real
 /// fatal-signal tests run there unchanged.
 /// </summary>
 internal static class NoCoreDumps
@@ -20,7 +20,7 @@ internal static class NoCoreDumps
     [ModuleInitializer]
     internal static void Apply()
     {
-        if (!OperatingSystem.IsLinux() || Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true")
+        if (!OperatingSystem.IsLinux() || (Environment.GetEnvironmentVariable("GITHUB_ACTIONS") == "true" && Environment.GetEnvironmentVariable("RUNNER_ENVIRONMENT") == "github-hosted"))
         {
             return;
         }

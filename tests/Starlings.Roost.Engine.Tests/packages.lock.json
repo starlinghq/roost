@@ -137,6 +137,12 @@
         "dependencies": {
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
         }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
       }
     }
   }

@@ -25,7 +25,7 @@ jobs:
   # starlinghq/starling): files, file names, embedded base64/hex data, commit authors and messages.
   boundary:
     name: boundary
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omarchy]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && fromJSON('["self-hosted", "omarchy"]') || matrix.os }}
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
@@ -55,7 +55,7 @@ jobs:
 
   tools:
     name: tools (pytest, ruff)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omarchy]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - run: pipx run ruff==0.16.9 check .
@@ -69,7 +69,7 @@ jobs:
   # golden layout under clang's MSVC target (clang in MSVC mode, not MSVC itself).
   abi:
     name: abi (C headers, golden layout)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omarchy]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
       - name: Golden layout matches gcc
@@ -102,7 +102,7 @@ jobs:
   # ship no CUDA toolkit, so the MSVC kernel build is not done (kernels/README.md).
   kernels:
     name: kernels (build every SM, provenance)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, omarchy]
     container:
       image: nvidia/cuda:13.3.0-devel-ubuntu24.04@sha256:ef2203909e80b8b976cfc672f7e2ae2b00bc0e25c404ee86d89e10a3802f1c52
     steps:
@@ -136,3 +136,8 @@ jobs:
         with:
           name: kernel-digests
           path: ${{ runner.temp }}/kernel-digests.json
+      # The container runs as root on a self-hosted runner, so hand the workspace and temp tree back to the runner's
+      # user or the next job's checkout cannot clean them.
+      - name: Return workspace ownership to the runner user
+        if: always()
+        run: chown -R "$(stat -c %u:%g "$GITHUB_WORKSPACE/..")" "$GITHUB_WORKSPACE" "$RUNNER_TEMP"

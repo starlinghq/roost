@@ -1,0 +1,45 @@
+identity: abi 1.2, manifest 35103ee802160f27, weights 04b1c301231dd422
+OpenDevice: None; device id 40670ec84ac27b57421b0443b19cbf10
+LoadWeights: None, 5.5 s; sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696
+device SM 86; library roost-kernels-sm86, abi 1.2, SM status Experimental
+device memory: 1516 MiB allocated, 60.6 MiB pinned
+  activation arena: 60.8 MiB
+  plan region: 0.0 MiB
+  state pools: 20.1 MiB
+  probe: 0.0 MiB
+  weights: 1435.1 MiB
+library file libroost_kernels_sm86.so sha256 fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7
+  capital-of-france step 0: 5 token(s) -> 11751; upload 1423 us, forward 292.60 ms (eager, synchronised), argmax 3080 us; finish None
+  capital-of-france step 1: 1 token(s) -> 13; upload 25 us, forward 50.04 ms (eager, synchronised), argmax 422 us; finish None
+  capital-of-france step 2: 1 token(s) -> 198; upload 19 us, forward 47.87 ms (eager, synchronised), argmax 709 us; finish None
+  capital-of-france step 3: 1 token(s) -> 760; upload 18 us, forward 23.13 ms (eager, synchronised), argmax 728 us; finish None
+  capital-of-france step 4: 1 token(s) -> 6511; upload 28 us, forward 4.49 ms (eager, synchronised), argmax 704 us; finish None
+  capital-of-france step 5: 1 token(s) -> 314; upload 14 us, forward 4.31 ms (eager, synchronised), argmax 715 us; finish None
+  capital-of-france step 6: 1 token(s) -> 9338; upload 14 us, forward 4.52 ms (eager, synchronised), argmax 668 us; finish None
+  capital-of-france step 7: 1 token(s) -> 369; upload 14 us, forward 4.39 ms (eager, synchronised), argmax 711 us; finish Length
+prompt capital-of-france: ids [760 6511 314 9338 369] -> greedy tokens [11751 13 198 760 6511 314 9338 369]
+  python-def step 0: 6 token(s) -> 413; upload 19 us, forward 5.57 ms (eager, synchronised), argmax 719 us; finish None
+  python-def step 1: 1 token(s) -> 307; upload 24 us, forward 4.51 ms (eager, synchronised), argmax 700 us; finish None
+  python-def step 2: 1 token(s) -> 2564; upload 14 us, forward 4.37 ms (eager, synchronised), argmax 693 us; finish None
+  python-def step 3: 1 token(s) -> 220; upload 13 us, forward 4.41 ms (eager, synchronised), argmax 776 us; finish None
+  python-def step 4: 1 token(s) -> 16; upload 13 us, forward 4.41 ms (eager, synchronised), argmax 1027 us; finish None
+  python-def step 5: 1 token(s) -> 25; upload 23 us, forward 4.90 ms (eager, synchronised), argmax 385 us; finish None
+  python-def step 6: 1 token(s) -> 198; upload 13 us, forward 4.46 ms (eager, synchronised), argmax 383 us; finish None
+  python-def step 7: 1 token(s) -> 260; upload 13 us, forward 4.38 ms (eager, synchronised), argmax 352 us; finish Length
+prompt python-def: ids [727 73111 1393 1590 198 257] -> greedy tokens [413 307 2564 220 16 25 198 260]
+  moon-landing step 0: 19 token(s) -> 279; upload 21 us, forward 7.29 ms (eager, synchronised), argmax 550 us; finish None
+  moon-landing step 1: 1 token(s) -> 33986; upload 25 us, forward 4.45 ms (eager, synchronised), argmax 385 us; finish None
+  moon-landing step 2: 1 token(s) -> 220; upload 14 us, forward 4.46 ms (eager, synchronised), argmax 351 us; finish None
+  moon-landing step 3: 1 token(s) -> 16; upload 14 us, forward 4.40 ms (eager, synchronised), argmax 349 us; finish None
+  moon-landing step 4: 1 token(s) -> 16; upload 13 us, forward 4.35 ms (eager, synchronised), argmax 369 us; finish None
+  moon-landing step 5: 1 token(s) -> 8684; upload 13 us, forward 4.40 ms (eager, synchronised), argmax 365 us; finish None
+  moon-landing step 6: 1 token(s) -> 13; upload 13 us, forward 4.38 ms (eager, synchronised), argmax 391 us; finish None
+  moon-landing step 7: 1 token(s) -> 561; upload 13 us, forward 4.37 ms (eager, synchronised), argmax 372 us; finish Length
+prompt moon-landing: ids [623 220 16 24 21 24 11 279 1118 12313 25286 383 279 16820 13 561 8684 557 2512] -> greedy tokens [279 33986 220 16 16 8684 13 561]
+determinism: second run of 'capital-of-france' has 0 of 8 steps with logits that differ bitwise; tokens identical
+plan with an out-of-vocabulary token id: Recoverable, code 1002 (OutOfRange)
+plan asking for temperature sampling: Recoverable, code 1003 (Unsupported)
+variants chosen: RmsNorm=rms-norm-flashinfer, QkNorm=qk-norm-flashinfer, Rope=rope-roost, PagedAttention=paged-attention-flashinfer-fa2, SiluAndMul=silu-and-mul-flashinfer, Gemm=gemm-cublaslt, Embedding=embedding-roost, LmHead=lm-head-cublaslt, Residual=residual-stub, CacheWrite=cache-write-roost, GatedDeltaRule=gated-delta-rule-recurrent-aot, CausalConv1d=causal-conv1d-cuda, GatedDeltaRuleGates=gated-delta-rule-gates-cuda, GatedRmsNorm=gated-rms-norm-cuda, SigmoidMul=sigmoid-mul-cuda
+kernel launches: RmsNorm=1568, QkNorm=192, Rope=192, PagedAttention=192, SiluAndMul=768, Gemm=5376, Embedding=32, LmHead=32, Residual=1536, CacheWrite=192, GatedDeltaRule=576, CausalConv1d=576, GatedDeltaRuleGates=576, GatedRmsNorm=576, SigmoidMul=192
+dump written to /home/mark/Projects/roost-wave5/envs/R-025/scratch/gpu.dump
+PASS
