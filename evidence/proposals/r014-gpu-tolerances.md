@@ -23,8 +23,9 @@ reported `passed`; no value was non-finite.
 
 **Conv state.** Roost's slot keeps 3 inputs per channel and the reference keeps 4. The capture builds column 0 from the conv input,
 which is the `in_proj_qkv` Gemm output, for a forward of 4 or more tokens, and from the previous forward otherwise, as R-022's CPU
-recorder does. The harness checked that columns 1 to 3 equal the last rows of that Gemm output. That check held for every forward of
-every case on both SMs.
+recorder does. On the prompt forward (4 or more tokens) the harness checked that columns 1 to 3 equal the last rows of that Gemm
+output; the check held for every case on both SMs. On the 23 decode forwards there is no such check: column 0 comes from the previous
+forward's capture, unchecked.
 
 ## Results (worst over 5 cases x 24 forwards)
 
