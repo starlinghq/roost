@@ -69,11 +69,6 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
-      "Starlings.Acquisition": {
-        "type": "Transitive",
-        "resolved": "0.3.0",
-        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
-      },
       "Starlings.Tokenizers": {
         "type": "Transitive",
         "resolved": "0.3.0",
@@ -158,6 +153,12 @@
           "Starlings.Generation.OnnxGenAI": "[0.3.0, 0.3.0]",
           "Starlings.Models.Qwen35": "[0.3.0, 0.3.0]"
         }
+      },
+      "Starlings.Acquisition": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
       },
       "Starlings.Generation.OnnxGenAI": {
         "type": "CentralTransitive",

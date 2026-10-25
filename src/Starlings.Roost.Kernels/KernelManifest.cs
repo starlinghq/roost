@@ -116,6 +116,24 @@ public sealed class KernelManifest
         return Parse(bytes, expectedSha256);
     }
 
+    /// <summary>
+    /// The manifest this assembly was built with (<c>kernels/manifest.toml</c>, embedded at build time). In a released
+    /// package its digests are those of the release's kernel library assets, which the release workflow checks (R-060).
+    /// </summary>
+    /// <returns>The manifest.</returns>
+    /// <exception cref="KernelLoadException">The resource is missing or malformed (<see cref="RoostErrorCode.AssetMismatch"/>).</exception>
+    public static KernelManifest Embedded()
+    {
+        using var stream = typeof(KernelManifest).Assembly.GetManifestResourceStream(EmbeddedResourceName)
+            ?? throw new KernelLoadException(RoostErrorCode.AssetMismatch, $"the assembly embeds no kernel manifest ({EmbeddedResourceName})");
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return Parse(buffer.GetBuffer().AsSpan(0, (int)buffer.Length));
+    }
+
+    /// <summary>The logical name of the embedded manifest resource.</summary>
+    internal const string EmbeddedResourceName = "Starlings.Roost.Kernels.manifest.toml";
+
     /// <summary>Parses manifest bytes (UTF-8 TOML) and, when given, checks their digest.</summary>
     /// <param name="utf8">The manifest bytes.</param>
     /// <param name="expectedSha256">The pinned digest, or null to skip the check.</param>

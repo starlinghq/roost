@@ -1,0 +1,19 @@
+<Project>
+  <!--
+    Packing turns a ProjectReference into a package dependency with a lower bound only (">= version"). Roost's packages
+    are qualified as one exact set, released together from one tag (R-060, docs/releasing.md), so every dependency
+    created from a ProjectReference is written as the exact range "[version]", as Starling's packages do. Starling
+    packages are already exact pins in Directory.Packages.props.
+
+    This relies on NuGet's internal pack target _GetProjectReferenceVersions and its private item
+    _ProjectReferencesWithVersions (NuGet.Build.Tasks.Pack.targets), which an SDK update may rename. It affects pack only:
+    restore and packages.lock.json still record "[0.0.0-dev, )" for project references. If it stops working, the release
+    drill's nuspec check (tools/release-drill.sh, step 4: every Starlings.* dependency an exact [x.y.z] pin) fails the
+    drill, the advisory packaging workflow and the release; it never ships silently.
+  -->
+  <Target Name="RoostPinProjectReferenceVersions" AfterTargets="_GetProjectReferenceVersions">
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)" ProjectVersion="[%(_ProjectReferencesWithVersions.ProjectVersion)]" />
+    </ItemGroup>
+  </Target>
+</Project>

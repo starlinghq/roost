@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using Starlings.Roost.Abi;
 using Starlings.Roost.Requests;
@@ -47,6 +46,7 @@ public sealed class KernelLibrary : IDisposable
     private const uint KnownFlags = 0x1F;
 
     private readonly nint _handle;
+    private IDisposable? _keepAlive;
     private readonly KernelExports _exports;
     private bool _disposed;
 
@@ -115,18 +115,7 @@ public sealed class KernelLibrary : IDisposable
             throw new ProfileUnsupportedException(OpId.None, options.Sm, $"no kernel library file at {path}");
         }
 
-        VerifyFile(path, expected);
-
-        nint handle;
-        try
-        {
-            handle = NativeLibrary.Load(path);
-        }
-        catch (Exception e) when (e is DllNotFoundException or BadImageFormatException)
-        {
-            throw new KernelLoadException(RoostErrorCode.Internal, $"the OS could not load {path}: {e.Message}", e);
-        }
-
+        var (handle, verified) = LoadVerified(path, expected);
         try
         {
             var exports = new KernelExports(
@@ -135,11 +124,41 @@ public sealed class KernelLibrary : IDisposable
                 (delegate* unmanaged<OpTable*, int>)Export(handle, "roost_register"),
                 (delegate* unmanaged<ContextCreateParams*, nint*, int>)Export(handle, "roost_context_create"),
                 (delegate* unmanaged<nint, int>)Export(handle, "roost_context_destroy"));
-            return Attach(path, options, status, handle, exports);
+            return Attach(path, options, status, handle, exports, verified);
         }
         catch
         {
             NativeLibrary.Free(handle);
+            verified.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Verifies a library file against the manifest and loads the verified bytes (<see cref="VerifiedLibraryFile"/>: no
+    /// window between the digest check and the load). The returned file must stay open until after
+    /// <see cref="NativeLibrary.Free"/>: while it is open, no other file can get its <c>/proc/self/fd</c> number, so a later
+    /// <c>dlopen</c> of a reused fd path can never be answered with this already-loaded library (glibc matches loaded objects
+    /// by path name before opening anything).
+    /// </summary>
+    /// <param name="path">The library file.</param>
+    /// <param name="expected">The manifest's size and digest.</param>
+    /// <returns>The OS handle and the open verified file.</returns>
+    internal static (nint Handle, VerifiedLibraryFile File) LoadVerified(string path, ManifestBinary expected)
+    {
+        var verified = VerifiedLibraryFile.Open(path, expected);
+        try
+        {
+            return (NativeLibrary.Load(verified.LoadPath), verified);
+        }
+        catch (Exception e) when (e is DllNotFoundException or BadImageFormatException)
+        {
+            verified.Dispose();
+            throw new KernelLoadException(RoostErrorCode.Internal, $"the OS could not load {path}: {e.Message}", e);
+        }
+        catch
+        {
+            verified.Dispose();
             throw;
         }
     }
@@ -194,9 +213,18 @@ public sealed class KernelLibrary : IDisposable
         {
             NativeLibrary.Free(_handle);
         }
+
+        // Closed only after the unload (see LoadVerified).
+        _keepAlive?.Dispose();
     }
 
-    internal static unsafe KernelLibrary Attach(string path, KernelLoadOptions options, SmStatus status, nint handle, KernelExports exports)
+    internal static unsafe KernelLibrary Attach(
+        string path,
+        KernelLoadOptions options,
+        SmStatus status,
+        nint handle,
+        KernelExports exports,
+        IDisposable? keepAlive = null)
     {
         var manifest = options.Manifest;
         var abi = exports.AbiVersion();
@@ -217,7 +245,10 @@ public sealed class KernelLibrary : IDisposable
                 $"roost_register failed with {(KernelStatus)rc}: {LastError(exports)}");
         }
 
-        var library = new KernelLibrary(path, ReadName(table.LibraryName), options.Sm, status, abi, manifest, handle, exports);
+        var library = new KernelLibrary(path, ReadName(table.LibraryName), options.Sm, status, abi, manifest, handle, exports)
+        {
+            _keepAlive = keepAlive,
+        };
         library.Kernels = ReadTable(library, table, abi);
         CrossCheck(library, manifest, options.Sm);
         return library;
@@ -341,7 +372,7 @@ public sealed class KernelLibrary : IDisposable
         }
     }
 
-    private static SmStatus Admit(KernelLoadOptions options)
+    internal static SmStatus Admit(KernelLoadOptions options)
     {
         var manifest = options.Manifest;
         ArgumentNullException.ThrowIfNull(manifest);
@@ -368,7 +399,7 @@ public sealed class KernelLibrary : IDisposable
         };
     }
 
-    private static ManifestBinary ExpectedBinary(KernelLoadOptions options)
+    internal static ManifestBinary ExpectedBinary(KernelLoadOptions options)
     {
         var manifest = options.Manifest;
         var binaries = manifest.Variants.SelectMany(v => v.Binaries).Where(b => b.Arch == options.Sm).ToList();
@@ -387,25 +418,6 @@ public sealed class KernelLibrary : IDisposable
         }
 
         return binaries.FirstOrDefault(b => b.Bytes != 0) ?? binaries[0];
-    }
-
-    private static void VerifyFile(string path, ManifestBinary expected)
-    {
-        using var stream = File.OpenRead(path);
-        if (expected.Bytes != 0 && stream.Length != expected.Bytes)
-        {
-            throw new KernelLoadException(
-                RoostErrorCode.AssetMismatch,
-                $"kernel library {path} is {stream.Length} bytes; the manifest says {expected.Bytes}");
-        }
-
-        var actual = Convert.ToHexStringLower(SHA256.HashData(stream));
-        if (!string.Equals(actual, expected.Sha256, StringComparison.Ordinal))
-        {
-            throw new KernelLoadException(
-                RoostErrorCode.AssetMismatch,
-                $"kernel library digest mismatch for {path}: manifest {expected.Sha256}, file {actual}");
-        }
     }
 
     private static nint Export(nint handle, string name)
