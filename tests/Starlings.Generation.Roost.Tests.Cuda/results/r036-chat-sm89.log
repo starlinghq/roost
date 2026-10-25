@@ -1,0 +1,13 @@
+worker ready in 13.1 s; context 512 tokens
+[ok] What is the capital of France? Answer in one word.
+  ->  Paris
+  finish stop, usage 24+2, 0.61 s
+[ok] Write one sentence about the sea.
+  -> The vast, endless ocean stretches endlessly toward the horizon, a silent guardian that defines the rhythm of the world.
+  finish stop, usage 19+23, 0.20 s
+[ok] List three prime numbers.
+  -> Here are three prime numbers:  1.  **2** 2.  **3** 3.  **5**  *(Note: 2 is the only even prime number, and 3 is the only prime number
+  finish length, usage 17+48, 1.17 s
+cancelled mid-stream
+after cancel: Hello! How can I help you today (length)
+PASS
