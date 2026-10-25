@@ -2,7 +2,8 @@
 # R-025 GPU evidence: greedy decode of Qwen3.5-0.8B on the eager worker (SM 86 by default, through gpu-lease), then the same prompts on
 # CpuOps (double precision, teacher-forced with the GPU's tokens) and a text report of the differences. Two processes so the
 # GPU lease is held only while the GPU is used. Every heavy step takes the wave's heavy lock. The checkpoint, the kernel
-# library and the dump stay outside the repository.
+# library and the dump stay outside the repository. The log starts with the leased GPU's name, driver, compute capability and CUDA
+# versions (nvidia-smi, nvcc), since the harness itself prints only the SM and a device-id hash.
 # usage: run-eager.sh <checkpoint-dir> <kernel-build-dir> <scratch-dir> [label]
 # ROOST_GPU_DEVICE picks the gpu-lease device (default 3090; 4060 for the RTX 4060 Ti, SM 89, with label sm89).
 set -euo pipefail
@@ -17,7 +18,13 @@ LOCK=evidence/registry/qwen3.5-0.8b.lock.toml
 MANIFEST=kernels/manifest.toml
 EXE=tests/Starlings.Roost.Worker.Tests.Cuda/bin/Release/net10.0/Starlings.Roost.Worker.Tests.Cuda
 RESULTS=tests/Starlings.Roost.Worker.Tests.Cuda/results
+# Printed inside the lease, where CUDA_VISIBLE_DEVICES is the leased GPU's UUID.
+IDENTIFY='nvidia-smi -i "$CUDA_VISIBLE_DEVICES" --query-gpu=name,driver_version,compute_cap --format=csv,noheader | sed "s/^/gpu: /"
+echo "cuda: driver UMD $(nvidia-smi --version | grep -o "CUDA UMD version *: *[0-9.]*" | grep -o "[0-9.]*$"); toolkit $(nvcc --version 2>/dev/null | grep -o "release [0-9.]*" || echo unknown)"
+exec "$@"'
 dotnet build tests/Starlings.Roost.Worker.Tests.Cuda -c Release -v q
 mkdir -p "$SCRATCH"
-flock "$HEAVY" -c "tools/gpu-lease run --device $DEVICE --need-mib 6000 --wait 3600 --stream F -- $EXE gpu --ckpt $HUB --lock $LOCK --manifest $MANIFEST --kernels $KERNELS --out $SCRATCH/gpu.dump --allow-untested" 2>&1 | tee "$RESULTS/r025-eager-decode-$LABEL.log"
-flock "$HEAVY" -c "$EXE cpu --ckpt $HUB --lock $LOCK --dump $SCRATCH/gpu.dump --report $RESULTS/r025-cpu-compare-$LABEL.txt" 2>&1 | tail -n 5
+flock "$HEAVY" tools/gpu-lease run --device "$DEVICE" --need-mib 6000 --wait 3600 --stream F -- \
+  bash -c "$IDENTIFY" identify "$EXE" gpu --ckpt "$HUB" --lock "$LOCK" --manifest "$MANIFEST" --kernels "$KERNELS" \
+  --out "$SCRATCH/gpu.dump" --allow-untested 2>&1 | tee "$RESULTS/r025-eager-decode-$LABEL.log"
+flock "$HEAVY" "$EXE" cpu --ckpt "$HUB" --lock "$LOCK" --dump "$SCRATCH/gpu.dump" --report "$RESULTS/r025-cpu-compare-$LABEL.txt" 2>&1 | tail -n 5
