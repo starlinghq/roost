@@ -53,14 +53,28 @@ The forward runs the whole Qwen3.5 block on `CpuOps` (`Qwen35Model.NumericallyCo
 Zero-centred norms are not in v3, so every decoder, q/k and final norm slot holds `bfloat16(1 + w)` (the ADR's loading rule;
 `WeightTransform.OnePlus`). transformers computes `1 + w` in float32, so those norms agree with it only to bfloat16 weight rounding.
 
-## Development evidence (not a fixture, not parity)
+## Attention window and logits
+
+`PagedAttentionArgs.WindowLeft` is a sliding window when it is not negative, and -1 disables it. An unbound field would be 0, a
+window of one token, so the generator now rejects an unbound `WindowLeft` (ROOST015) and `CpuOps` rejects 0 (maintainer decision
+2026-10-20). The full-attention node binds `WindowLeft=-1`. Until R-022 it did not, and every query attended to itself only; position 0 and
+the linear layers were unaffected, so the smoke test below still passed. `LmHead` writes float32 logits (C3), and the definition
+declares the `logits` value `F32` so that `Output_logits` and the arena size agree with what the op writes
+(`ForwardLayout.PerTokenBytes` 498688 before, 995328 after: the generator sizes the logits per token of capacity).
+
+## Development evidence (not a fixture)
 
 One CPU forward on the locked checkpoint (Release, `CpuOps`) for the prompt "The capital of France is" (ids 760 6511 314 9338 369):
-the top logits are 279 " the" 15.008, 7172 " located" 14.179, 264 " a" 13.978, 11751 " Paris" 13.930, 303 " in" 13.650. Before the
-gating ops the argmax was 105607, a nonsense token. Prefill 11.4 s, decode step 4.7 s. Logits are finite, and prefill plus a decode
-step gives the same logits (cosine 1.000000) as one prefill. No reference comparison was made; R-022 does that.
+the top logits are 11751 " Paris" 14.875, 279 " the" 14.596, 7172 " located" 14.273, 25 14.062, 198 13.982 (transformers fp32 on
+the same ids: 14.871, 14.587, 14.285, 14.086, 14.022). Before the gating ops the argmax was 105607, a nonsense token; with the
+one-token attention window it was " the". Prefill 10 to 19 s, decode step 2.7 s. Logits are finite, and prefill plus a decode step
+gives the same logits (cosine 1.000000) as one prefill.
+
+Per-layer parity against transformers fp32 (hidden states of every layer, Gated DeltaNet recurrent and convolution state, step-0
+log-probabilities, five chat prompts, 24 forwards each) is R-022's: `docs/m0/roost-r022-cpu-parity.md`. At attention layers 3
+and 15 a bf16 emulation accounts for the remaining difference as bfloat16 storage of activations; for the 18 Gated DeltaNet layers
+that is inferred, as is the reduction of the multimodal rope to plain rotary embedding for text-only prompts (not tested directly).
 
 ## Unverified
 
-- A text-only prompt reducing the interleaved mrope (sections `[11,11,10]`) to plain rotary embedding is not tested here; R-022 must check it.
 - Package restore: the nupkg lists Abstractions, Graph and Ops as dependencies, but those projects are not packable yet, so it cannot be restored standalone.

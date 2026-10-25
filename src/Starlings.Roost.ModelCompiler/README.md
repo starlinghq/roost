@@ -113,6 +113,7 @@ evaluator over the node attributes above.
 | ROOST012 | A fused op has no known unfused form |
 | ROOST013 | A contract type the generated code needs is not referenced |
 | ROOST014 | (warning) A weight slot is never read; `[Weight(..., Reserved = true)]` marks a slot loaded for a node that cannot be written yet |
+| ROOST015 | A `PagedAttention` node does not bind `WindowLeft` (an unbound field is 0, not "no window"); bind `WindowLeft=-1` for no window |
 
 A node whose op or arguments fail is reported once; nodes that read its outputs are not reported again.
 

@@ -32,12 +32,13 @@ namespace Starlings.Roost.Models.Qwen35;
 //
 // Not modelled: the MTP head (Qwen35WeightMap.Mtp, unused in M0), vision, YaRN. Multimodal rope (mrope_interleaved=true, sections
 // [11,11,10]) gives every section the same position for a text-only prompt, so it is the plain rotary embedding on the first 64
-// dimensions. That reduction is inferred from R-022's per-layer agreement with transformers, not tested directly
-// (docs/m0/roost-r022-cpu-parity.md).
+// dimensions. That is inferred from R-022's per-layer agreement at the attention layers and its bf16 emulation of layers 3
+// and 15, not tested directly (docs/m0/roost-r022-cpu-parity.md).
 //
-// ATTENTION WINDOW: PagedAttentionArgs.WindowLeft is a window when it is not negative, and an unbound field is 0, a window of one
-// token. Full attention binds WindowLeft=-1 (R-022 found the forward attending to the current token only). LmHead writes float32
-// logits (C3), so the logits value is declared F32.
+// ATTENTION WINDOW: PagedAttentionArgs.WindowLeft is a window when it is not negative. The generator rejects a PagedAttention node
+// that does not bind it (ROOST015), and CpuOps throws on a window of 0. Full attention binds WindowLeft=-1, no window (R-022 found
+// the forward attending to the current token only when the field was left unbound). LmHead writes float32 logits (C3), so the
+// logits value is declared F32.
 [RoostModel("qwen3.5-0.8b", Dtype = "BF16")]
 [Dim("hidden", 1024)]
 [Dim("inter", 3584)]

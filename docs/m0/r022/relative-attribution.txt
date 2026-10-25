@@ -1,0 +1,32 @@
+== cand
+capital: first divergent none
+system-haiku: first divergent none
+multi-turn: first divergent none
+code: first divergent none
+long-context: first divergent none
+max row-relative L2 over all stages: 0.067
+== cand-window0
+capital: first divergent forward 0 layer.3 position 2 (0.229)
+system-haiku: first divergent forward 0 layer.3 position 2 (0.15)
+multi-turn: first divergent forward 0 layer.3 position 2 (0.229)
+code: first divergent forward 0 layer.3 position 2 (0.229)
+long-context: first divergent forward 0 layer.3 position 2 (0.229)
+max row-relative L2 over all stages: 1.62
+== drop-attention-gate
+capital: first divergent forward 0 layer.3 position 0 (2.06)
+long-context: first divergent forward 0 layer.3 position 0 (2.06)
+max row-relative L2 over all stages: 5.82
+| long-context | 23.3 | -25.7 | 18.1 | 18.1 | False | 0.494 | 10.8 | 0.324 (0.199) | f0 (0.494), f1 (11.3), f2 (6.36), f3 (2.28), f4 (0.792), f5 (6.43), f6 (2.35), f7 (4.81), f8 (1.89), f9 (1.54), f10 (8.85), f11 (5.91), f12 (0.324), f13 (1.2), f14 (8.2), f16 (3.33), f17 (7.33), f18 (0.524), f19 (0.439), f20 (0.641), f21 (0.968), f22 (0.678), f23 (1.5) |
+
+== drop-z-gate
+capital: first divergent forward 0 layer.0 position 0 (2.05)
+long-context: first divergent forward 0 layer.0 position 0 (2.05)
+max row-relative L2 over all stages: 11.3
+| long-context | 34.8 | -13.3 | 33.4 | 33.4 | False | 0.494 | 9.43 | 0.324 (4.12) | f0 (0.494), f1 (11.3), f2 (6.36), f3 (2.28), f4 (0.792), f5 (6.43), f6 (2.35), f7 (4.81), f8 (1.89), f9 (1.54), f10 (8.85), f11 (5.91), f12 (0.324), f13 (1.2), f14 (8.2), f15 (3.98), f16 (3.33), f17 (7.33), f18 (0.524), f19 (0.439), f20 (0.641), f21 (0.968), f22 (0.678), f23 (1.5) |
+
+== norm-eps-1e-5
+capital: first divergent forward 0 layer.0 position 0 (0.679)
+long-context: first divergent forward 0 layer.0 position 0 (0.679)
+max row-relative L2 over all stages: 1.41
+| long-context | 17 | -28.3 | 3.25 | 1.02 | False | 0.494 | 8.04 | 0.324 (1.63) | f0 (0.494), f3 (2.28), f4 (0.792), f6 (2.35), f7 (4.81), f12 (0.324), f14 (8.2), f19 (0.439), f20 (0.641), f21 (0.968), f22 (0.678), f23 (1.5) |
+

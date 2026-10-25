@@ -19,3 +19,4 @@ ROOST011 | Roost | Error | State group is not valid
 ROOST012 | Roost | Error | Fused op has no known unfused form
 ROOST013 | Roost | Error | A contract type the generated code needs is not referenced
 ROOST014 | Roost | Warning | Weight slot is never read
+ROOST015 | Roost | Error | PagedAttention does not bind WindowLeft
