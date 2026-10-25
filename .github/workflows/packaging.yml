@@ -1,0 +1,42 @@
+name: packaging
+
+# Advisory packaging check (R-060): on a pull request that touches how packages are built or released, run the release
+# drill without tests and without kernels (tools/release-drill.sh --no-kernels --skip-tests): pack the release set, check
+# the nuspecs, and restore and run a clean consumer from a local feed. It catches a packaging regression before a tag
+# does. GitHub-hosted, read-only token, no secrets. Not a required check yet (docs/branch-protection.md).
+on:
+  pull_request:
+    paths:
+      - "Directory.Build.props"
+      - "Directory.Build.targets"
+      - "Directory.Packages.props"
+      - "**/*.csproj"
+      - "tools/release-*"
+      - "tools/release-drill/**"
+      - ".github/workflows/release.yml"
+      - ".github/workflows/packaging.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packaging-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  drill:
+    name: packaging drill (advisory)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Release drill (no tests, no kernels)
+        run: tools/release-drill.sh --version "0.0.1-ci.${GITHUB_RUN_NUMBER}" --no-kernels --skip-tests --out "$RUNNER_TEMP/packages"
