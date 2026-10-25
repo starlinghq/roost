@@ -13,7 +13,7 @@ Status: **proposed**, for the maintainer. Nothing here is binding. The values ar
 | Devices | RTX 3090 (SM 86), library `fdf421a9…`. RTX 4060 Ti (SM 89), library `e4b8798c…`. These are the manifest's R-034 build. Leases through `tools/gpu-lease`, stream B3. |
 | Checkpoint | The locked snapshot. All 13 files match `evidence/registry/qwen3.5-0.8b.lock.toml`. |
 
-The run artifacts are outside Git, under `/home/mark/Projects/roost-evidence/R-014/`:
+The evaluator reports, summary, per-SM run records and analysis scripts are committed in [`docs/m0/r014-gpu/`](../../docs/m0/r014-gpu/README.md), with SHA-256 digests of the GPU captures. The large captures stay outside Git, under `/home/mark/Projects/roost-evidence/R-014/`:
 
 - captures in `gpu-sm86/` and `gpu-sm89/` (`layers/*.safetensors`, `step0/*.f32`, `candidate.jsonl`, `run.json`, `capture.log`);
 - evaluator reports in `eval/layers-sm86.json` and `eval/layers-sm89.json`, and the summary in `eval/summary.json`.
