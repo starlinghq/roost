@@ -1,0 +1,13 @@
+library roost-kernels-sm89 abi 0x10002, 19 variants; device sm_89; 2026-10-25T02:38:10.1482207Z
+PASS    gated-rms-norm-cuda fixed-BF16-wF32-592x128 class=elementwise-bf16 utilisation=0.353 violations=0 det=pass inv=pass
+PASS    gated-rms-norm-cuda fixed-BF16-wF32-16x128 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gated-rms-norm-cuda fixed-in-place-BF16-wF32-480x128 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gated-rms-norm-cuda fixed-F32-wBF16-33x100 class=hybrid-f32 utilisation=0.038 violations=0 det=pass inv=pass
+PASS    gated-rms-norm-cuda fixed-in-place-F32-wF32-9x3000 class=hybrid-f32 utilisation=0.032 violations=0 det=pass inv=pass
+PASS    gated-rms-norm-cuda random-0-F32-wF32-147x804 class=hybrid-f32 utilisation=0.035 violations=0 det=pass inv=pass
+PASS    gated-rms-norm-cuda random-1-F32-wF32-19x1388 class=hybrid-f32 utilisation=0.035 violations=0 det=pass inv=pass
+PASS    gated-rms-norm-cuda random-2-F32-wBF16-166x220 class=hybrid-f32 utilisation=0.032 violations=0 det=pass inv=pass
+roost-kernels-sm89: 8 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  GatedRmsNorm    gated-rms-norm-cuda                pass=8    fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm89/gated-rms-norm-cuda.synccheck.results.json
+=== green

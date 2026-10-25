@@ -1,0 +1,14 @@
+library roost-kernels-sm89 abi 0x10002, 19 variants; device sm_89; 2026-10-25T02:34:49.5188550Z
+PASS    gated-delta-rule-chunk-aot fixed-BF16-64.128.65.1.0.63-views-init-g0.2 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.416 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-chunk-aot fixed-BF16-70.40-views-init-g2.5 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.319 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-chunk-aot fixed-BF16-1.1.1.1-views-init-g0.2 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.285 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-chunk-aot fixed-BF16-5.1.1-dense-init-g0.2 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.378 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-chunk-aot fixed-BF16-3-views-g0.2 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.336 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-chunk-aot fixed-BF16-1.0.1-views-init-g0.2 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.234 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-chunk-aot random-0-BF16-1.47.43-dense-init-g0.2 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.384 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-chunk-aot random-1-BF16-29-views-init-g1 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.332 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-chunk-aot random-2-BF16-28.41.2.16-views-init-g2.5 class=gdn-chunk-bf16,gdn-chunk-state-f32 utilisation=0.519 violations=0 det=pass inv=pass
+roost-kernels-sm89: 9 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  GatedDeltaRule  gated-delta-rule-chunk-aot         pass=9    fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm89/gated-delta-rule-chunk-aot.racecheck.results.json
+=== green

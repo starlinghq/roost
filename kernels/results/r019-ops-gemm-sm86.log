@@ -1,0 +1,94 @@
+# R-019: kernels/tests/ops-cuda, group gemm only, RTX 3090 (SM 86), run 2026-10-25T02:24Z.
+# Provenance lines added after the run (the harness prints only the library name): library
+# libroost_kernels_sm86.so sha256 d84e95be84b608ec3baee330a58675a7280af45f299fb9c4402cf073a3ba7370 (the R-019 build, kernels/ source
+# as at 7b2b2cf); harness Roost.KernelOps.Tests.Cuda built from kernels/tests/ops-cuda as committed in 8eaa795 (unchanged
+# through 7b2b2cf). Command: tools/gpu-lease run --device 3090 --need-mib 4000 --stream D --wait 3600 --
+#   dotnet Roost.KernelOps.Tests.Cuda.dll libroost_kernels_sm86.so --filter gemm --log <this file>
+library roost-kernels-sm86 abi 0x10002 entries 19; device sm_86; 2026-10-25T02:24:32.5397135Z
+--- gemm
+PASS Gemm BF16 q_proj m=1 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=4096      max_abs=4.88E-004 ref_rms=1.01E+000 utilisation=0.131 violations=0 nonfinite=0
+     algo=31 tile=15 stages=17 splitk=1 scratch=0 (q_proj, m=1)
+PASS Gemm BF16 q_proj m=3 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=12288     max_abs=7.81E-003 ref_rms=9.79E-001 utilisation=0.246 violations=0 nonfinite=0
+PASS Gemm BF16 q_proj m=17 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=69632     max_abs=4.88E-004 ref_rms=9.99E-001 utilisation=0.141 violations=0 nonfinite=0
+PASS Gemm BF16 q_proj m=64 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=262144    max_abs=1.56E-002 ref_rms=9.99E-001 utilisation=0.413 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=1 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=512       max_abs=0.00E+000 ref_rms=9.81E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=3 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1536      max_abs=3.81E-006 ref_rms=1.03E+000 utilisation=0.002 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=17 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=8704      max_abs=0.00E+000 ref_rms=1.00E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 k_proj m=64 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=32768     max_abs=7.81E-003 ref_rms=1.01E+000 utilisation=0.361 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=1 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1024      max_abs=0.00E+000 ref_rms=1.02E+000 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=3 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=3072      max_abs=7.81E-003 ref_rms=1.04E+000 utilisation=0.324 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=17 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=7.81E-003 ref_rms=1.01E+000 utilisation=0.385 violations=0 nonfinite=0
+PASS Gemm BF16 o_proj m=64 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=65536     max_abs=3.91E-003 ref_rms=1.00E+000 utilisation=0.330 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=1 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=7168      max_abs=7.81E-003 ref_rms=9.99E-001 utilisation=0.301 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=3 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=21504     max_abs=7.81E-003 ref_rms=9.89E-001 utilisation=0.327 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=17 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=121856    max_abs=7.81E-003 ref_rms=1.00E+000 utilisation=0.390 violations=0 nonfinite=0
+PASS Gemm BF16 gate_up m=64 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=458752    max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=0.457 violations=0 nonfinite=0
+PASS Gemm BF16 down m=1 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=1024      max_abs=0.00E+000 ref_rms=1.05E+000 utilisation=0.000 violations=0 nonfinite=0
+     algo=13 tile=0 stages=0 splitk=1 scratch=0 (down, m=1)
+PASS Gemm BF16 down m=3 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=3072      max_abs=9.54E-007 ref_rms=9.91E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm BF16 down m=17 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=7.81E-003 ref_rms=9.92E-001 utilisation=0.400 violations=0 nonfinite=0
+PASS Gemm BF16 down m=64 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=65536     max_abs=7.81E-003 ref_rms=9.94E-001 utilisation=0.413 violations=0 nonfinite=0
+PASS Gemm F16 q_proj m=1 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=4096      max_abs=9.77E-004 ref_rms=1.03E+000 utilisation=0.434 violations=0 nonfinite=0
+     algo=31 tile=15 stages=17 splitk=1 scratch=0 (q_proj, m=1)
+PASS Gemm F16 q_proj m=3 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=12288     max_abs=9.77E-004 ref_rms=9.90E-001 utilisation=0.423 violations=0 nonfinite=0
+PASS Gemm F16 q_proj m=17 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=69632     max_abs=1.95E-003 ref_rms=9.99E-001 utilisation=0.464 violations=0 nonfinite=0
+PASS Gemm F16 q_proj m=64 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=262144    max_abs=1.95E-003 ref_rms=9.96E-001 utilisation=0.469 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=1 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=512       max_abs=2.44E-004 ref_rms=1.01E+000 utilisation=0.210 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=3 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=1536      max_abs=9.77E-004 ref_rms=1.00E+000 utilisation=0.361 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=17 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=8704      max_abs=1.95E-003 ref_rms=9.93E-001 utilisation=0.467 violations=0 nonfinite=0
+PASS Gemm F16 k_proj m=64 n=512 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=32768     max_abs=1.95E-003 ref_rms=9.88E-001 utilisation=0.434 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=1 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=1024      max_abs=7.63E-006 ref_rms=1.03E+000 utilisation=0.028 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=3 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=3072      max_abs=1.53E-005 ref_rms=9.87E-001 utilisation=0.052 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=17 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=17408     max_abs=9.77E-004 ref_rms=9.96E-001 utilisation=0.442 violations=0 nonfinite=0
+PASS Gemm F16 o_proj m=64 n=1024 k=2048 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=65536     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=0.448 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=1 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=7168      max_abs=1.95E-003 ref_rms=9.97E-001 utilisation=0.408 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=3 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=21504     max_abs=1.95E-003 ref_rms=9.98E-001 utilisation=0.470 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=17 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=121856    max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=0.461 violations=0 nonfinite=0
+PASS Gemm F16 gate_up m=64 n=7168 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=458752    max_abs=3.91E-003 ref_rms=9.95E-001 utilisation=0.473 violations=0 nonfinite=0
+PASS Gemm F16 down m=1 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=1024      max_abs=0.00E+000 ref_rms=9.84E-001 utilisation=0.000 violations=0 nonfinite=0
+     algo=13 tile=0 stages=0 splitk=1 scratch=0 (down, m=1)
+PASS Gemm F16 down m=3 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=3072      max_abs=4.88E-004 ref_rms=9.63E-001 utilisation=0.324 violations=0 nonfinite=0
+PASS Gemm F16 down m=17 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=17408     max_abs=1.95E-003 ref_rms=1.00E+000 utilisation=0.427 violations=0 nonfinite=0
+PASS Gemm F16 down m=64 n=1024 k=3584 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-f16           n=65536     max_abs=1.95E-003 ref_rms=9.99E-001 utilisation=0.470 violations=0 nonfinite=0
+PASS Gemm BF16 q_proj-m200 m=200 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=256 class=gemm-bf16          n=819200    max_abs=1.56E-002 ref_rms=1.00E+000 utilisation=0.460 violations=0 nonfinite=0
+PASS Gemm BF16 down-nontransposed m=17 n=1024 k=3584 tB=0 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=17408     max_abs=7.81E-003 ref_rms=1.01E+000 utilisation=0.335 violations=0 nonfinite=0
+PASS Gemm BF16 alpha m=17 n=1024 k=2048 tB=1 bias=0 a/b=0.5/0 bucket=0 class=gemm-bf16          n=17408     max_abs=1.95E-003 ref_rms=5.03E-001 utilisation=0.312 violations=0 nonfinite=0
+PASS Gemm F16 alpha m=5 n=512 k=1024 tB=0 bias=0 a/b=2/0 bucket=64 class=gemm-f16           n=2560      max_abs=1.95E-003 ref_rms=1.99E+000 utilisation=0.342 violations=0 nonfinite=0
+PASS Gemm BF16 small-k8 m=4 n=64 k=8 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=256       max_abs=0.00E+000 ref_rms=8.74E-001 utilisation=0.000 violations=0 nonfinite=0
+PASS Gemm n=1024 k=3584 bucket 64: two runs are bit-identical   algo=21 tile=15 stages=18 splitk=5 scratch=1310720
+PASS Gemm n=1024 k=3584 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=1024 k=3584: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=4096 k=1024 bucket 64: two runs are bit-identical   algo=6 tile=15 stages=17 splitk=1 scratch=0
+PASS Gemm n=4096 k=1024 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=4096 k=1024: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=7168 k=1024 bucket 64: two runs are bit-identical   algo=6 tile=18 stages=15 splitk=1 scratch=0
+PASS Gemm n=7168 k=1024 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=7168 k=1024: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=1024 k=2048 bucket 64: two runs are bit-identical   algo=21 tile=20 stages=11 splitk=9 scratch=2097152
+PASS Gemm n=1024 k=2048 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=1024 k=2048: m above the planned bucket -> INVALID_ARGUMENT 
+PASS Gemm n=512 k=1024 bucket 64: two runs are bit-identical    algo=21 tile=11 stages=20 splitk=8 scratch=1048576
+PASS Gemm n=512 k=1024 bucket 64: rows of m in {1,2,5,17,33,63} equal the m=64 rows bitwise 
+PASS Gemm n=512 k=1024: m above the planned bucket -> INVALID_ARGUMENT 
+PASS LmHead BF16 vocab=4096 dim=1024 padded=4096 selected=1 cap=0 class=lm-head-f32        n=4096      max_abs=4.29E-006 ref_rms=1.65E+000 utilisation=0.007 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead BF16 vocab=4096 dim=1024 padded=4096 selected=3 cap=0 class=lm-head-f32        n=12288     max_abs=1.05E-005 ref_rms=1.56E+000 utilisation=0.024 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead BF16 vocab=4000 dim=1024 padded=4096 selected=5 cap=30 class=lm-head-f32        n=20000     max_abs=1.05E-005 ref_rms=1.60E+000 utilisation=0.019 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead F16 vocab=4096 dim=1024 padded=4128 selected=2 cap=0 class=lm-head-f32        n=8192      max_abs=1.67E-005 ref_rms=1.57E+000 utilisation=0.022 violations=0 nonfinite=0
+PASS LmHead padded logits columns untouched                     
+PASS LmHead bucket 8: two runs, and rows {1,3,5} alone, are bitwise equal to the 8-row call algo=21 tile=15 stages=12 splitk=1 scratch=0
+PASS Gemm transpose_a -> UNSUPPORTED                            
+PASS Gemm f32 -> UNSUPPORTED                                    
+PASS Gemm run with another n than planned -> INVALID_ARGUMENT   
+PASS Gemm misaligned a -> INVALID_ARGUMENT                      
+PASS Gemm short d -> INVALID_ARGUMENT                           
+PASS Gemm BF16 with C (beta != 0) -> UNSUPPORTED from plan and from run, D untouched plan 2, run 2, d untouched True
+PASS Gemm BF16 with bias -> UNSUPPORTED from plan and from run, D untouched plan 2, run 2, d untouched True
+PASS Gemm BF16 with C (beta != 0) and bias -> UNSUPPORTED from plan and from run, D untouched plan 2, run 2, d untouched True
+PASS Gemm F16 with C (beta != 0) -> UNSUPPORTED from plan and from run, D untouched plan 2, run 2, d untouched True
+PASS Gemm F16 with bias -> UNSUPPORTED from plan and from run, D untouched plan 2, run 2, d untouched True
+PASS Gemm F16 with C (beta != 0) and bias -> UNSUPPORTED from plan and from run, D untouched plan 2, run 2, d untouched True
+PASS Gemm plan into a too-small plan record -> WORKSPACE_TOO_SMALL 
+=== 81 passed, 0 failed

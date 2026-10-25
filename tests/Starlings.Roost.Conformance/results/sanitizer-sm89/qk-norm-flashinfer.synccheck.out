@@ -1,0 +1,23 @@
+library roost-kernels-sm89 abi 0x10002, 19 variants; device sm_89; 2026-10-25T02:37:27.7367026Z
+PASS    qk-norm-flashinfer fixed-BF16-t1 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    qk-norm-flashinfer fixed-BF16-t5 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer fixed-BF16-t33 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer fixed-strided-BF16-t9-s2560-704 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer random-0-BF16-t13 class=elementwise-bf16 utilisation=0.344 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer random-1-BF16-t64 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer random-2-BF16-t43-s2224-584 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer fixed-F16-t1 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    qk-norm-flashinfer fixed-F16-t5 class=elementwise-f16 utilisation=0.251 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer fixed-F16-t33 class=elementwise-f16 utilisation=0.477 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer fixed-strided-F16-t9-s2560-704 class=elementwise-f16 utilisation=0.410 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer random-0-F16-t38 class=elementwise-f16 utilisation=0.482 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer random-1-F16-t23-s2104-536 class=elementwise-f16 utilisation=0.396 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer random-2-F16-t32 class=elementwise-f16 utilisation=0.439 violations=0 det=pass inv=pass
+PASS    qk-norm-flashinfer golden-QkNorm-BF16-t1 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    qk-norm-flashinfer golden-QkNorm-BF16-t5 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    qk-norm-flashinfer golden-QkNorm-F16-t1 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    qk-norm-flashinfer golden-QkNorm-F16-t5 class=elementwise-f16 utilisation=0.274 violations=0 det=pass inv=n/a
+roost-kernels-sm89: 18 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  QkNorm          qk-norm-flashinfer                 pass=18   fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm89/qk-norm-flashinfer.synccheck.results.json
+=== green

@@ -1,0 +1,13 @@
+library roost-kernels-sm89 abi 0x10002, 19 variants; device sm_89; 2026-10-25T02:38:08.6471891Z
+PASS    gated-delta-rule-gates-cuda fixed-BF16-alogF32-dtBF16-gF32-betaBF16-t37 class=hybrid-f32,elementwise-bf16 utilisation=0.018 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-gates-cuda fixed-BF16-alogF32-dtBF16-gF32-betaBF16-t300-s32-0-16 class=hybrid-f32,elementwise-bf16 utilisation=0.019 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-gates-cuda fixed-BF16-alogF32-dtBF16-gF32-betaBF16-t1 class=hybrid-f32,elementwise-bf16 utilisation=0.014 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-gates-cuda fixed-softplus-threshold-BF16-alogF32-dtBF16-gF32-betaBF16-t64 class=hybrid-f32,elementwise-bf16 utilisation=0.016 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-gates-cuda fixed-F32-alogBF16-dtF32-gBF16-betaF32-t41-s40-3-21 class=elementwise-bf16,hybrid-f32 utilisation=0.013 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-gates-cuda random-0-F32-alogF32-dtBF16-gF32-betaBF16-t18-s38-2-18 class=hybrid-f32,elementwise-bf16 utilisation=0.016 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-gates-cuda random-1-F32-alogF32-dtBF16-gF32-betaBF16-t50-s40-4-20 class=hybrid-f32,elementwise-bf16 utilisation=0.020 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-gates-cuda random-2-F32-alogBF16-dtBF16-gF32-betaF32-t13 class=hybrid-f32 utilisation=0.013 violations=0 det=pass inv=n/a
+roost-kernels-sm89: 8 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  GatedDeltaRuleGates gated-delta-rule-gates-cuda        pass=8    fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm89/gated-delta-rule-gates-cuda.synccheck.results.json
+=== green
