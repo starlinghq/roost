@@ -8,10 +8,10 @@ public enum RoostCapabilityStatus
     /// <summary>Not built, or refused with a typed error.</summary>
     Unsupported = 0,
 
-    /// <summary>Built and tested on the CPU test path; no hardware evidence yet.</summary>
+    /// <summary>Built, with hardware evidence, and with known caveats.</summary>
     Experimental,
 
-    /// <summary>Built, but not exercised by any test or evidence run.</summary>
+    /// <summary>Built and tested on the CPU path, without hardware evidence (AGENTS.md: no hardware evidence means untested).</summary>
     Untested,
 
     /// <summary>Built, tested and backed by committed evidence.</summary>
@@ -20,8 +20,9 @@ public enum RoostCapabilityStatus
 
 /// <summary>
 /// The capability table of a <see cref="RoostChatClient"/>. M0 (R-036): greedy decoding over the eager worker, streaming,
-/// cancellation, usage, stop token ids and stop strings are built and CPU-tested (<see cref="RoostCapabilityStatus.Experimental"/>; the
-/// Preview 1 drill, R-062, attaches the GPU evidence). Everything not built is <see cref="RoostCapabilityStatus.Unsupported"/>
+/// cancellation, usage, stop token ids and stop strings are built and CPU-tested, with no GPU evidence yet
+/// (<see cref="RoostCapabilityStatus.Untested"/>; what passes the Preview 1 drill, R-062, moves to
+/// <see cref="RoostCapabilityStatus.Experimental"/>). Everything not built is <see cref="RoostCapabilityStatus.Unsupported"/>
 /// and is refused with a typed error naming the option.
 /// </summary>
 public sealed class RoostCapabilities
@@ -53,7 +54,7 @@ public sealed class RoostCapabilities
     /// <summary><c>ChatOptions.StopSequences</c>, matched on detokenized text in the host process.</summary>
     public const string StopSequences = "stop_sequences";
 
-    /// <summary>Temperature, top-p, top-k and seeded sampling.</summary>
+    /// <summary>Temperature, top-p and top-k sampling. (A seed is accepted under greedy decoding, where it changes nothing.)</summary>
     public const string Sampling = "sampling";
 
     /// <summary>Frequency and presence penalties.</summary>
@@ -87,19 +88,19 @@ public sealed class RoostCapabilities
 
     internal RoostCapabilities()
     {
-        var experimental = RoostCapabilityStatus.Experimental;
+        var untested = RoostCapabilityStatus.Untested;
         var unsupported = RoostCapabilityStatus.Unsupported;
         _statuses = new Dictionary<string, RoostCapabilityStatus>
         {
-            [Chat] = experimental,
-            [Streaming] = experimental,
-            [Cancellation] = experimental,
-            [Usage] = experimental,
-            [GreedyDecoding] = experimental,
-            [StopTokenIds] = experimental,
-            [MaxOutputTokens] = experimental,
-            [Instructions] = experimental,
-            [StopSequences] = experimental,
+            [Chat] = untested,
+            [Streaming] = untested,
+            [Cancellation] = untested,
+            [Usage] = untested,
+            [GreedyDecoding] = untested,
+            [StopTokenIds] = untested,
+            [MaxOutputTokens] = untested,
+            [Instructions] = untested,
+            [StopSequences] = untested,
             [Sampling] = unsupported,
             [Penalties] = unsupported,
             [Tools] = unsupported,

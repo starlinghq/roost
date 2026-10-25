@@ -87,6 +87,11 @@ public sealed record RoostModelProfile
             throw new ArgumentException("Pool capacities and step limits must be positive.");
         }
 
+        if (RecurrentSlots == 0 && StateGroups.Any(static g => g.Kind == StateGroupKind.Recurrent))
+        {
+            throw new ArgumentException("The model has a recurrent state group, so the worker needs at least one recurrent slot.", nameof(RecurrentSlots));
+        }
+
         if (ManifestDigest.IsDefault || ManifestDigest.Length != 32 || WeightsDigest.IsDefault || WeightsDigest.Length != 32)
         {
             throw new ArgumentException("ManifestDigest and WeightsDigest are SHA-256 digests: 32 bytes each.");

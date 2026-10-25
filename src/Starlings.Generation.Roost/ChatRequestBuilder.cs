@@ -44,11 +44,13 @@ internal static class ChatRequestBuilder
                 stops = [.. s];
             }
 
-            instructions = options.Instructions;
+            // An empty Instructions string means no instructions, as null does: an empty system message would change the
+            // rendered prompt without saying anything.
+            instructions = string.IsNullOrEmpty(options.Instructions) ? null : options.Instructions;
         }
 
         var conversation = new List<RoostChatMessage>();
-        if (!string.IsNullOrEmpty(instructions))
+        if (instructions is not null)
         {
             conversation.Add(RoostChatMessage.System(instructions));
         }
@@ -58,7 +60,7 @@ internal static class ChatRequestBuilder
         {
             ArgumentNullException.ThrowIfNull(message);
             var mapped = Map(message, index);
-            if (mapped.Role == RoostChatRole.System && instructions is { Length: > 0 })
+            if (mapped.Role == RoostChatRole.System && instructions is not null)
             {
                 throw RoostChatException.InvalidOption("instructions", "Instructions are rendered as the system message; the conversation already has one.");
             }
@@ -102,11 +104,8 @@ internal static class ChatRequestBuilder
             throw RefuseInvariant("top_k", $"TopK {k} is unsupported: {GreedyOnly}");
         }
 
-        if (o.Seed is not null)
-        {
-            throw RefuseInvariant("seed", $"Seed is unsupported: {GreedyOnly}");
-        }
-
+        // Seed is accepted: greedy decoding is deterministic, so the seed's contract (the same output for the same input) holds
+        // without it. It changes nothing in M0; the sampler (R-042) honours it.
         if (o.FrequencyPenalty is { } f && f != 0f)
         {
             throw Refuse("frequency_penalty", "FrequencyPenalty is unsupported in M0 (the eager worker applies no penalties).");
@@ -184,10 +183,25 @@ internal static class ChatRequestBuilder
             throw RefuseInvariant(param + ".role", $"Role '{message.Role}' is unsupported.");
         }
 
+        if (!string.IsNullOrEmpty(message.AuthorName))
+        {
+            throw Refuse(param + ".name", "Message author names are unsupported: the chat template has no field for them.");
+        }
+
+        if (message.AdditionalProperties is { Count: > 0 } messageExtra)
+        {
+            throw RefuseInvariant(param + ".additional_properties", $"Message additional property '{messageExtra.Keys.First()}' is unsupported.");
+        }
+
         var text = new System.Text.StringBuilder();
         string? reasoning = null;
         foreach (var content in message.Contents)
         {
+            if (content.AdditionalProperties is { Count: > 0 } contentExtra)
+            {
+                throw RefuseInvariant(param + ".content", $"Content additional property '{contentExtra.Keys.First()}' is unsupported.");
+            }
+
             switch (content)
             {
                 case TextContent t:

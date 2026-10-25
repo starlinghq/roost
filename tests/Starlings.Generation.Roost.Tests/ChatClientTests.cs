@@ -236,7 +236,7 @@ public sealed class ChatClientTests
         Assert.Equal(ChatFinishReason.Stop, updates[^1].FinishReason);
         var usage = updates[^1].Contents.OfType<UsageContent>().Single().Details;
         Assert.True(usage.OutputTokenCount < 100, $"generation should end at the stop string; {usage.OutputTokenCount} tokens");
-        Assert.Equal(RoostCapabilityStatus.Experimental, client.Capabilities.StatusOf(RoostCapabilities.StopSequences));
+        Assert.Equal(RoostCapabilityStatus.Untested, client.Capabilities.StatusOf(RoostCapabilities.StopSequences));
 
         // Non-streaming gives the same, and the stopped request left the worker free.
         var response = await client.GetResponseAsync(Hi, new ChatOptions { StopSequences = ["world!"], MaxOutputTokens = 100 }, Timeout);
@@ -273,7 +273,7 @@ public sealed class ChatClientTests
         Assert.Equal("Hello, world! ", string.Concat(updates.Select(u => u.Text)));
         Assert.Equal(ChatFinishReason.Stop, updates[^1].FinishReason);
         Assert.Equal(["中文"], factory.Created.Single());
-        Assert.Equal(RoostCapabilityStatus.Experimental, client.Capabilities.StatusOf(RoostCapabilities.StopSequences));
+        Assert.Equal(RoostCapabilityStatus.Untested, client.Capabilities.StatusOf(RoostCapabilities.StopSequences));
         Assert.True(updates[^1].Contents.OfType<UsageContent>().Single().Details.OutputTokenCount < 100);
 
         // The stopped request was dropped from the worker: the next one runs.
@@ -289,6 +289,8 @@ public sealed class ChatClientTests
         var response = await client.GetResponseAsync(Hi, new ChatOptions { Instructions = "Be brief." }, Timeout);
 
         Assert.Equal(PromptTokens(RoostChatMessage.System("Be brief."), RoostChatMessage.User("Hi")), response.Usage!.InputTokenCount);
+        var empty = await client.GetResponseAsync(Hi, new ChatOptions { Instructions = string.Empty }, Timeout); // empty means none
+        Assert.Equal(PromptTokens(RoostChatMessage.User("Hi")), empty.Usage!.InputTokenCount);
         var e = await Assert.ThrowsAsync<RoostChatException>(() => client.GetResponseAsync(
             [new ChatMessage(ChatRole.System, "x"), new ChatMessage(ChatRole.User, "Hi")], new ChatOptions { Instructions = "Be brief." }, Timeout));
         Assert.Equal("instructions", e.Error.Param);
@@ -319,14 +321,14 @@ public sealed class ChatClientTests
         Assert.Null(chat.GetService<ChatClientMetadata>("keyed"));
 
         var caps = client.Capabilities;
-        Assert.Equal(RoostCapabilityStatus.Experimental, caps.StatusOf(RoostCapabilities.Streaming));
-        Assert.Equal(RoostCapabilityStatus.Experimental, caps.StatusOf(RoostCapabilities.GreedyDecoding));
+        Assert.Equal(RoostCapabilityStatus.Untested, caps.StatusOf(RoostCapabilities.Streaming));
+        Assert.Equal(RoostCapabilityStatus.Untested, caps.StatusOf(RoostCapabilities.GreedyDecoding));
         foreach (var name in new[] { RoostCapabilities.Sampling, RoostCapabilities.Tools, RoostCapabilities.ResponseFormat, RoostCapabilities.Logprobs, RoostCapabilities.Penalties, RoostCapabilities.Reasoning, RoostCapabilities.MultimodalInput, RoostCapabilities.ContinuousBatching, RoostCapabilities.WorkerRecovery, "beam_search" })
         {
             Assert.Equal(RoostCapabilityStatus.Unsupported, caps.StatusOf(name));
         }
 
-        Assert.DoesNotContain(caps.Statuses.Values, s => s == RoostCapabilityStatus.Supported);
+        Assert.DoesNotContain(caps.Statuses.Values, s => s is RoostCapabilityStatus.Supported or RoostCapabilityStatus.Experimental); // CPU evidence only
     }
 
     [Fact]
@@ -337,6 +339,25 @@ public sealed class ChatClientTests
 
         Assert.Throws<ObjectDisposedException>(() => client.GetStreamingResponseAsync(Hi, cancellationToken: TestContext.Current.CancellationToken));
         await client.DisposeAsync();
+    }
+
+    [Fact]
+    public void AProfileWithARecurrentGroupNeedsARecurrentSlot()
+    {
+        var e = Assert.Throws<ArgumentException>(() => (TestRig.Profile() with { RecurrentSlots = 0 }).Validate());
+        Assert.Equal("RecurrentSlots", e.ParamName);
+    }
+
+    [Fact]
+    public async Task APlanTheWorkerRefusesNamesTheCapacityMismatch()
+    {
+        // The worker holds 8 blocks, the profile claims 16: a long sequence gets a plan the eager reader refuses.
+        await using var client = await TestRig.InProcessAsync(new Script { Tokens = ReplyIds, NeverStop = true }, limits: TestRig.Limits() with { AttentionBlocks = 8, MaxKvBlocks = 8 });
+
+        var e = await Assert.ThrowsAsync<RoostChatException>(() => client.GetResponseAsync(Hi, new ChatOptions { MaxOutputTokens = 200 }, Timeout));
+
+        Assert.Equal(RoostErrorCode.DeviceFault, e.Error.Code);
+        Assert.Contains("capacities may not match", e.Message, StringComparison.Ordinal);
     }
 
     [Fact]

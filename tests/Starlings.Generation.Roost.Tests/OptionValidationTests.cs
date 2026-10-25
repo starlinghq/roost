@@ -16,7 +16,6 @@ public sealed class OptionValidationTests : IAsyncLifetime
         { "temperature", "temperature" },
         { "top_p", "top_p" },
         { "top_k", "top_k" },
-        { "seed", "seed" },
         { "frequency_penalty", "frequency_penalty" },
         { "presence_penalty", "presence_penalty" },
         { "tools", "tools" },
@@ -63,6 +62,7 @@ public sealed class OptionValidationTests : IAsyncLifetime
         var options = new ChatOptions
         {
             Temperature = 0f,
+            Seed = 42, // accepted: greedy decoding is deterministic, so a seed changes nothing
             TopP = 1f,
             TopK = 1,
             FrequencyPenalty = 0f,
@@ -84,6 +84,9 @@ public sealed class OptionValidationTests : IAsyncLifetime
     [InlineData("image")]
     [InlineData("function_call")]
     [InlineData("empty")]
+    [InlineData("author_name")]
+    [InlineData("message_properties")]
+    [InlineData("content_properties")]
     public void UnsupportedMessagesAreRefused(string kind)
     {
         ChatMessage[] messages = kind switch
@@ -91,6 +94,9 @@ public sealed class OptionValidationTests : IAsyncLifetime
             "tool_message" => [new ChatMessage(ChatRole.User, "Hi"), new ChatMessage(ChatRole.Tool, "42")],
             "image" => [new ChatMessage(ChatRole.User, [new TextContent("what is this"), new DataContent(new byte[] { 1, 2, 3 }, "image/png")])],
             "function_call" => [new ChatMessage(ChatRole.User, "Hi"), new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("c1", "f")])],
+            "author_name" => [new ChatMessage(ChatRole.User, "Hi") { AuthorName = "alice" }],
+            "message_properties" => [new ChatMessage(ChatRole.User, "Hi") { AdditionalProperties = new AdditionalPropertiesDictionary { ["x"] = 1 } }],
+            "content_properties" => [new ChatMessage(ChatRole.User, [new TextContent("Hi") { AdditionalProperties = new AdditionalPropertiesDictionary { ["x"] = 1 } }])],
             _ => [],
         };
 
@@ -105,7 +111,6 @@ public sealed class OptionValidationTests : IAsyncLifetime
         "temperature" => new ChatOptions { Temperature = 0.7f },
         "top_p" => new ChatOptions { TopP = 0.9f },
         "top_k" => new ChatOptions { TopK = 40 },
-        "seed" => new ChatOptions { Seed = 1 },
         "frequency_penalty" => new ChatOptions { FrequencyPenalty = 0.5f },
         "presence_penalty" => new ChatOptions { PresencePenalty = 0.5f },
         "tools" => new ChatOptions { Tools = [AIFunctionFactory.Create(() => 42, "answer")] },
