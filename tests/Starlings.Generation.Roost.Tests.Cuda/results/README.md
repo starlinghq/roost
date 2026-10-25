@@ -18,9 +18,14 @@ then prints the SHA-256 of the kernel libraries, manifest and weights it loads.
 | --- | --- | --- | --- |
 | `r036-chat-sm86.log` | RTX 3090 (SM 86) | `ROOST_KERNEL_MANIFEST=<that manifest> run.sh <snapshot> <kernels> <snapshot>/tokenizer.json sm86` | PASS |
 | `r036-chat-sm89.log` | RTX 4060 Ti (SM 89) | `ROOST_GPU_DEVICE=4060 ROOST_KERNEL_MANIFEST=<that manifest> run.sh <snapshot> <kernels> <snapshot>/tokenizer.json sm89` | PASS |
-| `r036-chat-sm86-roost-worker.log` | RTX 3090 (SM 86) | `ROOST_WORKER_EXE=<published roost-worker> run.sh <snapshot> <kernels> <snapshot>/tokenizer.json sm86-roost-worker` | PASS |
+| `r036-chat-sm86-roost-worker.log` | RTX 3090 (SM 86) | `ROOST_WORKER_EXE=<extracted>/runtimes/linux-x64/native/roost-worker run.sh <snapshot> <kernels> <snapshot>/tokenizer.json sm86-roost-worker` | PASS |
 
-**The packaged worker (R-062).** `r036-chat-sm86-roost-worker.log` starts the Native AOT `roost-worker` (`dotnet publish src/Starlings.Roost.Worker.Runtime -c Release -r linux-x64`, 3.4 MB) through `RoostWorkerLaunch`, instead of re-running the harness as the worker. It uses this branch's own `kernels/manifest.toml` and the R-034 SM 86 library it names (`fdf421a9…`), with no manifest override. Its text, finishes and usage are identical to the harness-as-worker run. The worker took 16.2 s to become ready, against 6.4 s for the harness-as-worker run earlier the same day. That is one cold run on a shared machine, not measured further.
+**The packaged worker (R-062).** `r036-chat-sm86-roost-worker.log` starts `roost-worker` through `RoostWorkerLaunch` instead of re-running the harness as the worker. The binary was taken from the package: `dotnet pack src/Starlings.Roost.Worker.Runtime` (version `0.0.1-drill.2`), then `unzip` of the `.nupkg`. The log records the binary's SHA-256 (`38cb0605…`).
+- **Execute bit:** `unzip` dropped it, as NuGet extraction can, and the host restored it before starting the worker.
+- **Manifest:** the worker read the one shipped beside it in the package (the default; nothing passed it a manifest path). The C8 handshake checked its digest (`35103ee8…`) against the profile's, which comes from this branch's `kernels/manifest.toml`.
+- **Kernel library:** `--kernels` names the R-034 SM 86 library that manifest pins (`fdf421a9…`). The package ships no library until R-060 fetches it by digest.
+
+Text, finishes and usage are identical to the harness-as-worker run. The worker was ready in 11.7 s, against 6.4 s for the harness-as-worker run the same day. These are single runs on a shared machine, not compared further.
 
 `PASS` now requires all of the following:
 - each of the three prompts streams the same text and finish reason as the non-streamed call;

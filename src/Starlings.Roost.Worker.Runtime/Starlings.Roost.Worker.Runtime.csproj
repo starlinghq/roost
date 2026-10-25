@@ -6,8 +6,9 @@
     <RootNamespace>Starlings.Roost.Worker.Runtime</RootNamespace>
     <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- Restored for linux-x64 so the locked restore records the ILCompiler packages that the AOT publish needs. -->
-    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
+    <!-- PublishAot adds the build host's RID to the restore, so both CI hosts (Linux, Windows) are listed and locked; only linux-x64
+         is packed. -->
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 
     <IsPackable>true</IsPackable>
     <PackageId>Starlings.Roost.Worker.Runtime.linux-x64</PackageId>

@@ -66,6 +66,13 @@ var profile = new RoostModelProfile
     WeightsDigest = ImmutableArray.Create(Convert.FromHexString(locked.Sha256)),
 };
 
+if (args.Contains("--worker-exe"))
+{
+    string worker = Opt("--worker-exe");
+    string shipped = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(worker))!, RoostWorkerRuntime.ManifestFileName);
+    Console.WriteLine($"worker {worker} sha256 {Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(worker)))}; shipped manifest sha256 {Convert.ToHexStringLower(RoostWorkerRuntime.ManifestDigest(shipped))}");
+}
+
 var clock = Stopwatch.StartNew();
 await using var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
 {
@@ -79,7 +86,8 @@ await using var client = await RoostChatClient.StartAsync(new RoostChatClientOpt
                 WeightsPath = Path.Combine(Opt("--ckpt"), WeightsFile),
                 WeightsSize = locked.Size,
                 KernelDirectory = Opt("--kernels"),
-                ManifestPath = Opt("--manifest"),
+                // The worker reads the manifest shipped beside it (the package default); the handshake checks that its digest
+                // equals the profile's, which comes from --manifest.
                 AllowUntestedSm = eager.AllowUntested,
             },
         }

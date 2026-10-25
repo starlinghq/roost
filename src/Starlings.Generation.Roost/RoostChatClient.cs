@@ -54,7 +54,9 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     /// <param name="options">The settings.</param>
     /// <param name="cancellationToken">Cancels the start.</param>
     /// <returns>The client; dispose it to stop the worker.</returns>
-    /// <exception cref="ArgumentException">The options are incomplete or inconsistent.</exception>
+    /// <exception cref="ArgumentException">The options are incomplete or inconsistent, or the packaged worker has no kernel library to load.</exception>
+    /// <exception cref="FileNotFoundException">The default process transport found no <c>roost-worker</c> executable (<see cref="RoostWorkerRuntime"/>).</exception>
+    /// <exception cref="UnauthorizedAccessException">The <c>roost-worker</c> executable lacks the execute permission and its mode cannot be changed.</exception>
     /// <exception cref="RoostChatException">The worker rejected the handshake (<see cref="RoostErrorCode.AssetMismatch"/>, <see cref="RoostErrorCode.ProfileUnsupported"/>) or did not start.</exception>
     public static Task<RoostChatClient> StartAsync(RoostChatClientOptions options, CancellationToken cancellationToken = default) =>
         StartAsync(options, null, cancellationToken);

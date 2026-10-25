@@ -27,6 +27,7 @@
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Engine": "[0.0.0-dev, )",
           "Starlings.Roost.Generation": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker.Runtime.linux-x64": "[0.0.0-dev, )",
           "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
         }
       },
@@ -89,6 +90,15 @@
         "dependencies": {
           "Starlings.Roost.Models.Qwen35": "[0.0.0-dev, )",
           "Starlings.Roost.Worker": "[0.0.0-dev, )"
+        }
+      },
+      "Starlings.Roost.Worker.Runtime.linux-x64": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker.Qwen35": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
         }
       },
       "starlings.roost.workerhost": {

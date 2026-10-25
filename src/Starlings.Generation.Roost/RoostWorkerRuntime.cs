@@ -24,7 +24,11 @@ public sealed record RoostWorkerLaunch
     /// <summary>The worker executable; null means the packaged one (<see cref="RoostWorkerRuntime.FindExecutable"/>).</summary>
     public string? Executable { get; init; }
 
-    /// <summary>The directory holding <c>libroost_kernels_sm&lt;N&gt;.so</c>; null means the worker executable's directory.</summary>
+    /// <summary>
+    /// The directory holding <c>libroost_kernels_sm&lt;N&gt;.so</c>; null means the worker executable's directory. The runtime
+    /// package ships no kernel library until R-060 fetches it by digest, so a package install must set this today; a directory
+    /// without a library is refused before the worker starts.
+    /// </summary>
     public string? KernelDirectory { get; init; }
 
     /// <summary>The kernel manifest; null means the one shipped beside the worker executable.</summary>
@@ -67,7 +71,7 @@ public static class RoostWorkerRuntime
     /// <param name="profile">The model profile.</param>
     /// <param name="worker">The worker settings; <see cref="RoostWorkerOptions.Launch"/> must be set.</param>
     /// <returns>The command.</returns>
-    /// <exception cref="ArgumentException"><see cref="RoostWorkerOptions.Launch"/> is not set.</exception>
+    /// <exception cref="ArgumentException"><see cref="RoostWorkerOptions.Launch"/> is not set, or there is no kernel library to load.</exception>
     /// <exception cref="FileNotFoundException">No worker executable was found.</exception>
     /// <exception cref="UnauthorizedAccessException">The executable is not executable and its mode cannot be changed.</exception>
     public static WorkerCommand CommandFor(RoostModelProfile profile, RoostWorkerOptions worker)
@@ -81,6 +85,16 @@ public static class RoostWorkerRuntime
         if (!File.Exists(executable))
         {
             throw new FileNotFoundException($"The worker executable {executable} does not exist.", executable);
+        }
+
+        // Until the kernel library is fetched by digest (decision 12, R-060), the package ships none: refuse here, before a
+        // worker is spawned, rather than let it fail to find a library for its SM.
+        string kernels = launch.KernelDirectory ?? Path.GetDirectoryName(Path.GetFullPath(executable))!;
+        if (!Directory.Exists(kernels) || Directory.GetFiles(kernels, "libroost_kernels_sm*.so").Length == 0)
+        {
+            throw new ArgumentException(
+                $"No kernel library (libroost_kernels_sm<N>.so) in {kernels}: set RoostWorkerLaunch.KernelDirectory to a kernel build.",
+                nameof(worker));
         }
 
         EnsureExecutable(executable);

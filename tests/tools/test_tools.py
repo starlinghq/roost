@@ -77,6 +77,26 @@ def test_native_binary_fails_by_extension_and_magic(tmp_path, capsys):
     assert "kernels/blob.bin: native binary tracked in Git (magic 7f454c46)" in out
 
 
+def test_host_package_naming_worker_code_fails(tmp_path, capsys):
+    root = git_repo(tmp_path)
+    write(root / "src/Starlings.Generation.Roost/Bad.cs", "using Starlings.Roost.Worker.Eager;\n")
+    write(
+        root / "src/Starlings.Roost.Engine/Bad.cs",
+        "extern alias roostworker;\nvar k = typeof(Starlings.Roost.Kernels.X);\n",
+    )
+    write(
+        root / "src/Starlings.Generation.Roost/Fine.cs",
+        "using Starlings.Roost.WorkerHost;\n// add Starlings.Roost.Worker.Runtime.linux-x64\n",
+    )
+    write(root / "src/Starlings.Roost.Worker/Fine.cs", "using Starlings.Roost.Kernels;\n")  # worker side may
+    assert boundaries.main(["--root", str(root), "--no-closure"]) == 1
+    out = capsys.readouterr().out
+    assert "host: src/Starlings.Generation.Roost/Bad.cs:1:" in out
+    assert "host: src/Starlings.Roost.Engine/Bad.cs:1:" in out
+    assert "host: src/Starlings.Roost.Engine/Bad.cs:2:" in out
+    assert "Fine.cs" not in out
+
+
 def test_cuda_project_in_solution_fails(tmp_path, capsys):
     root = git_repo(tmp_path)
     (root / "Roost.slnx").write_text(

@@ -11,7 +11,15 @@ public sealed class WorkerRuntimeTests : IDisposable
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
-    private static RoostWorkerOptions Options(string executable) => new()
+    private string Kernels()
+    {
+        string dir = Path.Combine(_dir, "kernels");
+        Directory.CreateDirectory(dir);
+        File.WriteAllBytes(Path.Combine(dir, "libroost_kernels_sm86.so"), [0x7f]);
+        return dir;
+    }
+
+    private RoostWorkerOptions Options(string executable, bool kernels = true) => new()
     {
         DeviceOrdinal = 1,
         Launch = new RoostWorkerLaunch
@@ -19,7 +27,7 @@ public sealed class WorkerRuntimeTests : IDisposable
             Executable = executable,
             WeightsPath = "/models/qwen/model.safetensors",
             WeightsSize = 1_234_567,
-            KernelDirectory = "/opt/kernels",
+            KernelDirectory = kernels ? Kernels() : null,
             ManifestPath = "/opt/kernels/manifest.toml",
             AllowUntestedSm = true,
         },
@@ -52,7 +60,7 @@ public sealed class WorkerRuntimeTests : IDisposable
         Assert.Equal("/models/qwen/model.safetensors", parsed.WeightsPath);
         Assert.Equal(1_234_567, parsed.WeightsSize);
         Assert.Equal(Convert.ToHexStringLower(profile.WeightsDigest.AsSpan()), parsed.WeightsSha256);
-        Assert.Equal("/opt/kernels", parsed.KernelDirectory);
+        Assert.Equal(Path.Combine(_dir, "kernels"), parsed.KernelDirectory);
         Assert.Equal("/opt/kernels/manifest.toml", parsed.ManifestPath);
         Assert.True(parsed.AllowUntested);
         Assert.Equal(1, parsed.Device);
@@ -80,6 +88,23 @@ public sealed class WorkerRuntimeTests : IDisposable
         var e = Assert.Throws<ArgumentException>(() => RoostWorkerRuntime.CommandFor(TestRig.Profile(), new RoostWorkerOptions()));
         Assert.Contains("Launch", e.Message, StringComparison.Ordinal);
         Assert.Contains("Command", e.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NoKernelLibraryIsRefusedBeforeAWorkerStarts()
+    {
+        string exe = FakeExecutable("roost-worker", UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        var e = Assert.Throws<ArgumentException>(() => RoostWorkerRuntime.CommandFor(TestRig.Profile(), Options(exe, kernels: false)));
+        Assert.Contains("KernelDirectory", e.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void KernelsBesideTheExecutableAreTheDefault()
+    {
+        string exe = FakeExecutable(Path.Combine("bin", "roost-worker"), UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        File.WriteAllBytes(Path.Combine(_dir, "bin", "libroost_kernels_sm89.so"), [0x7f]);
+        var parsed = WorkerArguments.Parse(RoostWorkerRuntime.CommandFor(TestRig.Profile(), Options(exe, kernels: false)).Arguments);
+        Assert.Null(parsed.KernelDirectory); // the worker defaults to its own directory, where the library is
     }
 
     [Fact]
