@@ -23,7 +23,7 @@
       "starlings.generation.roost": {
         "type": "Project",
         "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "[9.8.0, 9.8.0]",
+          "Microsoft.Extensions.AI.Abstractions": "[9.8.0, )",
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Engine": "[0.0.0-dev, )",
           "Starlings.Roost.Generation": "[0.0.0-dev, )",
@@ -93,7 +93,7 @@
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[9.8.0, 9.8.0]",
+        "requested": "[9.8.0, )",
         "resolved": "9.8.0",
         "contentHash": "0++t+lPqX5amr7Kgh+ZFm1C5hhzMmFc5Dhoc6siNZ4sPXxy0pLTFRk+4vHn0hZf7Xe8Y9OoqL2cL4oTdjt8STQ=="
       },
