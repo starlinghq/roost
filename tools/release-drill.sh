@@ -71,6 +71,9 @@ fi
 [[ -x "$dotnet" ]] || fail "no .NET SDK found (set DOTNET)"
 export DOTNET_NOLOGO=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
 read -ra msbuild_extra <<<"${DRILL_MSBUILD:-}"
+# No shared compiler server: a long-lived server from another build on this host must not load the model compiler's
+# analyzers for the drill (it failed to load Starlings.Roost.Graph from a fresh clone path once).
+msbuild_extra+=("-p:UseSharedCompilation=false")
 version_props=("-p:VersionPrefix=$prefix" "-p:VersionSuffix=$suffix")
 
 work="$(mktemp -d "${TMPDIR:-/tmp}/roost-release-drill.XXXXXX")"
