@@ -252,11 +252,13 @@ ls "$feed"
 consumer="$work/consumer"
 mkdir -p "$consumer"
 cp "$root/tools/release-drill/consumer/Program.cs" "$consumer/"
-references="" constants=""
+references="" constants="" patterns=""
 for nupkg in "$pack"/*.nupkg; do
     id="$(basename "$nupkg" ".$version.nupkg")"
     references+="    <PackageReference Include=\"$id\" Version=\"[$version]\" />"$'\n'
     constants+="HAS_$(tr '.a-z' '_A-Z' <<<"$id");"
+    # One mapping per packed id: the release set is not all under Starlings.Roost.* (Starlings.Generation.Roost, R-036).
+    patterns+="      <package pattern=\"$id\" />"$'\n'
 done
 python3 -I - "$root/tools/release-drill/consumer/Consumer.csproj.in" "$consumer/Consumer.csproj" "$references" "$constants" "$pack" "$version" "$sha" <<'EOF'
 import sys, zipfile
@@ -279,7 +281,7 @@ cat >"$consumer/NuGet.config" <<EOF
   </packageSources>
   <packageSourceMapping>
     <packageSource key="drill-local">
-      <package pattern="Starlings.Roost.*" />
+${patterns%$'\n'}
     </packageSource>
     <packageSource key="nuget.org">
       <package pattern="*" />
