@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Threading.Channels;
@@ -21,13 +20,18 @@ namespace Starlings.Generation.Roost.Driver;
 /// </summary>
 /// <remarks>
 /// <para><b>Threading.</b> <see cref="Submit"/> and the cancel callback may be called from any thread: they only enqueue a
-/// command. Everything that touches the planner or the transport runs on the driver thread (the transport is single
-/// host thread by contract).</para>
+/// command, under the same lock the driver takes when it stops, so a request is either taken by the driver or failed. Everything
+/// that touches the planner or the transport runs on the driver thread (the transport is single host thread by contract).</para>
 /// <para><b>Faults.</b> A recoverable step fault fails the requests of that step with
 /// <see cref="RoostErrorCode.DeviceFault"/> and keeps the worker. A sticky fault, a hang, a stall or an exited worker fails
 /// every live request (<see cref="RoostErrorCode.DeviceFault"/> for sticky, <see cref="RoostErrorCode.WorkerRestarted"/>
 /// otherwise), kills the worker, and the next request starts a new one. Resuming requests on the new worker with
 /// <c>Recovered</c> set is R-070.</para>
+/// <para><b>Containment.</b> The driver thread never ends while the client is alive: an unexpected exception anywhere in a
+/// step (planner, plan writer, transport, a malformed result, a kill that fails) fails the requests it affects with
+/// <see cref="RoostErrorCode.Internal"/>, discards the planner state and the worker (replacing the transport when it cannot
+/// be killed), and the loop goes on. An exception escaping a dedicated thread would end the consumer's process, which is
+/// what the worker process exists to prevent (decision 21).</para>
 /// </remarks>
 internal sealed class WorkerDriver : IGenerationBackend
 {
@@ -35,31 +39,25 @@ internal sealed class WorkerDriver : IGenerationBackend
 
     private readonly RoostModelProfile _profile;
     private readonly WorkerLaunch _launch;
-    private readonly WorkerTransportBase _transport;
-    private readonly StepPlanner _planner;
-    private readonly ConcurrentQueue<Command> _commands = new();
+    private readonly Func<IDriverTransport> _createTransport;
+    private readonly object _gate = new();
+    private readonly Queue<Command> _commands = new();
     private readonly SemaphoreSlim _wake = new(0);
     private readonly Dictionary<ulong, Live> _live = [];
     private readonly Thread _thread;
     private readonly TaskCompletionSource _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private IDriverTransport _transport;
+    private StepPlanner _planner;
     private volatile bool _stopping;
     private int _disposed;
 
-    private WorkerDriver(RoostModelProfile profile, RoostWorkerOptions worker, WorkerTransportBase transport)
+    private WorkerDriver(RoostModelProfile profile, RoostWorkerOptions worker, Func<IDriverTransport> createTransport)
     {
         _profile = profile;
-        _transport = transport;
-        var groups = profile.StateGroups;
-        var capacities = groups
-            .Select(g => new GroupCapacity(g.Index, g.Kind == StateGroupKind.Recurrent ? profile.RecurrentSlots : profile.AttentionBlocks, 0))
-            .ToImmutableArray();
-        _planner = new StepPlanner(new BlockManager(groups, capacities), new PlannerOptions
-        {
-            MaxTokensPerStep = profile.MaxTokensPerStep,
-            MaxSequencesPerStep = profile.MaxSequencesPerStep,
-            ModelStopTokenIds = profile.StopTokenIds,
-        });
-        long planBytes = PlanBuffer.SizeFor(profile.MaxSequencesPerStep, profile.MaxTokensPerStep, groups.Length, profile.AttentionBlocks, profile.StopTokenIds.Length);
+        _createTransport = createTransport;
+        _transport = createTransport();
+        _planner = CreatePlanner(profile);
+        long planBytes = PlanBuffer.SizeFor(profile.MaxSequencesPerStep, profile.MaxTokensPerStep, profile.StateGroups.Length, profile.AttentionBlocks, profile.StopTokenIds.Length);
         _launch = new WorkerLaunch
         {
             DeviceOrdinal = worker.DeviceOrdinal,
@@ -77,35 +75,41 @@ internal sealed class WorkerDriver : IGenerationBackend
     /// <summary>The offer made to the worker (tests read the buffer sizes).</summary>
     public WorkerLaunch Launch => _launch;
 
-    /// <summary>The transport (tests read its state and kind).</summary>
-    public WorkerTransportBase Transport => _transport;
+    /// <summary>The current transport (tests read its state and kind). Replaced when a worker cannot be killed.</summary>
+    public IDriverTransport Transport => _transport;
 
     /// <summary>Creates the transport, starts the worker and the driver thread.</summary>
     /// <param name="profile">The model profile, validated.</param>
     /// <param name="worker">How the worker is started.</param>
     /// <param name="cancellationToken">Cancels the start.</param>
+    /// <param name="decorate">Test hook: wraps each transport the driver creates.</param>
     /// <returns>The running driver.</returns>
     /// <exception cref="RoostChatException">The worker rejected the handshake or did not start.</exception>
-    public static async Task<WorkerDriver> StartAsync(RoostModelProfile profile, RoostWorkerOptions worker, CancellationToken cancellationToken)
+    public static async Task<WorkerDriver> StartAsync(RoostModelProfile profile, RoostWorkerOptions worker, CancellationToken cancellationToken, Func<IDriverTransport, IDriverTransport>? decorate = null)
     {
-        WorkerTransportBase transport = worker.Transport switch
+        var command = worker.Transport switch
         {
-            TransportKind.Process => new ProcessWorkerTransport(
-                worker.Command ?? throw new ArgumentException("The process transport (the default, decision 21) needs RoostWorkerOptions.Command.", nameof(worker)),
-                worker.TransportOptions),
-            TransportKind.InProcess => new InProcessWorkerTransport(
-                worker.InProcessExecutor ?? throw new ArgumentException("The in-process transport needs RoostWorkerOptions.InProcessExecutor.", nameof(worker)),
-                worker.TransportOptions),
+            TransportKind.Process => worker.Command ?? throw new ArgumentException("The process transport (the default, decision 21) needs RoostWorkerOptions.Command.", nameof(worker)),
+            TransportKind.InProcess => worker.InProcessExecutor is null ? throw new ArgumentException("The in-process transport needs RoostWorkerOptions.InProcessExecutor.", nameof(worker)) : null,
             _ => throw new ArgumentOutOfRangeException(nameof(worker), worker.Transport, "Unknown transport kind."),
         };
-        var driver = new WorkerDriver(profile, worker, transport);
+        IDriverTransport Create()
+        {
+            WorkerTransportBase inner = command is not null
+                ? new ProcessWorkerTransport(command, worker.TransportOptions)
+                : new InProcessWorkerTransport(worker.InProcessExecutor!, worker.TransportOptions);
+            var transport = new DriverTransport(inner);
+            return decorate?.Invoke(transport) ?? transport;
+        }
+
+        var driver = new WorkerDriver(profile, worker, Create);
         try
         {
             await driver.StartWorkerAsync(cancellationToken).ConfigureAwait(false);
         }
         catch
         {
-            await transport.DisposeAsync().ConfigureAwait(false);
+            await driver._transport.DisposeAsync().ConfigureAwait(false);
             driver._wake.Dispose();
             throw;
         }
@@ -119,21 +123,12 @@ internal sealed class WorkerDriver : IGenerationBackend
     {
         ArgumentNullException.ThrowIfNull(request);
         var live = new Live(request.Id, request.PromptTokenIds.Length);
-        if (_stopping)
+        if (!TryEnqueue(new Command(request, live, 0)))
         {
             live.Fail(new RoostError(RoostErrorCode.Internal, "The chat client is disposed."));
         }
-        else
-        {
-            _commands.Enqueue(new Command(request, live, 0));
-            Wake();
-        }
 
-        return new RequestChannel(request.Id, live.Channel.Reader, id =>
-        {
-            _commands.Enqueue(new Command(null, null, id.Value));
-            Wake();
-        });
+        return new RequestChannel(request.Id, live.Channel.Reader, id => TryEnqueue(new Command(null, null, id.Value)));
     }
 
     /// <inheritdoc />
@@ -151,8 +146,46 @@ internal sealed class WorkerDriver : IGenerationBackend
             await _exited.Task.ConfigureAwait(false);
         }
 
-        await _transport.DisposeAsync().ConfigureAwait(false);
-        _wake.Dispose();
+        try
+        {
+            await _transport.DisposeAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            _wake.Dispose();
+        }
+    }
+
+    private static StepPlanner CreatePlanner(RoostModelProfile profile)
+    {
+        var groups = profile.StateGroups;
+        var capacities = groups
+            .Select(g => new GroupCapacity(g.Index, g.Kind == StateGroupKind.Recurrent ? profile.RecurrentSlots : profile.AttentionBlocks, 0))
+            .ToImmutableArray();
+        return new StepPlanner(new BlockManager(groups, capacities), new PlannerOptions
+        {
+            MaxTokensPerStep = profile.MaxTokensPerStep,
+            MaxSequencesPerStep = profile.MaxSequencesPerStep,
+            ModelStopTokenIds = profile.StopTokenIds,
+        });
+    }
+
+    private static string Describe(Exception e) => e.GetType().Name + ": " + e.Message;
+
+    private bool TryEnqueue(Command command)
+    {
+        lock (_gate)
+        {
+            if (_stopping)
+            {
+                return false;
+            }
+
+            _commands.Enqueue(command);
+        }
+
+        Wake();
+        return true;
     }
 
     private void Wake()
@@ -193,43 +226,59 @@ internal sealed class WorkerDriver : IGenerationBackend
 
     private void Run()
     {
-        var reason = new RoostError(RoostErrorCode.Internal, "The chat client is disposed.");
         try
         {
             while (!_stopping)
             {
-                DrainCommands();
-                var step = _live.Count > 0 ? NextPlan() : null;
-                if (step is null)
+                try
                 {
-                    _ = _wake.Wait(_live.Count > 0 ? 10 : Timeout.Infinite);
-                    continue;
-                }
+                    DrainCommands();
+                    var step = _live.Count > 0 ? NextPlan() : null;
+                    if (step is null)
+                    {
+                        _ = _wake.Wait(_live.Count > 0 ? 10 : Timeout.Infinite);
+                        continue;
+                    }
 
-                RunStep(step);
+                    RunStep(step);
+                }
+                catch (Exception e)
+                {
+                    // Containment: see the class remarks. Nothing may escape this thread.
+                    LoseWorker(new RoostError(RoostErrorCode.Internal, $"The chat driver failed ({Describe(e)}); the requests in flight were failed and the worker is restarted."));
+                }
             }
-        }
-        catch (Exception e) when (e is InvalidOperationException or InvalidDataException or ArgumentException or RoostChatException or IOException)
-        {
-            reason = new RoostError(RoostErrorCode.Internal, "The chat driver failed: " + e.Message);
         }
         finally
         {
-            _stopping = true;
-            FailAll(reason);
-            while (_commands.TryDequeue(out var c))
+            var disposed = new RoostError(RoostErrorCode.Internal, "The chat client is disposed.");
+            lock (_gate)
             {
-                c.Live?.Fail(reason);
+                _stopping = true;
+                while (_commands.TryDequeue(out var c))
+                {
+                    c.Live?.Fail(disposed);
+                }
             }
 
+            FailAll(disposed);
             _exited.TrySetResult();
         }
     }
 
     private void DrainCommands()
     {
-        while (_commands.TryDequeue(out var command))
+        while (true)
         {
+            Command command;
+            lock (_gate)
+            {
+                if (!_commands.TryDequeue(out command))
+                {
+                    return;
+                }
+            }
+
             if (command.Request is null)
             {
                 if (_live.Remove(command.CancelId, out var cancelled))
@@ -253,7 +302,17 @@ internal sealed class WorkerDriver : IGenerationBackend
                 continue;
             }
 
-            var added = _planner.Add(command.Request);
+            AddResult added;
+            try
+            {
+                added = _planner.Add(command.Request);
+            }
+            catch (Exception e)
+            {
+                live.Fail(new RoostError(RoostErrorCode.Internal, "The planner refused the request: " + Describe(e)));
+                continue;
+            }
+
             if (added == AddResult.Added)
             {
                 _live.Add(command.Request.Id.Value, live);
@@ -273,25 +332,30 @@ internal sealed class WorkerDriver : IGenerationBackend
     private bool EnsureWorker(out RoostError? error)
     {
         error = null;
-        switch (_transport.State)
+        try
         {
-            case TransportState.Running:
+            if (_transport.State == TransportState.Running)
+            {
                 return true;
-            case TransportState.Idle:
-                try
-                {
-                    StartWorkerAsync(CancellationToken.None).GetAwaiter().GetResult();
-                    return true;
-                }
-                catch (RoostChatException e)
-                {
-                    error = e.Error;
-                    return false;
-                }
+            }
 
-            default:
-                error = new RoostError(RoostErrorCode.WorkerRestarted, $"The worker is {_transport.State} and cannot be restarted in this process.");
-                return false;
+            if (_transport.State != TransportState.Idle)
+            {
+                ReplaceTransport(); // abandoned (an in-process worker stuck in a step) or otherwise unusable
+            }
+
+            StartWorkerAsync(CancellationToken.None).GetAwaiter().GetResult();
+            return true;
+        }
+        catch (RoostChatException e)
+        {
+            error = e.Error;
+            return false;
+        }
+        catch (Exception e)
+        {
+            error = new RoostError(RoostErrorCode.WorkerRestarted, "The worker could not be started: " + Describe(e));
+            return false;
         }
     }
 
@@ -302,7 +366,11 @@ internal sealed class WorkerDriver : IGenerationBackend
         {
             if (notice.Kind == PlannerNoticeKind.Aborted && _live.Remove(notice.Handle, out var live))
             {
-                live.Fail(new RoostError(RoostErrorCode.PromptTooLong, "The sequence no longer fits the worker's pools.", "messages"));
+                // The planner aborts a sequence that cannot get its blocks even after preempting every later one. The client caps
+                // each request's output at the context left, so a lone request always fits; this happens only when the pools are
+                // exhausted by other live requests. That is a shortage of device memory (C6 InsufficientDeviceMemory, 503), not a
+                // fault in the request (PromptTooLong, 400) and not an admission refusal (QueueFull: the request had been admitted).
+                live.Fail(new RoostError(RoostErrorCode.InsufficientDeviceMemory, "The worker's KV and state pools were exhausted by the requests running at the same time; retry later."));
             }
         }
 
@@ -311,70 +379,100 @@ internal sealed class WorkerDriver : IGenerationBackend
 
     private void RunStep(PlannedStep step)
     {
-        if (!_transport.CanPublish())
+        try
         {
-            throw new InvalidOperationException("No plan buffer is free with no step in flight.");
-        }
-
-        int index = _transport.NextPlanBufferIndex;
-        _ = PlanBuffer.Write(_transport.PlanBuffer(index), step);
-        if (!_transport.TryPublish(new RingSlot { StepId = step.StepId, Kind = RingSlotKind.Step, BufferIndex = (uint)index }))
-        {
-            throw new InvalidOperationException("The plan ring is full with no step in flight.");
-        }
-
-        var spin = default(SpinWait);
-        while (true)
-        {
-            if (_transport.TryTakeResult(out var slot))
+            if (!_transport.CanPublish())
             {
-                if (slot.Kind != RingSlotKind.Step)
-                {
-                    continue;
-                }
+                throw new InvalidOperationException("No plan buffer is free with no step in flight.");
+            }
 
-                StepResultHeader header;
-                StepOutcome? outcome = null;
-                try
+            int index = _transport.NextPlanBufferIndex;
+            _ = PlanBuffer.Write(_transport.PlanBuffer(index), step);
+            if (!_transport.TryPublish(new RingSlot { StepId = step.StepId, Kind = RingSlotKind.Step, BufferIndex = (uint)index }))
+            {
+                throw new InvalidOperationException("The plan ring is full with no step in flight.");
+            }
+        }
+        catch (Exception e)
+        {
+            // Nothing reached the worker: fail this step's requests and keep the worker.
+            FailStep(step, new RoostError(RoostErrorCode.Internal, "The step could not be published: " + Describe(e)));
+            return;
+        }
+
+        StepOutcome? outcome = null;
+        StepResultHeader header = default;
+        try
+        {
+            var spin = default(SpinWait);
+            while (true)
+            {
+                if (_transport.TryTakeResult(out var slot))
                 {
-                    var buffer = _transport.ResultBuffer((int)slot.BufferIndex);
-                    header = PlanBuffer.ReadHeader(buffer);
-                    if (header.Fault == FaultClass.None)
+                    try
                     {
-                        outcome = PlanBuffer.ReadResult(buffer, step.StepId);
+                        if (slot.Kind != RingSlotKind.Step)
+                        {
+                            continue;
+                        }
+
+                        var buffer = _transport.ResultBuffer((int)slot.BufferIndex);
+                        header = PlanBuffer.ReadHeader(buffer);
+                        if (header.Fault == FaultClass.None)
+                        {
+                            outcome = PlanBuffer.ReadResult(buffer, step.StepId);
+                        }
                     }
-                }
-                finally
-                {
-                    _transport.ReleaseResult((int)slot.BufferIndex);
+                    finally
+                    {
+                        _transport.ReleaseResult((int)slot.BufferIndex);
+                    }
+
+                    break;
                 }
 
-                if (outcome is not null)
+                var fault = _transport.Poll();
+                if (fault != FaultClass.None)
                 {
-                    Apply(outcome);
-                }
-                else if (header.Fault == FaultClass.Recoverable)
-                {
-                    FailStep(step, header.ErrorCode);
-                }
-                else
-                {
-                    LoseWorker(header.Fault, header.ErrorCode);
+                    LoseWorker(new RoostError(RoostErrorCode.WorkerRestarted, $"The worker was lost ({fault}); it was killed and the request cannot be resumed (R-070)."));
+                    return;
                 }
 
-                return;
+                spin.SpinOnce();
             }
+        }
+        catch (Exception e)
+        {
+            // The worker's answer cannot be trusted (malformed result, a transport that throws): discard the worker.
+            LoseWorker(new RoostError(RoostErrorCode.Internal, $"The step result could not be read ({Describe(e)}); the worker was killed and the request cannot be resumed (R-070)."));
+            return;
+        }
 
-            var fault = _transport.Poll();
-            if (fault != FaultClass.None)
-            {
-                LoseWorker(fault, 0);
-                return;
-            }
-
-            spin.SpinOnce();
+        if (outcome is not null)
+        {
+            Apply(outcome);
+        }
+        else if (header.Fault == FaultClass.Recoverable)
+        {
+            FailStep(step, RecoverableError(header.ErrorCode));
+        }
+        else
+        {
+            LoseWorker(header.Fault == FaultClass.Sticky
+                ? new RoostError(RoostErrorCode.DeviceFault, string.Create(CultureInfo.InvariantCulture, $"The GPU faulted (sticky, status {header.ErrorCode}); the worker was killed and the request cannot be resumed (R-070)."))
+                : new RoostError(RoostErrorCode.WorkerRestarted, $"The worker reported {header.Fault}; it was killed and the request cannot be resumed (R-070)."));
         }
     }
+
+    private static RoostError RecoverableError(int errorCode) => errorCode switch
+    {
+        // The eager worker reports a plan it refused as a recoverable fault with its PlanRejection (1000-1003): the profile's
+        // capacities then disagree with the worker's (the C8 handshake does not carry them).
+        >= 1000 and <= 1003 => new RoostError(
+            RoostErrorCode.DeviceFault,
+            string.Create(CultureInfo.InvariantCulture, $"The worker refused the step plan (rejection {errorCode}); the profile's pool and step capacities may not match the worker's.")),
+        _ => new RoostError(RoostErrorCode.DeviceFault, string.Create(CultureInfo.InvariantCulture, $"The worker failed the step (recoverable fault, status {errorCode}); the worker is kept.")),
+    };
 
     private void Apply(StepOutcome outcome)
     {
@@ -396,32 +494,75 @@ internal sealed class WorkerDriver : IGenerationBackend
         }
     }
 
-    private void FailStep(PlannedStep step, int errorCode)
+    private void FailStep(PlannedStep step, RoostError error)
     {
-        var rows = step.Sequences.Select(static s => new SequenceResult(s.SequenceHandle, [], FinishReason.Error)).ToImmutableArray();
-        _ = _planner.ApplyResult(new StepOutcome(step.StepId, rows));
         foreach (var s in step.Sequences)
         {
             if (_live.Remove(s.SequenceHandle, out var live))
             {
-                live.Fail(new RoostError(RoostErrorCode.DeviceFault, string.Create(CultureInfo.InvariantCulture, $"The worker failed the step (recoverable fault, status {errorCode}); the worker is kept.")));
+                live.Fail(error);
             }
+        }
+
+        try
+        {
+            var rows = step.Sequences.Select(static s => new SequenceResult(s.SequenceHandle, [], FinishReason.Error)).ToImmutableArray();
+            _ = _planner.ApplyResult(new StepOutcome(step.StepId, rows));
+        }
+        catch (Exception e)
+        {
+            LoseWorker(new RoostError(RoostErrorCode.Internal, "The planner could not drop a failed step: " + Describe(e)));
         }
     }
 
-    private void LoseWorker(FaultClass fault, int errorCode)
+    /// <summary>Fails every live request, discards the planner state and the worker. Never throws.</summary>
+    private void LoseWorker(RoostError error)
     {
-        _planner.OnWorkerRestarted();
-        var error = fault == FaultClass.Sticky
-            ? new RoostError(RoostErrorCode.DeviceFault, string.Create(CultureInfo.InvariantCulture, $"The GPU faulted (sticky, status {errorCode}); the worker was killed and the request cannot be resumed (R-070)."))
-            : new RoostError(RoostErrorCode.WorkerRestarted, $"The worker was lost ({fault}); it was killed and the request cannot be resumed (R-070).");
-        foreach (var handle in _live.Keys)
+        FailAll(error);
+        try
         {
-            _ = _planner.Cancel(handle);
+            _planner = CreatePlanner(_profile); // every sequence it held has just been failed
+        }
+        catch (Exception)
+        {
+            // CreatePlanner succeeded at construction with the same profile; keep the old planner if it ever does not.
         }
 
-        FailAll(error);
-        _transport.KillAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+        try
+        {
+            _transport.KillAsync(CancellationToken.None).AsTask().GetAwaiter().GetResult();
+            if (_transport.State is not (TransportState.Idle or TransportState.Running))
+            {
+                ReplaceTransport();
+            }
+        }
+        catch (Exception)
+        {
+            ReplaceTransport();
+        }
+    }
+
+    /// <summary>Abandons a transport that cannot be killed or restarted and makes a fresh one. Never throws.</summary>
+    private void ReplaceTransport()
+    {
+        var old = _transport;
+        try
+        {
+            _transport = _createTransport();
+        }
+        catch (Exception)
+        {
+            return; // keep the old one; EnsureWorker reports the failure to the next request
+        }
+
+        try
+        {
+            old.DisposeAsync().AsTask().GetAwaiter().GetResult();
+        }
+        catch (Exception)
+        {
+            // Best effort: a process worker watches its parent and ends itself; the segment file is the transport's.
+        }
     }
 
     private void FailAll(RoostError error)
@@ -438,9 +579,9 @@ internal sealed class WorkerDriver : IGenerationBackend
 
     private sealed class Live(RequestId id, int promptTokens)
     {
-        public Channel<TokenEvent> Channel { get; } = System.Threading.Channels.Channel.CreateUnbounded<TokenEvent>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
-
         private int _completion;
+
+        public Channel<TokenEvent> Channel { get; } = System.Threading.Channels.Channel.CreateUnbounded<TokenEvent>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
         public void Tokens(ImmutableArray<int> tokens)
         {

@@ -22,7 +22,7 @@ public sealed class ProcessTransportTests
         await using var client = await TestRig.ProcessAsync(new Script { Tokens = ids });
         var driver = Assert.IsType<WorkerDriver>(client.Backend);
         Assert.Equal(TransportKind.Process, driver.Transport.Kind);
-        var pid = Assert.IsType<ProcessWorkerTransport>(driver.Transport).ProcessId;
+        var pid = Assert.IsType<ProcessWorkerTransport>(((DriverTransport)driver.Transport).Inner).ProcessId;
         Assert.NotEqual(Environment.ProcessId, pid);
 
         var response = await client.GetResponseAsync([new ChatMessage(ChatRole.User, "Hi")], cancellationToken: Timeout);
@@ -44,7 +44,7 @@ public sealed class ProcessTransportTests
     {
         // The command line carries the fault, so every spawned worker faults at its second step: each request fails, on a new process.
         await using var client = await TestRig.ProcessAsync(new Script { Tokens = TestRig.Encode(Reply), FaultAtStep = 2, Fault = FaultClass.Sticky });
-        var transport = Assert.IsType<ProcessWorkerTransport>(((WorkerDriver)client.Backend).Transport);
+        var transport = Assert.IsType<ProcessWorkerTransport>(((DriverTransport)((WorkerDriver)client.Backend).Transport).Inner);
         var first = transport.ProcessId;
 
         var e = await Assert.ThrowsAsync<RoostChatException>(() => client.GetResponseAsync([new ChatMessage(ChatRole.User, "Hi")], cancellationToken: Timeout));
@@ -59,7 +59,7 @@ public sealed class ProcessTransportTests
     public async Task AHungStepMissesItsDeadlineAndTheWorkerIsKilledAndReplaced()
     {
         await using var client = await TestRig.ProcessAsync(new Script { Tokens = TestRig.Encode(Reply), HangAtStep = 5 }, TimeSpan.FromMilliseconds(500));
-        var transport = Assert.IsType<ProcessWorkerTransport>(((WorkerDriver)client.Backend).Transport);
+        var transport = Assert.IsType<ProcessWorkerTransport>(((DriverTransport)((WorkerDriver)client.Backend).Transport).Inner);
         var first = transport.ProcessId;
 
         var e = await Assert.ThrowsAsync<RoostChatException>(() => client.GetResponseAsync([new ChatMessage(ChatRole.User, "Hi")], cancellationToken: Timeout));

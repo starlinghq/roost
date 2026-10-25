@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Starlings.Generation.Roost.Driver;
 using Starlings.Roost.Generation;
 using Starlings.Roost.Models.Tiny;
 using Starlings.Roost.Transport;
@@ -58,7 +59,12 @@ internal static class TestRig
     public static int[] Encode(string text) => [.. Tokenizer.Encode(text, false).Ids];
 
     /// <summary>A client over the in-process transport; <paramref name="executors"/> receives every executor made (one per worker start).</summary>
-    public static Task<RoostChatClient> InProcessAsync(Script script, List<ScriptedExecutor>? executors = null, Func<RoostChatClientOptions, RoostChatClientOptions>? configure = null)
+    public static Task<RoostChatClient> InProcessAsync(
+        Script script,
+        List<ScriptedExecutor>? executors = null,
+        Func<RoostChatClientOptions, RoostChatClientOptions>? configure = null,
+        Func<IDriverTransport, IDriverTransport>? decorate = null,
+        PlanLimits? limits = null)
     {
         var made = 0;
         var options = new RoostChatClientOptions
@@ -71,7 +77,7 @@ internal static class TestRig
                 {
                     // An injected fault happens in the first worker only; a restarted worker runs clean.
                     var first = Interlocked.Increment(ref made) == 1;
-                    var e = new ScriptedExecutor(first ? script : script with { FaultAtStep = 0 }, Limits(), StopId);
+                    var e = new ScriptedExecutor(first ? script : script with { FaultAtStep = 0, ThrowAtStep = 0 }, limits ?? Limits(), StopId);
                     if (executors is not null)
                     {
                         lock (executors)
@@ -86,7 +92,7 @@ internal static class TestRig
                 TransportOptions = new WorkerTransportOptions { StartupTimeout = TimeSpan.FromSeconds(30) },
             },
         };
-        return RoostChatClient.StartAsync(configure?.Invoke(options) ?? options);
+        return RoostChatClient.StartAsync(configure?.Invoke(options) ?? options, decorate, TestContext.Current.CancellationToken);
     }
 
     /// <summary>A client over the default (process) transport: this test executable re-run as the worker.</summary>

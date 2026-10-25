@@ -56,7 +56,11 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     /// <returns>The client; dispose it to stop the worker.</returns>
     /// <exception cref="ArgumentException">The options are incomplete or inconsistent.</exception>
     /// <exception cref="RoostChatException">The worker rejected the handshake (<see cref="RoostErrorCode.AssetMismatch"/>, <see cref="RoostErrorCode.ProfileUnsupported"/>) or did not start.</exception>
-    public static async Task<RoostChatClient> StartAsync(RoostChatClientOptions options, CancellationToken cancellationToken = default)
+    public static Task<RoostChatClient> StartAsync(RoostChatClientOptions options, CancellationToken cancellationToken = default) =>
+        StartAsync(options, null, cancellationToken);
+
+    /// <summary>Starts a client whose transports are wrapped by <paramref name="decorate"/> (tests inject transport failures).</summary>
+    internal static async Task<RoostChatClient> StartAsync(RoostChatClientOptions options, Func<IDriverTransport, IDriverTransport>? decorate, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(options.Model);
@@ -68,7 +72,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             throw new ArgumentException("DefaultMaxOutputTokens must be positive.", nameof(options));
         }
 
-        var driver = await WorkerDriver.StartAsync(options.Model, options.Worker, cancellationToken).ConfigureAwait(false);
+        var driver = await WorkerDriver.StartAsync(options.Model, options.Worker, cancellationToken, decorate).ConfigureAwait(false);
         return new RoostChatClient(options, driver);
     }
 

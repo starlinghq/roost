@@ -27,11 +27,14 @@ internal sealed record Script
     /// <summary>Sleep per step, to give a test time to cancel.</summary>
     public int DelayMs { get; init; }
 
+    /// <summary>1-based step number whose Execute throws a <see cref="KeyNotFoundException"/> (any exception type is sticky to the runtime), 0 for none.</summary>
+    public int ThrowAtStep { get; init; }
+
     /// <summary>1-based step number that sleeps 30 s (past any test deadline: a hang), 0 for none.</summary>
     public int HangAtStep { get; init; }
 
     public string Encode() => string.Create(CultureInfo.InvariantCulture,
-        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs};{HangAtStep}");
+        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs};{HangAtStep};{ThrowAtStep}");
 
     public static Script Decode(string text)
     {
@@ -44,6 +47,7 @@ internal sealed record Script
             Fault = (FaultClass)uint.Parse(p[3], CultureInfo.InvariantCulture),
             DelayMs = int.Parse(p[4], CultureInfo.InvariantCulture),
             HangAtStep = int.Parse(p[5], CultureInfo.InvariantCulture),
+            ThrowAtStep = int.Parse(p[6], CultureInfo.InvariantCulture),
         };
     }
 }
@@ -65,7 +69,7 @@ internal sealed class ScriptedExecutor : IStepExecutor
     private readonly Script _script;
     private readonly PlanLimits _limits;
     private readonly int _stopId;
-    private readonly Dictionary<ulong, int> _emitted = [];
+    private readonly Dictionary<ulong, int> _promptLength = [];
     private int _steps;
 
     public ScriptedExecutor(Script script, PlanLimits limits, int stopId)
@@ -128,6 +132,11 @@ internal sealed class ScriptedExecutor : IStepExecutor
             Thread.Sleep(30_000);
         }
 
+        if (_steps == _script.ThrowAtStep)
+        {
+            throw new KeyNotFoundException("injected: Execute threw an arbitrary exception type");
+        }
+
         if (_steps == _script.FaultAtStep)
         {
             return _script.Fault == FaultClass.Sticky ? StepOutcome.Sticky(700) : StepOutcome.Recoverable(11);
@@ -141,12 +150,14 @@ internal sealed class ScriptedExecutor : IStepExecutor
                 continue;
             }
 
-            if (s.PositionOffset == 0 || !_emitted.ContainsKey(s.Handle))
+            // The output index is the position after the prompt, so a sequence that was preempted and recomputes its prompt and
+            // its own earlier output continues where it was, as a real model would. The first sampling row ends the prompt.
+            if (!_promptLength.TryGetValue(s.Handle, out var promptLength))
             {
-                _emitted[s.Handle] = 0;
+                _promptLength[s.Handle] = promptLength = s.KvLength;
             }
 
-            var n = _emitted[s.Handle]++;
+            var n = s.KvLength - promptLength;
             tokens.Add(n < _script.Tokens.Length ? _script.Tokens[n] : _script.NeverStop ? _script.Tokens[^1] : _stopId);
         }
 
