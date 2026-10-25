@@ -1,18 +1,19 @@
 <Project>
   <!--
     Versions are central and locked (packages.lock.json; CI restores in locked mode). Pin native and runtime
-    packages exactly ([x]) with a comment saying why. Engine packages (Abstractions, Ops, Engine, Worker, Kernels,
-    Cuda, Models.*, Generation.Roost) must never reach Microsoft.ML.OnnxRuntime*, directly or transitively:
-    tools/check-roost-boundaries.py enforces it in CI.
+    packages exactly ([x]) with a comment saying why. Worker-side packages (Abstractions, Ops, Graph, Worker,
+    WorkerHost, Kernels, Cuda, Native, Distributed, Models.*) must never reach Microsoft.ML.OnnxRuntime*, directly
+    or transitively: tools/check-roost-boundaries.py enforces it in CI. Host-process packages (Engine, Generation,
+    Generation.Roost, Server) may use ONNX Runtime (decision 30).
   -->
   <ItemGroup>
     <!-- Starling's published packages, exact pins (plan 2.2). They bring ONNX Runtime GenAI: host-process packages only (decision 30). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
-    <!-- R-036: the IChatClient contract of Starlings.Generation.Roost. Exact pin at the version Starlings.Generation.OnnxGenAI 0.2.0 already resolves, so no other lock file moves. -->
+    <!-- R-036: the IChatClient contract of Starlings.Generation.Roost. Exact pin at the version Starlings.Generation.OnnxGenAI 0.3.0 already resolves. -->
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="[9.8.0]" />
-    <PackageVersion Include="Starlings.Generation.OnnxGenAI" Version="[0.2.0]" />
-    <PackageVersion Include="Starlings.Models.Qwen35" Version="[0.2.0]" />
+    <PackageVersion Include="Starlings.Generation.OnnxGenAI" Version="[0.3.0]" />
+    <PackageVersion Include="Starlings.Models.Qwen35" Version="[0.3.0]" />
     <!-- R-023: reads kernels/manifest.toml in Starlings.Roost.Kernels (BSD-2-Clause; depends on System.Text.Json and System.Collections.Immutable only, no ONNX Runtime). -->
     <PackageVersion Include="Tomlyn" Version="[2.10.1]" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
