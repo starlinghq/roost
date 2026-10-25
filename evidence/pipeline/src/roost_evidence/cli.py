@@ -57,12 +57,16 @@ def _evaluate_layers(args: argparse.Namespace) -> int:
     for name in report["missing_cases"]:
         print(f"missing        {name}: no candidate capture")
     for name, case in report["cases"].items():
-        first = case["first_divergent"]
-        if first:
-            print(
-                f"divergence     {name} first at forward {first['forward']} {first['stage']} "
-                f"position {first['position']} (max abs {first['max_abs']:.3g})"
-            )
+        for field, first in case.items():
+            if field.startswith("first_divergent") and first:
+                what = field.removeprefix("first_divergent").removeprefix("_") or "max_abs"
+                position = f" position {first['position']}" if first.get("position") is not None else ""
+                print(
+                    f"divergence     {name} first at forward {first['forward']} {first['stage']}{position} "
+                    f"({what} {first['value']:.3g})"
+                )
+    if report["unconfigured_checks"]:
+        print(f"unconfigured   {', '.join(report['unconfigured_checks'])}: no tolerance key, not checked")
     print(f"{report['status']}: layers")
     return 0 if report["status"] == evaluate_generation.PASSED else 1
 
