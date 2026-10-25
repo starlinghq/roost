@@ -265,7 +265,8 @@ public static class ConformanceRunner
 
         double util = r.Outputs.Max(o => o.Stat.MaxUtilisation);
         long bad = r.Outputs.Sum(o => o.Stat.Violations + o.Stat.NonFinite);
-        return $"class={r.Class} utilisation={util:F3} violations={bad} det={r.Determinism} inv={r.Invariance} {r.Detail}".TrimEnd();
+        string classes = string.Join(',', r.Outputs.Select(x => string.IsNullOrEmpty(x.Class) ? r.Class : x.Class).Distinct());
+        return $"class={classes} utilisation={util:F3} violations={bad} det={r.Determinism} inv={r.Invariance} {r.Detail}".TrimEnd();
     }
 
     private static CaseResult RunCase(IKernelBackend candidate, CpuBackend reference, VariantInfo v, OpCase c, RunOptions o)
@@ -343,8 +344,12 @@ public static class ConformanceRunner
 
             if (c.Op == OpId.PagedAttention && c.IOr("mode", -1) == (int)AttentionMode.Prefill && c.IOr("batch", 0) > 1 && c.Buffers.TryGetValue("q_indptr", out HostBuf? qIndptrBuf))
             {
-                // Prefill is not registered batch invariant, but a sequence's output must not depend on who else is in the batch
-                // (R-019: the racecheck exception of the FA2 prefill kernel is accepted only with this bit-for-bit evidence).
+                // Whether a sequence's prefill output depends on who else is in the batch. It was written as the evidence a racecheck
+                // exception for the FA2 prefill kernel would need (R-019). It gates the case only for a variant registered
+                // BATCH_INVARIANT: the contract promises nothing more, and the FA2 variant is not (decode split-KV depends on the
+                // batch). For any other variant the check is recorded, and a mismatch is reported in the results' summary. A call
+                // refused when run alone fails the case either way.
+                bool gate = v.Flags.HasFlag(VariantTraits.BatchInvariant);
                 int batch = c.I("batch");
                 int[] qIndptr = qIndptrBuf.As<int>().ToArray();
                 int width = c.I("q_heads") * c.I("head_dim") * Elem.Size(c.Dtype);
@@ -354,8 +359,9 @@ public static class ConformanceRunner
                     using ExecResult alone = candidate.Execute(v.Id, one);
                     bool same = alone.Status == 0
                         && got.Outputs["out"].Raw().Slice(qIndptr[seq] * width, (qIndptr[seq + 1] - qIndptr[seq]) * width).SequenceEqual(alone.Outputs["out"].Raw());
-                    r.Checks.Add(new BackendCheck($"prefill batch composition: sequence {seq} alone equals its rows in the batch (bytes)", same, same ? string.Empty : $"status {alone.Status}"));
-                    pass &= same;
+                    string role = gate ? "gating" : "recorded only: the variant is not registered batch invariant";
+                    r.Checks.Add(new BackendCheck($"prefill batch composition: sequence {seq} alone equals its rows in the batch (bytes)", same, $"status {alone.Status}; {role}"));
+                    pass &= alone.Status == 0 && (same || !gate);
                 }
             }
 

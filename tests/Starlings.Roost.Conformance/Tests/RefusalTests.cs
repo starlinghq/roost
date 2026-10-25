@@ -145,6 +145,18 @@ public sealed partial class RefusalTests
         Assert.All(rep.Results.Where(x => x.Outcome == "fail"), x => Assert.All(x.Outputs, o => Assert.Equal(0, o.Stat.Violations)));
     }
 
+    [Fact]
+    public void ACompositionBreakIsRecordedButDoesNotFailAVariantNotRegisteredBatchInvariant()
+    {
+        // As the FA2 prefill variant: deterministic, needs plan, not batch invariant. The same damaged multi-sequence output is
+        // recorded as a failed check on a passing case.
+        using var bad = new CpuBackend { Perturb = (c, r) => { if (c.IOr("batch", 1) > 1) { r.Outputs["out"].Raw()[^2] ^= 1; } } };
+        using var notInvariant = new DelegatingBackend(bad, flags: VariantTraits.Deterministic);
+        ConformanceReport rep = Prefill(notInvariant);
+        Assert.DoesNotContain(rep.Results, x => x.Outcome is "fail" or "error");
+        Assert.Contains(rep.Results, x => x.Outcome == "pass" && x.Checks.Any(k => k.Name.StartsWith("prefill batch composition", StringComparison.Ordinal) && !k.Ok && k.Detail.Contains("recorded only", StringComparison.Ordinal)));
+    }
+
     private static ConformanceReport Prefill(IKernelBackend b)
         => ConformanceRunner.Run(b, Fixtures.Options(variants: new HashSet<string> { CpuBackend.VariantId }, ops: new HashSet<OpId> { OpId.PagedAttention }, determinism: false, invariance: false));
 

@@ -189,6 +189,7 @@ public static class ResultsWriter
         w.WriteNumber("errors", report.Count("error"));
         w.WriteNumber("not_run", report.Count("not_run"));
         w.WriteNumber("refused", report.Count("refused"));
+        w.WriteNumber("recorded_check_failures_in_passing_cases", report.Results.Count(r => r.Outcome == "pass" && r.Checks.Any(k => !k.Ok)));
         w.WriteBoolean("green", report.Green);
         w.WriteBoolean("determinism_checked", o.Determinism);
         w.WriteBoolean("batch_invariance_checked", o.Invariance);
