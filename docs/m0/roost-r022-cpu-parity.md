@@ -7,7 +7,7 @@ step-0 vectors) stay outside Git; the summaries, gate reports and digests are in
 
 ## Result
 
-1. **R-022 found a definition defect, and this branch fixes it.** The full-attention node left `PagedAttentionArgs.WindowLeft`
+1. **R-022 found a definition defect; its fix (`WindowLeft=-1`, with a definition test) is already on `plan/build-plan` (3936c2d).** The full-attention node left `PagedAttentionArgs.WindowLeft`
    unbound. An unbound field is 0, and `CpuOps.PagedAttention` reads a non-negative `WindowLeft` as a sliding window, so every query
    attended only to itself. Position 0 (whose only key is itself) and all 18 Gated DeltaNet layers were unaffected, which is why the
    R-035 smoke test passed; the per-layer comparison put the first divergence at layer 3 (the first attention layer), position 2 at the evidence's 0.1

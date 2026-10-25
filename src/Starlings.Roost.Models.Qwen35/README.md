@@ -70,8 +70,9 @@ one-token attention window it was " the". Prefill 10 to 19 s, decode step 2.7 s.
 gives the same logits (cosine 1.000000) as one prefill.
 
 Per-layer parity against transformers fp32 (hidden states of every layer, Gated DeltaNet recurrent and convolution state, step-0
-log-probabilities, five chat prompts, 24 forwards each) is R-022's: `docs/m0/roost-r022-cpu-parity.md`. Every remaining difference
-is bfloat16 storage of activations; the multimodal rope reduces to plain rotary embedding for text-only prompts.
+log-probabilities, five chat prompts, 24 forwards each) is R-022's: `docs/m0/roost-r022-cpu-parity.md`. At attention layers 3
+and 15 a bf16 emulation accounts for the remaining difference as bfloat16 storage of activations; for the 18 Gated DeltaNet layers
+that is inferred, as is the reduction of the multimodal rope to plain rotary embedding for text-only prompts (not tested directly).
 
 ## Unverified
 
