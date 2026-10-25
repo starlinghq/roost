@@ -61,7 +61,8 @@ jobs:
       - run: pipx run ruff==0.16.9 check .
       - run: pipx run ruff==0.16.9 format --check .
       - run: pipx run --spec pytest==8.4.2 pytest -q tests/tools
-      # evidence/pipeline's own tests (evaluator, manifests, captures), without the torch reference extra.
+      # evidence/pipeline's own tests (evaluator, manifests, captures), without the torch reference extra: the reference-runner
+      # tests that need torch skip here and run only on the development host.
       - name: Evidence pipeline tests
         run: pipx run uv==0.12.19 run --project evidence/pipeline --locked pytest -q evidence/pipeline/tests
       - name: Backlog parses (dry run)
