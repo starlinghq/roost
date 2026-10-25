@@ -5,6 +5,7 @@ using Starlings.Roost.Models.Qwen35;
 using Starlings.Roost.Ops;
 using Starlings.Roost.Plans;
 using Starlings.Roost.Worker.Eager;
+using Starlings.Roost.Worker.Qwen35;
 using Starlings.Roost.Worker.Tests.Support;
 
 namespace Starlings.Roost.Worker.Tests;

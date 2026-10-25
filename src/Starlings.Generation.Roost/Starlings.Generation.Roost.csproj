@@ -13,6 +13,10 @@
     <ProjectReference Include="../Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
     <ProjectReference Include="../Starlings.Roost.Generation/Starlings.Roost.Generation.csproj" />
     <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
+    <!-- The packaged roost-worker (R-062), so `dotnet add package Starlings.Generation.Roost` brings the worker executable among
+         the native runtime assets. The runtime package carries no lib/ assets, so a consumer's process gets no worker code; this
+         assembly uses none of it either (NuGet pack drops a ReferenceOutputAssembly="false" reference from the dependencies). -->
+    <ProjectReference Include="../Starlings.Roost.Worker.Runtime/Starlings.Roost.Worker.Runtime.csproj" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Starlings.Generation.Roost.Tests" />

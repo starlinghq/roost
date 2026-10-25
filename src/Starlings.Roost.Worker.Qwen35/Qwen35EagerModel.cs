@@ -5,12 +5,12 @@ using Starlings.Roost.Ops;
 using Starlings.Roost.Worker.Eager;
 using System.Runtime.InteropServices;
 
-namespace Starlings.Roost.Worker.Tests.Support;
+namespace Starlings.Roost.Worker.Qwen35;
 
 /// <summary>
 /// The adapter between the eager worker and the generated Qwen3.5-0.8B forward: slot tables, weight assembly from the
-/// weight map, layout offsets and the call into <c>Qwen35Model.Forward</c>. The forward runs the generated code directly on
-/// the backend; only when a <see cref="Recorder"/> is set (the per-layer comparison) does it go through <see cref="Probe{TInner}"/>.
+/// weight map, layout offsets and the call into <c>Qwen35Model.Forward</c>, which runs the generated code directly on the
+/// backend. This is what the packaged worker (<c>roost-worker</c>, R-062) serves for the model id <see cref="ModelId"/>.
 /// </summary>
 public sealed class Qwen35EagerModel : IEagerModel
 {
@@ -25,6 +25,9 @@ public sealed class Qwen35EagerModel : IEagerModel
         _weights = [.. Qwen35Model.WeightSlots.Select(Slot)];
         _state = [.. Qwen35Model.StateSlots.Select(static s => new EagerStateSlot(s.Name, s.Group, s.Dtype, s.ElementsPerBlock, s.Group == 1))];
     }
+
+    /// <summary>The model id this binding serves (the <c>RoostModel</c> name of the definition).</summary>
+    public static string ModelId => Qwen35Model.ModelName;
 
     /// <inheritdoc/>
     public string Name => Qwen35Model.ModelName;
@@ -104,19 +107,7 @@ public sealed class Qwen35EagerModel : IEagerModel
     /// <inheritdoc/>
     public void Forward<TOps>(in EagerForward input)
         where TOps : struct, IRoostOps
-    {
-        var layout = new Qwen35Model.ForwardLayout(input.MaxTokens, input.MaxSequences, input.MaxKvBlocks);
-        var plan = Qwen35Model.PlanInputs.Bind(input.PlanRegion, layout, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
-        var ctx = new Qwen35Model.StepContext(layout, input.Arena, input.Weights, input.State, plan, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
-        if (ProbeState.Recorder is null)
-        {
-            Qwen35Model.Forward<TOps>(in ctx);
-        }
-        else
-        {
-            Qwen35Model.Forward<Probe<TOps>>(in ctx);
-        }
-    }
+        => RunForward<TOps>(in input);
 
     /// <inheritdoc/>
     public DeviceSpan Logits(in EagerForward input)
@@ -125,6 +116,21 @@ public sealed class Qwen35EagerModel : IEagerModel
         var plan = Qwen35Model.PlanInputs.Bind(input.PlanRegion, layout, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
         var ctx = new Qwen35Model.StepContext(layout, input.Arena, input.Weights, input.State, plan, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
         return Qwen35Model.Output_logits(in ctx);
+    }
+
+    /// <summary>
+    /// Binds one step's plan region, arena, weights and state and runs the generated forward on <typeparamref name="TOps"/>.
+    /// A test can pass a wrapping backend (for example a per-layer probe) without its own copy of the binding.
+    /// </summary>
+    /// <typeparam name="TOps">The backend.</typeparam>
+    /// <param name="input">The step the eager worker is running.</param>
+    public static void RunForward<TOps>(in EagerForward input)
+        where TOps : struct, IRoostOps
+    {
+        var layout = new Qwen35Model.ForwardLayout(input.MaxTokens, input.MaxSequences, input.MaxKvBlocks);
+        var plan = Qwen35Model.PlanInputs.Bind(input.PlanRegion, layout, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
+        var ctx = new Qwen35Model.StepContext(layout, input.Arena, input.Weights, input.State, plan, input.Tokens, input.Selected, input.Sequences, input.KvBlocks);
+        Qwen35Model.Forward<TOps>(in ctx);
     }
 
     private static EagerWeightSlot Slot(Qwen35Model.WeightSlot slot)

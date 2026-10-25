@@ -154,6 +154,7 @@
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Engine": "[0.0.0-dev, )",
           "Starlings.Roost.Generation": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker.Runtime.linux-x64": "[0.0.0-dev, )",
           "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
         }
       },
@@ -186,6 +187,14 @@
           "Tomlyn": "[2.10.1, 2.10.1]"
         }
       },
+      "starlings.roost.models.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Graph": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
       "starlings.roost.models.tiny": {
         "type": "Project",
         "dependencies": {
@@ -209,6 +218,22 @@
           "Starlings.Roost.Ops": "[0.0.0-dev, )",
           "Starlings.Roost.WorkerHost": "[0.0.0-dev, )",
           "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.worker.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Models.Qwen35": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker": "[0.0.0-dev, )"
+        }
+      },
+      "Starlings.Roost.Worker.Runtime.linux-x64": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker.Qwen35": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
         }
       },
       "starlings.roost.workerhost": {

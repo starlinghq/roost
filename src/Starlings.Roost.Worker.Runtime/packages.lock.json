@@ -1,0 +1,102 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "Microsoft.DotNet.ILCompiler": {
+        "type": "Direct",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "AawF393Q+VkdrnrnI1gu612zh5iqpa1AGSvnKCQ3IkMgSKJXIQbO1sXYRgEzOU4f0cPZ6MaCCF29xZSGWlmbuQ=="
+      },
+      "Microsoft.NET.ILLink.Tasks": {
+        "type": "Direct",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "xi+BDjFpW+Sb+MHFHaH6Y/gV9I8BluFwRXc1QyCdoZbIK26eNiBeFuMTe/FMwc33G1wdHCyDg7CVTmb8OdQrMQ=="
+      },
+      "starlings.roost.abstractions": {
+        "type": "Project"
+      },
+      "starlings.roost.cuda": {
+        "type": "Project"
+      },
+      "starlings.roost.engine": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.graph": {
+        "type": "Project"
+      },
+      "starlings.roost.kernels": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.models.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Graph": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.worker": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Cuda": "[0.0.0-dev, )",
+          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.worker.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Models.Qwen35": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.workerhost": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Engine": "[0.0.0-dev, )"
+        }
+      },
+      "Tomlyn": {
+        "type": "CentralTransitive",
+        "requested": "[2.10.1, 2.10.1]",
+        "resolved": "2.10.1",
+        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+      }
+    },
+    "net10.0/linux-x64": {
+      "Microsoft.DotNet.ILCompiler": {
+        "type": "Direct",
+        "requested": "[10.0.12, )",
+        "resolved": "10.0.12",
+        "contentHash": "AawF393Q+VkdrnrnI1gu612zh5iqpa1AGSvnKCQ3IkMgSKJXIQbO1sXYRgEzOU4f0cPZ6MaCCF29xZSGWlmbuQ==",
+        "dependencies": {
+          "runtime.linux-x64.Microsoft.DotNet.ILCompiler": "10.0.12"
+        }
+      },
+      "runtime.linux-x64.Microsoft.DotNet.ILCompiler": {
+        "type": "Transitive",
+        "resolved": "10.0.12",
+        "contentHash": "wAa+LAE6+Bkd+pEJvGdnQU8PZQRzvhurpQ4hzsOTpRuedIq1kunJcz86xBCBlzsc+QlVdCKVUPzEfB3uYVB7Gw=="
+      }
+    }
+  }
+}

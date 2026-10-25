@@ -1,0 +1,18 @@
+gpu: NVIDIA GeForce RTX 3090, 610.57.04, 8.6
+cuda: driver UMD 13.3; toolkit release 13.3
+command: tests/Starlings.Generation.Roost.Tests.Cuda/bin/Release/net10.0/Starlings.Generation.Roost.Tests.Cuda --ckpt /home/mark/Projects/roost-wave3/envs/R-013/hub --lock evidence/registry/qwen3.5-0.8b.lock.toml --manifest kernels/manifest.toml --kernels /home/mark/Projects/roost-wave5/envs/R-025/lib --tokenizer /home/mark/Projects/roost-wave3/envs/R-013/hub/tokenizer.json --allow-untested --worker-exe /home/mark/.claude/jobs/41b9d24d/tmp/roost-worker-pub/roost-worker
+kernel library libroost_kernels_sm86.so sha256 fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7
+manifest sha256 35103ee802160f2700f8dadffcecd7a539c4febf5079f5cf0267c80057b16615; weights sha256 04b1c301231dd422b8860db31311ab2721511346a32cb1e079c4c4e5f1fe4696; CUDA_VISIBLE_DEVICES GPU-9e21a72e-3a6f-e082-3d74-4b8d361de70c
+worker ready in 16.2 s; context 512 tokens; worker packaged /home/mark/.claude/jobs/41b9d24d/tmp/roost-worker-pub/roost-worker
+[ok] What is the capital of France? Answer in one word.
+  ->  Paris
+  finish stop, usage 24+2, 0.66 s
+[ok] Write one sentence about the sea.
+  -> The vast, endless ocean stretches endlessly across the horizon, a silent guardian that defines the rhythm of the world.
+  finish stop, usage 19+23, 0.20 s
+[ok] List three prime numbers.
+  -> Here are three prime numbers:  1.  **2** 2.  **3** 3.  **5**  *(Note: 2 is the only even prime number, and 3 is the only prime number
+  finish length, usage 17+48, 0.46 s
+cancelled mid-stream
+after cancel: Hello! How can I help you today (length)
+PASS

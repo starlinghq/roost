@@ -13,6 +13,8 @@
     <Project Path="src/Starlings.Roost.Models.Qwen35/Starlings.Roost.Models.Qwen35.csproj" />
     <Project Path="src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
     <Project Path="src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
+    <Project Path="src/Starlings.Roost.Worker.Qwen35/Starlings.Roost.Worker.Qwen35.csproj" />
+    <Project Path="src/Starlings.Roost.Worker.Runtime/Starlings.Roost.Worker.Runtime.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Starlings.Generation.Roost.Tests/Starlings.Generation.Roost.Tests.csproj" />

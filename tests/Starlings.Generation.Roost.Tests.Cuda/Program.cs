@@ -7,7 +7,7 @@ using Starlings.Roost.Generation;
 using Starlings.Roost.Kernels;
 using Starlings.Roost.Models.Qwen35;
 using Starlings.Roost.Worker.Eager;
-using Starlings.Roost.Worker.Tests.Support;
+using Starlings.Roost.Worker.Qwen35;
 using Starlings.Roost.Worker.Weights;
 using Starlings.Roost.WorkerHost;
 using Starlings.Tokenizers;
@@ -16,6 +16,7 @@ using Starlings.Tokenizers;
 // decision 21). This executable is both the host and, re-run with WorkerEntry.SegmentFlag, the worker. Run it through
 // tools/gpu-lease (run.sh) so CUDA_VISIBLE_DEVICES selects the leased device; the worker inherits it as ordinal 0.
 //   usage: <exe> --ckpt <dir> --lock <lock.toml> --manifest <manifest.toml> --kernels <dir> --tokenizer <tokenizer.json> [--allow-untested]
+//          [--worker-exe <roost-worker>]   start the packaged Native AOT worker (R-062) instead of re-running this executable
 const string WeightsFile = "model.safetensors-00001-of-00001.safetensors";
 
 string Opt(string name) => args.SkipWhile(a => a != name).Skip(1).FirstOrDefault() ?? throw new ArgumentException($"missing {name}");
@@ -69,9 +70,22 @@ var clock = Stopwatch.StartNew();
 await using var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
 {
     Model = profile,
-    Worker = new RoostWorkerOptions { Command = WorkerCommand.ForCurrentProcess([.. args]) },
+    Worker = args.Contains("--worker-exe")
+        ? new RoostWorkerOptions
+        {
+            Launch = new RoostWorkerLaunch
+            {
+                Executable = Opt("--worker-exe"),
+                WeightsPath = Path.Combine(Opt("--ckpt"), WeightsFile),
+                WeightsSize = locked.Size,
+                KernelDirectory = Opt("--kernels"),
+                ManifestPath = Opt("--manifest"),
+                AllowUntestedSm = eager.AllowUntested,
+            },
+        }
+        : new RoostWorkerOptions { Command = WorkerCommand.ForCurrentProcess([.. args]) },
 });
-Console.WriteLine($"worker ready in {clock.Elapsed.TotalSeconds:F1} s; context {profile.ContextTokens} tokens");
+Console.WriteLine($"worker ready in {clock.Elapsed.TotalSeconds:F1} s; context {profile.ContextTokens} tokens; worker {(args.Contains("--worker-exe") ? "packaged " + Opt("--worker-exe") : "this executable")}");
 
 string[] prompts =
 [

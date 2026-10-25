@@ -14,6 +14,9 @@ LABEL=${4:-sm86}
 DEVICE=${ROOST_GPU_DEVICE:-3090}
 # ROOST_KERNEL_MANIFEST names another manifest, e.g. one that records the digests of a newer kernel build.
 MANIFEST=${ROOST_KERNEL_MANIFEST:-kernels/manifest.toml}
+# ROOST_WORKER_EXE starts the packaged Native AOT roost-worker (R-062) instead of re-running the harness as the worker.
+WORKER=()
+if [[ -n "${ROOST_WORKER_EXE:-}" ]]; then WORKER=(--worker-exe "$ROOST_WORKER_EXE"); fi
 EXE=tests/Starlings.Generation.Roost.Tests.Cuda/bin/Release/net10.0/Starlings.Generation.Roost.Tests.Cuda
 RESULTS=tests/Starlings.Generation.Roost.Tests.Cuda/results
 # Printed inside the lease, where CUDA_VISIBLE_DEVICES is the leased GPU's UUID.
@@ -25,4 +28,4 @@ dotnet build tests/Starlings.Generation.Roost.Tests.Cuda -c Release -v q
 mkdir -p "$RESULTS"
 tools/gpu-lease run --device "$DEVICE" --need-mib 6000 --wait 3600 --stream H -- \
   bash -c "$IDENTIFY" identify "$EXE" --ckpt "$HUB" --lock evidence/registry/qwen3.5-0.8b.lock.toml --manifest "$MANIFEST" \
-  --kernels "$KERNELS" --tokenizer "$TOKENIZER" --allow-untested 2>&1 | tee "$RESULTS/r036-chat-$LABEL.log"
+  --kernels "$KERNELS" --tokenizer "$TOKENIZER" --allow-untested "${WORKER[@]}" 2>&1 | tee "$RESULTS/r036-chat-$LABEL.log"

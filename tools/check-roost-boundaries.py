@@ -30,9 +30,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Worker-side packages (build plan decision 30). Starlings.Roost.Models.* matches every model package.
+# Worker-side packages (build plan decision 30). Starlings.Roost.Models.* matches every model package, and
+# Starlings.Roost.Worker.* the worker's model bindings and the packaged worker executable (R-062).
 WORKER_SIDE = re.compile(
-    r"^Starlings\.Roost\.(Abstractions|Ops|Graph|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)$"
+    r"^Starlings\.Roost\.(Abstractions|Ops|Graph|Worker(\..+)?|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)$"
 )
 ONNX = re.compile(r"^microsoft\.ml\.onnxruntime", re.IGNORECASE)
 

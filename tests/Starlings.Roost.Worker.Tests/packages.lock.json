@@ -176,6 +176,13 @@
           "Tomlyn": "[2.10.1, 2.10.1]"
         }
       },
+      "starlings.roost.worker.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Models.Qwen35": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker": "[0.0.0-dev, )"
+        }
+      },
       "starlings.roost.workerhost": {
         "type": "Project",
         "dependencies": {

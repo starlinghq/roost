@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost eager-worker binding for Qwen3.5-0.8B (R-062): the slot tables, weight assembly and layout that connect the eager worker (R-025) to the generated forward of Starlings.Roost.Models.Qwen35. Worker-side: never loads ONNX Runtime.</Description>
+    <IsPackable>true</IsPackable>
+    <PackageId>Starlings.Roost.Worker.Qwen35</PackageId>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Models.Qwen35/Starlings.Roost.Models.Qwen35.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
+  </ItemGroup>
+</Project>

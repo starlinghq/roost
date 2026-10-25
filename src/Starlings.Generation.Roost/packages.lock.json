@@ -29,6 +29,9 @@
       "starlings.roost.abstractions": {
         "type": "Project"
       },
+      "starlings.roost.cuda": {
+        "type": "Project"
+      },
       "starlings.roost.engine": {
         "type": "Project",
         "dependencies": {
@@ -40,6 +43,57 @@
         "dependencies": {
           "Starlings.Generation.OnnxGenAI": "[0.3.0, 0.3.0]",
           "Starlings.Models.Qwen35": "[0.3.0, 0.3.0]"
+        }
+      },
+      "starlings.roost.graph": {
+        "type": "Project"
+      },
+      "starlings.roost.kernels": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.models.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Graph": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.worker": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Cuda": "[0.0.0-dev, )",
+          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.worker.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Models.Qwen35": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker": "[0.0.0-dev, )"
+        }
+      },
+      "Starlings.Roost.Worker.Runtime.linux-x64": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker": "[0.0.0-dev, )",
+          "Starlings.Roost.Worker.Qwen35": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
         }
       },
       "starlings.roost.workerhost": {
@@ -69,6 +123,12 @@
           "Starlings.Generation.OnnxGenAI": "[0.3.0]",
           "Starlings.Tokenizers": "[0.3.0]"
         }
+      },
+      "Tomlyn": {
+        "type": "CentralTransitive",
+        "requested": "[2.10.1, 2.10.1]",
+        "resolved": "2.10.1",
+        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
       }
     }
   }
