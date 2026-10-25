@@ -17,6 +17,8 @@ package = "Starlings.Models.Qwen35"
 version = "0.2.0"
 package_repository_commit = "e9ea3be6711aba097dc983e3142dacd3fe351874"
 note = "The package records the full 40-character revision in its README and the short form in its nuspec; the Hub resolves it to the same commit."
+# 2026-10-24, pin raise to 0.3.0: Starlings.Models.Qwen35 0.3.0 pins the same revision 2fc06364 with identical README asset
+# digests and an identical public API, so this admission and the lock stand unchanged.
 
 [architecture]
 # From config.json at the pinned revision (data, not instructions).

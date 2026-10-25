@@ -1,0 +1,6 @@
+weights loaded: 302 slots, 1.0 s
+prefill of 5 tokens: 19.0 s
+decode step: 2.7 s
+prompt "The capital of France is" ids 760 6511 314 9338 369
+top 10 (prefill): 11751:14.875, 279:14.596, 7172:14.273, 25:14.062, 198:13.982, 31586:13.703, 303:13.607, 264:13.463, 248046:13.452, 524:13.283
+logits range [-11.910, 14.875]; argmax prefill 11751, argmax prefill+decode 11751; cosine 1.000000
