@@ -4,9 +4,9 @@
     "net10.0": {
       "Starlings.Generation.OnnxGenAI": {
         "type": "Direct",
-        "requested": "[0.2.0, 0.2.0]",
-        "resolved": "0.2.0",
-        "contentHash": "0gpWMAfc12D3ZgZz637PrSZZwPddjZvq1q5FCLse8t0vCPi2aLRTwzBGoDpFb70ftvf2qChmCkcmpW4M6a0P+Q==",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "0juaWJVAMGFLCHLGmX/k/Wv1x4v93izxK8I7L3dcWqoD/1rVyBrHcm9roT6xTzILJ/GwkSi/ipCpFlk7Xpb9ew==",
         "dependencies": {
           "Microsoft.ML.OnnxRuntimeGenAI.Managed": "[0.17.1]",
           "Starlings.Tokenizers": "[0.3.0]"
@@ -14,12 +14,12 @@
       },
       "Starlings.Models.Qwen35": {
         "type": "Direct",
-        "requested": "[0.2.0, 0.2.0]",
-        "resolved": "0.2.0",
-        "contentHash": "dYqJFXsBIbAcZGIioqzUhk2o8nkZYr6qySk6AOcej81lOqqhLFOwoZLPw02c0mcZQl6b6QAnONXgGQt96430hw==",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "TrdhyICuESdW5rjc3sun7lujkBouxHrZ9HhE6rpeY4hsUrxYI5iYxBer87HcnD1t5p8WYUm9JBDcWOq/0wNuEA==",
         "dependencies": {
-          "Starlings.Acquisition": "[0.2.0]",
-          "Starlings.Generation.OnnxGenAI": "[0.2.0]",
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Generation.OnnxGenAI": "[0.3.0]",
           "Starlings.Tokenizers": "[0.3.0]"
         }
       },
@@ -38,8 +38,8 @@
       },
       "Starlings.Acquisition": {
         "type": "Transitive",
-        "resolved": "0.2.0",
-        "contentHash": "64wB+S35n0TjOwFw1w/b65sFXkZOXwpmHfFM1K9C7omuA8XV08jc4yYVEaTcOo28dNaK9nceLq8UcCdfX/739g=="
+        "resolved": "0.3.0",
+        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
       },
       "Starlings.Tokenizers": {
         "type": "Transitive",

@@ -2,10 +2,12 @@ namespace Starlings.Roost.Generation.Tests;
 
 public sealed class StopMatcherSeamTests
 {
+    private static IStopMatcher Create(params string[] stops) => StarlingStopMatcherFactory.Instance.Create(stops);
+
     [Fact]
     public void NoStopSequencesPassesTextThrough()
     {
-        var matcher = PendingStopMatcherFactory.Instance.Create([]);
+        var matcher = Create();
         Assert.Equal(new StopMatchResult("hello ", null), matcher.Push("hello "));
         Assert.Equal(new StopMatchResult("", null), matcher.Push(""));
         Assert.Equal(new StopMatchResult("world", null), matcher.Push("world"));
@@ -15,31 +17,57 @@ public sealed class StopMatcherSeamTests
     [Fact]
     public void MatchersAreIndependent()
     {
-        var a = PendingStopMatcherFactory.Instance.Create([]);
-        var b = PendingStopMatcherFactory.Instance.Create([]);
+        var a = Create("</s>");
+        var b = Create("</s>");
         Assert.NotSame(a, b);
+        a.Push("x</");
+        Assert.Equal(new StopMatchResult("y", null), b.Push("y"));
     }
 
     [Fact]
-    public void StopSequencesAreRefusedUntilStarlingPublishesItsMatcher()
+    public void APartialStopIsHeldBackUntilItMatches()
     {
-        var ex = Assert.Throws<NotSupportedException>(() => PendingStopMatcherFactory.Instance.Create(["</s>"]));
-        Assert.Contains("starling#124", ex.Message, StringComparison.Ordinal);
+        var matcher = Create("</s>");
+        Assert.Equal(new StopMatchResult("abc", null), matcher.Push("abc</"));
+        Assert.Equal(new StopMatchResult("", "</s>"), matcher.Push("s>tail"));
     }
 
     [Fact]
-    public void NullsAreRejected()
+    public void APartialStopThatFailsIsReleased()
     {
-        Assert.Throws<ArgumentNullException>(() => PendingStopMatcherFactory.Instance.Create(null!));
-        Assert.Throws<ArgumentNullException>(() => PendingStopMatcherFactory.Instance.Create([]).Push(null!));
+        var matcher = Create("</s>");
+        Assert.Equal(new StopMatchResult("a", null), matcher.Push("a</"));
+        Assert.Equal(new StopMatchResult("</x", null), matcher.Push("x"));
     }
 
     [Fact]
-    public void StarlingStillKeepsItsMatcherInternal()
+    public void HeldBackTextIsFlushedAtTheEnd()
     {
-        // Tripwire: when a Starling pin exposes a public matcher, this fails and the pending factory should be replaced.
-        var type = typeof(Starlings.Generation.OnnxGenAI.IncrementalDetokenizer).Assembly.GetType("Starlings.Generation.OnnxGenAI.StopSequenceMatcher");
-        Assert.NotNull(type);
-        Assert.False(type.IsVisible);
+        var matcher = Create("STOP");
+        Assert.Equal(new StopMatchResult("end ", null), matcher.Push("end ST"));
+        Assert.Equal("ST", matcher.Flush());
+        Assert.Equal("", matcher.Flush());
+    }
+
+    [Fact]
+    public void TheEarliestMatchWinsAndTextAfterItIsDropped()
+    {
+        var matcher = Create("bb", "a");
+        Assert.Equal(new StopMatchResult("x", "a"), matcher.Push("xabb"));
+    }
+
+    [Fact]
+    public void AtTheSameStartTheLongestMatchWins()
+    {
+        var matcher = Create("ab", "abc");
+        Assert.Equal(new StopMatchResult("", "abc"), matcher.Push("abcd"));
+    }
+
+    [Fact]
+    public void NullsAndEmptyStopsAreRejected()
+    {
+        Assert.Throws<ArgumentNullException>(() => StarlingStopMatcherFactory.Instance.Create(null!));
+        Assert.Throws<ArgumentNullException>(() => Create().Push(null!));
+        Assert.Throws<ArgumentException>(() => Create(""));
     }
 }

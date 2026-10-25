@@ -1,0 +1,12 @@
+layer 15, case capital, prefill of 25 tokens; row-relative L2, position 0 and max:
+  exact recomputation from reference input vs reference output:   max 9.50e-07
+  bf16 recomputation from reference input vs reference output:    0.0185, max 0.0185
+  bf16 recomputation from candidate input vs candidate output:    0.0000, max 0.0021
+  candidate vs reference, output:                                 0.0589, max 0.0589
+  candidate vs reference, input:                                  0.0098, max 0.0154
+layer 3, case long-context, prefill of 134 tokens; row-relative L2, position 0 and max:
+  exact recomputation from reference input vs reference output:   max 9.73e-07
+  bf16 recomputation from reference input vs reference output:    0.0033, max 0.0062
+  bf16 recomputation from candidate input vs candidate output:    0.0000, max 0.0036
+  candidate vs reference, output:                                 0.0041, max 0.0127
+  candidate vs reference, input:                                  0.0042, max 0.0116
