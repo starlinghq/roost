@@ -15,7 +15,9 @@ Checks:
              Kernel binaries are release assets only.
   host       Host-process packages (Engine, Generation, Generation.Roost, Server) name no worker, kernel or CUDA
              namespace (Starlings.Roost.Worker.*, Kernels, Cuda; WorkerHost is the host side of C8) and no
-             `roostworker` extern alias: the packaged worker is a separate process (decision 21, R-062).
+             `roostworker` extern alias: the packaged worker is a separate process (decision 21, R-062). It scans
+             tracked .cs files line by line; MSBuild-level usings and pure-managed Kernels types a host package
+             might want later (such as KernelManifest) are outside it.
   solution   No *.Cuda project in Roost.slnx. CUDA test projects are local-only.
   starling   Starling is consumed only as exact NuGet pins (build plan section 2.2): no submodule or .gitmodules,
              no external/ project reference, and every Starlings.* package version in Directory.Packages.props

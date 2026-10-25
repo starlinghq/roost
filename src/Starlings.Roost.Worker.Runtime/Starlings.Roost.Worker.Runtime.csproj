@@ -20,11 +20,13 @@
     <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackRoostWorker</TargetsForTfmSpecificContentInPackage>
     <RoostWorkerPackPublishDir>$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)pack-publish/</RoostWorkerPackPublishDir>
   </PropertyGroup>
+  <!-- PrivateAssets: the worker's assemblies are compiled into the executable and do not flow to projects that reference this
+       one (Starlings.Generation.Roost references it only so that pack emits the package dependency). -->
   <ItemGroup>
-    <ProjectReference Include="../Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" />
-    <ProjectReference Include="../Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
-    <ProjectReference Include="../Starlings.Roost.Worker.Qwen35/Starlings.Roost.Worker.Qwen35.csproj" />
-    <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../Starlings.Roost.Worker.Qwen35/Starlings.Roost.Worker.Qwen35.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" PrivateAssets="all" />
   </ItemGroup>
   <ItemGroup>
     <!-- The manifest the worker reads by default sits beside the executable, in the build output and in the package. -->
