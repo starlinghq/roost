@@ -55,8 +55,9 @@ Zero-centred norms are not in v3, so every decoder, q/k and final norm slot hold
 
 ## Attention window and logits
 
-`PagedAttentionArgs.WindowLeft` is a sliding window when it is not negative, and an attribute left unbound is 0: a window of one
-token. The full-attention node binds `WindowLeft=-1`. Until R-022 it did not, and every query attended to itself only; position 0 and
+`PagedAttentionArgs.WindowLeft` is a sliding window when it is not negative, and -1 disables it. An unbound field would be 0, a
+window of one token, so the generator now rejects an unbound `WindowLeft` (ROOST015) and `CpuOps` rejects 0 (maintainer decision
+2026-10-20). The full-attention node binds `WindowLeft=-1`. Until R-022 it did not, and every query attended to itself only; position 0 and
 the linear layers were unaffected, so the smoke test below still passed. `LmHead` writes float32 logits (C3), and the definition
 declares the `logits` value `F32` so that `Output_logits` and the arena size agree with what the op writes
 (`ForwardLayout.PerTokenBytes` 498688 before, 995328 after: the generator sizes the logits per token of capacity).
