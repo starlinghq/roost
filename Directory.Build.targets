@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    Packing turns a ProjectReference into a package dependency with a lower bound only (">= version"). Roost's packages
+    are qualified as one exact set, released together from one tag (R-060, docs/releasing.md), so every dependency
+    created from a ProjectReference is written as the exact range "[version]", as Starling's packages do. Starling
+    packages are already exact pins in Directory.Packages.props. tools/release-drill.sh checks the result in every nuspec.
+  -->
+  <Target Name="RoostPinProjectReferenceVersions" AfterTargets="_GetProjectReferenceVersions">
+    <ItemGroup>
+      <_ProjectReferencesWithVersions Update="@(_ProjectReferencesWithVersions)" ProjectVersion="[%(_ProjectReferencesWithVersions.ProjectVersion)]" />
+    </ItemGroup>
+  </Target>
+</Project>

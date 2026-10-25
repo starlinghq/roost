@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Written by tools/release-drill.sh into a directory outside the checkout: no Directory.Build.props, no project references. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+    <!-- One HAS_<PACKAGE_ID> symbol per packed package, so a typed check compiles only when its package is in the release. -->
+    <DefineConstants>$(DefineConstants);@CONSTANTS@</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+@REFERENCES@
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The assemblies under lib/ of the packed packages; Program.cs loads each one. -->
+    <RuntimeHostConfigurationOption Include="RoostDrillAssemblies" Value="@ASSEMBLIES@" />
+  </ItemGroup>
+</Project>
