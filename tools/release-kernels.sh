@@ -4,8 +4,8 @@
 #
 #   tools/release-kernels.sh <work-dir> <assets-dir>
 #
-# 1. Creates the build-time Python of the manifest's [triton_aot] closure (exact pins, uv) unless ROOST_TRITON_PYTHON
-#    names one.
+# 1. Creates the build-time Python of the manifest's [triton_aot] closure from the hash-locked
+#    tools/release-kernels/uv.lock (uv sync --locked) unless ROOST_TRITON_PYTHON names one.
 # 2. Configures and builds every SM of the manifest twice, into <work-dir>/a and <work-dir>/b, with the AOT step. The AOT
 #    step needs a visible CUDA device (kernels/aot/build_gdn.py), so each build runs through tools/gpu-lease on the 3090.
 # 3. Fails unless the two builds are byte-identical per SM and each library's registration table loads
@@ -42,28 +42,26 @@ echo "SM list:   $sms"
 echo "checkout:  $root"
 echo "work dir:  $work"
 
-# 1. The [triton_aot] closure, exactly as the manifest pins it. FLA itself is not installed: build_gdn.py imports it from
-# the checkout CMake fetches at the manifest's SHA.
+# 1. The [triton_aot] closure from tools/release-kernels/uv.lock: every file pinned by hash, torch only from the PyTorch
+# cu130 index and everything else only from PyPI (no fallback between indexes). The project's pins must equal the
+# manifest's. FLA itself is not installed: build_gdn.py imports it from the checkout CMake fetches at the manifest's SHA.
 python="${ROOST_TRITON_PYTHON:-}"
 if [[ -z "$python" ]]; then
     uv=(uv)
     command -v uv >/dev/null || uv=(pipx run uv==0.12.19)
-    read -r py_version requirements < <(python3 -I - "$manifest" <<'EOF'
+    python3 -I - "$manifest" "$root/tools/release-kernels/pyproject.toml" <<'EOF' \
+        || fail "tools/release-kernels/pyproject.toml differs from the manifest's [triton_aot] closure"
 import sys, tomllib
 aot = tomllib.load(open(sys.argv[1], "rb"))["triton_aot"]
-pins = {k: v for k, v in aot["packages"].items() if k != "fla"}
-print(aot["python"], " ".join(f"{k}=={v}" for k, v in sorted(pins.items())))
+project = tomllib.load(open(sys.argv[2], "rb"))["project"]
+want = {f"{k}=={v}" for k, v in aot["packages"].items() if k != "fla"}
+have = set(project["dependencies"])
+if want != have or project["requires-python"] != f"=={aot['python']}":
+    print(f"manifest: python {aot['python']}, {sorted(want)}; project: {project['requires-python']}, {sorted(have)}")
+    sys.exit(1)
 EOF
-)
     venv="$work/triton-venv"
-    if [[ ! -x "$venv/bin/python" ]]; then
-        "${uv[@]}" venv --python "$py_version" "$venv"
-        # torch +cu130 wheels come from the PyTorch index; everything else from PyPI.
-        # shellcheck disable=SC2086 # requirements is a list of name==version words
-        VIRTUAL_ENV="$venv" "${uv[@]}" pip install --python "$venv/bin/python" \
-            --index-url https://pypi.org/simple --extra-index-url https://download.pytorch.org/whl/cu130 \
-            --index-strategy unsafe-best-match $requirements
-    fi
+    UV_PROJECT_ENVIRONMENT="$venv" "${uv[@]}" sync --locked --no-install-project --project "$root/tools/release-kernels"
     python="$venv/bin/python"
 fi
 "$python" -I -c 'import sys, torch, triton; print("python", sys.version.split()[0], "torch", torch.__version__, "triton", triton.__version__)'
@@ -110,8 +108,11 @@ fi
     cmake --version | head -1
     "$python" -I -c 'import sys, torch, triton; print("triton", triton.__version__, "torch", torch.__version__, "python", sys.version.split()[0])'
 } >"$assets/toolchain.txt"
-(cd "$assets" && sha256sum -- libroost_kernels_sm*.so manifest.toml kernel-digests.json toolchain.txt Cargo.lock.* 2>/dev/null) \
-    >"$assets/SHA256SUMS" || true
+(
+    cd "$assets"
+    shopt -s nullglob # Cargo.lock.* exists only once native/ has crates
+    sha256sum -- libroost_kernels_sm*.so manifest.toml kernel-digests.json toolchain.txt Cargo.lock.*
+) >"$assets/SHA256SUMS"
 cat "$assets/SHA256SUMS"
 
 # 5. A release publishes exactly the bytes the manifest records.
