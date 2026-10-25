@@ -61,7 +61,7 @@ public sealed class ContainmentTests
     }
 
     [Fact]
-    public async Task AStepThatCannotBePublishedFailsOnlyThatRequestAndKeepsTheWorker()
+    public async Task UnpublishableStepFailsItsRequestsAndKeepsTheWorker()
     {
         var faults = new TransportFaults();
         var executors = new List<ScriptedExecutor>();
