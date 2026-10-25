@@ -6,11 +6,11 @@ Status: **proposed**, for the maintainer. Nothing here is binding. `r014-fixture
 
 They are the transformers float32 CPU reference for the five `R022PromptSet` chat prompts, at the locked checkpoint:
 - greedy output ids (24 tokens per case);
-- step-0 logits (float32, the full 248320-entry vocabulary);
+- step-0 log-probabilities (float32, log-softmax over the full 248320-entry vocabulary);
 - per-layer hidden states for all 24 layers;
 - recurrent (Gated DeltaNet) and convolution state for the 18 linear-attention layers, over 24 forwards.
 
-They come from the R-022 reference run, which depends only on transformers, the checkpoint and Starling's template and tokenizer, not on Roost's code. The run's snapshot matches `evidence/registry/qwen3.5-0.8b.lock.toml` for the weights, config, chat template, `tokenizer.json` and `tokenizer_config.json`.
+They come from the R-022 reference run, which depends only on transformers, the checkpoint and Starling's template and tokenizer, not on Roost's code. The run's snapshot matches `evidence/registry/qwen3.5-0.8b.lock.toml` for the weights, config, chat template, `tokenizer.json` and `tokenizer_config.json`. The run's `environment.json` records a local hub path and `revision: null`, so the TOML carries those five snapshot digests itself; the reference runner should record the revision in future runs (stream B2).
 
 This proposal reuses that run rather than recomputing it. A rerun costs about 2.5 GB of captures and several CPU-minutes per case, and it would only reproduce the same transformers output.
 
@@ -31,6 +31,18 @@ Four of the five cases have a greedy step whose top-2 logit margin is below 0.1:
 | capital | 15 | 0.0554 |
 | system-haiku | 5 | 0.0711 |
 
+How many of each case's 24 greedy steps fall below a given margin bound:
+
+| Case | < 0.1 | < 0.2 | < 0.5 | < 1.0 |
+| --- | --- | --- | --- | --- |
+| capital | 1 | 1 | 4 | 11 |
+| system-haiku | 1 | 3 | 5 | 11 |
+| multi-turn | 1 | 1 | 5 | 9 |
+| code | 1 | 2 | 3 | 3 |
+| long-context | 0 | 0 | 3 | 8 |
+
+Every case has at-risk steps once the bound is near 0.5, which is where R-025's GPU error suggests it lands.
+
 R-025 measured GPU-vs-CpuOps logit error up to 0.23 on SM 86, so a GPU candidate can legitimately flip any of these. An unconditional "greedy ids equal" check would be flaky. The options:
 - **(a)** Keep the R-022 rule form, `exact_except_listed_margin_below_<bound>`, with the bound set per profile (decision 8). The CPU proposal uses 0.2. The GPU profile needs its own value once it is measured against these fixtures.
 - **(b)** Compare teacher-forced: feed the reference's tokens and check per-step argmax only where the margin clears the bound. This is how R-022 and R-025 already compare.
@@ -45,6 +57,6 @@ Recommended: (a) together with (b), which is what the evaluator already supports
 
 ## Open questions for the maintainer
 
-1. Accept these five cases as the protected fixture set for both profiles, or ask for more (for example a case longer than 134 tokens, so that chunked prefill is exercised)?
-2. Approve publishing the bytes as release assets, under which tag?
+1. Accept these five cases as the protected fixture set for both profiles, or ask for more (for example a case longer than 134 tokens, so that Roost's chunked prefill splits a prompt across steps)?
+2. Approve publishing the bytes as release assets, under which tag? They must be published before `evidence/protected/` references them.
 3. Choose the near-tie rule (a, b or c above) and its bound per profile.
