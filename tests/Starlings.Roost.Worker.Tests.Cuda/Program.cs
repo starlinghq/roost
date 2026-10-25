@@ -14,10 +14,16 @@ if (args.Length >= 1 && args[0] is "gpu" or "cpu")
     return args[0] == "gpu" ? DecodeGpu.Run(args[1..]) : DecodeCpu.Run(args[1..]);
 }
 
+if (args.Length >= 1 && args[0] == "capture")
+{
+    return CaptureGpu.Run(args[1..]);
+}
+
 if (args.Length < 2)
 {
     Console.Error.WriteLine("usage: weights-check <checkpoint-file> <lock.toml> [--expect-mismatch]");
     Console.Error.WriteLine("       gpu <options>  eager greedy decode on the GPU (R-025); cpu <options>  CpuOps comparison of its dump");
+    Console.Error.WriteLine("       capture <options>  teacher-forced per-layer capture against a reference run (R-014)");
     return 2;
 }
 
