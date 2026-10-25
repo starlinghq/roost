@@ -1,0 +1,129 @@
+{
+  "version": 2,
+  "dependencies": {
+    "net10.0": {
+      "Microsoft.ML.OnnxRuntimeGenAI.Managed": {
+        "type": "Transitive",
+        "resolved": "0.17.1",
+        "contentHash": "MIAOSt1TY4K96nGPZ1QLhEEH0XW7XmDTEwjDpxhaz+ruSnlkekaDsHmfvjXkcojQa6kgTA/SkNHkA7R849pERw==",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "9.8.0"
+        }
+      },
+      "Starlings.Acquisition": {
+        "type": "Transitive",
+        "resolved": "0.2.0",
+        "contentHash": "64wB+S35n0TjOwFw1w/b65sFXkZOXwpmHfFM1K9C7omuA8XV08jc4yYVEaTcOo28dNaK9nceLq8UcCdfX/739g=="
+      },
+      "Starlings.Tokenizers": {
+        "type": "Transitive",
+        "resolved": "0.3.0",
+        "contentHash": "5VQxvrls4G1GQBsnJaHuMsgzGWGVDlUCQ4p3Z5/lAiMhTG4FZPZ4RbvGxegOtzqM/8kBVTMD8zvicspZyYlnTg=="
+      },
+      "starlings.generation.roost": {
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Extensions.AI.Abstractions": "[9.8.0, 9.8.0]",
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Engine": "[0.0.0-dev, )",
+          "Starlings.Roost.Generation": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.abstractions": {
+        "type": "Project"
+      },
+      "starlings.roost.cuda": {
+        "type": "Project"
+      },
+      "starlings.roost.engine": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.generation": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Generation.OnnxGenAI": "[0.2.0, 0.2.0]",
+          "Starlings.Models.Qwen35": "[0.2.0, 0.2.0]"
+        }
+      },
+      "starlings.roost.graph": {
+        "type": "Project"
+      },
+      "starlings.roost.kernels": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.models.qwen35": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Graph": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.worker": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Cuda": "[0.0.0-dev, )",
+          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )",
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )",
+          "Tomlyn": "[2.10.1, 2.10.1]"
+        }
+      },
+      "starlings.roost.workerhost": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Engine": "[0.0.0-dev, )"
+        }
+      },
+      "Microsoft.Extensions.AI.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[9.8.0, 9.8.0]",
+        "resolved": "9.8.0",
+        "contentHash": "0++t+lPqX5amr7Kgh+ZFm1C5hhzMmFc5Dhoc6siNZ4sPXxy0pLTFRk+4vHn0hZf7Xe8Y9OoqL2cL4oTdjt8STQ=="
+      },
+      "Starlings.Generation.OnnxGenAI": {
+        "type": "CentralTransitive",
+        "requested": "[0.2.0, 0.2.0]",
+        "resolved": "0.2.0",
+        "contentHash": "0gpWMAfc12D3ZgZz637PrSZZwPddjZvq1q5FCLse8t0vCPi2aLRTwzBGoDpFb70ftvf2qChmCkcmpW4M6a0P+Q==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntimeGenAI.Managed": "[0.17.1]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Starlings.Models.Qwen35": {
+        "type": "CentralTransitive",
+        "requested": "[0.2.0, 0.2.0]",
+        "resolved": "0.2.0",
+        "contentHash": "dYqJFXsBIbAcZGIioqzUhk2o8nkZYr6qySk6AOcej81lOqqhLFOwoZLPw02c0mcZQl6b6QAnONXgGQt96430hw==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.2.0]",
+          "Starlings.Generation.OnnxGenAI": "[0.2.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Tomlyn": {
+        "type": "CentralTransitive",
+        "requested": "[2.10.1, 2.10.1]",
+        "resolved": "2.10.1",
+        "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+      }
+    }
+  }
+}
