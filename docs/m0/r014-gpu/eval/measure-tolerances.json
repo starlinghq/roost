@@ -1,0 +1,15 @@
+{
+ "float.layer_hidden_max_abs": 1000.0,
+ "float.recurrent_state_max_abs": 1000.0,
+ "float.conv_state_max_abs": 1000.0,
+ "float.nan_or_inf": "fail",
+ "float.layer_hidden_rel_l2": 10.0,
+ "float.layer_hidden_max_abs_rel": 10.0,
+ "float.layer_hidden_cosine_min": -1.0,
+ "float.recurrent_state_rel_l2": 10.0,
+ "float.recurrent_state_max_abs_rel": 10.0,
+ "float.recurrent_state_cosine_min": -1.0,
+ "float.conv_state_rel_l2": 10.0,
+ "float.conv_state_max_abs_rel": 10.0,
+ "float.conv_state_cosine_min": -1.0
+}
