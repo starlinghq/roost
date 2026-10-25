@@ -15,7 +15,7 @@ public sealed class OracleBackend : IKernelBackend
 
     private readonly List<VariantInfo> _variants =
     [
-        .. CpuBackend.CoveredOps.Select(op => new VariantInfo(op, VariantId, VariantTraits.Deterministic | VariantTraits.BatchInvariant, default)),
+        .. CpuBackend.M0Ops.Select(op => new VariantInfo(op, VariantId, VariantTraits.Deterministic | VariantTraits.BatchInvariant, default)),
     ];
 
     /// <inheritdoc/>

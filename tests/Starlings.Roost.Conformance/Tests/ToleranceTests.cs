@@ -37,6 +37,7 @@ public sealed class ToleranceTests
                 using (c)
                 {
                     Assert.True(t.Classes.ContainsKey(c.ToleranceClass), $"{c.Id}: no class {c.ToleranceClass}");
+                    Assert.All(c.OutputClasses.Values, k => Assert.True(t.Classes.ContainsKey(k), $"{c.Id}: no class {k}"));
                 }
             }
         }

@@ -146,6 +146,13 @@ internal sealed unsafe class CudaBackend : IKernelBackend
             case OpId.Residual: Residual(v, c, res); break;
             case OpId.CacheWrite: CacheWrite(v, c, res); break;
             case OpId.CacheCopy: CacheCopy(v, c, res); break;
+            case OpId.GatedDeltaRule: GatedDeltaRule(v, c, res); break;
+            case OpId.CausalConv1d: CausalConv1d(v, c, res); break;
+            case OpId.RecurrentStateCopy: StateCopy(v, c, res); break;
+            case OpId.RecurrentStateSnapshot: Snapshot(v, c, res); break;
+            case OpId.GatedDeltaRuleGates: Gates(v, c, res); break;
+            case OpId.GatedRmsNorm: GatedRmsNorm(v, c, res); break;
+            case OpId.SigmoidMul: SigmoidMul(v, c, res); break;
             default: throw new NotSupportedException($"No GPU case runner for {c.Op}.");
         }
     }
@@ -431,5 +438,168 @@ internal sealed unsafe class CudaBackend : IKernelBackend
         var p = new CacheCopyParams { StructSize = (uint)sizeof(CacheCopyParams), SrcPool = src.Span, DstPool = (dst ?? src).Span, Pairs = pairs.Span, BlockBytes = (ulong)c.I("block_bytes"), Count = (uint)c.I("count") };
         Launch(v, ref p, res);
         res.Outputs["dst"] = (dst ?? src).Download();
+    }
+
+    // ---- hybrid ops (R-034, contract version 3) ---------------------------------------------------------------
+
+    private void GatedDeltaRule(string v, OpCase c, ExecResult res)
+    {
+        bool strided = c.I("strided") != 0;
+        using DevBuf? qkv = strided ? DevBuf.Upload(c.Buffers["qkv"]) : null;
+        using DevBuf? q = strided ? null : DevBuf.Upload(c.Buffers["q"]);
+        using DevBuf? k = strided ? null : DevBuf.Upload(c.Buffers["k"]);
+        using DevBuf? vv = strided ? null : DevBuf.Upload(c.Buffers["v"]);
+        using DevBuf g = DevBuf.Upload(c.Buffers["g"]);
+        using DevBuf beta = DevBuf.Upload(c.Buffers["beta"]);
+        using DevBuf state = DevBuf.Upload(c.Buffers["state"]);
+        using DevBuf slots = DevBuf.Upload(c.Buffers["slots"]);
+        using DevBuf cu = DevBuf.Upload(c.Buffers["cu"]);
+        HostBuf cuHost = c.Buffers["cu"];
+        // NaN fill: an element the kernels do not write shows up as a mismatch.
+        using DevBuf o = DevBuf.Empty(DType.BF16, c.Buffers["out"].Count, 0xFF);
+        var p = new GatedDeltaRuleParams
+        {
+            StructSize = (uint)sizeof(GatedDeltaRuleParams),
+            AbiMinor = (uint)KernelAbi.Minor,
+            G = g.Span,
+            Beta = beta.Span,
+            Output = o.Span,
+            State = state.Span,
+            StateSlots = slots.Span,
+            CuSeqlens = cu.Span,
+            CuSeqlensHost = cuHost.Host,
+            Batch = (uint)c.I("batch"),
+            Tokens = (uint)c.I("tokens"),
+            KHeads = (uint)c.I("q_heads"),
+            VHeads = (uint)c.I("kv_heads"),
+            KDim = (uint)c.I("head_dim"),
+            VDim = (uint)c.I("head_dim"),
+            UseInitialState = (uint)c.I("init"),
+            L2NormQk = 1,
+            Scale = 0,
+        };
+        if (strided)
+        {
+            p.Q = CpuBackend.FusedView(qkv!.Span, 0, c);
+            p.K = CpuBackend.FusedView(qkv.Span, 1, c);
+            p.V = CpuBackend.FusedView(qkv.Span, 2, c);
+            p.QStride = p.KStride = p.VStride = (uint)(3 * c.I("seq_row_width"));
+        }
+        else
+        {
+            p.Q = q!.Span;
+            p.K = k!.Span;
+            p.V = vv!.Span;
+        }
+
+        Launch(v, ref p, res);
+        res.Outputs["out"] = o.Download();
+        res.Outputs["state"] = state.Download();
+    }
+
+    private void CausalConv1d(string v, OpCase c, ExecResult res)
+    {
+        bool bias = c.I("use_bias") != 0;
+        using DevBuf x = DevBuf.Upload(c.Buffers["x"]);
+        using DevBuf w = DevBuf.Upload(c.Buffers["w"]);
+        using DevBuf? b = bias ? DevBuf.Upload(c.Buffers["bias"]) : null;
+        using DevBuf state = DevBuf.Upload(c.Buffers["conv_state"]);
+        using DevBuf slots = DevBuf.Upload(c.Buffers["slots"]);
+        using DevBuf cu = DevBuf.Upload(c.Buffers["cu"]);
+        using DevBuf o = DevBuf.Empty(c.Dtype, c.Buffers["out"].Count, 0xFF);
+        var p = new CausalConv1dParams
+        {
+            StructSize = (uint)sizeof(CausalConv1dParams),
+            AbiMinor = (uint)KernelAbi.Minor,
+            Input = x.Span,
+            Weight = w.Span,
+            Bias = b?.Span ?? default,
+            Output = o.Span,
+            ConvState = state.Span,
+            StateSlots = slots.Span,
+            CuSeqlens = cu.Span,
+            Batch = (uint)c.I("batch"),
+            Tokens = (uint)c.I("tokens"),
+            Channels = (uint)c.I("channels"),
+            Width = (uint)c.I("width"),
+            Silu = (uint)c.I("silu"),
+        };
+        Launch(v, ref p, res);
+        res.Outputs["out"] = o.Download();
+        res.Outputs["conv_state"] = state.Download();
+    }
+
+    private void StateCopy(string v, OpCase c, ExecResult res)
+    {
+        using DevBuf pool = DevBuf.Upload(c.Buffers["pool"]);
+        using DevBuf pairs = DevBuf.Upload(c.Buffers["pairs"]);
+        var p = new RecurrentStateCopyParams { StructSize = (uint)sizeof(RecurrentStateCopyParams), AbiMinor = (uint)KernelAbi.Minor, Pool = pool.Span, Pairs = pairs.Span, SlotBytes = (ulong)c.I("slot_bytes"), Count = (uint)c.I("count") };
+        Launch(v, ref p, res);
+        res.Outputs["pool"] = pool.Download();
+    }
+
+    private void Snapshot(string v, OpCase c, ExecResult res)
+    {
+        using DevBuf pool = DevBuf.Upload(c.Buffers["pool"]);
+        using DevBuf snaps = DevBuf.Upload(c.Buffers["snapshots"]);
+        using DevBuf pairs = DevBuf.Upload(c.Buffers["pairs"]);
+        var p = new RecurrentStateSnapshotParams { StructSize = (uint)sizeof(RecurrentStateSnapshotParams), AbiMinor = (uint)KernelAbi.Minor, Pool = pool.Span, Snapshots = snaps.Span, Pairs = pairs.Span, SlotBytes = (ulong)c.I("slot_bytes"), Count = (uint)c.I("count"), Restore = (uint)c.I("restore") };
+        Launch(v, ref p, res);
+        res.Outputs["pool"] = pool.Download();
+        res.Outputs["snapshots"] = snaps.Download();
+    }
+
+    private void Gates(string v, OpCase c, ExecResult res)
+    {
+        bool fused = c.I("stride") != 0;
+        using DevBuf? ab = fused ? DevBuf.Upload(c.Buffers["ab"]) : null;
+        using DevBuf? a = fused ? null : DevBuf.Upload(c.Buffers["a"]);
+        using DevBuf? b = fused ? null : DevBuf.Upload(c.Buffers["b"]);
+        using DevBuf aLog = DevBuf.Upload(c.Buffers["a_log"]);
+        using DevBuf dt = DevBuf.Upload(c.Buffers["dt_bias"]);
+        using DevBuf g = DevBuf.Empty(c.Buffers["g"].Dtype, c.Buffers["g"].Count, 0xFF);
+        using DevBuf beta = DevBuf.Empty(c.Buffers["beta"].Dtype, c.Buffers["beta"].Count, 0xFF);
+        (DeviceSpan sa, DeviceSpan sb) = fused ? CpuBackend.GateViews(ab!.Span, c) : (a!.Span, b!.Span);
+        var p = new GatedDeltaRuleGatesParams
+        {
+            StructSize = (uint)sizeof(GatedDeltaRuleGatesParams),
+            AbiMinor = (uint)KernelAbi.Minor,
+            A = sa,
+            B = sb,
+            ALog = aLog.Span,
+            DtBias = dt.Span,
+            G = g.Span,
+            Beta = beta.Span,
+            Tokens = (uint)c.I("tokens"),
+            VHeads = 16,
+            AStride = (uint)c.I("stride"),
+            BStride = (uint)c.I("stride"),
+        };
+        Launch(v, ref p, res);
+        res.Outputs["g"] = g.Download();
+        res.Outputs["beta"] = beta.Download();
+    }
+
+    private void GatedRmsNorm(string v, OpCase c, ExecResult res)
+    {
+        bool inPlace = c.I("in_place") != 0;
+        using DevBuf x = DevBuf.Upload(c.Buffers["x"]);
+        using DevBuf gate = DevBuf.Upload(c.Buffers["gate"]);
+        using DevBuf w = DevBuf.Upload(c.Buffers["w"]);
+        using DevBuf? o = inPlace ? null : DevBuf.Empty(c.Dtype, c.Buffers["out"].Count, 0xFF);
+        var p = new GatedRmsNormParams { StructSize = (uint)sizeof(GatedRmsNormParams), AbiMinor = (uint)KernelAbi.Minor, Input = x.Span, Gate = gate.Span, Weight = w.Span, Output = (o ?? x).Span, Rows = (uint)c.I("rows"), Dim = (uint)c.I("dim"), Eps = c.F("eps") };
+        Launch(v, ref p, res);
+        res.Outputs["out"] = (o ?? x).Download();
+    }
+
+    private void SigmoidMul(string v, OpCase c, ExecResult res)
+    {
+        bool inPlace = c.I("in_place") != 0;
+        using DevBuf x = DevBuf.Upload(c.Buffers["x"]);
+        using DevBuf gate = DevBuf.Upload(c.Buffers["gate"]);
+        using DevBuf? o = inPlace ? null : DevBuf.Empty(c.Dtype, c.Buffers["out"].Count, 0xFF);
+        var p = new SigmoidMulParams { StructSize = (uint)sizeof(SigmoidMulParams), AbiMinor = (uint)KernelAbi.Minor, Input = x.Span, Gate = gate.Span, Output = (o ?? x).Span, Rows = (uint)c.I("rows"), Dim = (uint)c.I("dim") };
+        Launch(v, ref p, res);
+        res.Outputs["out"] = (o ?? x).Download();
     }
 }

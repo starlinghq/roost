@@ -45,7 +45,7 @@ public sealed class RunOptions
 /// <summary>Statistics of one output of a case.</summary>
 /// <param name="Name">Output name.</param>
 /// <param name="Stat">The comparison.</param>
-public sealed record OutputResult(string Name, CompareStat Stat);
+public sealed record OutputResult(string Name, CompareStat Stat, string Class = "");
 
 /// <summary>The result of one case on one variant.</summary>
 public sealed class CaseResult
@@ -270,7 +270,6 @@ public static class ConformanceRunner
 
     private static CaseResult RunCase(IKernelBackend candidate, CpuBackend reference, VariantInfo v, OpCase c, RunOptions o)
     {
-        ToleranceClass tol = o.Tolerances[c.ToleranceClass];
         string refName = c.Expected is not null ? "golden" : "CpuOps";
         var r = new CaseResult
         {
@@ -310,7 +309,8 @@ public static class ConformanceRunner
             {
                 foreach (string name in c.Outputs)
                 {
-                    r.Outputs.Add(new OutputResult(name, Compare.Close(got.Outputs[name], want[name], tol, scale)));
+                    string cls = c.ClassOf(name, v.Id);
+                    r.Outputs.Add(new OutputResult(name, Compare.Close(got.Outputs[name], want[name], o.Tolerances[cls], scale), cls));
                 }
             }
             finally
@@ -359,12 +359,59 @@ public static class ConformanceRunner
                 }
             }
 
+            if (v.Flags.HasFlag(VariantTraits.BatchInvariant) && o.Invariance && c.Buffers.TryGetValue("cu", out HostBuf? cuBuf) && c.I("batch") > 1)
+            {
+                // The sequence ops (GatedDeltaRule, CausalConv1d): a sequence run alone over the same state pool must give, byte for byte,
+                // its token rows and its state slot of the batched call.
+                int[] cu = cuBuf.As<int>().ToArray();
+                int batch = c.I("batch");
+                bool inv = true;
+                foreach (int seq in new[] { 0, batch - 1, batch / 2 }.Distinct().Where(s => cu[s + 1] > cu[s]))
+                {
+                    using OpCase one = CaseCatalog.SequenceAlone(c, seq);
+                    using ExecResult alone = candidate.Execute(v.Id, one);
+                    inv &= alone.Status == 0 && SequenceEqual(c, got, alone, seq, cu);
+                }
+
+                r.Invariance = inv ? "pass" : "fail";
+                pass &= inv;
+            }
+
             return Finish(r, pass ? "pass" : "fail", string.Empty);
         }
         catch (Exception e) when (e is not OutOfMemoryException)
         {
             return Finish(r, "error", e.GetType().Name + ": " + e.Message);
         }
+    }
+
+    private static bool SequenceEqual(OpCase c, ExecResult batched, ExecResult alone, int seq, int[] cu)
+    {
+        int slot = c.Buffers["slots"].As<int>()[seq];
+        foreach (string name in c.Outputs)
+        {
+            HostBuf b = batched.Outputs[name], a = alone.Outputs[name];
+            int es = Elem.Size(b.Dtype);
+            bool same;
+            if (name == "out")
+            {
+                int width = c.I("seq_row_width") * es;
+                same = b.Raw().Slice(cu[seq] * width, (cu[seq + 1] - cu[seq]) * width).SequenceEqual(a.Raw());
+            }
+            else
+            {
+                // The state pool: the sequence's slot.
+                int width = (int)(c.Num["slot_elems"] * es);
+                same = b.Raw().Slice(slot * width, width).SequenceEqual(a.Raw().Slice(slot * width, width));
+            }
+
+            if (!same)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private static CaseResult RunRefusal(IKernelBackend candidate, VariantInfo v, OpCase c, RefusalRule rule)

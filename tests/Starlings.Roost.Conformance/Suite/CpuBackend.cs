@@ -12,12 +12,22 @@ public sealed class CpuBackend : IKernelBackend
     /// <summary>The variant id every op has in this backend.</summary>
     public const string VariantId = "cpu-reference";
 
-    /// <summary>The ops this backend lists as variants: the M0 ops that have cases.</summary>
-    public static readonly OpId[] CoveredOps =
+    /// <summary>The M0 attention-side ops (R-017), which the independent oracle also implements.</summary>
+    public static readonly OpId[] M0Ops =
     [
         OpId.RmsNorm, OpId.QkNorm, OpId.Rope, OpId.PagedAttention, OpId.SiluAndMul, OpId.Gemm, OpId.Embedding, OpId.LmHead,
         OpId.Residual, OpId.CacheWrite, OpId.CacheCopy,
     ];
+
+    /// <summary>The hybrid ops of Qwen3.5 (R-034, contract version 3), checked against <c>CpuOps</c> only.</summary>
+    public static readonly OpId[] HybridOps =
+    [
+        OpId.GatedDeltaRule, OpId.CausalConv1d, OpId.RecurrentStateCopy, OpId.RecurrentStateSnapshot, OpId.GatedDeltaRuleGates,
+        OpId.GatedRmsNorm, OpId.SigmoidMul,
+    ];
+
+    /// <summary>The ops this backend lists as variants: every op that has cases.</summary>
+    public static readonly OpId[] CoveredOps = [.. M0Ops, .. HybridOps];
 
     private readonly List<VariantInfo> _variants =
     [
@@ -72,6 +82,45 @@ public sealed class CpuBackend : IKernelBackend
     /// <inheritdoc/>
     public void Dispose()
     {
+    }
+
+    /// <summary>The q (0), k (1) or v (2) column view of the fused [tokens, 3 * row] GatedDeltaRule input, spanning exactly its reach.</summary>
+    /// <param name="fused">The fused buffer.</param>
+    /// <param name="part">0, 1 or 2.</param>
+    /// <param name="c">The case.</param>
+    /// <returns>The view.</returns>
+    public static DeviceSpan GdnView(HostBuf fused, int part, OpCase c) => FusedView(fused.Span, part, c);
+
+    /// <summary>The same view over any base span (host or device).</summary>
+    /// <param name="whole">The fused buffer's span.</param>
+    /// <param name="part">0, 1 or 2.</param>
+    /// <param name="c">The case.</param>
+    /// <returns>The view.</returns>
+    public static DeviceSpan FusedView(DeviceSpan whole, int part, OpCase c)
+    {
+        long row = c.I("seq_row_width"), tokens = c.I("tokens");
+        long length = tokens == 0 ? 0 : ((tokens - 1) * 3 * row) + row;
+        return new DeviceSpan { Address = whole.Address + (nint)(part * row * Elem.Size(whole.Dtype)), Length = (ulong)length, Dtype = whole.Dtype };
+    }
+
+    /// <summary>The a and b inputs of GatedDeltaRuleGates: separate buffers, or column views of the fused buffer <c>ab</c>.</summary>
+    /// <param name="b">The buffers.</param>
+    /// <param name="c">The case.</param>
+    /// <returns>a and b.</returns>
+    public static (DeviceSpan A, DeviceSpan B) GateViews(Dictionary<string, HostBuf> b, OpCase c) =>
+        c.I("stride") == 0 ? (b["a"].Span, b["b"].Span) : GateViews(b["ab"].Span, c);
+
+    /// <summary>The column views of a fused a and b buffer, over any base span.</summary>
+    /// <param name="ab">The fused span.</param>
+    /// <param name="c">The case.</param>
+    /// <returns>a and b.</returns>
+    public static (DeviceSpan A, DeviceSpan B) GateViews(DeviceSpan ab, OpCase c)
+    {
+        int es = Elem.Size(ab.Dtype);
+        int aCol = c.I("a_col"), bCol = c.I("b_col");
+        return (
+            new DeviceSpan { Address = ab.Address + (aCol * es), Length = ab.Length - (ulong)aCol, Dtype = ab.Dtype },
+            new DeviceSpan { Address = ab.Address + (bCol * es), Length = ab.Length - (ulong)bCol, Dtype = ab.Dtype });
     }
 
     private static void Run(OpCase c, Dictionary<string, HostBuf> b)
@@ -176,6 +225,114 @@ public sealed class CpuBackend : IKernelBackend
                     {
                         // The output is named "dst"; with one pool it is the pool itself.
                         b["dst"] = src.Clone();
+                    }
+
+                    break;
+                }
+
+            case OpId.GatedDeltaRule:
+                {
+                    bool strided = c.I("strided") != 0;
+                    var a = new GatedDeltaRuleArgs
+                    {
+                        G = b["g"].Span,
+                        Beta = b["beta"].Span,
+                        Output = b["out"].Span,
+                        State = b["state"].Span,
+                        StateSlots = b["slots"].Span,
+                        CuSeqlens = b["cu"].Span,
+                        Batch = c.I("batch"),
+                        Tokens = c.I("tokens"),
+                        KHeads = c.I("q_heads"),
+                        VHeads = c.I("kv_heads"),
+                        KDim = c.I("head_dim"),
+                        VDim = c.I("head_dim"),
+                        UseInitialState = c.I("init") != 0,
+                        L2NormQk = true,
+                        Scale = 0,
+                        DType = dt,
+                    };
+                    if (strided)
+                    {
+                        a.Q = GdnView(b["qkv"], 0, c);
+                        a.K = GdnView(b["qkv"], 1, c);
+                        a.V = GdnView(b["qkv"], 2, c);
+                        a.QStride = a.KStride = a.VStride = 3 * c.I("seq_row_width");
+                    }
+                    else
+                    {
+                        a.Q = b["q"].Span;
+                        a.K = b["k"].Span;
+                        a.V = b["v"].Span;
+                    }
+
+                    CpuOps.GatedDeltaRule(a);
+                    break;
+                }
+
+            case OpId.CausalConv1d:
+                CpuOps.CausalConv1d(new CausalConv1dArgs
+                {
+                    Input = b["x"].Span,
+                    Weight = b["w"].Span,
+                    Bias = c.I("use_bias") != 0 ? b["bias"].Span : default,
+                    Output = b["out"].Span,
+                    ConvState = b["conv_state"].Span,
+                    StateSlots = b["slots"].Span,
+                    CuSeqlens = b["cu"].Span,
+                    Batch = c.I("batch"),
+                    Tokens = c.I("tokens"),
+                    Channels = c.I("channels"),
+                    Width = c.I("width"),
+                    Silu = c.I("silu") != 0,
+                    DType = dt,
+                });
+                break;
+            case OpId.RecurrentStateCopy:
+                CpuOps.RecurrentStateCopy(new RecurrentStateCopyArgs { Pool = b["pool"].Span, Pairs = b["pairs"].Span, SlotBytes = c.I("slot_bytes"), Count = c.I("count") });
+                break;
+            case OpId.RecurrentStateSnapshot:
+                CpuOps.RecurrentStateSnapshot(new RecurrentStateSnapshotArgs { Pool = b["pool"].Span, Snapshots = b["snapshots"].Span, Pairs = b["pairs"].Span, SlotBytes = c.I("slot_bytes"), Count = c.I("count"), Restore = c.I("restore") != 0 });
+                break;
+            case OpId.GatedDeltaRuleGates:
+                {
+                    (DeviceSpan sa, DeviceSpan sb) = GateViews(b, c);
+                    CpuOps.GatedDeltaRuleGates(new GatedDeltaRuleGatesArgs
+                    {
+                        A = sa,
+                        B = sb,
+                        ALog = b["a_log"].Span,
+                        DtBias = b["dt_bias"].Span,
+                        G = b["g"].Span,
+                        Beta = b["beta"].Span,
+                        Tokens = c.I("tokens"),
+                        VHeads = 16,
+                        AStride = c.I("stride"),
+                        BStride = c.I("stride"),
+                        DType = dt,
+                    });
+                    break;
+                }
+
+            case OpId.GatedRmsNorm:
+                {
+                    bool inPlace = c.I("in_place") != 0;
+                    CpuOps.GatedRmsNorm(new GatedRmsNormArgs { Input = b["x"].Span, Gate = b["gate"].Span, Weight = b["w"].Span, Output = inPlace ? b["x"].Span : b["out"].Span, Rows = c.I("rows"), Dim = c.I("dim"), Eps = c.F("eps"), DType = dt });
+                    if (inPlace)
+                    {
+                        b["x"].Raw().CopyTo(b["out"].Raw());
+                    }
+
+                    break;
+                }
+
+            case OpId.SigmoidMul:
+                {
+                    bool inPlace = c.I("in_place") != 0;
+                    CpuOps.SigmoidMul(new SigmoidMulArgs { Input = b["x"].Span, Gate = b["gate"].Span, Output = inPlace ? b["x"].Span : b["out"].Span, Rows = c.I("rows"), Dim = c.I("dim"), DType = dt });
+                    if (inPlace)
+                    {
+                        b["x"].Raw().CopyTo(b["out"].Raw());
                     }
 
                     break;

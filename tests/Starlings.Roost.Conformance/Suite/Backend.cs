@@ -32,6 +32,21 @@ public sealed class OpCase : IDisposable
     /// <summary>Names of the buffers a backend must return and the suite compares.</summary>
     public List<string> Outputs { get; } = [];
 
+    /// <summary>
+    /// Tolerance classes of outputs that do not use <see cref="ToleranceClass"/>: by output name, or by <c>output@variant</c> for a
+    /// class that applies to one variant only (the chunked GatedDeltaRule). See <see cref="ClassOf"/>.
+    /// </summary>
+    public Dictionary<string, string> OutputClasses { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>The tolerance class of one output when run on one variant: <c>output@variant</c>, then <c>output</c>, then the case's class.</summary>
+    /// <param name="output">The output name.</param>
+    /// <param name="variant">The variant id.</param>
+    /// <returns>The class name.</returns>
+    public string ClassOf(string output, string variant) =>
+        OutputClasses.TryGetValue(output + "@" + variant, out string? v) ? v
+        : OutputClasses.TryGetValue(output, out string? o) ? o
+        : ToleranceClass;
+
     /// <summary>Name of the buffer whose largest |x| scales the absolute tolerance (attention's value pool), or null.</summary>
     public string? ScaleBuffer { get; init; }
 

@@ -147,6 +147,7 @@ public static class ResultsWriter
             {
                 w.WriteStartObject();
                 w.WriteString("name", x.Name);
+                w.WriteString("class", string.IsNullOrEmpty(x.Class) ? r.Class : x.Class);
                 w.WriteNumber("count", x.Stat.Count);
                 Number(w, "max_abs", x.Stat.MaxAbs);
                 Number(w, "max_utilisation", x.Stat.MaxUtilisation);
@@ -201,15 +202,17 @@ public static class ResultsWriter
         w.WriteString("tolerance_file_status", o.Tolerances.Status);
         w.WriteEndObject();
 
-        // Per class: how many cases and how close to the limit the worst element came (1.0 is the limit).
+        // Per class: how many cases compared an output in it and how close to the limit the worst element came (1.0 is the limit). An
+        // output's class is the case's class unless the case names another for that output (the hybrid ops' state and f32 outputs).
         w.WriteStartObject("classes");
-        foreach (IGrouping<string, CaseResult> g in report.Results.Where(r => r.Outputs.Count > 0).GroupBy(r => r.Class).OrderBy(g => g.Key, StringComparer.Ordinal))
+        var outputs = report.Results.SelectMany(r => r.Outputs.Select(x => (Case: r, Output: x, Class: string.IsNullOrEmpty(x.Class) ? r.Class : x.Class)));
+        foreach (var g in outputs.GroupBy(t => t.Class).OrderBy(g => g.Key, StringComparer.Ordinal))
         {
             w.WriteStartObject(g.Key);
-            w.WriteNumber("cases", g.Count());
-            Number(w, "max_utilisation", g.Max(r => r.Outputs.Max(x => x.Stat.MaxUtilisation)));
-            Number(w, "max_abs", g.Max(r => r.Outputs.Max(x => x.Stat.MaxAbs)));
-            w.WriteNumber("violations", g.Sum(r => r.Outputs.Sum(x => x.Stat.Violations + x.Stat.NonFinite)));
+            w.WriteNumber("cases", g.Select(t => t.Case).Distinct().Count());
+            Number(w, "max_utilisation", g.Max(t => t.Output.Stat.MaxUtilisation));
+            Number(w, "max_abs", g.Max(t => t.Output.Stat.MaxAbs));
+            w.WriteNumber("violations", g.Sum(t => t.Output.Stat.Violations + t.Output.Stat.NonFinite));
             w.WriteEndObject();
         }
 

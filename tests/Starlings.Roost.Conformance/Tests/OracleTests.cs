@@ -19,7 +19,7 @@ public sealed class OracleTests
         var bad = r.Results.Where(x => x.Outcome is not ("pass" or "not_run")).Select(x => $"{x.Op} {x.Case}: {x.Outcome} {x.Detail} {string.Join(',', x.Outputs.Select(o => $"{o.Name}:{o.Stat.MaxUtilisation:F3}/{o.Stat.Violations}"))}").ToList();
         Assert.Empty(bad);
         Assert.True(r.Count("pass") > 150, $"only {r.Count("pass")} cases ran");
-        Assert.All(CaseCatalog.Ops, op => Assert.Contains(r.Results, x => x.Op == op && x.Outcome == "pass"));
+        Assert.All(CpuBackend.M0Ops, op => Assert.Contains(r.Results, x => x.Op == op && x.Outcome == "pass"));
     }
 
     [Fact]
