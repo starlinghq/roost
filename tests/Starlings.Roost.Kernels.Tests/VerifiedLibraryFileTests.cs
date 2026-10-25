@@ -69,6 +69,45 @@ public sealed class VerifiedLibraryFileTests : IDisposable
     }
 
     [Fact]
+    public void TwoDifferentLibrariesLoadedBackToBackEachResolveTheirOwnSymbols()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "the /proc/self/fd path is Linux's");
+
+        // KernelLibrary.LoadVerified keeps each verified file open while its library is loaded (KernelLibrary owns it), so
+        // the second load cannot reuse the first one's /proc/self/fd number and be answered with the first library.
+        var (first, firstFile) = LoadCopy("libSystem.Native.so");
+        try
+        {
+            var (second, secondFile) = LoadCopy("libSystem.IO.Compression.Native.so");
+            try
+            {
+                Assert.NotEqual(firstFile.LoadPath, secondFile.LoadPath);
+                Assert.NotEqual(first, second);
+                Assert.True(NativeLibrary.TryGetExport(first, "SystemNative_GetPid", out _));
+                Assert.True(NativeLibrary.TryGetExport(second, "CompressionNative_Crc32", out _));
+                Assert.False(NativeLibrary.TryGetExport(second, "SystemNative_GetPid", out _));
+            }
+            finally
+            {
+                NativeLibrary.Free(second);
+                secondFile.Dispose();
+            }
+        }
+        finally
+        {
+            NativeLibrary.Free(first);
+            firstFile.Dispose();
+        }
+    }
+
+    private (nint Handle, VerifiedLibraryFile File) LoadCopy(string name)
+    {
+        var copy = Path.Combine(_root, name);
+        File.Copy(Path.Combine(RuntimeEnvironment.GetRuntimeDirectory(), name), copy);
+        return KernelLibrary.LoadVerified(copy, Expect(File.ReadAllBytes(copy)));
+    }
+
+    [Fact]
     public void TheOsLoaderLoadsTheVerifiedPath()
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "the /proc/self/fd path is Linux's");

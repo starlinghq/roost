@@ -253,24 +253,44 @@ jobs:
         with:
           user: ${{ vars.NUGET_USER }}
       # 2. The packages. No --skip-duplicate: a published version is immutable, so pushing one twice fails. Only a rerun of
-      # this job (run attempt > 1) skips a package whose exact version nuget.org already lists: an earlier attempt of the
-      # same run pushed it from these same drilled bytes. Each .snupkg next to its .nupkg is pushed with it.
+      # this job (run attempt > 1) may skip a package whose exact version nuget.org already lists, and only when the
+      # published package holds exactly the bytes of this drilled one: every entry equal, ignoring the repository
+      # signature (.signature.p7s) nuget.org adds. A repacked candidate ("Re-run all jobs" repacks, and a nupkg is not
+      # byte-reproducible) differs, and the job fails instead of attaching or listing bytes nuget.org does not serve.
+      # Each .snupkg next to its .nupkg is pushed with it.
       - name: Push to nuget.org
         env:
           NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
         run: |
           for nupkg in packages/*."${VERSION}".nupkg; do
             id="$(basename "${nupkg}" ".${VERSION}.nupkg")"
+            lower_id="${id,,}" lower_version="${VERSION,,}"
             if [[ "${GITHUB_RUN_ATTEMPT}" -gt 1 ]] &&
-              curl -fsS "https://api.nuget.org/v3-flatcontainer/${id,,}/index.json" 2>/dev/null |
-              python3 -I -c 'import json, sys; sys.exit(0 if sys.argv[1] in json.load(sys.stdin)["versions"] else 1)' "${VERSION,,}"; then
-              echo "::notice::${id} ${VERSION} is already on nuget.org (pushed by an earlier attempt of this run); skipped."
+              curl -fsS "https://api.nuget.org/v3-flatcontainer/${lower_id}/index.json" 2>/dev/null |
+              python3 -I -c 'import json, sys; sys.exit(0 if sys.argv[1] in json.load(sys.stdin)["versions"] else 1)' "${lower_version}"; then
+              published="$RUNNER_TEMP/published-${lower_id}.nupkg"
+              curl -fsSL -o "${published}" \
+                "https://api.nuget.org/v3-flatcontainer/${lower_id}/${lower_version}/${lower_id}.${lower_version}.nupkg"
+              python3 -I - "${nupkg}" "${published}" <<'EOF' || { echo "::error::${id} ${VERSION} on nuget.org differs from this run's drilled package; not skipping, not attaching. Rerun only the failed publish job of the run that pushed it (docs/releasing.md)."; exit 1; }
+          import hashlib, sys, zipfile
+          def entries(path):
+              with zipfile.ZipFile(path) as z:
+                  return {n: hashlib.sha512(z.read(n)).hexdigest() for n in z.namelist() if n != ".signature.p7s"}
+          sys.exit(0 if entries(sys.argv[1]) == entries(sys.argv[2]) else 1)
+          EOF
+              echo "::notice::${id} ${VERSION} is already on nuget.org with these exact contents (an earlier attempt of this run); skipped."
               continue
             fi
             dotnet nuget push "${nupkg}" --api-key "${NUGET_API_KEY}" --source https://api.nuget.org/v3/index.json
           done
       # 3. Attach the packages and publish the release.
+      # A release that is already published is never changed: its assets are what consumers fetched.
       - name: Publish the GitHub release
         run: |
+          draft="$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq .isDraft)"
+          if [[ "${draft}" != "true" ]]; then
+            echo "::notice::Release ${GITHUB_REF_NAME} is already published; its assets are not replaced."
+            exit 0
+          fi
           gh release upload "${GITHUB_REF_NAME}" --clobber packages/*.nupkg
           gh release edit "${GITHUB_REF_NAME}" --draft=false

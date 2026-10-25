@@ -12,8 +12,15 @@ namespace Starlings.Roost.Kernels;
 /// Linux: the file is read once through one handle into a sealed memory file (<c>memfd_create</c>, then
 /// <c>F_SEAL_WRITE | F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL</c>) while it is hashed, and the loader opens
 /// <c>/proc/self/fd/&lt;memfd&gt;</c>. Nothing can change those bytes after the hash, not even this process. Where
-/// <c>memfd_create</c> is unavailable, the file is hashed through an open handle and loaded as <c>/proc/self/fd/&lt;fd&gt;</c>,
-/// the same inode, so a rename or replacement of the path after the check has no effect.
+/// <c>memfd_create</c> or sealing is unavailable, the file is hashed through an open handle and loaded as
+/// <c>/proc/self/fd/&lt;fd&gt;</c>, the same inode, so a rename or replacement of the path after the check has no effect.
+/// That fallback does NOT protect against an in-place write to the same inode between the hash and the load: on Linux
+/// <see cref="FileShare.Read"/> is advisory, so a writer with access to the file can still change it.
+/// </para>
+/// <para>
+/// Keep the object alive until after the library is unloaded (<see cref="KernelLibrary"/> owns it): while it is open no other
+/// file gets its fd number, so a later <c>dlopen</c> of a reused <c>/proc/self/fd</c> path cannot be answered with this
+/// already-loaded library.
 /// </para>
 /// <para>
 /// Other systems: the file stays open with read sharing only while it is hashed and loaded; Windows enforces that share
@@ -89,9 +96,9 @@ internal sealed partial class VerifiedLibraryFile : IDisposable
         {
             fd = MemfdCreate("roost-kernels", MfdCloexec | MfdAllowSealing);
         }
-        catch (EntryPointNotFoundException)
+        catch (Exception e) when (e is EntryPointNotFoundException or DllNotFoundException)
         {
-            return null; // glibc before 2.27; fall back to the open handle
+            return null; // no libc to bind, or glibc before 2.27: fall back to the open handle
         }
 
         if (fd < 0)
@@ -117,7 +124,9 @@ internal sealed partial class VerifiedLibraryFile : IDisposable
             CheckDigest(path, hash.GetHashAndReset(), expected);
             if (Fcntl(fd, FAddSeals, SealsAll) != 0 || (Fcntl(fd, FGetSeals, 0) & SealsAll) != SealsAll)
             {
-                throw new KernelLoadException(RoostErrorCode.Internal, $"could not seal the in-memory copy of {path} (errno {Marshal.GetLastPInvokeError()})");
+                // A kernel or filesystem without seals: an unsealed copy protects nothing, so use the open handle instead.
+                memfd.Dispose();
+                return null;
             }
 
             return new VerifiedLibraryFile(FdPath(memfd), sealedCopy: true, memfd);
