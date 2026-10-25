@@ -101,19 +101,20 @@ layouts = ["row_major"]
 min_alignment = 4
 
 # Digests of the per-SM libraries (libroost_kernels_sm<N>.so). Written by kernels/tools/record_digests.py; do not
-# edit by hand. All builds are of the development host (CUDA 13.3.73, gcc 16.2.1) with the Triton AOT GatedDeltaRule cubins (the
-# [triton_aot] closure below), so the GPU-less CI build (no GatedDeltaRule) has other bytes. SM 86 and SM 89 are the R-019 build
-# (kernels/src/gemm.cu refuses Gemm epilogues with C or bias), from the checkout path
-# /home/mark/Projects/roost/.claude/worktrees/agent-aaf3b503d96fd1902; both have run on hardware (the R-019 conformance results in
-# tests/Starlings.Roost.Conformance/results/). SM 80, 90, 100 and 120 are still the R-034 build from /home/mark/Projects/roost-wave4/R-034,
-# which predates the gemm.cu refusal, so their digests are of an older source and are not rebuilt here (R-060 rebuilds every SM).
+# edit by hand. All six are the R-019 build: one kernels/ source (the R-034 sources plus kernels/src/gemm.cu refusing Gemm epilogues
+# with C or bias; kernels/ unchanged from d318b9d to 97e5f71), one checkout path
+# (/home/mark/Projects/roost/.claude/worktrees/agent-aaf3b503d96fd1902), the development host's toolchain (CUDA 13.3.73, gcc 16.2.1)
+# and the Triton AOT GatedDeltaRule cubins (the [triton_aot] closure below), so the GPU-less CI build (no GatedDeltaRule) has other
+# bytes. Two cmake invocations: SM 86 and 89 (ROOST_SM_LIST=86;89), then SM 80, 90, 100 and 120. SM 86 and SM 89 have run on hardware
+# (tests/Starlings.Roost.Conformance/results/); the other four are build-only.
 # One library per SM holds every variant, so every variant's block lists the same file. They DEPEND on the source checkout path
 # (nvcc hashes it into _INTERNAL_ symbol names; a build from another path gives another digest), so they reproduce only from that
-# path. The release workflow (R-060) replaces these with the digests of the pinned CI container build and publishes the files as release assets.
+# path, which is a worktree that will not outlive this branch. The release workflow (R-060) replaces these with the digests of the pinned
+# release build and publishes the files as release assets.
 # BEGIN binaries residual-stub
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -128,17 +129,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries residual-stub
 
@@ -159,7 +160,7 @@ min_alignment = 16
 # BEGIN binaries rms-norm-flashinfer
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -174,17 +175,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries rms-norm-flashinfer
 
@@ -206,7 +207,7 @@ head_dims = [256]
 # BEGIN binaries qk-norm-flashinfer
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -221,17 +222,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries qk-norm-flashinfer
 
@@ -253,7 +254,7 @@ min_alignment = 2
 # BEGIN binaries rope-roost
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -268,17 +269,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries rope-roost
 
@@ -303,7 +304,7 @@ group_sizes = [4]
 # BEGIN binaries paged-attention-flashinfer-fa2
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -318,17 +319,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries paged-attention-flashinfer-fa2
 
@@ -349,7 +350,7 @@ min_alignment = 16
 # BEGIN binaries silu-and-mul-flashinfer
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -364,17 +365,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries silu-and-mul-flashinfer
 
@@ -451,7 +452,7 @@ library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72d
 # BEGIN binaries gemm-cublaslt
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -466,17 +467,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries gemm-cublaslt
 
@@ -498,7 +499,7 @@ min_alignment = 2
 # BEGIN binaries embedding-roost
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -513,17 +514,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries embedding-roost
 
@@ -545,7 +546,7 @@ weight_dtypes = ["bf16", "f16"]
 # BEGIN binaries lm-head-cublaslt
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -560,17 +561,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries lm-head-cublaslt
 
@@ -593,7 +594,7 @@ min_alignment = 2
 # BEGIN binaries cache-write-roost
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -608,17 +609,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries cache-write-roost
 
@@ -639,7 +640,7 @@ min_alignment = 1
 # BEGIN binaries cache-copy-roost
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -654,17 +655,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries cache-copy-roost
 
@@ -690,7 +691,7 @@ min_alignment = 4
 # BEGIN binaries causal-conv1d-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -705,17 +706,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries causal-conv1d-cuda
 
@@ -735,7 +736,7 @@ min_alignment = 1
 # BEGIN binaries recurrent-state-copy-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -750,17 +751,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries recurrent-state-copy-cuda
 
@@ -780,7 +781,7 @@ min_alignment = 1
 # BEGIN binaries recurrent-state-snapshot-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -795,17 +796,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries recurrent-state-snapshot-cuda
 
@@ -827,7 +828,7 @@ min_alignment = 4
 # BEGIN binaries gated-delta-rule-gates-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -842,17 +843,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries gated-delta-rule-gates-cuda
 
@@ -873,7 +874,7 @@ min_alignment = 4
 # BEGIN binaries gated-rms-norm-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -888,17 +889,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries gated-rms-norm-cuda
 
@@ -919,7 +920,7 @@ min_alignment = 4
 # BEGIN binaries sigmoid-mul-cuda
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -934,17 +935,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries sigmoid-mul-cuda
 
@@ -974,7 +975,7 @@ min_alignment = 16
 # BEGIN binaries gated-delta-rule-chunk-aot
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -989,17 +990,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries gated-delta-rule-chunk-aot
 
@@ -1020,7 +1021,7 @@ min_alignment = 16
 # BEGIN binaries gated-delta-rule-recurrent-aot
 [[ops.variants.binaries]]
 arch = 80
-sha256 = "977bb0e8824fca0e42d1e1905796dfedfe9313692beb95bcc5733612908c7261"
+sha256 = "d7c84d2263f13a29e886c5b1e99a37dccea8f521977be4c1963c9339c691e3d1"
 bytes = 3315648
 
 [[ops.variants.binaries]]
@@ -1035,17 +1036,17 @@ bytes = 3299264
 
 [[ops.variants.binaries]]
 arch = 90
-sha256 = "4fbb7fd1930d7e2667712e7c142ac5fad10adcc7a00e1e7463ae6da8ffa68f50"
+sha256 = "0863ccf62695763907f9670d13fa80b07cd8b8538d1f5fa22e75b3cceea31096"
 bytes = 3446720
 
 [[ops.variants.binaries]]
 arch = 100
-sha256 = "df924e914e765e1baaa72041da7e464a8ac9d41c76b0e8da504646e5c90c4a1d"
+sha256 = "316cc13c6564f51d138dc39f7c738327135aaa3c2dc8162df944bb725b44ebb6"
 bytes = 4433856
 
 [[ops.variants.binaries]]
 arch = 120
-sha256 = "3feae547c0583be92f46a299eab09677084e933054238113f6295c4699a48d4f"
+sha256 = "18379f97dcbb0671d51f37f34fb23b39fffc806fab431dfc993cfc727c4e979d"
 bytes = 4495296
 # END binaries gated-delta-rule-recurrent-aot
 

@@ -184,7 +184,8 @@ depends on that path. RTX 3090 (SM 86) and RTX 4060 Ti (SM 89), driver 610.57, `
   single-sequence form. The integer and copy ops, the state copy and snapshot and the conv state are bit-exact.
 - **Refused** (43 per SM, 22 bf16 and 21 f16): every `gemm-cublaslt` case with a C input or a bias, including 4 golden cases
   (`Gemm-<dtype>-bias` and `Gemm-<dtype>-alpha-beta-c-bias-bucket64`), which are now refused rather than compared. Alpha-only cases are
-  served and pass. `kernels/results/r019-ops-gemm-sm86.log` is the stream C harness on the same SM 86 library: 81 passed, 0 failed,
+  served and pass. `kernels/results/r019-ops-gemm-sm86.log` is the stream C harness on the same SM 86 library (sha256 `d84e95be…`; the
+  harness as committed in `8eaa795`, unchanged through `7b2b2cf`; the log's first lines record both): 81 passed, 0 failed,
   including the six refusal checks (bf16 and f16; C, bias, both: `UNSUPPORTED` from `plan()` and `run()`, D untouched).
 - **Prefill batch composition (recorded)**: 7 multi-sequence prefill cases per SM (6 random and the golden `prefill-multi-seq`, plus the
   fixed `prefill-multi-seq`) return, for at least one sequence run alone, rows that differ in bytes from the batched call, while both are
@@ -197,8 +198,8 @@ depends on that path. RTX 3090 (SM 86) and RTX 4060 Ti (SM 89), driver 610.57, `
   under memcheck with `--leak-check full`, racecheck and synccheck: 57 runs per SM): **56 runs per SM report zero** (memcheck 0 errors and
   0 bytes leaked, synccheck 0 errors, racecheck 0 hazards), including the Triton AOT GatedDeltaRule cubins and every other hybrid variant.
   **One does not: `paged-attention-flashinfer-fa2` under racecheck**, in `flashinfer::BatchPrefillWithPagedKVCacheKernel` as before. The
-  gate number is racecheck's own summary, errors plus warnings: **SM 86 48 errors and 413 warnings (461; 101 hazards displayed), SM 89 48
-  errors and 412 warnings (460; 100 displayed)**. The first R-019 run on the old library (`0f707ae0…`, 11 variants, fewer prefill
+  gate number is racecheck's own summary, errors plus warnings: **SM 86 48 errors and 412 warnings (460; 100 hazards displayed), SM 89 48
+  errors and 413 warnings (461; 101 displayed)**. The first R-019 run on the old library (`0f707ae0…`, 11 variants, fewer prefill
   cases in the profile) had 23 errors and 370 warnings. All prefill-mode cases show hazards; decode-mode cases show none. The variant is
   clean under memcheck and synccheck, and its outputs match `CpuOps`.
 - **CPU half** (`results/r019-cpu-oracle.results.json`, `r019-cpu-cpuops-goldens.results.json`, `r019-cpu.out`, `full` profile, at `7b2b2cf`):
@@ -238,9 +239,9 @@ depends on that path. RTX 3090 (SM 86) and RTX 4060 Ti (SM 89), driver 610.57, `
     readable (stream A).
   - `evidence/schemas/stage-results.schema.json` does not accept `task: kernel-conformance`; stream B2 must extend it.
   - The `-lineinfo` racecheck attribution of the FA2 prefill hazards.
-  - The kernel manifest's SM 80, 90, 100 and 120 digests are from the R-034 build, before the `gemm.cu` refusal; the SM 86 and 89 digests
-    are from a worktree path that will not exist once this branch is merged, so they reproduce only by rebuilding at that path. Both are
-    for the release pipeline (R-060) to replace.
+  - All six manifest digests are the R-019 build (SM 80, 90, 100 and 120 were rebuilt build-only from the same source and path after the
+    runs, so the manifest names one build). That path is a worktree that will not exist once this branch is merged, so the digests
+    reproduce only by rebuilding there; the release pipeline (R-060) replaces them.
 - The goldens file is not uploaded as a release asset (no release is made here) and CI does not fetch it; the real-goldens test is skipped there.
 - Only SM 86 and SM 89 have hardware evidence; other SMs stay `untested`. The manifest still lists SM 89 `untested`: setting it `experimental` with this evidence is the maintainer's (or stream C's) call, and `ManifestAndNamesTests` (stream F) asserts the current value.
 - Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases.

@@ -1,3 +1,9 @@
+# R-019: kernels/tests/ops-cuda, group gemm only, RTX 3090 (SM 86), run 2026-10-25T02:24Z.
+# Provenance lines added after the run (the harness prints only the library name): library
+# libroost_kernels_sm86.so sha256 d84e95be84b608ec3baee330a58675a7280af45f299fb9c4402cf073a3ba7370 (the R-019 build, kernels/ source
+# as at 7b2b2cf); harness Roost.KernelOps.Tests.Cuda built from kernels/tests/ops-cuda as committed in 8eaa795 (unchanged
+# through 7b2b2cf). Command: tools/gpu-lease run --device 3090 --need-mib 4000 --stream D --wait 3600 --
+#   dotnet Roost.KernelOps.Tests.Cuda.dll libroost_kernels_sm86.so --filter gemm --log <this file>
 library roost-kernels-sm86 abi 0x10002 entries 19; device sm_86; 2026-10-25T02:24:32.5397135Z
 --- gemm
 PASS Gemm BF16 q_proj m=1 n=4096 k=1024 tB=1 bias=0 a/b=1/0 bucket=0 class=gemm-bf16          n=4096      max_abs=4.88E-004 ref_rms=1.01E+000 utilisation=0.131 violations=0 nonfinite=0

@@ -257,11 +257,13 @@ at one path. Nothing shows a path-independent build. R-017 measured 576 differin
 `_INTERNAL_<hash>_<file>_cu_...` symbol names whose hash derives from the source path (they come from `cuda::std` entities in the headers, so a
 named namespace in our sources does not remove them), and R-034's reviewer saw the same kind of difference on the AOT library (12 bytes in every
 nvcc-compiled object, while the generated C++ and all 7 Triton cubins were identical). The manifest digests therefore reproduce only from the
-checkout path they were recorded at (`/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for example a fixed build path
+checkout path they were recorded at (since R-019 `/home/mark/Projects/roost/.claude/worktrees/agent-aaf3b503d96fd1902`, a worktree that
+will not outlive the R-019 branch; before it `/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for example a fixed build path
 in CI) is open and belongs to the release pipeline (R-060). Linking needs no line info (it records source mtimes), no build id and no local
 symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
 
-The manifest's six digests are one AOT build each, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
+The manifest's six digests are the R-019 build (one source with the `gemm.cu` refusal, one path, two cmake invocations: SM 86 and 89,
+then SM 80, 90, 100 and 120), each with the AOT cubins, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
 other bytes. SM 86 and SM 89 have run on hardware. SM 89 has run the R-019 conformance suite and compute-sanitizer (RTX 4060 Ti, `tests/Starlings.Roost.Conformance/results/`); the manifest still lists it `untested` until the maintainer sets its status. The CI job reports, and does not fail on, a difference from the digests; the release workflow
 (R-060) records the digests of the pinned container build and publishes the libraries.
 
