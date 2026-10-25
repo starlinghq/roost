@@ -77,9 +77,9 @@ internal static class ChatRequestBuilder
         {
             matcher = stopFactory.Create(stops);
         }
-        catch (NotSupportedException e)
+        catch (Exception e) when (e is NotSupportedException or ArgumentException)
         {
-            throw new RoostChatException(new Starlings.Roost.Requests.RoostError(Starlings.Roost.Requests.RoostErrorCode.InvalidOption, "Stop sequences are unsupported: " + e.Message, "stop"), e);
+            throw new RoostChatException(new Starlings.Roost.Requests.RoostError(Starlings.Roost.Requests.RoostErrorCode.InvalidOption, "The stop matcher refused the stop sequences: " + e.Message, "stop"), e);
         }
 
         return new PreparedChat(conversation, stops, matcher, maxOutput);

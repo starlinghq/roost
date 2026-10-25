@@ -20,7 +20,7 @@ public enum RoostCapabilityStatus
 
 /// <summary>
 /// The capability table of a <see cref="RoostChatClient"/>. M0 (R-036): greedy decoding over the eager worker, streaming,
-/// cancellation, usage and stop token ids are built and CPU-tested (<see cref="RoostCapabilityStatus.Experimental"/>; the
+/// cancellation, usage, stop token ids and stop strings are built and CPU-tested (<see cref="RoostCapabilityStatus.Experimental"/>; the
 /// Preview 1 drill, R-062, attaches the GPU evidence). Everything not built is <see cref="RoostCapabilityStatus.Unsupported"/>
 /// and is refused with a typed error naming the option.
 /// </summary>
@@ -85,7 +85,7 @@ public sealed class RoostCapabilities
 
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
-    internal RoostCapabilities(bool stopSequences)
+    internal RoostCapabilities()
     {
         var experimental = RoostCapabilityStatus.Experimental;
         var unsupported = RoostCapabilityStatus.Unsupported;
@@ -99,7 +99,7 @@ public sealed class RoostCapabilities
             [StopTokenIds] = experimental,
             [MaxOutputTokens] = experimental,
             [Instructions] = experimental,
-            [StopSequences] = stopSequences ? experimental : unsupported,
+            [StopSequences] = experimental,
             [Sampling] = unsupported,
             [Penalties] = unsupported,
             [Tools] = unsupported,

@@ -39,7 +39,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         _options = options;
         _backend = backend;
         _metadata = new ChatClientMetadata("roost", null, options.Model.ModelId);
-        Capabilities = new RoostCapabilities(stopSequences: options.StopMatcherFactory is not PendingStopMatcherFactory);
+        Capabilities = new RoostCapabilities();
     }
 
     /// <summary>What this client supports; anything not listed is unsupported.</summary>

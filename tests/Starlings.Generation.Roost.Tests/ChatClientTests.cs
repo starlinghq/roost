@@ -217,15 +217,44 @@ public sealed class ChatClientTests
     }
 
     [Fact]
-    public async Task StopStringsAreRefusedByTheDefaultFactory()
+    public async Task AStopStringEndsTheStreamWithStopAndIsNotEmittedByDefault()
+    {
+        // The default factory is Starling's StopSequenceMatcher (StarlingStopMatcherFactory); the stop string spans tokens.
+        var executors = new List<ScriptedExecutor>();
+        await using var client = await TestRig.InProcessAsync(new Script { Tokens = ReplyIds, NeverStop = true }, executors);
+        Assert.Same(StarlingStopMatcherFactory.Instance, new RoostChatClientOptions { Model = TestRig.Profile() }.StopMatcherFactory);
+
+        var updates = new List<ChatResponseUpdate>();
+        await foreach (var u in client.GetStreamingResponseAsync(Hi, new ChatOptions { StopSequences = ["world!", "never"], MaxOutputTokens = 100 }, Timeout))
+        {
+            updates.Add(u);
+        }
+
+        var text = string.Concat(updates.Select(u => u.Text));
+        Assert.Equal("Hello, ", text);
+        Assert.DoesNotContain("world", text, StringComparison.Ordinal);
+        Assert.Equal(ChatFinishReason.Stop, updates[^1].FinishReason);
+        var usage = updates[^1].Contents.OfType<UsageContent>().Single().Details;
+        Assert.True(usage.OutputTokenCount < 100, $"generation should end at the stop string; {usage.OutputTokenCount} tokens");
+        Assert.Equal(RoostCapabilityStatus.Experimental, client.Capabilities.StatusOf(RoostCapabilities.StopSequences));
+
+        // Non-streaming gives the same, and the stopped request left the worker free.
+        var response = await client.GetResponseAsync(Hi, new ChatOptions { StopSequences = ["world!"], MaxOutputTokens = 100 }, Timeout);
+        Assert.Equal("Hello, ", response.Text);
+        Assert.Equal(ChatFinishReason.Stop, response.FinishReason);
+        Assert.Empty(executors.Single().Rejections);
+    }
+
+    [Fact]
+    public async Task AStopStringThatNeverAppearsChangesNothing()
     {
         await using var client = await TestRig.InProcessAsync(new Script { Tokens = ReplyIds });
 
-        var e = await Assert.ThrowsAsync<RoostChatException>(() => client.GetResponseAsync(Hi, new ChatOptions { StopSequences = ["world"] }, Timeout));
+        var response = await client.GetResponseAsync(Hi, new ChatOptions { StopSequences = ["zzz"] }, Timeout);
 
-        Assert.Equal(RoostErrorCode.InvalidOption, e.Error.Code);
-        Assert.Equal("stop", e.Error.Param);
-        Assert.Equal(RoostCapabilityStatus.Unsupported, client.Capabilities.StatusOf(RoostCapabilities.StopSequences));
+        Assert.Equal(Reply, response.Text);
+        Assert.Equal(ChatFinishReason.Stop, response.FinishReason);
+        Assert.Equal(ReplyIds.Length + 1, response.Usage!.OutputTokenCount);
     }
 
     [Fact]

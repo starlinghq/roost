@@ -43,11 +43,10 @@ public sealed record RoostChatClientOptions
     public RoostWorkerOptions Worker { get; init; } = new();
 
     /// <summary>
-    /// Makes the matcher for a request's stop strings. The default refuses any stop string (a typed
-    /// <see cref="Starlings.Roost.Requests.RoostErrorCode.InvalidOption"/> naming <c>stop_sequences</c>) until Starling publishes
-    /// a stop-matching API (starling#124); pass a Starling-backed factory to enable them.
+    /// Makes the matcher for a request's stop strings, matched on detokenized text in the host process. The default is
+    /// <see cref="StarlingStopMatcherFactory.Instance"/>, over Starling's public <c>StopSequenceMatcher</c> (starling#124).
     /// </summary>
-    public IStopMatcherFactory StopMatcherFactory { get; init; } = PendingStopMatcherFactory.Instance;
+    public IStopMatcherFactory StopMatcherFactory { get; init; } = StarlingStopMatcherFactory.Instance;
 
     /// <summary>Output tokens when <c>ChatOptions.MaxOutputTokens</c> is not set (always capped by the context left).</summary>
     public int DefaultMaxOutputTokens { get; init; } = 512;
