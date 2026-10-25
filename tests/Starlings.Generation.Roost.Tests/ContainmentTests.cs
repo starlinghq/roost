@@ -78,6 +78,23 @@ public sealed class ContainmentTests
     }
 
     [Fact]
+    public async Task ARingWithNoFreePlanBufferAndNothingInFlightReplacesTheWorker()
+    {
+        var faults = new TransportFaults();
+        var executors = new List<ScriptedExecutor>();
+        await using var client = await TestRig.InProcessAsync(new Script { Tokens = ReplyIds }, executors, decorate: t => new FaultyTransport(t, faults));
+
+        faults.NoFreeBuffer = true;
+        var e = await Assert.ThrowsAsync<RoostChatException>(() => client.GetResponseAsync(Hi, cancellationToken: Timeout));
+        Assert.Equal(RoostErrorCode.WorkerRestarted, e.Error.Code);
+        Assert.Contains("out of step", e.Message, StringComparison.Ordinal);
+
+        Assert.Equal(Reply, (await client.GetResponseAsync(Hi, cancellationToken: Timeout)).Text);
+        Assert.Equal(1, faults.Kills);
+        Assert.Equal(2, executors.Count); // a new worker
+    }
+
+    [Fact]
     public async Task AKillThatThrowsReplacesTheTransportAndTheNextRequestRuns()
     {
         var faults = new TransportFaults();

@@ -87,6 +87,7 @@ public sealed class OptionValidationTests : IAsyncLifetime
     [InlineData("author_name")]
     [InlineData("message_properties")]
     [InlineData("content_properties")]
+    [InlineData("annotations")]
     public void UnsupportedMessagesAreRefused(string kind)
     {
         ChatMessage[] messages = kind switch
@@ -97,6 +98,7 @@ public sealed class OptionValidationTests : IAsyncLifetime
             "author_name" => [new ChatMessage(ChatRole.User, "Hi") { AuthorName = "alice" }],
             "message_properties" => [new ChatMessage(ChatRole.User, "Hi") { AdditionalProperties = new AdditionalPropertiesDictionary { ["x"] = 1 } }],
             "content_properties" => [new ChatMessage(ChatRole.User, [new TextContent("Hi") { AdditionalProperties = new AdditionalPropertiesDictionary { ["x"] = 1 } }])],
+            "annotations" => [new ChatMessage(ChatRole.User, [new TextContent("Hi") { Annotations = [new CitationAnnotation { Title = "t" }] }])],
             _ => [],
         };
 

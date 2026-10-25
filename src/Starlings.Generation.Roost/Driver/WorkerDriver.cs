@@ -379,13 +379,16 @@ internal sealed class WorkerDriver : IGenerationBackend
 
     private void RunStep(PlannedStep step)
     {
+        if (!_transport.CanPublish())
+        {
+            // With no step in flight every plan buffer should be free: the host's and the worker's view of the rings disagree.
+            // The worker cannot be trusted with the next step, so replace it.
+            LoseWorker(new RoostError(RoostErrorCode.WorkerRestarted, "The plan ring is out of step with the worker (no plan buffer free with no step in flight); the worker was killed and the request cannot be resumed (R-070)."));
+            return;
+        }
+
         try
         {
-            if (!_transport.CanPublish())
-            {
-                throw new InvalidOperationException("No plan buffer is free with no step in flight.");
-            }
-
             int index = _transport.NextPlanBufferIndex;
             _ = PlanBuffer.Write(_transport.PlanBuffer(index), step);
             if (!_transport.TryPublish(new RingSlot { StepId = step.StepId, Kind = RingSlotKind.Step, BufferIndex = (uint)index }))

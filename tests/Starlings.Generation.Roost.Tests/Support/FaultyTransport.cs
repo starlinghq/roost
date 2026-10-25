@@ -12,6 +12,12 @@ internal sealed class TransportFaults
     private int _corruptResult;
     private int _throwOnKill;
     private int _throwOnPlanBuffer;
+    private int _noFreeBuffer;
+
+    /// <summary>The next CanPublish says no plan buffer is free, as a desynchronised ring would.</summary>
+    public bool NoFreeBuffer { set => _noFreeBuffer = value ? 1 : 0; }
+
+    internal bool TakeNoFreeBuffer() => Take(ref _noFreeBuffer);
 
     /// <summary>The next result take throws an exception type the driver does not expect.</summary>
     public bool ThrowOnTake { set => _throwOnTake = value ? 1 : 0; }
@@ -60,7 +66,7 @@ internal sealed class FaultyTransport : IDriverTransport
 
     public int NextPlanBufferIndex => _inner.NextPlanBufferIndex;
 
-    public bool CanPublish() => _inner.CanPublish();
+    public bool CanPublish() => !_faults.TakeNoFreeBuffer() && _inner.CanPublish();
 
     public ValueTask<HandshakeResult> StartAsync(WorkerLaunch launch, CancellationToken cancellationToken) => _inner.StartAsync(launch, cancellationToken);
 

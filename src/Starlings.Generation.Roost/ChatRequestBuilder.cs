@@ -197,6 +197,11 @@ internal static class ChatRequestBuilder
         string? reasoning = null;
         foreach (var content in message.Contents)
         {
+            if (content.Annotations is { Count: > 0 })
+            {
+                throw Refuse(param + ".annotations", "Content annotations (citations and the like) are unsupported: the chat template has no field for them.");
+            }
+
             if (content.AdditionalProperties is { Count: > 0 } contentExtra)
             {
                 throw RefuseInvariant(param + ".content", $"Content additional property '{contentExtra.Keys.First()}' is unsupported.");
