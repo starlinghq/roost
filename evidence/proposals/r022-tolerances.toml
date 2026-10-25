@@ -1,0 +1,74 @@
+# PROPOSED tolerances for Qwen3.5-0.8B (R-022, streams E and D). NOT BINDING. The maintainer sets binding tolerances in
+# evidence/protected/ (decision 8, R-014); nothing here is read by any gate. Rationale, measurements and the negative runs:
+# evidence/proposals/r022-tolerances.md. Procedure and raw summaries: docs/m0/roost-r022-cpu-parity.md.
+#
+# Tolerances are per profile (decision 8). Every value in [tolerances] belongs to ONE profile only: the CPU reference
+# (the generated forward on CpuOps: double arithmetic, bfloat16 weights, bfloat16 activations and convolution state,
+# float32 recurrent state) against the transformers 5.20.1 float32 CPU reference. It checks the model definition. It is not
+# the M0 gate's profile (the bf16 GPU worker, R-026), whose values are PENDING a GPU measurement and are not extrapolated here.
+#
+# The evaluator reads YAML or JSON, not TOML: to use these values, copy [tolerances] into a tolerance file, for example
+#   python3 -c 'import json,sys,tomllib; print(json.dumps(tomllib.load(open(sys.argv[1],"rb"))["tolerances"], indent=1))' \
+#       evidence/proposals/r022-tolerances.toml > tolerances.json
+proposal_version = 1
+status = "proposed"
+item = "R-022"
+
+[profile]
+id = "qwen3.5-0.8b/cpu-fp64-reference"  # proposed name; no profile manifest exists yet (R-012/R-013)
+candidate = "Qwen35Model.Forward<CpuOps> (src/Starlings.Roost.Models.Qwen35, definition with WindowLeft=-1 and F32 logits)"
+candidate_numerics = "double arithmetic per op; bf16 weights (norm slots bf16(1 + w)); bf16 activations, K/V and conv state; f32 recurrent state; f32 logits"
+reference = "transformers 5.20.1, torch 2.9.1+cpu, float32, CPU (roost-evidence reference-run --capture-layers)"
+checkpoint = "Qwen/Qwen3.5-0.8B at 2fc06364715b967f1860aea9cf38778875588b17"
+prompt_set = "5 chat prompts through Starling's Qwen35ChatTemplate (thinking off), 25 to 134 prompt tokens, 24 greedy tokens each (prefill + 23 decode forwards), teacher-forced"
+
+# Keys of evidence/pipeline/src/roost_evidence/evaluate_generation.TOLERANCE_KEYS; all for the profile above.
+[tolerances]
+"float.layer_hidden_max_abs" = 2.0
+"float.recurrent_state_max_abs" = 0.15
+"float.conv_state_max_abs" = 0.5
+"float.nan_or_inf" = "fail"
+"float.step0_logprob_max_abs" = 0.4
+"float.step0_top5_logprob_max_abs" = 0.25
+"discrete.step0_argmax" = "equal"
+"discrete.greedy_ids" = "exact_except_listed_margin_below_0.2"
+
+# What each value was chosen from (max over 5 cases x 24 forwards; details in the .md).
+[measured."float.layer_hidden_max_abs"]
+max = 1.33
+set_by = "final_norm, multi-turn, forward 0 (prefill), position 33, channel 687 (reference 5.73)"
+decoder_layers_max = 0.138  # layer.23, capital, prefill position 21; layers 0-22 at most 0.071
+decode_forwards_max = 0.407
+margin = "1.5x the measured maximum"
+
+[measured."float.recurrent_state_max_abs"]
+max = 0.0729
+set_by = "layer 16, capital, forward 0"
+per_forward = "0.073 at forward 0, 0.067 at forward 23: no growth over 24 forwards"
+margin = "2x"
+
+[measured."float.conv_state_max_abs"]
+max = 0.306
+set_by = "layer 21, code, forward 0 (reference magnitude up to 38.4)"
+margin = "1.6x"
+
+[measured."float.step0_logprob_max_abs"]
+max = 0.257
+set_by = "code, token 109565 (reference log-probability -26.6, a tail token)"
+margin = "1.6x"
+
+[measured."float.step0_top5_logprob_max_abs"]
+max = 0.159
+set_by = "code"
+margin = "1.6x"
+
+[measured."discrete.greedy_ids"]
+argmax_equal_forwards = "120 of 120"
+max_margin_error = 0.137  # |candidate top-1/top-2 gap - reference gap|, any forward; set at a reference margin of 8.85
+smallest_reference_margin_matched = 0.0096
+margin = "near-tie bound 0.2 is about 1.5x the largest margin error"
+
+# The M0 gate compares the bf16 GPU worker with protected fixtures (R-026, R-014). Its tolerances need a GPU measurement.
+[pending."qwen3.5-0.8b/bf16-gpu"]
+status = "pending"
+reason = "no GPU run of the worker exists yet (R-025); these CPU values are not extrapolated to it"

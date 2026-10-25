@@ -1,0 +1,15 @@
+{
+  "candidate": "Qwen35Model.Forward\u003CRecordingOps\u003E over CpuOps (double arithmetic; bfloat16 weights, activations and convolution state; float32 recurrent state)",
+  "perturbation": "none",
+  "checkpoint_file": "<snapshot of Qwen/Qwen3.5-0.8B at 2fc06364>/model.safetensors-00001-of-00001.safetensors",
+  "reference": "<run artifacts>/ref",
+  "weights_load_seconds": 2.8,
+  "dotnet": "10.0.12",
+  "captures": {
+    "layers/capital.safetensors": "dbe5b6f84c733ffa58941f94608d2a314ea73b159e6d22dacc714cfeadda793b",
+    "layers/system-haiku.safetensors": "1c5e913adaa38cc6755d9a4e903b83d699950583ab6b814aa171f928c8b1b944",
+    "layers/multi-turn.safetensors": "4e52a55870a9141fe1f3e789f6b786bbbd83dd5651d5a49024255ae296305968",
+    "layers/code.safetensors": "4dd0548ba57b3a6eaeb4310e23036257c52f986884cf8a30e8dd933bd736bbc0",
+    "layers/long-context.safetensors": "ac926a9675e9d739e433922a983de35d0b8933677ab541a55ed322bd9fa3945c"
+  }
+}
