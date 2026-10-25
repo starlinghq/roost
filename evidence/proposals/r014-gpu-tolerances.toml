@@ -1,0 +1,73 @@
+# PROPOSED tolerances for profile qwen3.5-0.8b/cuda-bf16-eager (R-014 GPU measurement, stream B3). NOT BINDING. The maintainer sets
+# binding tolerances in evidence/protected/ together with the fixtures (decision 8; the 2026-10-20 ruling: row-relative plus cosine).
+# Nothing here is read by any gate. Rationale, per-case numbers and caveats: evidence/proposals/r014-gpu-tolerances.md.
+#
+# Measured: the eager GPU worker, teacher-forced on the five R-014 reference cases (evidence/proposals/r014-fixtures.toml, bytes
+# verified against SHA256SUMS), per-layer captures compared by `roost-evidence evaluate-layers` (evidence/pipeline with the relative
+# and cosine metrics of PR #134), step-0 vectors and greedy margins by the analysis in the .md. Maxima are over both SMs, 5 cases x 24
+# forwards. The evaluator reads YAML or JSON: copy [tolerances] into a tolerance file to use these values.
+proposal_version = 1
+status = "proposed"
+item = "R-014"
+
+[profile]
+id = "qwen3.5-0.8b/cuda-bf16-eager"
+candidate = "eager worker: EagerStepExecutor with Qwen35EagerModel over CudaOps (bf16 weights and activations, f32 recurrent state, f32 logits)"
+reference = "R-014 fixtures: transformers 5.20.1 float32 CPU (evidence/proposals/r014-fixtures.toml)"
+devices = ["RTX 3090, SM 86, libroost_kernels_sm86.so fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7", "RTX 4060 Ti, SM 89, libroost_kernels_sm89.so e4b8798c6b560249059c14d6ccf6518b469478a465ee323ece7e8999742d9248"]
+harness = "tests/Starlings.Roost.Worker.Tests.Cuda capture (CaptureGpu.cs), run-capture.sh; code at plan/build-plan d6c6fe6"
+rule = "each bound is the measured worst over both SMs times about 1.5 to 2, rounded to a short number; cosine bounds leave 3 to 5 times the measured 1 - cosine"
+
+# Keys of evidence/pipeline/src/roost_evidence/evaluate_generation.TOLERANCE_KEYS.
+[tolerances]
+"float.nan_or_inf" = "fail"
+"float.layer_hidden_rel_l2" = 0.1
+"float.layer_hidden_cosine_min" = 0.995
+"float.layer_hidden_max_abs_rel" = 0.12
+"float.recurrent_state_rel_l2" = 0.03
+"float.recurrent_state_cosine_min" = 0.9995
+"float.recurrent_state_max_abs_rel" = 0.06
+"float.conv_state_rel_l2" = 0.02
+"float.conv_state_cosine_min" = 0.9997
+"float.conv_state_max_abs_rel" = 0.03
+"float.step0_logprob_rel_l2" = 0.03
+"float.step0_logprob_cosine_min" = 0.9995
+"float.step0_logprob_max_abs_rel" = 0.02
+"float.step0_top5_logprob_max_abs" = 0.15
+"discrete.step0_argmax" = "equal"
+"discrete.greedy_ids" = "exact_except_listed_margin_below_0.2"
+
+# The absolute forms, for an evaluator run that reads only them (not recommended: the final norm's scale sets them, see the .md).
+[tolerances_absolute_alternative]
+"float.layer_hidden_max_abs" = 1.5
+"float.recurrent_state_max_abs" = 0.12
+"float.conv_state_max_abs" = 0.45
+"float.step0_logprob_max_abs" = 0.5
+
+[measured]
+# worst over both SMs; [SM 86, SM 89]
+"float.layer_hidden_rel_l2" = { max = 0.0551, per_sm = [0.0551, 0.0457], note = "final_norm 0.0551 / 0.0453; decoder layers 0.0541 / 0.0457" }
+"float.layer_hidden_cosine_min" = { min = 0.99848, per_sm = [0.99848, 0.99897] }
+"float.layer_hidden_max_abs_rel" = { max = 0.0668, per_sm = [0.0668, 0.0668] }
+"float.layer_hidden_max_abs" = { max = 0.923, per_sm = [0.738, 0.923], note = "set by final_norm; decoder layers at most 0.132 / 0.105" }
+"float.recurrent_state_rel_l2" = { max = 0.0148, per_sm = [0.0148, 0.0141] }
+"float.recurrent_state_cosine_min" = { min = 0.99989, per_sm = [0.99989, 0.99990] }
+"float.recurrent_state_max_abs_rel" = { max = 0.0338, per_sm = [0.0215, 0.0338] }
+"float.recurrent_state_max_abs" = { max = 0.0704, per_sm = [0.0506, 0.0704] }
+"float.conv_state_rel_l2" = { max = 0.0111, per_sm = [0.0108, 0.0111] }
+"float.conv_state_cosine_min" = { min = 0.99994, per_sm = [0.99994, 0.99994] }
+"float.conv_state_max_abs_rel" = { max = 0.0143, per_sm = [0.0127, 0.0143] }
+"float.conv_state_max_abs" = { max = 0.284, per_sm = [0.284, 0.250] }
+"float.step0_logprob_rel_l2" = { max = 0.0163, per_sm = [0.0163, 0.0150], note = "mean-centred, as the evaluator defines it" }
+"float.step0_logprob_cosine_min" = { min = 0.99987, per_sm = [0.99987, 0.99989] }
+"float.step0_logprob_max_abs_rel" = { max = 0.0093, per_sm = [0.0093, 0.0059] }
+"float.step0_logprob_max_abs" = { max = 0.300, per_sm = [0.300, 0.210] }
+"float.step0_top5_logprob_max_abs" = { max = 0.0815, per_sm = [0.0712, 0.0815] }
+"discrete.step0_argmax" = { equal = "5 of 5 cases on both SMs" }
+"discrete.greedy_ids" = { argmax_equal_forwards = [120, 119], flip = "SM 89, code, forward 23: GPU 13, reference 5199, reference margin 0.0096 (GPU margin 0.0034)", max_margin_error_where_equal = [0.121, 0.137] }
+
+# The near-tie rule: steps the 0.2 bound lists (reference top-2 margin below 0.2), [case, forward, margin].
+[near_ties]
+bound = 0.2
+listed = [["capital", 15, 0.0554], ["system-haiku", 5, 0.0711], ["system-haiku", 7, 0.1256], ["system-haiku", 10, 0.1663], ["multi-turn", 9, 0.0479], ["code", 23, 0.0096], ["code", 17, 0.1903]]
+comparison = "teacher-forced (the candidate is fed the reference's tokens), so a flip at a listed step does not propagate"

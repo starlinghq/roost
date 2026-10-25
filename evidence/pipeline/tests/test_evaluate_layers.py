@@ -217,6 +217,6 @@ def test_the_command_reports_and_sets_the_exit_code(tmp_path: Path, capsys: pyte
     pair.write_candidate(pair.perturbed(CASE, "forward0/layer.2", 0.5, positions=1))
     assert cli.main(args) == 1
     out = capsys.readouterr().out
-    assert f"divergence     {CASE} first at forward 0 layer.2 position 1" in out
+    assert f"divergence     {CASE} first at forward 0 layer.2 position 1 (max_abs 0.5)" in out
     layer_captures.capture_path(pair.reference_dir, CASE).unlink()
     assert cli.main(args) == 2

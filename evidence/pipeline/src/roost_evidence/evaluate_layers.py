@@ -1,20 +1,31 @@
 """The per-layer evaluator (build plan R-011): candidate captures against a reference run, per case and per layer.
 
-Checks, each with an explicit status (`passed`, `failed`, `not_run`) and the tolerance key that binds it:
+Targets and checks, each with an explicit status (`passed`, `failed`, `not_run`) and the tolerance key that binds it.
+Every target can be bound by up to four metrics (definitions in roost_evidence.metrics):
 
     layers.hidden            every stage output (embeddings, each decoder layer, final norm) at every position of
-                             every forward: max abs difference                          float.layer_hidden_max_abs
-    layers.recurrent_state   Gated DeltaNet recurrent state after each captured forward float.recurrent_state_max_abs
-    layers.conv_state        Gated DeltaNet convolution state, likewise                 float.conv_state_max_abs
+                             every forward                                              float.layer_hidden_<metric>
+    layers.recurrent_state   Gated DeltaNet recurrent state after each captured forward float.recurrent_state_<metric>
+    layers.conv_state        Gated DeltaNet convolution state, likewise                 float.conv_state_<metric>
     layers.nan_or_inf        a non-finite candidate value anywhere                      float.nan_or_inf
 
-A check with no tolerance key is `not_run`, as is one whose inputs are absent (no candidate capture for a case, no
-candidate state tensors); `not_run` never counts as a pass. Measurements are reported whether or not a bound exists.
+    <metric>  max_abs        max |c - r|                                  check id layers.<target>
+              rel_l2         ||c - r|| / ||r||, per position (a state is one row)     layers.<target>_rel_l2
+              max_abs_rel    max |c - r| / max |r| over one whole tensor              layers.<target>_max_abs_rel
+              cosine_min     cosine similarity, a LOWER bound                         layers.<target>_cosine_min
 
-Attribution: for each case the first divergent stage is the earliest forward in which any stage exceeds the hidden-state
-bound, and within that forward the stage that comes first in model order, at its first exceeding position. An error
-in layer k reaches every later layer in the same forward, so the earliest stage in model order is where it entered.
-Recurrent and convolution state are attributed the same way, to the earliest forward and then the lowest layer.
+A tolerance file chooses its metrics by naming keys. A target none of whose keys is named keeps its absolute check,
+reported `not_run` (an absolute-only file therefore behaves as it always did); once a target names any metric key, only
+the named metrics are checked, and the report lists the others under `unconfigured_checks`. A check whose input is
+absent (no candidate capture for a case, no candidate state tensors) is `not_run`; `not_run` never counts as a pass.
+Measurements of every metric are reported whether or not a bound exists.
+
+Attribution: for each case and metric the first divergent stage is the earliest forward in which any stage violates the
+bound, and within that forward the stage that comes first in model order, at its first violating position. An error in
+layer k reaches every later layer in the same forward, so the earliest stage in model order is where it entered. An
+absolute bound must be loose enough for the largest stage (the final norm is about ten times the layers' scale), so it
+can miss a defect in an early layer and name a late one; the relative metrics are scale-free and do not. Recurrent and
+convolution state are attributed the same way, to the earliest forward and then the lowest layer.
 
 The candidate must have been teacher-forced on the reference's tokens; captures whose prompt or fed tokens differ, or
 whose layer types or stages differ, cannot be compared and raise InputError. Tolerances are an input: the evaluator
@@ -29,7 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from roost_evidence import generation_reference, layer_captures, stage_results
+from roost_evidence import generation_reference, layer_captures, metrics, stage_results
 from roost_evidence.evaluate_generation import (
     FAILED,
     NOT_APPLICABLE,
@@ -41,6 +52,7 @@ from roost_evidence.evaluate_generation import (
     overall,
 )
 from roost_evidence.layer_captures import Capture
+from roost_evidence.metrics import ABS, METRICS, Metric, RowStats
 
 REPORT_FORMAT = "roost.evaluation-report"
 TASK = "layers"
@@ -51,14 +63,40 @@ NAN_KEY = "float.nan_or_inf"
 KINDS = ("recurrent_state", "conv_state")
 
 
+# target -> (tolerance key prefix, check id)
+TARGETS = {
+    "hidden": ("layer_hidden", "layers.hidden"),
+    "recurrent_state": ("recurrent_state", "layers.recurrent_state"),
+    "conv_state": ("conv_state", "layers.conv_state"),
+}
+
+
+def tolerance_key(target: str, metric: Metric) -> str:
+    return f"float.{TARGETS[target][0]}_{metric.name}"
+
+
+def check_id(target: str, metric: Metric) -> str:
+    return TARGETS[target][1] + ("" if metric is ABS else "_" + metric.name)
+
+
+def _first_name(target: str, metric: Metric) -> str:
+    """Report field of a first divergence: first_divergent[_<state kind>][_<metric>]; absolute hidden is bare."""
+    return (
+        "first_divergent" + ("" if target == "hidden" else "_" + target) + ("" if metric is ABS else "_" + metric.name)
+    )
+
+
+def row_stats(candidate: array, reference: array, width: int) -> list[RowStats]:
+    """Metrics per row of `width` values; a row with any non-finite candidate value reports infinite errors."""
+    return [
+        metrics.compare(candidate[start : start + width], reference[start : start + width])
+        for start in range(0, len(candidate), width)
+    ]
+
+
 def row_max_abs(candidate: array, reference: array, width: int) -> list[float]:
     """Max abs difference per row of `width` values; a row with any non-finite difference reports infinity."""
-    out: list[float] = []
-    for start in range(0, len(candidate), width):
-        pairs = zip(candidate[start : start + width], reference[start : start + width], strict=True)
-        diffs = [abs(a - b) for a, b in pairs]
-        out.append(max(diffs) if math.isfinite(sum(diffs)) else math.inf)
-    return out
+    return [r.max_abs for r in row_stats(candidate, reference, width)]
 
 
 def _finite(values: array) -> bool:
@@ -69,12 +107,37 @@ def _finite(values: array) -> bool:
 class _Case:
     """Measurements for one case."""
 
-    hidden_max: dict[str, float] = field(default_factory=dict)
-    first_hidden: dict[str, Any] | None = None
-    state_max: dict[str, dict[str, float]] = field(default_factory=lambda: {k: {} for k in KINDS})
-    first_state: dict[str, dict[str, Any] | None] = field(default_factory=lambda: dict.fromkeys(KINDS))
+    worst: dict[tuple[str, str], dict[str, float]] = field(default_factory=dict)
+    first: dict[tuple[str, str], dict[str, Any] | None] = field(default_factory=dict)
     nonfinite: list[str] = field(default_factory=list)
     state_missing: list[str] = field(default_factory=list)
+
+    def observe(
+        self,
+        target: str,
+        metric: Metric,
+        stage: str,
+        forward: int,
+        values: list[float],
+        bound: float | None,
+    ) -> None:
+        """Fold the per-position (or single, per-tensor) `values` of one stage output into the case's tables."""
+        pick = min if metric.lower_is_worse else max
+        table = self.worst.setdefault((target, metric.name), {})
+        worst = pick(values)
+        table[stage] = pick(table.get(stage, worst), worst)
+        if self.first.get((target, metric.name)) is not None or bound is None:
+            self.first.setdefault((target, metric.name), None)
+            return
+        index = next((i for i, v in enumerate(values) if metric.violates(v, bound)), None)
+        if index is None:
+            return
+        found: dict[str, Any] = {"forward": forward, "stage": stage, "value": values[index]}
+        if target == "hidden":
+            found["position"] = None if metric.per_tensor else index
+        if metric is ABS:
+            found["max_abs"] = values[index]
+        self.first[(target, metric.name)] = found
 
 
 def _compatible(name: str, candidate: Capture, reference: Capture) -> None:
@@ -93,27 +156,38 @@ def _compatible(name: str, candidate: Capture, reference: Capture) -> None:
         raise InputError(f"case {name}: candidate captures state for forwards the reference did not")
 
 
-def _compare_case(name: str, candidate: Capture, reference: Capture, bounds: dict[str, float | None]) -> _Case:
+def _observe_all(
+    result: _Case,
+    target: str,
+    stage: str,
+    forward: int,
+    rows: list[RowStats],
+    bounds: dict[tuple[str, str], float | None],
+) -> None:
+    """All four metrics of one tensor: per row for the row metrics, one ratio of maxima for max_abs_rel."""
+    values = {
+        "max_abs": [r.max_abs for r in rows],
+        "rel_l2": [r.rel_l2 for r in rows],
+        "max_abs_rel": [metrics.ratio(max(r.max_abs for r in rows), max(r.max_ref for r in rows))],
+        "cosine_min": [r.cosine for r in rows],
+    }
+    for metric in METRICS:
+        result.observe(target, metric, stage, forward, values[metric.name], bounds[(target, metric.name)])
+
+
+def _compare_case(
+    name: str, candidate: Capture, reference: Capture, bounds: dict[tuple[str, str], float | None]
+) -> _Case:
     _compatible(name, candidate, reference)
     result = _Case()
-    hidden_bound = bounds["hidden"]
     for forward in range(reference.forwards):
         for stage in reference.stages:
             key = layer_captures.hidden_name(forward, stage)
             cand = candidate.values(key)
             if not _finite(cand):
                 result.nonfinite.append(key)
-            rows = row_max_abs(cand, reference.values(key), reference.hidden_size)
-            worst = max(rows)
-            result.hidden_max[stage] = max(result.hidden_max.get(stage, 0.0), worst)
-            if result.first_hidden is None and hidden_bound is not None and worst > hidden_bound:
-                position = next(i for i, v in enumerate(rows) if v > hidden_bound)
-                result.first_hidden = {
-                    "forward": forward,
-                    "stage": stage,
-                    "position": position,
-                    "max_abs": rows[position],
-                }
+            rows = row_stats(cand, reference.values(key), reference.hidden_size)
+            _observe_all(result, "hidden", stage, forward, rows, bounds)
     for forward in range(reference.state_forwards):
         for layer in reference.linear_layers:
             for kind in KINDS:
@@ -129,13 +203,8 @@ def _compare_case(name: str, candidate: Capture, reference: Capture, bounds: dic
                 cand = candidate.values(key)
                 if not _finite(cand):
                     result.nonfinite.append(key)
-                (worst,) = row_max_abs(cand, reference.values(key), max(len(cand), 1))
-                stage = layer_captures.layer_stage(layer)
-                table = result.state_max[kind]
-                table[stage] = max(table.get(stage, 0.0), worst)
-                bound = bounds[kind]
-                if result.first_state[kind] is None and bound is not None and worst > bound:
-                    result.first_state[kind] = {"forward": forward, "stage": stage, "max_abs": worst}
+                rows = row_stats(cand, reference.values(key), max(len(cand), 1))
+                _observe_all(result, kind, layer_captures.layer_stage(layer), forward, rows, bounds)
     return result
 
 
@@ -179,6 +248,18 @@ class _Checks:
         return float(c.bound)
 
 
+def _case_report(r: _Case) -> dict[str, Any]:
+    """Per case: the worst value per stage of every metric, and the first divergence of every metric."""
+    report: dict[str, Any] = {}
+    for target in TARGETS:
+        for metric in METRICS:
+            report[_first_name(target, metric)] = r.first.get((target, metric.name))
+    for target in TARGETS:
+        for metric in METRICS:
+            report[f"{target}_{metric.name}"] = r.worst.get((target, metric.name), {})
+    return report
+
+
 def evaluate(
     candidate_dir: Path,
     reference_path: Path,
@@ -195,14 +276,19 @@ def evaluate(
     except generation_reference.ReferenceFileError as error:
         raise InputError(str(error)) from error
     checks = _Checks(load_tolerances(tolerances_path))
-    hidden = checks.check("layers.hidden", HIDDEN_KEY)
-    recurrent = checks.check("layers.recurrent_state", RECURRENT_KEY)
-    conv = checks.check("layers.conv_state", CONV_KEY)
+    metric_checks: dict[tuple[str, str], Check] = {}
+    unconfigured: list[str] = []
+    for target in TARGETS:
+        named = [m for m in METRICS if tolerance_key(target, m) in checks.tol]
+        for metric in named or [ABS]:
+            metric_checks[(target, metric.name)] = checks.check(check_id(target, metric), tolerance_key(target, metric))
+        if named:
+            unconfigured += [check_id(target, m) for m in METRICS if m not in named]
     nan = checks.check("layers.nan_or_inf", NAN_KEY)
-    bounds = {
-        "hidden": checks.number(hidden),
-        "recurrent_state": checks.number(recurrent),
-        "conv_state": checks.number(conv),
+    bounds: dict[tuple[str, str], float | None] = {
+        (target, m.name): checks.number(metric_checks[(target, m.name)]) if (target, m.name) in metric_checks else None
+        for target in TARGETS
+        for m in METRICS
     }
 
     layers_dir = candidate_dir / layer_captures.LAYERS_DIR
@@ -233,25 +319,29 @@ def evaluate(
         raise InputError(str(error)) from error
 
     lacking = [f"no candidate capture for case {n}" for n in absent]
-    for c, kind in ((hidden, "hidden"), (recurrent, "recurrent_state"), (conv, "conv_state")):
-        tables = (r.hidden_max if kind == "hidden" else r.state_max[kind] for r in results.values())
+    for (target, metric_name), c in metric_checks.items():
+        metric = next(m for m in METRICS if m.name == metric_name)
+        tables = [r.worst.get((target, metric_name), {}) for r in results.values()]
+        pick = min if metric.lower_is_worse else max
         c.metrics = {
-            "max_abs": max((v for table in tables for v in table.values()), default=0.0),
+            metric.summary: pick(
+                (v for table in tables for v in table.values()), default=None if metric.lower_is_worse else 0.0
+            ),
             "compared": len(results),
         }
-        if bounds[kind] is None:
+        if bounds[(target, metric_name)] is None:
             continue
         failures: list[str] = []
         incomplete = list(lacking)
         for name, r in results.items():
-            first = r.first_hidden if kind == "hidden" else r.first_state[kind]
+            first = r.first.get((target, metric_name))
             if first is not None:
                 where = f"forward {first['forward']} {first['stage']}"
-                if kind == "hidden":
+                if first.get("position") is not None:
                     where += f" position {first['position']}"
-                failures.append(f"{name}: first divergent {where} ({first['max_abs']:.3g})")
-            if kind != "hidden":
-                incomplete += [f"{name}: no {k}" for k in r.state_missing if k.endswith("/" + kind)]
+                failures.append(f"{name}: first divergent {where} ({first['value']:.3g})")
+            if target != "hidden":
+                incomplete += [f"{name}: no {k}" for k in r.state_missing if k.endswith("/" + target)]
         checks.settle(c, failures, incomplete)
     if checks.active(nan):
         if nan.bound != "fail":
@@ -266,17 +356,8 @@ def evaluate(
         "task": TASK,
         "status": overall(checks.checks),
         "checks": [c.as_json() for c in checks.checks],
-        "cases": {
-            name: {
-                "first_divergent": r.first_hidden,
-                "first_divergent_recurrent_state": r.first_state["recurrent_state"],
-                "first_divergent_conv_state": r.first_state["conv_state"],
-                "hidden_max_abs": r.hidden_max,
-                "recurrent_state_max_abs": r.state_max["recurrent_state"],
-                "conv_state_max_abs": r.state_max["conv_state"],
-            }
-            for name, r in results.items()
-        },
+        "unconfigured_checks": unconfigured,
+        "cases": {name: _case_report(r) for name, r in results.items()},
         "missing_cases": absent,
         "inputs": {
             **digests,
