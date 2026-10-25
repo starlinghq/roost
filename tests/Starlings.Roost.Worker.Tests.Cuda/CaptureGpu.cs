@@ -64,7 +64,7 @@ internal static unsafe class CaptureGpu
         int maxContext = cases.Max(c => c.Prompt.Length + c.Output.Length);
         var manifest = KernelManifest.Load(Opt("--manifest"));
         var locked = WeightLock.Load(Opt("--lock")).Get(Weights);
-        var model = new Qwen35EagerModel();
+        var model = new ProbedQwen35EagerModel();
         var options = new EagerWorkerOptions
         {
             Device = 0,

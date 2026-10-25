@@ -14,7 +14,16 @@ public sealed record RoostWorkerOptions
     /// </summary>
     public TransportKind Transport { get; init; } = WorkerTransports.Default;
 
-    /// <summary>How to start the worker process; required for <see cref="TransportKind.Process"/>.</summary>
+    /// <summary>
+    /// Starts the packaged <c>roost-worker</c> (R-062) for <see cref="TransportKind.Process"/>: the weights and, optionally,
+    /// where the executable, kernels and manifest are. The command passes the profile's capacities to the worker.
+    /// </summary>
+    public RoostWorkerLaunch? Launch { get; init; }
+
+    /// <summary>
+    /// A custom command that starts the worker process for <see cref="TransportKind.Process"/>, used instead of
+    /// <see cref="Launch"/> (for example a test executable re-run as the worker).
+    /// </summary>
     public WorkerCommand? Command { get; init; }
 
     /// <summary>Makes the step executor for <see cref="TransportKind.InProcess"/>; required for it.</summary>

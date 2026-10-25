@@ -35,7 +35,7 @@ internal static unsafe class DecodeGpu
         var manifest = KernelManifest.Load(manifestPath);
         var lockFile = WeightLock.Load(lockPath);
         var locked = lockFile.Get(Weights);
-        var model = new Qwen35EagerModel();
+        var model = new ProbedQwen35EagerModel();
         var options = new EagerWorkerOptions
         {
             Device = 0,

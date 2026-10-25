@@ -13,6 +13,13 @@
     <ProjectReference Include="../Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
     <ProjectReference Include="../Starlings.Roost.Generation/Starlings.Roost.Generation.csproj" />
     <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
+    <!-- The packaged roost-worker (R-062), so `dotnet add package Starlings.Generation.Roost` brings the worker executable among
+         the native runtime assets. The runtime package carries no lib/ assets, so a consumer's process gets no worker code. A
+         plain project reference is what makes pack emit the dependency (a ReferenceOutputAssembly="false" one is dropped). The
+         runtime project's own references are PrivateAssets="all", so no worker assembly flows here; roost-worker.dll itself is
+         behind the alias, and tools/check-roost-boundaries.py refuses host source that names worker, kernel or CUDA
+         namespaces or the alias (decision 21). -->
+    <ProjectReference Include="../Starlings.Roost.Worker.Runtime/Starlings.Roost.Worker.Runtime.csproj" Aliases="roostworker" Private="false" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Starlings.Generation.Roost.Tests" />

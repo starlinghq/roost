@@ -89,7 +89,7 @@ internal sealed class WorkerDriver : IGenerationBackend
     {
         var command = worker.Transport switch
         {
-            TransportKind.Process => worker.Command ?? throw new ArgumentException("The process transport (the default, decision 21) needs RoostWorkerOptions.Command.", nameof(worker)),
+            TransportKind.Process => worker.Command ?? RoostWorkerRuntime.CommandFor(profile, worker),
             TransportKind.InProcess => worker.InProcessExecutor is null ? throw new ArgumentException("The in-process transport needs RoostWorkerOptions.InProcessExecutor.", nameof(worker)) : null,
             _ => throw new ArgumentOutOfRangeException(nameof(worker), worker.Transport, "Unknown transport kind."),
         };

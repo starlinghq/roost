@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost GPU worker executable for linux-x64 (R-062): roost-worker, a Native AOT process that Starlings.Generation.Roost starts by default (decision 21), so CUDA and the kernel library never load in the consumer's process. The package carries the binary and the kernel manifest it was built against under runtimes/linux-x64/native/. Worker-side: never loads ONNX Runtime.</Description>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>roost-worker</AssemblyName>
+    <RootNamespace>Starlings.Roost.Worker.Runtime</RootNamespace>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- PublishAot adds the build host's RID to the restore, so both CI hosts (Linux, Windows) are listed and locked; only linux-x64
+         is packed. -->
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+
+    <IsPackable>true</IsPackable>
+    <PackageId>Starlings.Roost.Worker.Runtime.linux-x64</PackageId>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <!-- The package carries the published native binary, not the managed build output or its dependencies. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <IncludeSymbols>false</IncludeSymbols>
+    <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);PackRoostWorker</TargetsForTfmSpecificContentInPackage>
+    <RoostWorkerPackPublishDir>$(MSBuildProjectDirectory)/$(BaseIntermediateOutputPath)pack-publish/</RoostWorkerPackPublishDir>
+  </PropertyGroup>
+  <!-- PrivateAssets: the worker's assemblies are compiled into the executable and do not flow to projects that reference this
+       one (Starlings.Generation.Roost references it only so that pack emits the package dependency). -->
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../Starlings.Roost.Worker.Qwen35/Starlings.Roost.Worker.Qwen35.csproj" PrivateAssets="all" />
+    <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The manifest the worker reads by default sits beside the executable, in the build output and in the package. -->
+    <None Include="README.md" Pack="true" PackagePath="/" />
+    <None Include="../../kernels/manifest.toml" Link="roost-kernels.manifest.toml" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" Pack="false" />
+  </ItemGroup>
+
+  <!-- Pack: publish the Native AOT binary for linux-x64 (a Linux host is required) and place it, with the manifest, where NuGet
+       puts native runtime assets. -->
+  <Target Name="PackRoostWorker">
+    <MSBuild Projects="$(MSBuildProjectFullPath)" Targets="Publish" Properties="Configuration=$(Configuration);RuntimeIdentifier=linux-x64;SelfContained=true;PublishDir=$(RoostWorkerPackPublishDir);NoBuild=false" />
+    <ItemGroup>
+      <TfmSpecificPackageFile Include="$(RoostWorkerPackPublishDir)roost-worker" PackagePath="runtimes/linux-x64/native/" />
+      <TfmSpecificPackageFile Include="$(RoostWorkerPackPublishDir)roost-kernels.manifest.toml" PackagePath="runtimes/linux-x64/native/" />
+    </ItemGroup>
+    <Error Condition="!Exists('$(RoostWorkerPackPublishDir)roost-worker')" Text="The Native AOT publish of roost-worker produced no binary at $(RoostWorkerPackPublishDir)roost-worker." />
+  </Target>
+</Project>

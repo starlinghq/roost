@@ -361,10 +361,11 @@ public sealed class ChatClientTests
     }
 
     [Fact]
-    public async Task TheProcessTransportIsTheDefaultAndNeedsACommand()
+    public async Task TheProcessTransportIsTheDefaultAndNeedsALaunchOrACommand()
     {
         Assert.Equal(TransportKind.Process, new RoostWorkerOptions().Transport);
         var e = await Assert.ThrowsAsync<ArgumentException>(() => RoostChatClient.StartAsync(new RoostChatClientOptions { Model = TestRig.Profile() }, Timeout));
+        Assert.Contains("Launch", e.Message, StringComparison.Ordinal);
         Assert.Contains("Command", e.Message, StringComparison.Ordinal);
     }
 }

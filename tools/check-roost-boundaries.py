@@ -13,6 +13,11 @@ Checks:
              Generation, Generation.Roost, Server) may use ONNX Runtime.
   binaries   No kernel or native binaries tracked in Git (by extension and by ELF, PE, Mach-O or fatbin magic).
              Kernel binaries are release assets only.
+  host       Host-process packages (Engine, Generation, Generation.Roost, Server) name no worker, kernel or CUDA
+             namespace (Starlings.Roost.Worker.*, Kernels, Cuda; WorkerHost is the host side of C8) and no
+             `roostworker` extern alias: the packaged worker is a separate process (decision 21, R-062). It scans
+             tracked .cs files line by line; MSBuild-level usings and pure-managed Kernels types a host package
+             might want later (such as KernelManifest) are outside it.
   solution   No *.Cuda project in Roost.slnx. CUDA test projects are local-only.
   starling   Starling is consumed only as exact NuGet pins (build plan section 2.2): no submodule or .gitmodules,
              no external/ project reference, and every Starlings.* package version in Directory.Packages.props
@@ -30,9 +35,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Worker-side packages (build plan decision 30). Starlings.Roost.Models.* matches every model package.
+# Worker-side packages (build plan decision 30). Starlings.Roost.Models.* matches every model package, and
+# Starlings.Roost.Worker.* the worker's model bindings and the packaged worker executable (R-062).
 WORKER_SIDE = re.compile(
-    r"^Starlings\.Roost\.(Abstractions|Ops|Graph|Worker|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)$"
+    r"^Starlings\.Roost\.(Abstractions|Ops|Graph|Worker(\..+)?|WorkerHost|Kernels|Cuda|Native|Distributed|Models\..+)$"
 )
 ONNX = re.compile(r"^microsoft\.ml\.onnxruntime", re.IGNORECASE)
 
@@ -128,6 +134,30 @@ def check_binaries(root: Path, files: list[Path]) -> list[str]:
     return errors
 
 
+HOST_PROJECTS = (
+    "Starlings.Roost.Engine",
+    "Starlings.Roost.Generation",
+    "Starlings.Generation.Roost",
+    "Starlings.Roost.Server",
+)
+# The runtime package's id may be named (in docs and messages telling a consumer what to install); its code may not.
+WORKER_NAMESPACE = re.compile(
+    r"\bStarlings\.Roost\.(?:Worker(?!Host\b)(?!\.Runtime\.linux-x64\b)|Kernels\b|Cuda\b)|\broostworker\b"
+)
+
+
+def check_host(root: Path, files: list[Path]) -> list[str]:
+    errors = []
+    for path in files:
+        rel = path.relative_to(root)
+        if path.suffix != ".cs" or len(rel.parts) < 3 or rel.parts[0] != "src" or rel.parts[1] not in HOST_PROJECTS:
+            continue
+        for number, line in enumerate(path.read_text(encoding="utf-8", errors="replace").splitlines(), 1):
+            if WORKER_NAMESPACE.search(line):
+                errors.append(f"host: {rel.as_posix()}:{number}: a host package names worker-side code (decision 21)")
+    return errors
+
+
 def check_solution(root: Path) -> list[str]:
     solution = root / "Roost.slnx"
     if not solution.is_file():
@@ -188,7 +218,13 @@ def main(argv: list[str] | None = None) -> int:
     root = args.root.resolve()
 
     files = tracked(root)
-    errors = check_python(root, files) + check_binaries(root, files) + check_solution(root) + check_starling(root)
+    errors = (
+        check_python(root, files)
+        + check_binaries(root, files)
+        + check_host(root, files)
+        + check_solution(root)
+        + check_starling(root)
+    )
     if not args.no_closure:
         errors += check_closure(root)
     for error in errors:

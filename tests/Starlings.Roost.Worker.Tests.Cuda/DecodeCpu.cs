@@ -21,7 +21,7 @@ internal static unsafe class DecodeCpu
     {
         string Opt(string name) => args.SkipWhile(a => a != name).Skip(1).FirstOrDefault() ?? throw new ArgumentException($"missing {name}");
         var dump = Dump.Load(Opt("--dump"));
-        var model = new Qwen35EagerModel();
+        var model = new ProbedQwen35EagerModel();
         var lockFile = WeightLock.Load(Opt("--lock"));
         var clock = Stopwatch.StartNew();
         using var weights = ModelWeightLoader.LoadHost(Path.Combine(Opt("--ckpt"), Weights), lockFile.Get(Weights), model.WeightSlots);
