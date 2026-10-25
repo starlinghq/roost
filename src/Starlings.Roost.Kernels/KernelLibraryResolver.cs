@@ -8,8 +8,9 @@ namespace Starlings.Roost.Kernels;
 public sealed class KernelLibraryResolverOptions
 {
     /// <summary>
-    /// Directories with locally built or copied libraries, searched first (<see cref="KernelLibraryNames.Find"/>). When one
-    /// holds the SM's file, nothing is downloaded.
+    /// Directories with locally built or copied libraries (<see cref="KernelLibraryNames.Find"/>). When any are configured
+    /// they are the only source: the SM's file is taken from the first that holds it, and when none does the resolver
+    /// refuses with <see cref="ProfileUnsupportedException"/> and downloads nothing.
     /// </summary>
     public IReadOnlyList<string> SearchDirectories { get; init; } = [];
 
@@ -182,19 +183,43 @@ public sealed class KernelLibraryResolver
         KernelLibrary.Admit(load);
         _ = KernelLibrary.ExpectedBinary(load);
 
-        var platform = _options.Platform ?? KernelLibraryNames.Current();
-        var fileName = KernelLibraryNames.FileName(load.Sm, platform);
-        var local = KernelLibraryNames.Find(load.Sm, _options.SearchDirectories, platform);
-        if (local is not null)
+        KernelPlatform platform;
+        try
         {
-            return (null, fileName, local);
+            platform = _options.Platform ?? KernelLibraryNames.Current();
+        }
+        catch (PlatformNotSupportedException e)
+        {
+            throw new ProfileUnsupportedException(OpId.None, load.Sm, e.Message);
+        }
+
+        var fileName = KernelLibraryNames.FileName(load.Sm, platform);
+
+        // Configured directories are the whole answer: an operator who names a local path gets no download.
+        if (_options.SearchDirectories.Count > 0)
+        {
+            return (null, fileName, KernelLibraryNames.Find(load.Sm, _options.SearchDirectories, platform)
+                ?? throw new ProfileUnsupportedException(
+                    OpId.None,
+                    load.Sm,
+                    $"no configured directory holds {fileName} ({string.Join(", ", _options.SearchDirectories)}); nothing is downloaded when directories are configured"));
+        }
+
+        // Releases publish Linux libraries only (the manifest's digests are of libroost_kernels_sm<N>.so), so there is
+        // nothing to fetch for another platform.
+        if (platform != KernelPlatform.Linux)
+        {
+            throw new ProfileUnsupportedException(
+                OpId.None,
+                load.Sm,
+                $"Roost releases publish kernel libraries for Linux only; build {fileName} and add its directory to the search directories");
         }
 
         var release = _options.Release ?? KernelRelease.FromAssembly()
             ?? throw new ProfileUnsupportedException(
                 OpId.None,
                 load.Sm,
-                $"no directory holds {fileName} and this build records no release to fetch it from (a development build); " +
+                $"no directory is configured for {fileName} and this build records no release to fetch it from (a development build); " +
                 "build the kernel library and add its directory to the search directories");
         return (LockFor(load, release, platform), fileName, null);
     }

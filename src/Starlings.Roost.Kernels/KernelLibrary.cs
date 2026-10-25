@@ -1,6 +1,5 @@
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text;
 using Starlings.Roost.Abi;
 using Starlings.Roost.Requests;
@@ -115,16 +114,18 @@ public sealed class KernelLibrary : IDisposable
             throw new ProfileUnsupportedException(OpId.None, options.Sm, $"no kernel library file at {path}");
         }
 
-        VerifyFile(path, expected);
-
+        // The loader maps the bytes that were hashed: see VerifiedLibraryFile (no check-then-load window).
         nint handle;
-        try
+        using (var verified = VerifiedLibraryFile.Open(path, expected))
         {
-            handle = NativeLibrary.Load(path);
-        }
-        catch (Exception e) when (e is DllNotFoundException or BadImageFormatException)
-        {
-            throw new KernelLoadException(RoostErrorCode.Internal, $"the OS could not load {path}: {e.Message}", e);
+            try
+            {
+                handle = NativeLibrary.Load(verified.LoadPath);
+            }
+            catch (Exception e) when (e is DllNotFoundException or BadImageFormatException)
+            {
+                throw new KernelLoadException(RoostErrorCode.Internal, $"the OS could not load {path}: {e.Message}", e);
+            }
         }
 
         try
@@ -387,25 +388,6 @@ public sealed class KernelLibrary : IDisposable
         }
 
         return binaries.FirstOrDefault(b => b.Bytes != 0) ?? binaries[0];
-    }
-
-    private static void VerifyFile(string path, ManifestBinary expected)
-    {
-        using var stream = File.OpenRead(path);
-        if (expected.Bytes != 0 && stream.Length != expected.Bytes)
-        {
-            throw new KernelLoadException(
-                RoostErrorCode.AssetMismatch,
-                $"kernel library {path} is {stream.Length} bytes; the manifest says {expected.Bytes}");
-        }
-
-        var actual = Convert.ToHexStringLower(SHA256.HashData(stream));
-        if (!string.Equals(actual, expected.Sha256, StringComparison.Ordinal))
-        {
-            throw new KernelLoadException(
-                RoostErrorCode.AssetMismatch,
-                $"kernel library digest mismatch for {path}: manifest {expected.Sha256}, file {actual}");
-        }
     }
 
     private static nint Export(nint handle, string name)

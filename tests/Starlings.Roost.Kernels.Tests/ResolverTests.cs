@@ -149,6 +149,34 @@ public sealed class ResolverTests : IDisposable
     }
 
     [Fact]
+    public async Task AConfiguredDirectoryWithoutTheFileIsRefusedWithoutARequest()
+    {
+        var dir = Directory.CreateDirectory(Path.Combine(_root, "empty")).FullName;
+        var (resolver, server) = Resolver(dirs: [dir]);
+        var e = await Assert.ThrowsAsync<ProfileUnsupportedException>(
+            () => resolver.ResolveAsync(Options(), cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Contains("nothing is downloaded", e.Message);
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact]
+    public async Task APlatformTheReleaseDoesNotBuildIsRefusedWithoutARequest()
+    {
+        var server = new FakeRelease(Library);
+        var resolver = new KernelLibraryResolver(new KernelLibraryResolverOptions
+        {
+            Release = Release(),
+            CacheDirectory = Path.Combine(_root, "cache"),
+            HttpClient = new HttpClient(server),
+            Platform = KernelPlatform.Windows,
+        });
+        var e = await Assert.ThrowsAsync<ProfileUnsupportedException>(
+            () => resolver.ResolveAsync(Options(), cancellationToken: TestContext.Current.CancellationToken));
+        Assert.Contains("Linux only", e.Message);
+        Assert.Empty(server.Requests);
+    }
+
+    [Fact]
     public async Task PrefetchFillsTheCacheForAnOfflineResolve()
     {
         var (resolver, server) = Resolver();
