@@ -1,0 +1,11 @@
+library roost-kernels-sm86 abi 0x10002, 19 variants; device sm_86; 2026-10-25T02:33:28.3175334Z
+PASS    recurrent-state-copy-cuda fixed-slot1048576-n8-p6 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-copy-cuda fixed-slot12-n8-p6 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-copy-cuda fixed-slot7-n8-p6 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-copy-cuda random-0-slot4096-n9-p9 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-copy-cuda random-1-slot4-n10-p1 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-copy-cuda random-2-slot4-n7-p9 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+roost-kernels-sm86: 6 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  RecurrentStateCopy recurrent-state-copy-cuda          pass=6    fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm86/recurrent-state-copy-cuda.memcheck.results.json
+=== green

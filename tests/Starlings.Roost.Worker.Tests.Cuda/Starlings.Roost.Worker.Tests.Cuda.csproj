@@ -18,5 +18,7 @@
     <Compile Include="../Starlings.Roost.Worker.Tests/Support/PlanWriter.cs" Link="Support/PlanWriter.cs" />
     <Compile Include="../Starlings.Roost.Worker.Tests/Support/Probe.cs" Link="Support/Probe.cs" />
     <Compile Include="../Starlings.Roost.Worker.Tests/Support/Qwen35EagerModel.cs" Link="Support/Qwen35EagerModel.cs" />
+    <!-- The R-011 capture layout writer of R-022's CPU parity run, shared so the GPU capture (R-014) writes the same files. -->
+    <Compile Include="../Starlings.Roost.Models.Qwen35.Tests/Parity/LayerCaptureFile.cs" Link="Support/LayerCaptureFile.cs" />
   </ItemGroup>
 </Project>

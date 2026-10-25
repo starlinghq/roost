@@ -1,0 +1,14 @@
+passed         layers.hidden
+passed         layers.hidden_rel_l2
+passed         layers.hidden_max_abs_rel
+passed         layers.hidden_cosine_min
+passed         layers.recurrent_state
+passed         layers.recurrent_state_rel_l2
+passed         layers.recurrent_state_max_abs_rel
+passed         layers.recurrent_state_cosine_min
+passed         layers.conv_state
+passed         layers.conv_state_rel_l2
+passed         layers.conv_state_max_abs_rel
+passed         layers.conv_state_cosine_min
+passed         layers.nan_or_inf
+passed: layers

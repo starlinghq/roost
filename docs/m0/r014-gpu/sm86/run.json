@@ -1,0 +1,15 @@
+{
+  "candidate": "eager worker (EagerStepExecutor, Qwen35EagerModel over CudaOps through the probe), teacher-forced",
+  "device_sm": 86,
+  "library": "libroost_kernels_sm86.so",
+  "library_sha256": "fdf421a9020da8d3b676d786e7fd56d26190421566d0764d2a4c8c09c90b81b7",
+  "reference": "/home/mark/Projects/roost-evidence/R-014/ref",
+  "dotnet": "10.0.12",
+  "captures": {
+    "layers/capital.safetensors": "1a77143dc366f31536e17ab41a41e40d43d066a48d0db746d7d9ab39e6881f50",
+    "layers/system-haiku.safetensors": "6801cc42356322918054e4007bd9ce5bf0e8e6417cbf7a662ae28080e20ae207",
+    "layers/multi-turn.safetensors": "ae4fde77acafd3c3882f2241284087618de037b922547097e6a6d12b4227781e",
+    "layers/code.safetensors": "d6cae54140941a95b48355d1cdcde142eb573adc4f5a69eb88fd095c67bd307a",
+    "layers/long-context.safetensors": "c001500a8e465b2239634364c2398fde7b2713d43554a1986591c8216d2742a2"
+  }
+}

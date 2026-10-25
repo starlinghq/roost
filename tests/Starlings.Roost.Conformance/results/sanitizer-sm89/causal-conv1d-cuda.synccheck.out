@@ -1,0 +1,16 @@
+library roost-kernels-sm89 abi 0x10002, 19 variants; device sm_89; 2026-10-25T02:38:04.3469150Z
+PASS    causal-conv1d-cuda fixed-BF16-stateBF16-37.1.2.130.0.5-c6144-w4-silu class=elementwise-bf16,exact utilisation=0.470 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda fixed-BF16-stateBF16-8x1-c6144-w4-silu class=elementwise-bf16,exact utilisation=0.000 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda fixed-BF16-stateBF16-2-c6144-w4-silu class=elementwise-bf16,exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    causal-conv1d-cuda fixed-BF16-stateBF16-1-c6144-w4-silu class=elementwise-bf16,exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    causal-conv1d-cuda fixed-BF16-stateF32-17.3.1-c1000-w4-bias class=elementwise-bf16,exact utilisation=0.000 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda fixed-F32-stateF32-40.2.9-c333-w7-bias-silu class=hybrid-f32,exact utilisation=0.115 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda fixed-F32-stateF32-64.1.20-c130-w16 class=hybrid-f32,exact utilisation=0.175 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda fixed-F32-stateF32-5.3-c64-w1-bias-silu class=hybrid-f32,exact utilisation=0.015 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda random-0-BF16-stateF32-2.39.24.2-c440-w13 class=elementwise-bf16,exact utilisation=0.008 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda random-1-F32-stateF32-1.34.2-c568-w2-bias class=hybrid-f32,exact utilisation=0.064 violations=0 det=pass inv=pass
+PASS    causal-conv1d-cuda random-2-BF16-stateF32-18.29.28.29.1-c144-w9-bias class=elementwise-bf16,exact utilisation=0.000 violations=0 det=pass inv=pass
+roost-kernels-sm89: 11 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  CausalConv1d    causal-conv1d-cuda                 pass=11   fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm89/causal-conv1d-cuda.synccheck.results.json
+=== green

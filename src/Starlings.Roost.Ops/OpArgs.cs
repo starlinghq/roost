@@ -181,7 +181,7 @@ public struct PagedAttentionArgs
     /// <summary>Logit soft cap; 0 disables.</summary>
     public float SoftCap;
 
-    /// <summary>Sliding window; -1 disables.</summary>
+    /// <summary>Sliding window in tokens before the query; -1 disables it. Must be bound: 0 (an unbound field) is rejected by the generator (ROOST015) and by <c>CpuOps</c>, and the GPU kernel accepts only -1 in M0 (maintainer decision 2026-10-20, docs/kickoff.md; documentation only, no layout or version change).</summary>
     public int WindowLeft;
 
     /// <summary>Causal mask (prefill).</summary>

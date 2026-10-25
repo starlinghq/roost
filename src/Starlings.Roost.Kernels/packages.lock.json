@@ -8,6 +8,12 @@
         "resolved": "10.0.12",
         "contentHash": "xi+BDjFpW+Sb+MHFHaH6Y/gV9I8BluFwRXc1QyCdoZbIK26eNiBeFuMTe/FMwc33G1wdHCyDg7CVTmb8OdQrMQ=="
       },
+      "Starlings.Acquisition": {
+        "type": "Direct",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
+      },
       "Tomlyn": {
         "type": "Direct",
         "requested": "[2.10.1, 2.10.1]",

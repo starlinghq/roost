@@ -1,0 +1,27 @@
+# Build-time Python of the Triton AOT kernels for the kernel release build (tools/release-kernels.sh, R-060). The pins equal
+# the [triton_aot] closure of kernels/manifest.toml (the script refuses a difference), and uv.lock fixes every file by hash.
+# torch comes only from the PyTorch cu130 index; every other package only from PyPI (no index fallback between them).
+# FLA is not installed: kernels/aot/build_gdn.py imports it from the checkout CMake fetches at the manifest's SHA.
+[project]
+name = "roost-release-kernels"
+version = "0.1.0"
+requires-python = "==3.12.14"
+dependencies = [
+    "einops==0.8.2",
+    "numpy==2.5.4",
+    "torch==2.14.1+cu130",
+    "transformers==5.20.1",
+    "triton==3.8.0",
+]
+
+[tool.uv]
+package = false
+environments = ["sys_platform == 'linux' and platform_machine == 'x86_64'"]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu130" }

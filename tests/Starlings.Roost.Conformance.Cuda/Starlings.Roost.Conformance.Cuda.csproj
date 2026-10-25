@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Local only, not in Roost.slnx (AGENTS.md: CUDA projects stay out of the solution; tools/check-roost-boundaries.py enforces it).
+    The GPU half of the kernel conformance suite (R-019): loads a built libroost_kernels_sm<N>.so through its C1 exports and
+    runs every registered variant through the same cases, comparison and results writer as the CPU half. It compiles the
+    runner sources of tests/Starlings.Roost.Conformance/Suite so that the two halves cannot drift.
+    Run it through tools/gpu-lease, and under compute-sanitizer with tests/Starlings.Roost.Conformance/sanitize.py.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Starlings.Roost.Conformance.Cuda</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <NoWarn>$(NoWarn);CA1303;CA1304;CA1305;CA1307;CA1309;CA1310;CA1707;CA1812;CA1822;CA1031;CA1051;CA1861;CA2000;CA5394;CS1591;IDE0058;IDE0010;IDE0011;IDE0045;IDE0046;IDE0072;IDE0305;IDE0300;IDE0301;IDE0090;CA1002;CA1819;CA1815;CA1034;CA1720;CA1711;CA1716;CA1008;CA1027;CA1062;CA1859;CA1860;CA2201;CA2216;CA1401;CA2101;CA5392;IDE0079;CA1707;IDE0290</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Starlings.Roost.Conformance/Suite/**/*.cs" Link="Suite/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Content Include="../Starlings.Roost.Conformance/op-class-tolerances.proposal.json" Link="op-class-tolerances.proposal.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../Starlings.Roost.Conformance/goldens/goldens.lock.json" Link="goldens.lock.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+  </ItemGroup>
+</Project>

@@ -147,6 +147,7 @@
       "starlings.roost.kernels": {
         "type": "Project",
         "dependencies": {
+          "Starlings.Acquisition": "[0.3.0, 0.3.0]",
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Tomlyn": "[2.10.1, 2.10.1]"
         }
@@ -182,6 +183,12 @@
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Engine": "[0.0.0-dev, )"
         }
+      },
+      "Starlings.Acquisition": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
       },
       "Tomlyn": {
         "type": "CentralTransitive",
