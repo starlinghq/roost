@@ -262,17 +262,17 @@ in CI) is open and belongs to the release pipeline (R-060). Linking needs no lin
 symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
 
 The manifest's six digests are one AOT build each, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
-other bytes. Only SM 86 has run on hardware. The CI job reports, and does not fail on, a difference from the digests; the release workflow
+other bytes. SM 86 and SM 89 have run on hardware. SM 89 has run the R-019 conformance suite and compute-sanitizer (RTX 4060 Ti, `tests/Starlings.Roost.Conformance/results/`); the manifest still lists it `untested` until the maintainer sets its status. The CI job reports, and does not fail on, a difference from the digests; the release workflow
 (R-060) records the digests of the pinned container build and publishes the libraries.
 
 ## Not done
 
-- R-017: `graph_capturable` is not claimed for any M0 op (graph replay is R-033's; see "Signal death during R-017"); GeluAndMul, Argmax and Sample are not in R-017's list; FP8 and quantised KV (R-043), INT4 (R-077), sliding window (R-113) and RoPE scaling variants (R-098) are refused with `UNSUPPORTED`; no throughput number is claimed (the tests check numerical agreement only); SM 80, 89, 90, 100 and 120 compile (CI builds them) but no M0 op has run on them.
+- R-017: `graph_capturable` is not claimed for any M0 op (graph replay is R-033's; see "Signal death during R-017"); GeluAndMul, Argmax and Sample are not in R-017's list; FP8 and quantised KV (R-043), INT4 (R-077), sliding window (R-113) and RoPE scaling variants (R-098) are refused with `UNSUPPORTED`; no throughput number is claimed (the tests check numerical agreement only); SM 80, 90, 100 and 120 compile (CI builds them) but no M0 op has run on them; SM 89 ran in R-019 (below).
 
 - MSVC kernel build: GitHub-hosted Windows runners ship no CUDA toolkit, so it is not built. The sources use `ROOST_API`
   from the C1 header and no POSIX types, and `stub_check.cpp` has a `LoadLibrary` path, but none of it has been compiled with
   MSVC.
-- Triton AOT: built by R-034 (above) for SM 80 to 120; only SM 86 has run on hardware, the others are `untested`.
+- Triton AOT: built by R-034 (above) for SM 80 to 120; SM 86 and, in R-019, SM 89 have run on hardware, the others are `untested`.
   A GPU-less CI build does not compile the AOT cubins. `kernels/ci/build-all-sm.sh` (the CI path) still builds
   all six SMs twice byte-identically and passes the registration check on the merged tree without a GPU
   (`kernels/results/r034-ci-noaot-build.log`, a local run; the GitHub Actions job itself has not run), but its libraries carry no GatedDeltaRule.
@@ -285,7 +285,7 @@ other bytes. Only SM 86 has run on hardware. The CI job reports, and does not fa
 - The `kernels` CI job has not run in GitHub Actions; its script passes locally for all six SMs outside the container.
 - The patch-set check has never run on a real patch (there are none yet).
 - `toolkit.min_driver = "580"` is unverified; only driver 610.57 was tested.
-- SM 80, 89, 90, 100 and 120 are built and registration-checked only; none ran on hardware.
+- SM 80, 90, 100 and 120 are built and registration-checked only; none ran on hardware. SM 89 ran R-019's suite and sanitizers (manifest status unchanged, `untested`).
 
 ## Gemm: epilogues with C or bias are refused (R-019)
 
