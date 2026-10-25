@@ -1,6 +1,7 @@
 <Solution>
   <!-- CPU projects only. *.Cuda and *.Tests.Cuda projects are local-only and never listed here (tools/check-roost-boundaries.py). -->
   <Folder Name="/src/">
+    <Project Path="src/Starlings.Generation.Roost/Starlings.Generation.Roost.csproj" />
     <Project Path="src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <Project Path="src/Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
     <Project Path="src/Starlings.Roost.Generation/Starlings.Roost.Generation.csproj" />
@@ -14,6 +15,7 @@
     <Project Path="src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Starlings.Generation.Roost.Tests/Starlings.Generation.Roost.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Abstractions.Tests/Starlings.Roost.Abstractions.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Conformance/Starlings.Roost.Conformance.csproj" />
     <Project Path="tests/Starlings.Roost.Engine.Tests/Starlings.Roost.Engine.Tests.csproj" />

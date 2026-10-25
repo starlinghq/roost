@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Local only, not in Roost.slnx (AGENTS.md): Qwen3.5-0.8B through RoostChatClient on a GPU worker process (R-036, the GPU half). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Generation.Roost/Starlings.Generation.Roost.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Kernels/Starlings.Roost.Kernels.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Models.Qwen35/Starlings.Roost.Models.Qwen35.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The R-025 eager adapter for Qwen3.5-0.8B, compiled in CI by Starlings.Roost.Worker.Tests. -->
+    <Compile Include="../Starlings.Roost.Worker.Tests/Support/Probe.cs" Link="Support/Probe.cs" />
+    <Compile Include="../Starlings.Roost.Worker.Tests/Support/Qwen35EagerModel.cs" Link="Support/Qwen35EagerModel.cs" />
+  </ItemGroup>
+</Project>

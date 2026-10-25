@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Roost's in-process chat API (R-036, stream H): an IChatClient (Microsoft.Extensions.AI) over Roost's generation layer that drives a GPU worker, in a worker process by default (decision 21). M0 runs the eager worker one step at a time; the engine replaces the internal driver from M1 with no change to this API. Host process only (decision 30).</Description>
+    <!-- Packing is opt-in, like every Roost package (nothing is published before Preview 1, R-062). -->
+    <IsPackable>true</IsPackable>
+    <PackageId>Starlings.Generation.Roost</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Generation/Starlings.Roost.Generation.csproj" />
+    <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Starlings.Generation.Roost.Tests" />
+    <InternalsVisibleTo Include="Starlings.Generation.Roost.Tests.Cuda" />
+  </ItemGroup>
+</Project>
