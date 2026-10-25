@@ -341,7 +341,7 @@ public sealed class KernelLibrary : IDisposable
         }
     }
 
-    private static SmStatus Admit(KernelLoadOptions options)
+    internal static SmStatus Admit(KernelLoadOptions options)
     {
         var manifest = options.Manifest;
         ArgumentNullException.ThrowIfNull(manifest);
@@ -368,7 +368,7 @@ public sealed class KernelLibrary : IDisposable
         };
     }
 
-    private static ManifestBinary ExpectedBinary(KernelLoadOptions options)
+    internal static ManifestBinary ExpectedBinary(KernelLoadOptions options)
     {
         var manifest = options.Manifest;
         var binaries = manifest.Variants.SelectMany(v => v.Binaries).Where(b => b.Arch == options.Sm).ToList();
