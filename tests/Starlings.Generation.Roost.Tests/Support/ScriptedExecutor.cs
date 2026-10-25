@@ -27,8 +27,11 @@ internal sealed record Script
     /// <summary>Sleep per step, to give a test time to cancel.</summary>
     public int DelayMs { get; init; }
 
+    /// <summary>1-based step number that sleeps 30 s (past any test deadline: a hang), 0 for none.</summary>
+    public int HangAtStep { get; init; }
+
     public string Encode() => string.Create(CultureInfo.InvariantCulture,
-        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs}");
+        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs};{HangAtStep}");
 
     public static Script Decode(string text)
     {
@@ -40,6 +43,7 @@ internal sealed record Script
             FaultAtStep = int.Parse(p[2], CultureInfo.InvariantCulture),
             Fault = (FaultClass)uint.Parse(p[3], CultureInfo.InvariantCulture),
             DelayMs = int.Parse(p[4], CultureInfo.InvariantCulture),
+            HangAtStep = int.Parse(p[5], CultureInfo.InvariantCulture),
         };
     }
 }
@@ -117,6 +121,11 @@ internal sealed class ScriptedExecutor : IStepExecutor
         if (_script.DelayMs > 0)
         {
             Thread.Sleep(_script.DelayMs);
+        }
+
+        if (_steps == _script.HangAtStep)
+        {
+            Thread.Sleep(30_000);
         }
 
         if (_steps == _script.FaultAtStep)

@@ -54,4 +54,21 @@ public sealed class ProcessTransportTests
         Assert.Equal(RoostErrorCode.DeviceFault, e.Error.Code);
         Assert.NotEqual(first, transport.ProcessId);
     }
+
+    [Fact]
+    public async Task AHungStepMissesItsDeadlineAndTheWorkerIsKilledAndReplaced()
+    {
+        await using var client = await TestRig.ProcessAsync(new Script { Tokens = TestRig.Encode(Reply), HangAtStep = 5 }, TimeSpan.FromMilliseconds(500));
+        var transport = Assert.IsType<ProcessWorkerTransport>(((WorkerDriver)client.Backend).Transport);
+        var first = transport.ProcessId;
+
+        var e = await Assert.ThrowsAsync<RoostChatException>(() => client.GetResponseAsync([new ChatMessage(ChatRole.User, "Hi")], cancellationToken: Timeout));
+        Assert.Equal(RoostErrorCode.WorkerRestarted, e.Error.Code);
+        Assert.Contains("Hang", e.Message, StringComparison.Ordinal);
+
+        // A short request (its prefill chunks only, fewer than five steps) runs on a new worker process.
+        var next = await client.GetResponseAsync([new ChatMessage(ChatRole.User, "Hi")], new ChatOptions { MaxOutputTokens = 1 }, Timeout);
+        Assert.Equal(1, next.Usage!.OutputTokenCount);
+        Assert.NotEqual(first, transport.ProcessId);
+    }
 }

@@ -90,13 +90,13 @@ internal static class TestRig
     }
 
     /// <summary>A client over the default (process) transport: this test executable re-run as the worker.</summary>
-    public static Task<RoostChatClient> ProcessAsync(Script script) => RoostChatClient.StartAsync(new RoostChatClientOptions
+    public static Task<RoostChatClient> ProcessAsync(Script script, TimeSpan? stepDeadline = null) => RoostChatClient.StartAsync(new RoostChatClientOptions
     {
         Model = Profile(),
         Worker = new RoostWorkerOptions
         {
             Command = WorkerCommand.ForCurrentProcess(WorkerFlag, ScriptPrefix + script.Encode()),
-            StepDeadline = TimeSpan.FromSeconds(10),
+            StepDeadline = stepDeadline ?? TimeSpan.FromSeconds(10),
             TransportOptions = new WorkerTransportOptions { StartupTimeout = TimeSpan.FromSeconds(60) },
         },
     });
