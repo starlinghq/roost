@@ -231,8 +231,9 @@ jobs:
           } >notes.md
           prerelease=()
           [[ "${VERSION}" == *-* ]] && prerelease=(--prerelease)
+          # Cargo.lock.<crate> exists once native/ has crates (decision 22); nullglob keeps the list valid without them.
+          shopt -s nullglob
+          files=(kernel-assets/libroost_kernels_sm*.so kernel-assets/manifest.toml kernel-assets/kernel-digests.json
+            kernel-assets/SHA256SUMS kernel-assets/toolchain.txt kernel-assets/Cargo.lock.* packages/*.nupkg)
           gh release create "${GITHUB_REF_NAME}" "${prerelease[@]}" --verify-tag \
-            --title "Roost ${VERSION}" --notes-file notes.md \
-            kernel-assets/libroost_kernels_sm*.so kernel-assets/manifest.toml kernel-assets/kernel-digests.json \
-            kernel-assets/SHA256SUMS kernel-assets/toolchain.txt \
-            packages/*.nupkg
+            --title "Roost ${VERSION}" --notes-file notes.md "${files[@]}"

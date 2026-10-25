@@ -258,7 +258,7 @@ for nupkg in "$pack"/*.nupkg; do
     references+="    <PackageReference Include=\"$id\" Version=\"[$version]\" />"$'\n'
     constants+="HAS_$(tr '.a-z' '_A-Z' <<<"$id");"
 done
-python3 -I - "$root/tools/release-drill/consumer/Consumer.csproj.in" "$consumer/Consumer.csproj" "$references" "$constants" "$pack" <<'EOF'
+python3 -I - "$root/tools/release-drill/consumer/Consumer.csproj.in" "$consumer/Consumer.csproj" "$references" "$constants" "$pack" "$version" "$sha" <<'EOF'
 import sys, zipfile
 from pathlib import Path
 assemblies = set()
@@ -267,7 +267,7 @@ for nupkg in Path(sys.argv[5]).glob("*.nupkg"):
         assemblies.update(Path(n).stem for n in z.namelist() if n.startswith("lib/") and n.endswith(".dll"))
 template = open(sys.argv[1], encoding="utf-8").read()
 text = template.replace("@REFERENCES@", sys.argv[3].rstrip("\n")).replace("@CONSTANTS@", sys.argv[4])
-open(sys.argv[2], "w", encoding="utf-8").write(text.replace("@ASSEMBLIES@", ";".join(sorted(assemblies))))
+open(sys.argv[2], "w", encoding="utf-8").write(text.replace("@ASSEMBLIES@", ";".join(sorted(assemblies))).replace("@VERSION@", sys.argv[6]).replace("@COMMIT@", sys.argv[7]))
 EOF
 cat >"$consumer/NuGet.config" <<EOF
 <?xml version="1.0" encoding="utf-8"?>

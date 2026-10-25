@@ -17,6 +17,15 @@ foreach (var name in AppContext.GetData("RoostDrillAssemblies") as string is { }
         {
             failures.Add($"{name} exports no types");
         }
+
+        // Starlings.Roost.Kernels finds its release (and so the kernel library assets) from "<version>+<commit>"
+        // (KernelRelease.FromAssembly, decision 12), so every packaged assembly must carry exactly that.
+        var informational = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        var expected = $"{AppContext.GetData("RoostDrillVersion")}+{AppContext.GetData("RoostDrillCommit")}";
+        if (informational != expected)
+        {
+            failures.Add($"{name} informational version is '{informational}', expected '{expected}'");
+        }
     }
     catch (Exception e) when (e is FileNotFoundException or FileLoadException or BadImageFormatException)
     {

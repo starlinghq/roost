@@ -16,5 +16,7 @@
   <ItemGroup>
     <!-- The assemblies under lib/ of the packed packages; Program.cs loads each one. -->
     <RuntimeHostConfigurationOption Include="RoostDrillAssemblies" Value="@ASSEMBLIES@" />
+    <RuntimeHostConfigurationOption Include="RoostDrillVersion" Value="@VERSION@" />
+    <RuntimeHostConfigurationOption Include="RoostDrillCommit" Value="@COMMIT@" />
   </ItemGroup>
 </Project>
