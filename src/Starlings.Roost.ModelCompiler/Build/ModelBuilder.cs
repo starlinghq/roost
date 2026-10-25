@@ -497,6 +497,13 @@ internal sealed class ModelBuilder
             }
         }
 
+        // An unbound PagedAttention WindowLeft is 0, a window of one token on CpuOps and refused by the GPU kernel (R-022, R-025).
+        if (op.Name == "PagedAttention" && !bound.Contains("WindowLeft"))
+        {
+            Fail(Diagnostics.UnboundWindowLeft, loc, "Node '" + name + "' (PagedAttention) does not bind WindowLeft; an unbound field is 0, not 'no window'. Bind WindowLeft=-1 for no window");
+            bad = true;
+        }
+
         // Fields the node leaves unbound: plan inputs by name, the activation dtype, the KV dtype of a bound state slot.
         foreach (var f in op.Fields)
         {

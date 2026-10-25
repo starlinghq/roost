@@ -172,7 +172,8 @@ public readonly partial struct CpuOps : IRoostOps
     /// <para>Sequence b has <c>QIndptr[b+1] - QIndptr[b]</c> query tokens (n) and <c>kvLen = (pages - 1) * BlockSize + KvLastPageLength[b]</c>
     /// keys, pages being <c>KvIndptr[b+1] - KvIndptr[b]</c>. Query i sits at key position <c>kvLen - n + i</c> (the last n keys).
     /// Key j is visible when j &lt;= that position (only if Causal; a decode query sees every key) and, when WindowLeft is not
-    /// negative, j &gt;= position - WindowLeft.</para>
+    /// negative, j &gt;= position - WindowLeft. WindowLeft == 0 is rejected (ArgumentException naming PagedAttention), as the GPU kernel refuses
+    /// any window but -1: an unbound field is 0, and a one-token window is almost never intended; bind -1 for no window.</para>
     /// <para>Score = <c>q . k * Scale</c> (Scale 0 means 1/sqrt(HeadDim)); if SoftCap is not 0 the score becomes <c>SoftCap * tanh(score / SoftCap)</c>.
     /// Softmax and the weighted sum of V are in double with an online maximum; query head h reads KV head <c>h / (QHeads / KvHeads)</c>.
     /// A query that sees no key outputs zeros. Pools are indexed as PagedNhd or PagedHnd and read in KvDType. HeadDim is at most 1024.</para>
@@ -193,6 +194,11 @@ public readonly partial struct CpuOps : IRoostOps
         if (a.BlockSize < 1)
         {
             throw new ArgumentException("BlockSize must be positive.", nameof(a));
+        }
+
+        if (a.WindowLeft == 0)
+        {
+            throw new ArgumentException("PagedAttention: WindowLeft is 0 (an unbound field); bind -1 for no window or a positive window.", nameof(a));
         }
 
         bool hnd = a.KvLayout switch
