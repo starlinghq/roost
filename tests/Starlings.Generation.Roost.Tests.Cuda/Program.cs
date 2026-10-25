@@ -40,6 +40,13 @@ if (WorkerEntry.IsWorkerInvocation(args))
     return WorkerEntry.Run(args, _ => new EagerStepExecutor(new Qwen35EagerModel(), eager, manifest, Path.Combine(Opt("--ckpt"), WeightsFile), locked));
 }
 
+// Provenance: what this run loaded, by digest (the worker picks the library of its device's SM from --kernels).
+foreach (var lib in Directory.GetFiles(Opt("--kernels"), "libroost_kernels_sm*.so").Order(StringComparer.Ordinal))
+{
+    Console.WriteLine($"kernel library {Path.GetFileName(lib)} sha256 {Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(lib)))}");
+}
+
+Console.WriteLine($"manifest sha256 {manifest.Sha256.ToLowerInvariant()}; weights sha256 {locked.Sha256.ToLowerInvariant()}; CUDA_VISIBLE_DEVICES {Environment.GetEnvironmentVariable("CUDA_VISIBLE_DEVICES")}");
 var tokenizer = Tokenizer.FromFile(Opt("--tokenizer"));
 int StopId(string token) => tokenizer.TokenToId(token) ?? throw new InvalidOperationException($"{token} is not in the tokenizer");
 var profile = new RoostModelProfile
@@ -94,7 +101,9 @@ foreach (var prompt in prompts)
         $"[{(same ? "ok" : "MISMATCH")}] {prompt}\n  -> {response.Text.ReplaceLineEndings(" ")}\n  finish {response.FinishReason}, usage {response.Usage?.InputTokenCount}+{response.Usage?.OutputTokenCount}, {seconds:F2} s"));
 }
 
-// Cancellation on the GPU path: cancel after the first update, then a following request must run.
+// Cancellation on the GPU path: cancel after the first update; the stream must end with OperationCanceledException, and a
+// following request must run. A cancel that is not observed fails the run.
+var cancelled = false;
 using (var cts = new CancellationTokenSource())
 {
     try
@@ -107,10 +116,23 @@ using (var cts = new CancellationTokenSource())
     catch (OperationCanceledException)
     {
         Console.WriteLine("cancelled mid-stream");
+        cancelled = true;
     }
+}
+
+if (!cancelled)
+{
+    Console.WriteLine("FAIL: the cancel was not observed (no OperationCanceledException)");
+    failures++;
 }
 
 var after = await client.GetResponseAsync([new ChatMessage(ChatRole.User, "Say hello.")], new ChatOptions { MaxOutputTokens = 8 });
 Console.WriteLine($"after cancel: {after.Text.ReplaceLineEndings(" ")} ({after.FinishReason})");
-Console.WriteLine(failures == 0 ? "PASS" : $"FAIL: {failures} streaming/non-streaming mismatches");
+if (string.IsNullOrWhiteSpace(after.Text))
+{
+    Console.WriteLine("FAIL: the request after the cancel returned no text");
+    failures++;
+}
+
+Console.WriteLine(failures == 0 ? "PASS" : $"FAIL: {failures} failed check(s)");
 return failures == 0 ? 0 : 1;
