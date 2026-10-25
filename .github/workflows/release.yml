@@ -1,0 +1,238 @@
+name: release
+
+# Release Roost (R-060, docs/releasing.md).
+#
+#   git tag v0.1.0-preview.1 && git push origin v0.1.0-preview.1
+#
+# 1. candidate: the tag is v<SemVer>, points at a commit on the default branch, and CHANGELOG.md has a section for the
+#    version. The version comes from the tag and is passed to MSBuild as VersionPrefix and VersionSuffix; no file is
+#    edited per release.
+# 2. kernels: the per-SM kernel libraries with the Triton AOT cubins, built twice on the self-hosted runner with the
+#    RTX 3090 (leased through tools/gpu-lease) and checked against the digests in kernels/manifest.toml. A difference
+#    fails the release (CI only reports one). The libraries, the manifest and the digests are the `kernel-assets` artifact.
+# 3. packages: the release drill (tools/release-drill.sh) tests, packs every IsPackable project and its Starlings.Roost.*
+#    closure at the tag's version, checks the nuspecs and the kernel assets, and installs the packages into a clean
+#    consumer outside the checkout. The exact bytes it verified are the `packages` artifact.
+# 4. publish (tags only): waits for approval on the `release` environment, pushes those packages to nuget.org with NuGet
+#    trusted publishing (a short-lived key from GitHub OIDC; no stored key), and creates the GitHub release with the
+#    kernel assets attached and their digests in the notes.
+#
+# Run by hand (workflow_dispatch) it builds the candidate only and never publishes. Pull requests never run it, so no
+# job here is reachable from a pull request, and only the publish job can mint an OIDC token or write to the repository.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Candidate version (SemVer 2, no leading v), for example 0.1.0-rc.1"
+        required: true
+      kernels:
+        description: "Build the kernel libraries (needs the RTX 3090 on the runner); off drills the packages only"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  candidate:
+    name: release candidate
+    runs-on: [self-hosted, omarchy]
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      kernels: ${{ steps.version.outputs.kernels }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Boundary check
+        run: python3 -I tools/check-boundary.py
+      - name: Version, tag and changelog
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          INPUT_KERNELS: ${{ inputs.kernels }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            [[ "${GITHUB_REF_NAME}" == v* ]] || { echo "::error::Tag ${GITHUB_REF_NAME} does not start with v."; exit 1; }
+            kernels=true
+            git fetch --quiet origin "${DEFAULT_BRANCH}"
+            if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/${DEFAULT_BRANCH}"; then
+              echo "::error::Tag ${GITHUB_REF_NAME} points at ${GITHUB_SHA}, which is not on ${DEFAULT_BRANCH}."
+              exit 1
+            fi
+          else
+            version="${INPUT_VERSION#v}"
+            kernels="${INPUT_KERNELS:-true}"
+          fi
+          semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?$'
+          if [[ ! "${version}" =~ ${semver} ]]; then
+            echo "::error::Version '${version}' is not SemVer 2 without build metadata."
+            exit 1
+          fi
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]] && ! grep -qF "## [${version}]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [${version}]' section."
+            exit 1
+          fi
+          echo "version=${version}" >>"$GITHUB_OUTPUT"
+          echo "kernels=${kernels}" >>"$GITHUB_OUTPUT"
+          echo "version ${version}, kernels ${kernels}"
+
+  # Not in the pinned CUDA container of ci.yml: the Triton AOT step needs the GPU during the build, and the runner's Docker
+  # has no NVIDIA container runtime, so this job uses the runner's CUDA 13.3 toolchain (tools/release-kernels.sh says why).
+  kernels:
+    name: kernel libraries (every SM, Triton AOT, digests)
+    needs: candidate
+    if: needs.candidate.outputs.kernels == 'true'
+    runs-on: [self-hosted, omarchy]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Manifest validates (C5)
+        run: python3 -I tools/validate-kernel-manifest.py
+      - name: Build, compare and check the digests
+        run: tools/release-kernels.sh "$RUNNER_TEMP/roost-kernels" "$RUNNER_TEMP/kernel-assets"
+      # Uploaded even when the digests differ, so the first build at a new path can be recorded (docs/releasing.md).
+      # The packages and publish jobs need this job to succeed, so such a build is never published.
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: success() || failure()
+        with:
+          name: kernel-assets
+          path: ${{ runner.temp }}/kernel-assets/
+          if-no-files-found: error
+          retention-days: 90
+
+  packages:
+    name: release drill (packages)
+    needs: [candidate, kernels]
+    if: ${{ !cancelled() && needs.candidate.result == 'success' && (needs.kernels.result == 'success' || (needs.kernels.result == 'skipped' && github.ref_type != 'tag')) }}
+    runs-on: [self-hosted, omarchy]
+    env:
+      VERSION: ${{ needs.candidate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: needs.kernels.result == 'success'
+        with:
+          name: kernel-assets
+          path: kernel-assets
+      # Locked restore, tests, boundaries, pack at the tag's version, nuspec checks, kernel asset checks, local feed and a
+      # clean consumer outside the checkout.
+      - name: Release drill
+        run: |
+          if [[ -d kernel-assets ]]; then
+            tools/release-drill.sh --version "${VERSION}" --kernel-assets kernel-assets --out "$RUNNER_TEMP/packages"
+          else
+            tools/release-drill.sh --version "${VERSION}" --no-kernels --out "$RUNNER_TEMP/packages"
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: packages
+          path: ${{ runner.temp }}/packages/
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    name: publish (nuget.org, GitHub release)
+    needs: [candidate, kernels, packages]
+    if: github.ref_type == 'tag'
+    runs-on: [self-hosted, omarchy]
+    environment: release # required reviewer; NUGET_USER is a variable of this environment
+    permissions:
+      contents: write # create the GitHub release
+      id-token: write # NuGet trusted publishing
+    env:
+      VERSION: ${{ needs.candidate.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: packages
+          path: packages
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kernel-assets
+          path: kernel-assets
+      - name: Artifacts are the drilled candidate
+        run: |
+          ls -l packages kernel-assets
+          grep -qx 'RESULT: PASS' packages/drill.txt
+          grep -qx "version ${VERSION}" packages/drill.txt
+          grep -qx "commit ${GITHUB_SHA}" packages/drill.txt
+          grep -qx 'kernels yes' packages/drill.txt
+          (cd packages && sha256sum -c <(grep -E '^[0-9a-f]{64}  ' drill.txt))
+          (cd kernel-assets && sha256sum -c SHA256SUMS)
+          cmp kernel-assets/manifest.toml kernels/manifest.toml
+          python3 -I kernels/tools/record_digests.py kernel-assets --check
+      - name: NuGet login (OIDC)
+        id: nuget
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        with:
+          user: ${{ vars.NUGET_USER }}
+      # No --skip-duplicate: a published version is immutable, so pushing one twice must fail. Each .snupkg next to its
+      # .nupkg is pushed with it.
+      - name: Push to nuget.org
+        env:
+          NUGET_API_KEY: ${{ steps.nuget.outputs.NUGET_API_KEY }}
+        run: |
+          for nupkg in packages/*."${VERSION}".nupkg; do
+            dotnet nuget push "${nupkg}" --api-key "${NUGET_API_KEY}" --source https://api.nuget.org/v3/index.json
+          done
+      - name: GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            awk -v v="${VERSION}" '
+              $0 ~ "^## \\[" { if (found) exit; if (index($0, "## [" v "]") == 1) { found = 1; next } }
+              found { print }
+            ' CHANGELOG.md
+            echo
+            echo "## Kernel libraries"
+            echo
+            echo "One library per SM, fetched at first run by \`Starlings.Roost.Kernels\` and verified against these digests"
+            echo "(the manifest embedded in the package). An SM without hardware evidence is \`untested\` (kernels/manifest.toml)."
+            echo
+            echo "| File | Bytes | SHA-256 |"
+            echo "| --- | --- | --- |"
+            python3 -I - kernel-assets/kernel-digests.json <<'EOF'
+          import json, sys
+          for arch, d in sorted(json.load(open(sys.argv[1])).items(), key=lambda item: int(item[0])):
+              print(f"| libroost_kernels_sm{arch}.so | {d['bytes']} | `{d['sha256']}` |")
+          EOF
+            echo
+            echo "Toolchain:"
+            echo
+            echo '```'
+            cat kernel-assets/toolchain.txt
+            echo '```'
+            echo
+            echo "## Packages"
+            echo
+            echo '```'
+            grep -E '^(package |[0-9a-f]{64}  )' packages/drill.txt
+            echo '```'
+          } >notes.md
+          prerelease=()
+          [[ "${VERSION}" == *-* ]] && prerelease=(--prerelease)
+          gh release create "${GITHUB_REF_NAME}" "${prerelease[@]}" --verify-tag \
+            --title "Roost ${VERSION}" --notes-file notes.md \
+            kernel-assets/libroost_kernels_sm*.so kernel-assets/manifest.toml kernel-assets/kernel-digests.json \
+            kernel-assets/SHA256SUMS kernel-assets/toolchain.txt \
+            packages/*.nupkg

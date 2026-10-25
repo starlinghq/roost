@@ -1,0 +1,4 @@
+# actionlint (https://github.com/rhysd/actionlint): labels of the self-hosted runner the workflows use.
+self-hosted-runner:
+  labels:
+    - omarchy
