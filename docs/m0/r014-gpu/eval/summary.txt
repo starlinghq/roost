@@ -1,0 +1,42 @@
+== sm86
+  layers.hidden: {'max_abs': 0.7375656366348267, 'compared': 5}
+  layers.hidden_rel_l2: {'max_rel_l2': 0.05506718388291814, 'compared': 5}
+  layers.hidden_max_abs_rel: {'max_abs_rel': 0.06677404966001962, 'compared': 5}
+  layers.hidden_cosine_min: {'min_cosine': 0.9984828622916648, 'compared': 5}
+  layers.recurrent_state: {'max_abs': 0.05064964294433594, 'compared': 5}
+  layers.recurrent_state_rel_l2: {'max_rel_l2': 0.014800832960021802, 'compared': 5}
+  layers.recurrent_state_max_abs_rel: {'max_abs_rel': 0.02147898244941085, 'compared': 5}
+  layers.recurrent_state_cosine_min: {'min_cosine': 0.9998914036658053, 'compared': 5}
+  layers.conv_state: {'max_abs': 0.28371238708496094, 'compared': 5}
+  layers.conv_state_rel_l2: {'max_rel_l2': 0.010807950631420041, 'compared': 5}
+  layers.conv_state_max_abs_rel: {'max_abs_rel': 0.012712920308729657, 'compared': 5}
+  layers.conv_state_cosine_min: {'min_cosine': 0.9999416305718173, 'compared': 5}
+  layers.nan_or_inf: {}
+  split: {'decoder_hidden_max_abs': 0.13213574886322021, 'final_norm_max_abs': 0.7375656366348267, 'decoder_rel_l2': 0.05414112463320909, 'final_norm_rel_l2': 0.05506718388291814}
+  step0 max_abs 0.3004188537597656 top5 0.07123756408691406 rel_l2 0.016252072812625824 cos 0.9998679536532671 max_abs_rel 0.009259739375603404 argmax True
+  capital: agree 24/24 flips [] margin_err 0.0772 min_ref_margin 0.0554@15
+  system-haiku: agree 24/24 flips [] margin_err 0.0956 min_ref_margin 0.0711@5
+  multi-turn: agree 24/24 flips [] margin_err 0.1207 min_ref_margin 0.0479@9
+  code: agree 24/24 flips [] margin_err 0.0964 min_ref_margin 0.0096@23
+  long-context: agree 24/24 flips [] margin_err 0.0910 min_ref_margin 0.3243@12
+== sm89
+  layers.hidden: {'max_abs': 0.9227156639099121, 'compared': 5}
+  layers.hidden_rel_l2: {'max_rel_l2': 0.045711342787428756, 'compared': 5}
+  layers.hidden_max_abs_rel: {'max_abs_rel': 0.06677404966001962, 'compared': 5}
+  layers.hidden_cosine_min: {'min_cosine': 0.9989690350620822, 'compared': 5}
+  layers.recurrent_state: {'max_abs': 0.07037663459777832, 'compared': 5}
+  layers.recurrent_state_rel_l2: {'max_rel_l2': 0.014078463799101975, 'compared': 5}
+  layers.recurrent_state_max_abs_rel: {'max_abs_rel': 0.03380783471751368, 'compared': 5}
+  layers.recurrent_state_cosine_min: {'min_cosine': 0.9999040009994528, 'compared': 5}
+  layers.conv_state: {'max_abs': 0.2503013610839844, 'compared': 5}
+  layers.conv_state_rel_l2: {'max_rel_l2': 0.011085784453443229, 'compared': 5}
+  layers.conv_state_max_abs_rel: {'max_abs_rel': 0.014347276018281598, 'compared': 5}
+  layers.conv_state_cosine_min: {'min_cosine': 0.9999386498474326, 'compared': 5}
+  layers.nan_or_inf: {}
+  split: {'decoder_hidden_max_abs': 0.10467004776000977, 'final_norm_max_abs': 0.9227156639099121, 'decoder_rel_l2': 0.045711342787428756, 'final_norm_rel_l2': 0.045305858311766124}
+  step0 max_abs 0.21025848388671875 top5 0.0815286636352539 rel_l2 0.014995261288482586 cos 0.9998877484109586 max_abs_rel 0.00592468731145412 argmax True
+  capital: agree 24/24 flips [] margin_err 0.1049 min_ref_margin 0.0554@15
+  system-haiku: agree 24/24 flips [] margin_err 0.0959 min_ref_margin 0.0711@5
+  multi-turn: agree 24/24 flips [] margin_err 0.0910 min_ref_margin 0.0479@9
+  code: agree 23/24 flips [{'forward': 23, 'reference': 5199, 'gpu': 13, 'reference_margin': 0.009565353393554688, 'gpu_margin': 0.00337982177734375}] margin_err 0.1369 min_ref_margin 0.0096@23
+  long-context: agree 24/24 flips [] margin_err 0.1047 min_ref_margin 0.3243@12

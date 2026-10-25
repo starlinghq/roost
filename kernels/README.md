@@ -171,9 +171,9 @@ mrope sections are model definition (R-035), not ops.
 | RmsNorm | `rms-norm-flashinfer` | FlashInfer `norm::RMSNorm` | bf16, f16; any `dim`; row strides | deterministic, batch invariant | none |
 | QkNorm | `qk-norm-flashinfer` | FlashInfer `norm::QKRMSNorm`, called for q then k, in place | bf16, f16; head_dim 256 registered | deterministic, batch invariant | none |
 | Rope | `rope-roost` | Roost (see below) | bf16, f16; default and llama3; NeoX and interleaved; `rotary_dim` <= `head_dim`; head_dim 64, 128, 256 registered | deterministic, batch invariant | none |
-| PagedAttention | `paged-attention-flashinfer-fa2` | FlashInfer FA2 batch decode and batch prefill | bf16 Q, KV and output; head_dim 256; 4 query heads per KV head; NHD and HND; page sizes 16, 32, 64 registered; causal or not; no sliding window, no soft cap | deterministic, needs plan | query: int and float scheduler buffers (0 to 8.2 MiB in the tested batches), pinned staging, plan record |
+| PagedAttention | `paged-attention-flashinfer-fa2` | FlashInfer FA2 batch decode and batch prefill (prefill **experimental**, R-019: racecheck hazards not shown benign; see the conformance suite's README) | bf16 Q, KV and output; head_dim 256; 4 query heads per KV head; NHD and HND; page sizes 16, 32, 64 registered; causal or not; no sliding window, no soft cap | deterministic, needs plan | query: int and float scheduler buffers (0 to 8.2 MiB in the tested batches), pinned staging, plan record |
 | SiluAndMul | `silu-and-mul-flashinfer` | FlashInfer `act_and_mul_kernel`, launcher written here | bf16, f16; any `dim` | deterministic, batch invariant | none |
-| Gemm | `gemm-cublaslt` | cuBLASLt, algorithm pinned per shape bucket | bf16, f16 with fp32 accumulation; B as `[k,n]` or `[n,k]`; alpha, beta, C, bias | deterministic, batch invariant, needs plan, plan per shape | 8 MiB cuBLASLt scratch, plan record |
+| Gemm | `gemm-cublaslt` | cuBLASLt, algorithm pinned per shape bucket | bf16, f16 with fp32 accumulation; B as `[k,n]` or `[n,k]`; alpha; C (beta != 0) and bias are refused with `UNSUPPORTED` (R-019, below) | deterministic, batch invariant, needs plan, plan per shape | 8 MiB cuBLASLt scratch, plan record |
 | Embedding | `embedding-roost` | Roost gather | bf16, f16, f32 tables | deterministic, batch invariant | none |
 | LmHead | `lm-head-cublaslt` | gather of the selected rows, then cuBLASLt with fp32 logits and `ldd = vocab_padded`, then optional soft cap | bf16, f16 hidden and weight | deterministic, batch invariant, needs plan, plan per shape | gathered rows plus 8 MiB scratch, plan record |
 | CacheWrite | `cache-write-roost` | Roost (C1's `slot_mapping` form does not match FlashInfer's append API) | bf16, f16, f32, same type as the activations; NHD and HND | deterministic, batch invariant | none |
@@ -257,22 +257,24 @@ at one path. Nothing shows a path-independent build. R-017 measured 576 differin
 `_INTERNAL_<hash>_<file>_cu_...` symbol names whose hash derives from the source path (they come from `cuda::std` entities in the headers, so a
 named namespace in our sources does not remove them), and R-034's reviewer saw the same kind of difference on the AOT library (12 bytes in every
 nvcc-compiled object, while the generated C++ and all 7 Triton cubins were identical). The manifest digests therefore reproduce only from the
-checkout path they were recorded at (`/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for example a fixed build path
+checkout path they were recorded at (since R-019 `/home/mark/Projects/roost/.claude/worktrees/agent-aaf3b503d96fd1902`, a worktree that
+will not outlive the R-019 branch; before it `/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for example a fixed build path
 in CI) is open and belongs to the release pipeline (R-060). Linking needs no line info (it records source mtimes), no build id and no local
 symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
 
-The manifest's six digests are one AOT build each, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
-other bytes. Only SM 86 has run on hardware. The CI job reports, and does not fail on, a difference from the digests; the release workflow
+The manifest's six digests are the R-019 build (one source with the `gemm.cu` refusal, one path, two cmake invocations: SM 86 and 89,
+then SM 80, 90, 100 and 120), each with the AOT cubins, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
+other bytes. SM 86 and SM 89 have run on hardware. SM 89 has run the R-019 conformance suite and compute-sanitizer (RTX 4060 Ti, `tests/Starlings.Roost.Conformance/results/`); the manifest still lists it `untested` until the maintainer sets its status. The CI job reports, and does not fail on, a difference from the digests; the release workflow
 (R-060) records the digests of the pinned container build and publishes the libraries.
 
 ## Not done
 
-- R-017: `graph_capturable` is not claimed for any M0 op (graph replay is R-033's; see "Signal death during R-017"); GeluAndMul, Argmax and Sample are not in R-017's list; FP8 and quantised KV (R-043), INT4 (R-077), sliding window (R-113) and RoPE scaling variants (R-098) are refused with `UNSUPPORTED`; no throughput number is claimed (the tests check numerical agreement only); SM 80, 89, 90, 100 and 120 compile (CI builds them) but no M0 op has run on them.
+- R-017: `graph_capturable` is not claimed for any M0 op (graph replay is R-033's; see "Signal death during R-017"); GeluAndMul, Argmax and Sample are not in R-017's list; FP8 and quantised KV (R-043), INT4 (R-077), sliding window (R-113) and RoPE scaling variants (R-098) are refused with `UNSUPPORTED`; no throughput number is claimed (the tests check numerical agreement only); SM 80, 90, 100 and 120 compile (CI builds them) but no M0 op has run on them; SM 89 ran in R-019 (below).
 
 - MSVC kernel build: GitHub-hosted Windows runners ship no CUDA toolkit, so it is not built. The sources use `ROOST_API`
   from the C1 header and no POSIX types, and `stub_check.cpp` has a `LoadLibrary` path, but none of it has been compiled with
   MSVC.
-- Triton AOT: built by R-034 (above) for SM 80 to 120; only SM 86 has run on hardware, the others are `untested`.
+- Triton AOT: built by R-034 (above) for SM 80 to 120; SM 86 and, in R-019, SM 89 have run on hardware, the others are `untested`.
   A GPU-less CI build does not compile the AOT cubins. `kernels/ci/build-all-sm.sh` (the CI path) still builds
   all six SMs twice byte-identically and passes the registration check on the merged tree without a GPU
   (`kernels/results/r034-ci-noaot-build.log`, a local run; the GitHub Actions job itself has not run), but its libraries carry no GatedDeltaRule.
@@ -285,4 +287,22 @@ other bytes. Only SM 86 has run on hardware. The CI job reports, and does not fa
 - The `kernels` CI job has not run in GitHub Actions; its script passes locally for all six SMs outside the container.
 - The patch-set check has never run on a real patch (there are none yet).
 - `toolkit.min_driver = "580"` is unverified; only driver 610.57 was tested.
-- SM 80, 89, 90, 100 and 120 are built and registration-checked only; none ran on hardware.
+- SM 80, 90, 100 and 120 are built and registration-checked only; none ran on hardware. SM 89 ran R-019's suite and sanitizers (manifest status unchanged, `untested`).
+
+## Gemm: epilogues with C or bias are refused (R-019)
+
+The first R-019 conformance run on SM 86 found five bf16 `gemm-cublaslt` cases outside the `gemm-bf16` class (utilisation 1.09 to
+1.95, 44 elements), all with a C input (`beta != 0`) and a bias together. The maintainer's ruling of 2026-10-20 (`docs/kickoff.md`) is
+to refuse unused GEMM epilogues at plan time. Every `Gemm` node of Qwen3.5-0.8B, roost-tiny and roost-tiny-hybrid passes `A, B, D, M,
+N, K, TransposeB, Alpha, WeightDType` and nothing else, and the model compiler adds no C, Beta or Bias
+(`RefusalTests.NoGeneratedModelForwardUsesGemmWithBetaOrBias` in `tests/Starlings.Roost.Conformance` scans the node definitions and
+fails if one appears). So no epilogue but alpha is used: `ValidateGemm` returns the typed `ROOST_STATUS_UNSUPPORTED` for a C input
+or a bias, in bf16 and f16, from `plan()` and from `run()`, before any launch. Alpha alone stays served. `RoostConstraints` has no
+field for an epilogue, so the refusal is not a manifest constraint; adding one (an `epilogue_mask`) is a C1 change for stream A,
+proposed and not made.
+
+Serving an epilogue again needs a model that uses it, a fix or re-pin for the bf16 C-and-bias rounding (the conformance suite's
+README holds the unconfirmed hypothesis: a rounding of the 16-bit output between the C and bias terms), and the removal of the
+refusal and of `RefusalRules.GemmEpilogueWithCOrBias` together. `kernels/tests/ops-cuda` checks the refusal (`Gemm <dtype> with
+<epilogue> -> UNSUPPORTED from plan and from run, D untouched`, six checks) and keeps alpha-only cases as served cases.
+This section and the `ValidateGemm` change were made on the stream D branch of R-019 to apply the ruling; they are stream C paths.

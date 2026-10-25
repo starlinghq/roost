@@ -16,11 +16,6 @@
           "Microsoft.Extensions.AI.Abstractions": "9.8.0"
         }
       },
-      "Starlings.Acquisition": {
-        "type": "Transitive",
-        "resolved": "0.3.0",
-        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
-      },
       "Starlings.Tokenizers": {
         "type": "Transitive",
         "resolved": "0.3.0",
@@ -102,6 +97,12 @@
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Engine": "[0.0.0-dev, )"
         }
+      },
+      "Starlings.Acquisition": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
       },
       "Starlings.Generation.OnnxGenAI": {
         "type": "CentralTransitive",

@@ -23,7 +23,11 @@ LAYER_TOLERANCES = {
 Tensors = dict[str, tuple[tuple[int, ...], list[float]]]
 
 
-def make_capture(case: dict[str, Any], seed: int, state_forwards: int = 2) -> tuple[dict[str, str], Tensors]:
+def make_capture(
+    case: dict[str, Any], seed: int, state_forwards: int = 2, scales: dict[str, float] | None = None
+) -> tuple[dict[str, str], Tensors]:
+    """Captures of random values; `scales` multiplies the hidden values of the named stages (default 1)."""
+    scales = scales or {}
     rng = random.Random(seed)
     prompt, decode = case["prompt_ids"], case["output_ids"][:-1]
     metadata = layer_captures.metadata_for(
@@ -40,7 +44,7 @@ def make_capture(case: dict[str, Any], seed: int, state_forwards: int = 2) -> tu
         for stage in STAGES:
             tensors[layer_captures.hidden_name(forward, stage)] = (
                 (rows, HIDDEN),
-                [rng.uniform(-2, 2) for _ in range(rows * HIDDEN)],
+                [rng.uniform(-2, 2) * scales.get(stage, 1.0) for _ in range(rows * HIDDEN)],
             )
         if forward < state_forwards:
             for layer, kind in enumerate(LAYER_TYPES):
@@ -67,14 +71,15 @@ def write_captures(
 class Pair:
     """A reference run directory and a candidate run directory with identical captures, and the means to perturb."""
 
-    def __init__(self, tmp_path: Path, count: int = 2) -> None:
+    def __init__(self, tmp_path: Path, count: int = 2, scales: dict[str, float] | None = None) -> None:
+        self.scales = scales or {}
         self.cases = reference_cases(count)
         self.reference_dir = tmp_path / "reference"
         self.candidate_dir = tmp_path / "candidate"
         self.metadata: dict[str, dict[str, str]] = {}
         self.tensors: dict[str, Tensors] = {}
         for index, (name, case) in enumerate(self.cases.items()):
-            self.metadata[name], self.tensors[name] = make_capture(case, seed=100 + index)
+            self.metadata[name], self.tensors[name] = make_capture(case, seed=100 + index, scales=self.scales)
         digests = write_captures(self.reference_dir, self.cases, self.tensors, self.metadata)
         for name, case in self.cases.items():
             case["layers_sha256"] = digests[name]

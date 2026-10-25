@@ -5,10 +5,15 @@
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Starlings.Acquisition" />
     <PackageReference Include="Tomlyn" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The manifest this build was made from (contract C5): its digests are the release assets' digests for this package version (R-060). -->
+    <EmbeddedResource Include="../../kernels/manifest.toml" LogicalName="Starlings.Roost.Kernels.manifest.toml" Visible="false" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Starlings.Roost.Kernels.Tests" />

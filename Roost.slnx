@@ -19,6 +19,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Starlings.Generation.Roost.Tests/Starlings.Generation.Roost.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Abstractions.Tests/Starlings.Roost.Abstractions.Tests.csproj" />
+    <Project Path="tests/Starlings.Roost.Conformance/Starlings.Roost.Conformance.csproj" />
     <Project Path="tests/Starlings.Roost.Engine.Tests/Starlings.Roost.Engine.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Generation.Tests/Starlings.Roost.Generation.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Kernels.Tests/Starlings.Roost.Kernels.Tests.csproj" />

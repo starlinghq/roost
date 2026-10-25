@@ -1,0 +1,12 @@
+library roost-kernels-sm86 abi 0x10002, 19 variants; device sm_86; 2026-10-25T02:38:27.8317198Z
+PASS    sigmoid-mul-cuda fixed-BF16-37x2048 class=elementwise-bf16 utilisation=0.342 violations=0 det=pass inv=pass
+PASS    sigmoid-mul-cuda fixed-BF16-1x2048 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    sigmoid-mul-cuda fixed-in-place-BF16-30x2048 class=elementwise-bf16 utilisation=0.330 violations=0 det=pass inv=pass
+PASS    sigmoid-mul-cuda fixed-F32-7x1001 class=hybrid-f32 utilisation=0.020 violations=0 det=pass inv=pass
+PASS    sigmoid-mul-cuda random-0-F32-198x2034 class=hybrid-f32 utilisation=0.024 violations=0 det=pass inv=pass
+PASS    sigmoid-mul-cuda random-1-BF16-36x1902 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    sigmoid-mul-cuda random-2-BF16-117x2612 class=elementwise-bf16 utilisation=0.342 violations=0 det=pass inv=pass
+roost-kernels-sm86: 7 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  SigmoidMul      sigmoid-mul-cuda                   pass=7    fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm86/sigmoid-mul-cuda.synccheck.results.json
+=== green

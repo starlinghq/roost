@@ -1,0 +1,29 @@
+library roost-kernels-sm86 abi 0x10002, 19 variants; device sm_86; 2026-10-25T02:38:09.1724559Z
+PASS    residual-stub fixed-F32-n1024 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-F32-n7168 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-F32-n1001 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-0-F32-n97505 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-1-F32-n19310 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-2-F32-n49806 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-BF16-n1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-BF16-n7168 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-BF16-n1001 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-0-BF16-n50921 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-1-BF16-n42669 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-2-BF16-n43682 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-F16-n1024 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-F16-n7168 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub fixed-F16-n1001 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-0-F16-n78362 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-1-F16-n21748 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub random-2-F16-n93583 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub golden-Residual-F32-n1024 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub golden-Residual-F32-n7168 class=elementwise-f32 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub golden-Residual-BF16-n1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub golden-Residual-BF16-n7168 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub golden-Residual-F16-n1024 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    residual-stub golden-Residual-F16-n7168 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+roost-kernels-sm86: 24 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  Residual        residual-stub                      pass=24   fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm86/residual-stub.synccheck.results.json
+=== green

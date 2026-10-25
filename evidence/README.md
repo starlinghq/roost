@@ -62,13 +62,32 @@ uv run --project evidence/pipeline --locked roost-evidence evaluate-layers <resu
 
 The model revision of a real capture is whatever `--revision` the operator passes; this branch records it in `environment.json` but does not decide which revision is admitted (that is R-013's). The R-011 development run used the hub's then-current main, 2fc06364, as a spike only.
 
-Exit codes and statuses are those of `evaluate`. Four checks, bound by the tolerance keys `float.layer_hidden_max_abs`, `float.recurrent_state_max_abs`, `float.conv_state_max_abs` and `float.nan_or_inf`. The report holds, per case and per stage, the maximum absolute difference, and `first_divergent`: the earliest forward in which a stage exceeds the hidden-state bound, the first stage in model order within it, and the first position. Recurrent and convolution state are attributed separately. A candidate capture for another token sequence, another layer count or other layer types is an input error (exit 2); a case with no candidate capture, or a candidate without state tensors, is `not_run`.
+Exit codes and statuses are those of `evaluate`. The targets are the hidden states (`layers.hidden`), the recurrent state, the convolution state and `layers.nan_or_inf` (key `float.nan_or_inf`). A candidate capture for another token sequence, another layer count or other layer types is an input error (exit 2); a case with no candidate capture, or a candidate without state tensors, is `not_run`.
+
+### Metrics and tolerance keys
+
+Each target can be bound by four metrics ([`metrics.py`](pipeline/src/roost_evidence/metrics.py) defines them; every key is documented in `evaluate_generation.TOLERANCE_KEYS`). For a candidate `c` and a reference `r`:
+
+| Metric | Definition | Granularity | Hidden-state key | Direction |
+| --- | --- | --- | --- | --- |
+| absolute | `max abs(c - r)` | per position | `float.layer_hidden_max_abs` | upper bound |
+| row-relative | `norm(c - r) / norm(r)` | per position (a state is one row) | `float.layer_hidden_rel_l2` | upper bound |
+| tensor-relative | `max abs(c - r) / max abs(r)` | per stage output of one forward | `float.layer_hidden_max_abs_rel` | upper bound |
+| cosine | `dot(c, r) / (norm(c) * norm(r))` | per position | `float.layer_hidden_cosine_min` | **lower** bound |
+
+The state targets use `float.recurrent_state_<suffix>` and `float.conv_state_<suffix>` with the same suffixes (`max_abs`, `rel_l2`, `max_abs_rel`, `cosine_min`). The step-0 vector of the generation evaluator takes `float.step0_logprob_rel_l2`, `_max_abs_rel` and `_cosine_min` beside `float.step0_logprob_max_abs`: its relative error and cosine are taken after subtracting each vector's mean, because a log-softmax row differs from the logits row by a constant, so the centred metrics are the logits' metrics; `max_abs_rel` uses the log-probabilities as recorded. The step-0 metrics need the sidecar and the reference vectors (`--reference-vectors`); without them they are `not_run`.
+
+A tolerance file chooses its metrics by naming keys. A target with no key keeps its absolute check, reported `not_run`, so absolute-only files evaluate exactly as before. Once a target names any key, only the named metrics are checked, and the report lists the rest under `unconfigured_checks` (they do not block). Mark a key `not_applicable` to record that a metric is deliberately not used. A non-finite candidate value makes every error infinite and every cosine `-inf`; a zero reference row has relative error 0 only when the candidate row is zero too.
+
+The report holds, per case, the worst value of every metric per stage (`hidden_max_abs`, `hidden_rel_l2`, `hidden_max_abs_rel`, `hidden_cosine_min`, and `recurrent_state_*`, `conv_state_*`) and the first divergence of every metric (`first_divergent` for the absolute hidden metric, then `first_divergent_<metric>` and `first_divergent_<state>[_<metric>]`): the earliest forward in which a stage violates the bound, the first stage in model order within it, and for the per-position metrics the first position. An absolute bound must be loose enough for the final norm, which is about ten times the layers' scale, so it can blame a late layer for a defect that entered early; the relative metrics do not have that scale problem. This is shown on a synthetic capture only (`test_relative_metrics.py`); no real capture has been evaluated with them yet. The stage-results schema is unchanged: no new input is needed.
 
 ## Test the pipeline
 
 ```sh
 uv run --project evidence/pipeline --locked pytest -q evidence/pipeline/tests
 ```
+
+Outside `uv run --project`, a plain `pytest evidence/pipeline/tests` fails on a missing `roost_evidence` import unless `PYTHONPATH=evidence/pipeline/src` is set (the suite also needs `jsonschema` and `pyyaml`).
 
 Tests that need torch (`test_reference_runner.py`, `test_layer_capture_runner.py`) skip unless the `reference` extra is installed: add `--extra reference` and point `UV_PROJECT_ENVIRONMENT` outside the repository to run them.
 

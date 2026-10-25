@@ -1,0 +1,19 @@
+RmsNorm	rms-norm-flashinfer	Deterministic, BatchInvariant
+QkNorm	qk-norm-flashinfer	Deterministic, BatchInvariant
+Rope	rope-roost	Deterministic, BatchInvariant
+PagedAttention	paged-attention-flashinfer-fa2	Deterministic, NeedsPlan
+SiluAndMul	silu-and-mul-flashinfer	Deterministic, BatchInvariant
+Gemm	gemm-cublaslt	Deterministic, BatchInvariant, NeedsPlan, PlanPerShape
+Embedding	embedding-roost	Deterministic, BatchInvariant
+LmHead	lm-head-cublaslt	Deterministic, BatchInvariant, NeedsPlan, PlanPerShape
+Residual	residual-stub	GraphCapturable, Deterministic, BatchInvariant
+CacheWrite	cache-write-roost	Deterministic, BatchInvariant
+CacheCopy	cache-copy-roost	Deterministic, BatchInvariant
+GatedDeltaRule	gated-delta-rule-chunk-aot	Deterministic, BatchInvariant, NeedsPlan
+GatedDeltaRule	gated-delta-rule-recurrent-aot	GraphCapturable, Deterministic, BatchInvariant
+CausalConv1d	causal-conv1d-cuda	GraphCapturable, Deterministic, BatchInvariant
+RecurrentStateCopy	recurrent-state-copy-cuda	GraphCapturable, Deterministic, BatchInvariant
+RecurrentStateSnapshot	recurrent-state-snapshot-cuda	GraphCapturable, Deterministic, BatchInvariant
+GatedDeltaRuleGates	gated-delta-rule-gates-cuda	GraphCapturable, Deterministic, BatchInvariant
+GatedRmsNorm	gated-rms-norm-cuda	GraphCapturable, Deterministic, BatchInvariant
+SigmoidMul	sigmoid-mul-cuda	GraphCapturable, Deterministic, BatchInvariant

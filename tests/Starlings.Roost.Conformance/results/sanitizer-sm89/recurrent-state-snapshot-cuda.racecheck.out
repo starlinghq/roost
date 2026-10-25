@@ -1,0 +1,12 @@
+library roost-kernels-sm89 abi 0x10002, 19 variants; device sm_89; 2026-10-25T02:36:49.9299800Z
+PASS    recurrent-state-snapshot-cuda fixed-save-slot1048576-n6-s5-p4 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-snapshot-cuda fixed-save-slot12-n6-s5-p4 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-snapshot-cuda fixed-restore-slot1048576-n6-s5-p4 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-snapshot-cuda fixed-restore-slot12-n6-s5-p4 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-snapshot-cuda random-0-restore-slot4096-n3-s1-p1 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-snapshot-cuda random-1-save-slot9-n5-s9-p4 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    recurrent-state-snapshot-cuda random-2-restore-slot65539-n3-s6-p3 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
+roost-kernels-sm89: 7 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  RecurrentStateSnapshot recurrent-state-snapshot-cuda      pass=7    fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm89/recurrent-state-snapshot-cuda.racecheck.results.json
+=== green

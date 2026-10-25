@@ -31,11 +31,6 @@
           "Microsoft.Extensions.AI.Abstractions": "9.8.0"
         }
       },
-      "Starlings.Acquisition": {
-        "type": "Transitive",
-        "resolved": "0.3.0",
-        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
-      },
       "Starlings.Tokenizers": {
         "type": "Transitive",
         "resolved": "0.3.0",
@@ -46,6 +41,12 @@
         "requested": "[9.8.0, )",
         "resolved": "9.8.0",
         "contentHash": "0++t+lPqX5amr7Kgh+ZFm1C5hhzMmFc5Dhoc6siNZ4sPXxy0pLTFRk+4vHn0hZf7Xe8Y9OoqL2cL4oTdjt8STQ=="
+      },
+      "Starlings.Acquisition": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
       }
     }
   }

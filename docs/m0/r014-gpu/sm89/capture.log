@@ -1,0 +1,7 @@
+device SM 89; library libroost_kernels_sm89.so sha256 e4b8798c6b560249059c14d6ccf6518b469478a465ee323ece7e8999742d9248; SM status Untested
+capital: 24 forwards, 25 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 3.3 s
+system-haiku: 24 forwards, 44 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 2.9 s
+multi-turn: 24 forwards, 69 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 2.9 s
+code: 24 forwards, 31 prompt tokens, argmax equals the reference's greedy token at 23 of 24; 2.9 s
+long-context: 24 forwards, 134 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 3.1 s
+PASS
