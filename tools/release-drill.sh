@@ -115,10 +115,27 @@ echo "ok:   locked restore of Roost.slnx"
 if ((skip_tests)); then
     echo "note: tests skipped (--skip-tests); a release never passes this flag"
 else
-    (cd "$src" && CI=true "$dotnet" test --solution Roost.slnx --configuration Release --no-restore "${msbuild_extra[@]}") \
-        >"$work/test.log" 2>&1 || { tail -60 "$work/test.log"; fail "tests failed"; }
-    grep -E 'Total|total:|Passed!|Failed!|succeeded|error' "$work/test.log" | tail -20 || true
-    echo "ok:   CPU test suite passed"
+    (cd "$src" && CI=true "$dotnet" build Roost.slnx --configuration Release --no-restore "${msbuild_extra[@]}") \
+        >"$work/build.log" 2>&1 || { tail -40 "$work/build.log"; fail "build failed"; }
+    # The xunit v3 test projects are executables; run each one directly. (`dotnet test` through Microsoft.Testing.Platform
+    # reports "Zero tests ran" on some hosts, which would hide whether anything was tested.)
+    : >"$work/test.log"
+    tests=0
+    while read -r rel; do
+        name="$(basename "$rel" .csproj)"
+        exe="$src/$(dirname "$rel")/bin/Release/net10.0/$name"
+        [[ -x "$exe" ]] || fail "test executable missing: $exe"
+        "$exe" >"$work/test-$name.log" 2>&1 || { tail -60 "$work/test-$name.log"; fail "tests failed: $name"; }
+        cat "$work/test-$name.log" >>"$work/test.log"
+        summary="$(sed 's/\x1b\[[0-9;]*m//g' "$work/test-$name.log" | grep -a "  $name  Total:" | tail -1)"
+        if [[ ! "$summary" =~ Total:\ ([0-9]+),\ Errors:\ 0,\ Failed:\ 0 ]] || ((BASH_REMATCH[1] == 0)); then
+            fail "no passing test summary for $name: '$summary'"
+        fi
+        echo "ok:  $summary"
+        tests=$((tests + 1))
+    done < <(grep -o 'Path="tests/[^"]*\.csproj"' "$src/Roost.slnx" | sed 's/^Path="//; s/"$//')
+    ((tests > 0)) || fail "Roost.slnx lists no test projects"
+    echo "ok:   $tests test projects passed"
 fi
 (cd "$src" && python3 -I tools/check-roost-boundaries.py) || fail "Roost boundary check failed"
 
