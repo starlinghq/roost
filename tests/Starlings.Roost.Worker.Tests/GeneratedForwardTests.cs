@@ -141,9 +141,9 @@ public sealed unsafe class GeneratedForwardTests
     }
 
     [Fact]
-    public void AWindowOfZeroMakesCpuOpsAttendToTheCurrentKeyOnly()
+    public void AWindowOfZeroIsRejectedAndAWindowOfOneDropsTheOldestKey()
     {
-        // Three keys with distinct values; the last query. WindowLeft 0 gives V[2]; -1 gives the softmax mix of all three.
+        // Three keys with distinct values; the last query. WindowLeft 0 is rejected; 1 mixes V[1] and V[2]; -1 mixes all three.
         const int hd = 4;
         var q = new float[hd] { 1, 0, 0, 0 };
         var k = new float[3 * hd];
@@ -192,9 +192,12 @@ public sealed unsafe class GeneratedForwardTests
             return o;
         }
 
-        Assert.Equal(30f, Attend(0)[0]);
-        float mix = Attend(-1)[0];
-        Assert.InRange(mix, 20f, 30f);
-        Assert.NotEqual(30f, mix);
+        var ex = Assert.Throws<ArgumentException>(() => Attend(0));
+        Assert.Contains("PagedAttention", ex.Message, StringComparison.Ordinal);
+        float two = Attend(1)[0];
+        float all = Attend(-1)[0];
+        Assert.InRange(two, 20f, 30f);
+        Assert.InRange(all, 20f, 30f);
+        Assert.True(two > all);
     }
 }
