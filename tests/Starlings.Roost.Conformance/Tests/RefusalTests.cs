@@ -3,10 +3,10 @@ using Starlings.Roost.Abi;
 
 namespace Starlings.Roost.Conformance.Tests;
 
-/// <summary>R-019 decisions taken from data: the bf16 Gemm epilogue refusal, and the prefill batch-composition check.</summary>
+/// <summary>R-019 decisions taken from data: the Gemm epilogue refusal (C or bias), and the prefill batch-composition check.</summary>
 public sealed partial class RefusalTests
 {
-    private static readonly RefusalRule CpuRule = new(CpuBackend.VariantId, RefusalRules.GemmBf16CWithBias.Applies, KernelStatus.Unsupported, "test");
+    private static readonly RefusalRule CpuRule = new(CpuBackend.VariantId, RefusalRules.GemmEpilogueWithCOrBias.Applies, KernelStatus.Unsupported, "test");
 
     private static ConformanceReport RunGemm(IKernelBackend b)
     {
@@ -26,19 +26,23 @@ public sealed partial class RefusalTests
     private static ExecResult Refuse(OpCase c, KernelStatus s) => new() { Status = (int)s, Message = "refused" };
 
     [Fact]
-    public void TheRuleSelectsExactlyBf16WithBothACInputAndABias()
+    public void TheRuleSelectsExactlyTheCasesWithACInputOrABias()
     {
         var cases = CaseCatalog.Generate(OpId.Gemm, 20261019, CaseProfile.Full).ToList();
         try
         {
-            var hit = cases.Where(RefusalRules.GemmBf16CWithBias.Applies).ToList();
+            var hit = cases.Where(RefusalRules.GemmEpilogueWithCOrBias.Applies).ToList();
             Assert.NotEmpty(hit);
-            Assert.All(hit, c => Assert.Equal((DType.BF16, 1, 1), (c.Dtype, c.I("use_bias"), c.I("use_c"))));
-            Assert.All(cases.Where(c => !hit.Contains(c)), c => Assert.False(c.Dtype == DType.BF16 && c.I("use_bias") == 1 && c.I("use_c") == 1));
-            // The five cases that exceeded the class in the SM 86 run are among them (fixed-epilogue bf16 bias with beta, at both buckets).
+            Assert.All(hit, c => Assert.True(c.I("use_bias") == 1 || c.I("use_c") == 1));
+            Assert.All(cases.Where(c => !hit.Contains(c)), c => Assert.Equal((0, 0), (c.I("use_bias"), c.I("use_c"))));
+            // Both dtypes, each epilogue alone and together; the five cases that exceeded the class in the first SM 86 run are among them.
+            Assert.Contains(hit, c => c.Dtype == DType.F16);
+            Assert.Contains(hit, c => c.Dtype == DType.BF16 && c.I("use_bias") == 1 && c.I("use_c") == 0);
+            Assert.Contains(hit, c => c.Dtype == DType.BF16 && c.I("use_bias") == 0 && c.I("use_c") == 1);
             Assert.Contains(hit, c => c.Id.StartsWith("fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket49", StringComparison.Ordinal));
             Assert.Contains(hit, c => c.Id.StartsWith("fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket49", StringComparison.Ordinal));
-            Assert.DoesNotContain(hit, c => c.Dtype == DType.F16);
+            // Alpha alone is served.
+            Assert.Contains(cases.Except(hit), c => c.F("alpha") != 1f);
         }
         finally
         {
@@ -54,9 +58,10 @@ public sealed partial class RefusalTests
         ConformanceReport rep = RunGemm(wrapped);
         Assert.True(rep.Green);
         Assert.Contains(rep.Results, x => x.Outcome == "refused");
-        Assert.All(rep.Results.Where(x => x.Outcome == "refused"), x => Assert.Equal(DType.BF16, x.Dtype));
+        Assert.Contains(rep.Results, x => x.Outcome == "refused" && x.Dtype == DType.F16);
         Assert.Equal(0, rep.Count("fail") + rep.Count("error"));
         Assert.Contains(rep.Results, x => x.Outcome == "pass" && x.Dtype == DType.F16);
+        Assert.Contains(rep.Results, x => x.Outcome == "pass" && x.Dtype == DType.BF16);
     }
 
     [Fact]
@@ -67,7 +72,7 @@ public sealed partial class RefusalTests
         Assert.False(rep.Green);
         var served = rep.Results.Where(x => x.Detail.Contains("served a combination", StringComparison.Ordinal)).ToList();
         Assert.NotEmpty(served);
-        Assert.All(served, x => Assert.Equal(("fail", DType.BF16), (x.Outcome, x.Dtype)));
+        Assert.All(served, x => Assert.Equal("fail", x.Outcome));
         Assert.All(rep.Results.Except(served).Where(x => x.Outcome != "not_run"), x => Assert.Equal("pass", x.Outcome));
     }
 
@@ -87,7 +92,11 @@ public sealed partial class RefusalTests
         using var cpu = new CpuBackend();
         using var wrapped = new DelegatingBackend(cpu, replace: (v, c) => c.Dtype == DType.F16 ? Refuse(c, KernelStatus.Unsupported) : null);
         ConformanceReport rep = RunGemm(wrapped);
-        Assert.All(rep.Results.Where(x => x.Dtype == DType.F16 && x.Outcome != "not_run"), x => Assert.Equal("fail", x.Outcome));
+        // f16 cases the rule covers (C or bias) are refused as registered; every other f16 case refused is a failure.
+        var f16 = rep.Results.Where(x => x.Dtype == DType.F16 && x.Outcome is not ("not_run" or "refused")).ToList();
+        Assert.NotEmpty(f16);
+        Assert.All(f16, x => Assert.Equal("fail", x.Outcome));
+        Assert.All(rep.Results.Where(x => x.Outcome == "refused"), x => Assert.Contains("as registered", x.Detail, StringComparison.Ordinal));
     }
 
     [Fact]

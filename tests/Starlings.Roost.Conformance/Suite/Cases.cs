@@ -35,7 +35,7 @@ public sealed record CaseProfile(string Name, bool Large, int RandomPerOp)
 /// Qwen/Qwen3.5-0.8B at 2fc06364715b967f1860aea9cf38778875588b17) and randomized shapes and values. Every case carries the
 /// seed it was drawn from, so a failure reproduces from its id and the run's base seed.
 /// </summary>
-public static class CaseCatalog
+public static partial class CaseCatalog
 {
     private const float Eps = 1e-6f;
     private const int QHeads = 8, KvHeads = 2, HeadDim = 256;
@@ -72,7 +72,7 @@ public static class CaseCatalog
         OpId.Residual => ResidualCases(baseSeed, p),
         OpId.CacheWrite => CacheWriteCases(baseSeed, p),
         OpId.CacheCopy => CacheCopyCases(baseSeed, p),
-        _ => throw new NotSupportedException($"No cases for {op}."),
+        _ => HybridCases(op, baseSeed, p),
     };
 
     private static ulong SeedFor(OpId op, string id, ulong baseSeed) => Rng.SeedOf($"{op}/{id}", baseSeed);
@@ -537,11 +537,11 @@ public static class CaseCatalog
             yield return Gemm("fixed-alpha-beta-c-bias-bucket64", dt, 5, p.Large ? 512 : 128, p.Large ? 1024 : 256, false, true, 2f, 1f, 64, baseSeed);
             yield return Gemm("fixed-small-k8", dt, 4, 64, 8, true, false, 1f, 0f, 0, baseSeed);
 
-            // The epilogue matrix: every combination of alpha, beta * C and bias, on one shape whose partial sums reach several
+            // The epilogue matrix: alpha alone (served) and every combination with beta * C or bias (refused, R-019), on one shape whose partial sums reach several
             // units, so that an intermediate rounded to the 16-bit output type before the epilogue is finished shows.
             foreach (int bucket in new[] { 0, 49 })
             {
-                foreach ((float alpha, float beta, bool bias) in new[] { (0.5f, 0f, true), (1f, 1f, true), (0.5f, 1f, false), (0.5f, 1f, true) })
+                foreach ((float alpha, float beta, bool bias) in new[] { (0.5f, 0f, false), (0.5f, 0f, true), (1f, 1f, true), (0.5f, 1f, false), (0.5f, 1f, true) })
                 {
                     yield return Gemm("fixed-epilogue", dt, 39, 256, 200, true, bias, alpha, beta, bucket, baseSeed);
                 }

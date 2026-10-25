@@ -17,17 +17,19 @@ public sealed record RefusalRule(string Variant, Func<OpCase, bool> Applies, Ker
 public static class RefusalRules
 {
     /// <summary>
-    /// <c>gemm-cublaslt</c> in bf16 with a C input (<c>beta != 0</c>) and a bias together. On SM 86 the pinned algorithms exceed the
-    /// <c>gemm-bf16</c> class on it (utilisation 1.09 to 1.95, 44 elements in 5 conformance cases); f16 and every other epilogue
-    /// pass. No generated forward uses the combination (<c>ModelForwardsTests</c>), so the variant refuses it instead of the class
-    /// being widened. The kernel fix is a follow-up (kernels/README.md).
+    /// <c>gemm-cublaslt</c> with a C input (<c>beta != 0</c>) or a bias, in any dtype. The maintainer's R-019 ruling of 2026-10-20 is to
+    /// refuse unused GEMM epilogues at plan time; no generated forward passes C, Beta or Bias to a Gemm node
+    /// (<c>RefusalTests.NoGeneratedModelForwardUsesGemmWithBetaOrBias</c> scans the model definitions), so every such epilogue is
+    /// refused and alpha alone stays served. The first SM 86 run had found bf16 with C and bias outside the <c>gemm-bf16</c> class
+    /// (utilisation 1.09 to 1.95, 44 elements in 5 cases). Serving an epilogue again needs a model that uses it, a kernel change and
+    /// this rule removed together (kernels/README.md).
     /// </summary>
-    public static readonly RefusalRule GemmBf16CWithBias = new(
+    public static readonly RefusalRule GemmEpilogueWithCOrBias = new(
         "gemm-cublaslt",
-        c => c.Op == OpId.Gemm && c.Dtype == DType.BF16 && c.IOr("use_c", 0) != 0 && c.IOr("use_bias", 0) != 0,
+        c => c.Op == OpId.Gemm && (c.IOr("use_c", 0) != 0 || c.IOr("use_bias", 0) != 0),
         KernelStatus.Unsupported,
-        "bf16 Gemm with beta != 0 and a bias is outside the gemm-bf16 class; refused at plan time (R-019 finding)");
+        "Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)");
 
     /// <summary>The rules applied by default.</summary>
-    public static readonly IReadOnlyList<RefusalRule> Registered = [GemmBf16CWithBias];
+    public static readonly IReadOnlyList<RefusalRule> Registered = [GemmEpilogueWithCOrBias];
 }
