@@ -1,0 +1,66 @@
+# PROPOSED reference fixtures for Qwen3.5-0.8B (R-014, stream B3). NOT BINDING. The maintainer copies what they accept into
+# evidence/protected/ and sets the binding tolerances and the near-tie bound per profile (decision 8); nothing here is read by any
+# gate. Rationale and open questions: evidence/proposals/r014-fixtures.md.
+#
+# The fixture data (greedy outputs, step-0 logits, per-layer hidden states, recurrent and conv state captures) is 2.5 GB and never
+# enters Git. This file pins it by SHA-256; the bytes sit in run artifacts on the development host
+# (/home/mark/Projects/roost-evidence/R-014/ref) until the maintainer chooses where protected fixture data is published (the
+# proposal suggests a GitHub release asset, as R-019 does for its upstream goldens).
+proposal_version = 1
+status = "proposed"
+item = "R-014"
+
+[reference]
+runner = "roost-evidence reference-run --capture-layers --state-forwards 24 (evidence/pipeline, R-010/R-011)"
+numerics = "transformers 5.20.1, torch 2.9.1+cpu, float32, CPU"
+checkpoint = "Qwen/Qwen3.5-0.8B at 2fc06364715b967f1860aea9cf38778875588b17"
+checkpoint_lock = "evidence/registry/qwen3.5-0.8b.lock.toml"
+checkpoint_check = "the snapshot the run loaded matches the lock for model.safetensors, config.json, chat_template.jinja, tokenizer.json and tokenizer_config.json"
+prompt_set = "R022PromptSet: 5 chat conversations through Starling's Qwen35ChatTemplate (thinking off), 25 to 134 prompt tokens"
+generation = "greedy, 24 new tokens per case, stop ids [248044, 248046] (none reached; finish_reason length)"
+produced_by = "the R-022 reference run (docs/m0/roost-r022-cpu-parity.md, Reproduce steps 1 and 2); the reference is independent of Roost's code"
+
+# The profiles these fixtures are the reference for. Tolerances per profile are the maintainer's (decision 8).
+[profiles]
+"qwen3.5-0.8b/cpu-fp64-reference" = "CpuOps forward; proposed values in evidence/proposals/r022-tolerances.toml"
+"qwen3.5-0.8b/cuda-bf16-eager" = "the M0 gate profile (R-026); GPU against these fixtures is not measured yet, see the .md"
+
+[files]
+"reference.jsonl" = { sha256 = "fb58379b997f520907efac887920c62f815141ef493ec9f2795ab188abfa46fd", content = "per case: prompt ids, rendered prompt, greedy output ids, top-2 margin per step, step-0 top tokens, digests of the files below" }
+"environment.json" = { sha256 = "8c5bda6eb85bec6072898d8180aeaca2414599432e4a99cfea8cffd0577f1463", content = "runner versions, stop ids, layer types and capture stages" }
+"step0/capital.f32" = { sha256 = "2b6a2787772b3a676f84bacec8870be6e88e5cdbe95e7b7e603e531c9f68c9d3", size = 993280 }
+"step0/code.f32" = { sha256 = "84ced7673b605c5fdfe5e2963c9fa313b69cbdb1ed628e754fc4751c624d9c37", size = 993280 }
+"step0/long-context.f32" = { sha256 = "e1241fbafcd88f221bba1f5e3ec3d087ae818a9f5e55bc8b78bc1a82cb5c5d8f", size = 993280 }
+"step0/multi-turn.f32" = { sha256 = "cceb86cef8efa5270a4f90c942b46858e1da0e14e81a321995b8543e223ea6fa", size = 993280 }
+"step0/system-haiku.f32" = { sha256 = "46aee115451f38f07d3fdcb75cabd645e70b3053856907badb622075709bf80e", size = 993280 }
+"layers/capital.safetensors" = { sha256 = "7278b9a2c4924c1f9eb7b9d163867e82d51c5b27d1bd786ca9b1200b34df9c84", size = 500712352 }
+"layers/code.safetensors" = { sha256 = "439fa752d089a74d0ab291cb923695f4e6687979db5488de97d3bb69c9a11049", size = 501351360 }
+"layers/long-context.safetensors" = { sha256 = "4b95f9c86b4529c3d93edc469612735d2ade1da7d4eeeb8b3d7a03a9476073df", size = 512321144 }
+"layers/multi-turn.safetensors" = { sha256 = "065ffeff8460ddac6ba55b86c39fc68af97a2660fce33b2f74a6cda7724e5d92", size = 505398440 }
+"layers/system-haiku.safetensors" = { sha256 = "5e2e392363b41c203f2171ea354d74a49cc278acd4775a903e63ecc4096419d7", size = 502735904 }
+
+# Greedy outputs (small enough to state here) and the three smallest top-2 logit margins per case, [step, margin].
+[cases.capital]
+prompt_tokens = 25
+output_ids = [760, 3177, 314, 11751, 557, 11543, 430, 279, 6511, 314, 9338, 1521, 424, 557, 279, 1379, 91188, 321, 44737, 4927, 3177, 303, 279, 5364]
+smallest_margins = [[15, 0.0554], [18, 0.3379], [19, 0.4062]]
+
+[cases.system-haiku]
+prompt_tokens = 44
+output_ids = [4308, 279, 8329, 11, 198, 760, 10583, 4255, 11, 198, 2939, 279, 12515, 369, 17024, 13, 271, 760, 39107, 369, 279, 12503, 1881, 279]
+smallest_margins = [[5, 0.0711], [7, 0.1256], [10, 0.1663]]
+
+[cases.multi-turn]
+prompt_tokens = 69
+output_ids = [8160, 369, 279, 2923, 13909, 28253, 29006, 314, 279, 6673, 25, 271, 16, 13, 220, 2972, 3367, 440, 279, 2702, 1324, 314, 39332, 64700]
+smallest_margins = [[9, 0.0479], [6, 0.2402], [20, 0.2475]]
+
+[cases.code]
+prompt_tokens = 31
+output_ids = [71093, 12305, 198, 727, 73111, 1393, 25, 514, 8, 1411, 514, 25, 198, 262, 4071, 198, 262, 3301, 279, 307, 7324, 76938, 1324, 5199]
+smallest_margins = [[23, 0.0096], [17, 0.1903], [3, 0.4042]]
+
+[cases.long-context]
+prompt_tokens = 134
+output_ids = [27775, 383, 279, 5020, 3766, 11, 1532, 513, 279, 2250, 1822, 3387, 430, 31969, 25, 271, 9, 256, 2972, 760, 28107, 321, 6765, 14147]
+smallest_margins = [[12, 0.3243], [19, 0.4391], [0, 0.4939]]
