@@ -1,0 +1,41 @@
+library roost-kernels-sm86 abi 0x10002, 19 variants; device sm_86; 2026-10-25T02:37:52.1497789Z
+PASS    rope-roost fixed-qwen35-BF16-t17 class=elementwise-bf16 utilisation=0.268 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-qwen35-longpos-BF16-t33 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-full-rotary-BF16-t33 class=elementwise-bf16 utilisation=0.418 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-interleaved-BF16-t33 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-hd64-BF16-t33 class=elementwise-bf16 utilisation=0.285 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-hd128-BF16-t33 class=elementwise-bf16 utilisation=0.359 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-llama3-hd128-BF16-t33 class=elementwise-bf16 utilisation=0.253 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-llama3-hd256-rot64-BF16-t33 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-huge-positions-BF16-t33 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-llama3-longpos-BF16-t33 class=elementwise-bf16 utilisation=0.362 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-qwen35-BF16-t1 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rope-roost fixed-qwen35-BF16-t129 class=elementwise-bf16 utilisation=0.008 violations=0 det=pass inv=pass
+PASS    rope-roost random-0-huge-positions-BF16-t10 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rope-roost random-1-llama3-hd256-rot64-BF16-t45 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rope-roost random-2-qwen35-longpos-BF16-t41 class=elementwise-bf16 utilisation=0.002 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-qwen35-F16-t17 class=elementwise-f16 utilisation=0.389 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-qwen35-longpos-F16-t33 class=elementwise-f16 utilisation=0.427 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-full-rotary-F16-t33 class=elementwise-f16 utilisation=0.410 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-interleaved-F16-t33 class=elementwise-f16 utilisation=0.378 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-hd64-F16-t33 class=elementwise-f16 utilisation=0.456 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-hd128-F16-t33 class=elementwise-f16 utilisation=0.446 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-llama3-hd128-F16-t33 class=elementwise-f16 utilisation=0.345 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-llama3-hd256-rot64-F16-t33 class=elementwise-f16 utilisation=0.282 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-huge-positions-F16-t33 class=elementwise-f16 utilisation=0.368 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-llama3-longpos-F16-t33 class=elementwise-f16 utilisation=0.485 violations=0 det=pass inv=pass
+PASS    rope-roost fixed-qwen35-F16-t1 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rope-roost fixed-qwen35-F16-t129 class=elementwise-f16 utilisation=0.444 violations=0 det=pass inv=pass
+PASS    rope-roost random-0-qwen35-F16-t45 class=elementwise-f16 utilisation=0.324 violations=0 det=pass inv=pass
+PASS    rope-roost random-1-full-rotary-F16-t48 class=elementwise-f16 utilisation=0.489 violations=0 det=pass inv=pass
+PASS    rope-roost random-2-qwen35-longpos-F16-t56 class=elementwise-f16 utilisation=0.446 violations=0 det=pass inv=pass
+PASS    rope-roost golden-Rope-BF16-pos4096-t17 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rope-roost golden-Rope-BF16-pos262144-t17 class=elementwise-bf16 utilisation=0.366 violations=0 det=pass inv=n/a
+PASS    rope-roost golden-Rope-BF16-pos2e31-t17 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rope-roost golden-Rope-F16-pos4096-t17 class=elementwise-f16 utilisation=0.307 violations=0 det=pass inv=n/a
+PASS    rope-roost golden-Rope-F16-pos262144-t17 class=elementwise-f16 utilisation=0.015 violations=0 det=pass inv=n/a
+PASS    rope-roost golden-Rope-F16-pos2e31-t17 class=elementwise-f16 utilisation=0.141 violations=0 det=pass inv=n/a
+roost-kernels-sm86: 36 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  Rope            rope-roost                         pass=36   fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm86/rope-roost.synccheck.results.json
+=== green

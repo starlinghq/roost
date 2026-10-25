@@ -1,0 +1,65 @@
+library roost-kernels-sm89 abi 0x10002, 19 variants; device sm_89; 2026-10-25T02:37:42.1466556Z
+PASS    gemm-cublaslt fixed-k_proj-BF16-1x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-k_proj-BF16-3x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-k_proj-BF16-17x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-BF16-1x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-o_proj-BF16-3x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.001 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-BF16-17x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.398 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-nontransposed-BF16-17x256x512-tb0-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt fixed-bias-BF16-17x256x512-tb1-bias1-ab1.0-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-alpha-beta-c-BF16-17x256x512-tb1-bias0-ab0.5.0.25-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-alpha-beta-c-bias-bucket64-BF16-5x128x256-tb0-bias1-ab2.1-bucket64 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt fixed-small-k8-BF16-4x64x8-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.0-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.1-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.0-bucket49 class=gemm-bf16 utilisation=0.176 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.0-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.1-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt random-0-BF16-64x136x440-tb1-bias1-ab1.0-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt random-1-BF16-26x296x192-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt random-2-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt fixed-k_proj-F16-1x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.029 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-k_proj-F16-3x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-k_proj-F16-17x256x512-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.239 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-F16-1x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.248 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt fixed-o_proj-F16-3x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.234 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-o_proj-F16-17x512x1024-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.379 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-nontransposed-F16-17x256x512-tb0-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.357 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt fixed-bias-F16-17x256x512-tb1-bias1-ab1.0-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-alpha-beta-c-F16-17x256x512-tb1-bias0-ab0.5.0.25-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-alpha-beta-c-bias-bucket64-F16-5x128x256-tb0-bias1-ab2.1-bucket64 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt fixed-small-k8-F16-4x64x8-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.0-bucket0 class=gemm-f16 utilisation=0.334 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.0-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab1.1-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.1-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.1-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.0-bucket49 class=gemm-f16 utilisation=0.331 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.0-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab1.1-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.1-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.1-bucket49 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt random-0-F16-27x104x80-tb1-bias1-ab0.5.0.25-bucket54 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt random-1-F16-35x88x232-tb0-bias0-ab2.0-bucket38 class=gemm-f16 utilisation=0.029 violations=0 det=pass inv=pass
+REFUSED gemm-cublaslt random-2-F16-65x56x224-tb0-bias1-ab0.5.0.25-bucket0 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt golden-Gemm-BF16-o_proj-1x1024x2048 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-o_proj-17x1024x2048 class=gemm-bf16 utilisation=0.410 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-k_proj-3x512x1024 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-BF16-down-nontransposed-17x1024x3584 class=gemm-bf16 utilisation=0.342 violations=0 det=pass inv=n/a
+REFUSED gemm-cublaslt golden-Gemm-BF16-bias-17x1024x2048 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt golden-Gemm-BF16-alpha-beta-c-bias-bucket64-5x512x1024 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+PASS    gemm-cublaslt golden-Gemm-F16-o_proj-1x1024x2048 class=gemm-f16 utilisation=0.361 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-o_proj-17x1024x2048 class=gemm-f16 utilisation=0.450 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-k_proj-3x512x1024 class=gemm-f16 utilisation=0.297 violations=0 det=pass inv=n/a
+PASS    gemm-cublaslt golden-Gemm-F16-down-nontransposed-17x1024x3584 class=gemm-f16 utilisation=0.450 violations=0 det=pass inv=n/a
+REFUSED gemm-cublaslt golden-Gemm-F16-bias-17x1024x2048 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+REFUSED gemm-cublaslt golden-Gemm-F16-alpha-beta-c-bias-bucket64-5x512x1024 Unsupported from plan, as registered: Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)
+roost-kernels-sm89: 30 passed, 0 failed, 0 errors, 0 not run, 30 refused as registered
+  Gemm            gemm-cublaslt                      pass=30   fail=0   not_run=0   refused=30  abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm89/gemm-cublaslt.synccheck.results.json
+=== green

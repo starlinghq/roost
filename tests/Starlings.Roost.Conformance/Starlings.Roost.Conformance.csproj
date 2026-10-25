@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The kernel conformance suite (R-019, stream D). Suite/ holds the runner: cases, comparison, goldens, results; it has no
+    CUDA dependency and no xunit dependency, and tests/Starlings.Roost.Conformance.Cuda compiles the same files to run
+    them against a kernel library. Tests/ is the CPU half that CI runs: the suite checked against an independent oracle,
+    against upstream goldens when the asset is given, and against deliberately damaged backends.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Starlings.Roost.Conformance</RootNamespace>
+    <!-- A test and tool assembly: plain loops and exceptions, no localisation. -->
+    <NoWarn>$(NoWarn);CA1303;CA1304;CA1305;CA1307;CA1309;CA1310;CA1707;CA1812;CA1822;CA1031;CA1051;CA1861;CA2000;CA5394;CS1591;IDE0058;IDE0010;IDE0011;IDE0045;IDE0046;IDE0072;IDE0305;IDE0300;IDE0301;IDE0090;CA1002;CA1819;CA1815;CA1034;CA1720;CA1711;CA1716;CA1008;CA1027;CA1062;CA1859;CA1860;CA2201</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="op-class-tolerances.proposal.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="conformance-results.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="goldens/goldens.lock.json" Link="goldens.lock.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

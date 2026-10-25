@@ -1,0 +1,28 @@
+library roost-kernels-sm86 abi 0x10002, 19 variants; device sm_86; 2026-10-25T02:32:54.4956796Z
+PASS    paged-attention-flashinfer-fa2 decode-mixed4-PagedNhd-ps16-q1.1.1.1-kv5.37.130.16-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.098 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 decode-mixed4-PagedHnd-ps16-q1.1.1.1-kv5.37.130.16-causal-PagedHnd-ps16 class=attention-bf16 utilisation=0.086 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 decode-mixed4-PagedNhd-ps32-q1.1.1.1-kv5.37.130.16-causal-PagedNhd-ps32 class=attention-bf16 utilisation=0.184 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 decode-mixed4-PagedHnd-ps64-q1.1.1.1-kv5.37.130.16-causal-PagedHnd-ps64 class=attention-bf16 utilisation=0.101 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 decode-single-token-history-q1-kv1-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 decode-page-multiples-q1.1.1.1-kv16.32.48.64-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.029 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-one-token-q1-kv1-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-fresh-100-q100-kv100-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.432 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-fresh-100-hnd-q100-kv100-causal-PagedHnd-ps16 class=attention-bf16 utilisation=0.472 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-chunk-64-of-300-q64-kv300-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.164 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-chunk-32-of-200-hnd-ps32-q32-kv200-causal-PagedHnd-ps32 class=attention-bf16 utilisation=0.181 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-multi-seq-q17.64.1.60-kv17.300.50.60-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.459 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-non-causal-32-of-200-q32-kv200-full-PagedNhd-ps16 class=attention-bf16 utilisation=0.168 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 prefill-partial-last-page-q33.5-kv33.21-causal-PagedNhd-ps16 class=attention-bf16 utilisation=0.441 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 random-0-prefill-q15-kv49-full-PagedHnd-ps32 class=attention-bf16 utilisation=0.174 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 random-1-decode-q1.1.1.1-kv75.140.20.119-causal-PagedHnd-ps16 class=attention-bf16 utilisation=0.180 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 random-2-decode-q1.1.1-kv111.23.28-causal-PagedHnd-ps64 class=attention-bf16 utilisation=0.007 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 golden-PagedAttention-BF16-decode-mixed4 class=attention-bf16 utilisation=0.159 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 golden-PagedAttention-BF16-decode-mixed4-hnd-ps64 class=attention-bf16 utilisation=0.171 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 golden-PagedAttention-BF16-prefill-fresh-100 class=attention-bf16 utilisation=0.467 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 golden-PagedAttention-BF16-prefill-chunk-64-of-300-hnd-ps32 class=attention-bf16 utilisation=0.098 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 golden-PagedAttention-BF16-prefill-multi-seq class=attention-bf16 utilisation=0.303 violations=0 det=pass inv=n/a
+PASS    paged-attention-flashinfer-fa2 golden-PagedAttention-BF16-prefill-non-causal-32-of-200 class=attention-bf16 utilisation=0.174 violations=0 det=pass inv=n/a
+roost-kernels-sm86: 23 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  PagedAttention  paged-attention-flashinfer-fa2     pass=23   fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm86/paged-attention-flashinfer-fa2.memcheck.results.json
+=== green

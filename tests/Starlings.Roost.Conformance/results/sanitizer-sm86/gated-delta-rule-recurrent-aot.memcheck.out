@@ -1,0 +1,14 @@
+library roost-kernels-sm86 abi 0x10002, 19 variants; device sm_86; 2026-10-25T02:33:21.6445667Z
+PASS    gated-delta-rule-recurrent-aot fixed-BF16-64.128.65.1.0.63-views-init-g0.2 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.235 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-recurrent-aot fixed-BF16-70.40-views-init-g2.5 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.190 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-recurrent-aot fixed-BF16-1.1.1.1-views-init-g0.2 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.222 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-recurrent-aot fixed-BF16-5.1.1-dense-init-g0.2 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.206 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-recurrent-aot fixed-BF16-3-views-g0.2 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.027 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-recurrent-aot fixed-BF16-1.0.1-views-init-g0.2 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.022 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-recurrent-aot random-0-BF16-1.47.43-dense-init-g0.2 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.283 violations=0 det=pass inv=pass
+PASS    gated-delta-rule-recurrent-aot random-1-BF16-29-views-init-g1 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.061 violations=0 det=pass inv=n/a
+PASS    gated-delta-rule-recurrent-aot random-2-BF16-28.41.2.16-views-init-g2.5 class=gdn-recurrent-bf16,gdn-recurrent-state-f32 utilisation=0.207 violations=0 det=pass inv=pass
+roost-kernels-sm86: 9 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  GatedDeltaRule  gated-delta-rule-recurrent-aot     pass=9    fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm86/gated-delta-rule-recurrent-aot.memcheck.results.json
+=== green
