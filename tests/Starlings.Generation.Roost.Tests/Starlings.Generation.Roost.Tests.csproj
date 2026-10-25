@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Generation.Roost/Starlings.Generation.Roost.csproj" />
+    <!-- The eager worker's own plan reader and result writer (CPU code; nothing here touches CUDA) check every plan the client writes. -->
+    <ProjectReference Include="../../src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Models.Tiny/Starlings.Roost.Models.Tiny.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The 4 KB hand-built byte-level BPE tokenizer of the generation layer's tests (no Qwen asset in Git). -->
+    <None Include="../Starlings.Roost.Generation.Tests/Fixtures/tiny-bytelevel-bpe.tokenizer.json" Link="Fixtures/tiny-bytelevel-bpe.tokenizer.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
