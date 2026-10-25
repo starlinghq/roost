@@ -1,0 +1,29 @@
+library roost-kernels-sm86 abi 0x10002, 19 variants; device sm_86; 2026-10-25T02:32:49.2545450Z
+PASS    rms-norm-flashinfer fixed-BF16-1x1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rms-norm-flashinfer fixed-BF16-7x1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-BF16-64x1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-BF16-257x1024 class=elementwise-bf16 utilisation=0.335 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-strided-BF16-5x1024-s1280-1152 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-BF16-3x3584 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer random-0-BF16-116x3320 class=elementwise-bf16 utilisation=0.418 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer random-1-BF16-19x1496 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer random-2-BF16-106x4000 class=elementwise-bf16 utilisation=0.444 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-F16-1x1024 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rms-norm-flashinfer fixed-F16-7x1024 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-F16-64x1024 class=elementwise-f16 utilisation=0.476 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-F16-257x1024 class=elementwise-f16 utilisation=0.484 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-strided-F16-5x1024-s1280-1152 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer fixed-F16-3x3584 class=elementwise-f16 utilisation=0.490 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer random-0-F16-79x3392-s3520-3432 class=elementwise-f16 utilisation=0.399 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer random-1-F16-86x3832-s4064-4048 class=elementwise-f16 utilisation=0.473 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer random-2-F16-211x1416-s1624-1496 class=elementwise-f16 utilisation=0.471 violations=0 det=pass inv=pass
+PASS    rms-norm-flashinfer golden-RmsNorm-BF16-1x1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rms-norm-flashinfer golden-RmsNorm-BF16-7x1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rms-norm-flashinfer golden-RmsNorm-BF16-3x3584 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rms-norm-flashinfer golden-RmsNorm-F16-1x1024 class=elementwise-f16 utilisation=0.000 violations=0 det=pass inv=n/a
+PASS    rms-norm-flashinfer golden-RmsNorm-F16-7x1024 class=elementwise-f16 utilisation=0.401 violations=0 det=pass inv=n/a
+PASS    rms-norm-flashinfer golden-RmsNorm-F16-3x3584 class=elementwise-f16 utilisation=0.418 violations=0 det=pass inv=n/a
+roost-kernels-sm86: 24 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  RmsNorm         rms-norm-flashinfer                pass=24   fail=0   not_run=0   refused=0   abi=pass
+results: /home/mark/Projects/roost-evidence/R-019/sanitizer-sm86/rms-norm-flashinfer.memcheck.results.json
+=== green

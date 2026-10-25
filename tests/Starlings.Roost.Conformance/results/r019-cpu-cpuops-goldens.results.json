@@ -7,7 +7,7 @@
   "candidate": "CpuOps against the upstream goldens",
   "producer": {
     "name": "Starlings.Roost.Conformance",
-    "repository_commit": "b18d0da7412f64b79bb4aab9fd410dd8cb9a7a76"
+    "repository_commit": "7b2b2cf3961de49d94704b8126e25ce96a683ea1"
   },
   "environment": {
     "machine": "omarchy",
@@ -20,7 +20,7 @@
   "assets": [
     {
       "path": "op-class-tolerances.proposal.json",
-      "sha256": "08b1fb85f49f44e08521106f3b360887ef120c586e368199b0da5e8ede361f6d"
+      "sha256": "738030e277e48a674caa77739f10e8fadfdbaff2382475b6070c3a15c58ad50a"
     },
     {
       "path": "roost-conformance-goldens.safetensors",
@@ -40,6 +40,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -66,6 +67,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -92,6 +94,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 10752,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -118,6 +121,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -144,6 +148,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 7168,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.4336360524947536,
@@ -170,6 +175,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 10752,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4088011674479109,
@@ -196,6 +202,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -206,6 +213,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -232,6 +240,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 10240,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -242,6 +251,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -268,6 +278,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -278,6 +289,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -304,6 +316,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 10240,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.4217481858376764,
@@ -314,6 +327,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -340,6 +354,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -350,6 +365,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -376,6 +392,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -386,6 +403,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -412,6 +430,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -422,6 +441,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -448,6 +468,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 34816,
           "max_abs": 0.0001220703125,
           "max_utilisation": 0.2540217910046474,
@@ -458,6 +479,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -484,6 +506,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -494,6 +517,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -520,6 +544,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 34816,
           "max_abs": 3.814697265625E-06,
           "max_utilisation": 0.09212706379377929,
@@ -530,6 +555,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -556,6 +582,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -582,6 +609,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -608,6 +636,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 204800,
           "max_abs": 0.001953125,
           "max_utilisation": 0.0974124809741248,
@@ -634,6 +663,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 131072,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.025733815842380377,
@@ -660,6 +690,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 167936,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.04996096799375488,
@@ -671,7 +702,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 1 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/cpu-reference/golden-PagedAttention-BF16-prefill-non-causal-32-of-200": {
@@ -686,6 +733,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 65536,
           "max_abs": 6.103515625E-05,
           "max_utilisation": 0.0032755002814883055,
@@ -712,6 +760,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 3584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -738,6 +787,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 28672,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -764,6 +814,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 3003,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -790,6 +841,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 3584,
           "max_abs": 1.52587890625E-05,
           "max_utilisation": 0.1194199832394415,
@@ -816,6 +868,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 28672,
           "max_abs": 0.001953125,
           "max_utilisation": 0.36443351596032414,
@@ -842,6 +895,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 3003,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -868,6 +922,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -894,6 +949,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -920,6 +976,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -946,6 +1003,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -972,6 +1030,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -998,6 +1057,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1024,6 +1084,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1050,6 +1111,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.3169090303382156,
@@ -1076,6 +1138,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1102,6 +1165,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1128,6 +1192,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1154,6 +1219,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1180,6 +1246,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1206,6 +1273,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1232,6 +1300,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1258,6 +1327,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 4096,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1284,6 +1354,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 20000,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1310,6 +1381,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1336,6 +1408,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1362,6 +1435,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1388,6 +1462,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1414,6 +1489,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1440,6 +1516,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1466,6 +1543,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1492,6 +1570,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1502,6 +1581,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1528,6 +1608,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1538,6 +1619,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1564,6 +1646,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1574,6 +1657,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1600,6 +1684,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 98304,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1626,6 +1711,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 98304,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1651,12 +1737,14 @@
       "failed": 0,
       "errors": 0,
       "not_run": 0,
+      "refused": 0,
+      "recorded_check_failures_in_passing_cases": 0,
       "green": true,
       "determinism_checked": true,
       "batch_invariance_checked": true,
       "goldens_given": true,
       "goldens_sha256": "99b0726085266d8b003f29fa87087b15f7c82a6b1c5d3b4fcb9122cd91e1eeb4",
-      "tolerance_file_sha256": "08b1fb85f49f44e08521106f3b360887ef120c586e368199b0da5e8ede361f6d",
+      "tolerance_file_sha256": "738030e277e48a674caa77739f10e8fadfdbaff2382475b6070c3a15c58ad50a",
       "tolerance_file_status": "proposal"
     },
     "classes": {
@@ -1717,6 +1805,7 @@
         "passed": 6,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1726,6 +1815,7 @@
         "passed": 4,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1735,6 +1825,7 @@
         "passed": 6,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1744,6 +1835,7 @@
         "passed": 6,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1753,6 +1845,7 @@
         "passed": 6,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1762,6 +1855,7 @@
         "passed": 12,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1771,6 +1865,7 @@
         "passed": 3,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1780,6 +1875,7 @@
         "passed": 3,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1789,6 +1885,7 @@
         "passed": 6,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1798,6 +1895,7 @@
         "passed": 3,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -1807,6 +1905,77 @@
         "passed": 2,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "GatedDeltaRule",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 0,
+        "failed": 0,
+        "not_run": 0,
+        "refused": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "CausalConv1d",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 0,
+        "failed": 0,
+        "not_run": 0,
+        "refused": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "RecurrentStateCopy",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 0,
+        "failed": 0,
+        "not_run": 0,
+        "refused": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "RecurrentStateSnapshot",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 0,
+        "failed": 0,
+        "not_run": 0,
+        "refused": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "GatedDeltaRuleGates",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 0,
+        "failed": 0,
+        "not_run": 0,
+        "refused": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "GatedRmsNorm",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 0,
+        "failed": 0,
+        "not_run": 0,
+        "refused": 0,
+        "abi_probe": "n/a"
+      },
+      {
+        "op": "SigmoidMul",
+        "variant": "cpu-reference",
+        "flags": "Deterministic, BatchInvariant",
+        "passed": 0,
+        "failed": 0,
+        "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       }
     ]

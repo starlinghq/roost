@@ -7,7 +7,7 @@
   "candidate": "Oracle (independent implementation) against CpuOps",
   "producer": {
     "name": "Starlings.Roost.Conformance",
-    "repository_commit": "b18d0da7412f64b79bb4aab9fd410dd8cb9a7a76"
+    "repository_commit": "7b2b2cf3961de49d94704b8126e25ce96a683ea1"
   },
   "environment": {
     "machine": "omarchy",
@@ -20,7 +20,7 @@
   "assets": [
     {
       "path": "op-class-tolerances.proposal.json",
-      "sha256": "08b1fb85f49f44e08521106f3b360887ef120c586e368199b0da5e8ede361f6d"
+      "sha256": "738030e277e48a674caa77739f10e8fadfdbaff2382475b6070c3a15c58ad50a"
     },
     {
       "path": "roost-conformance-goldens.safetensors",
@@ -40,6 +40,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -66,6 +67,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -92,6 +94,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 65536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -118,6 +121,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 263168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -144,6 +148,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 5120,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -170,6 +175,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 10752,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -196,6 +202,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 385120,
           "max_abs": 0.0078125,
           "max_utilisation": 0.4181591315945175,
@@ -222,6 +229,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 28424,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -248,6 +256,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 424000,
           "max_abs": 0.015625,
           "max_utilisation": 0.4922157357529828,
@@ -274,6 +283,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 176352,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -300,6 +310,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 293088,
           "max_abs": 0.0078125,
           "max_utilisation": 0.29487548587386875,
@@ -326,6 +337,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 245952,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -352,6 +364,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 287648,
           "max_abs": 0.03125,
           "max_utilisation": 0.4866608025652709,
@@ -378,6 +391,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 311664,
           "max_abs": 0.0078125,
           "max_utilisation": 0.3121387141313223,
@@ -404,6 +418,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 80736,
           "max_abs": 0.015625,
           "max_utilisation": 0.4637058219203509,
@@ -430,6 +445,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 626688,
           "max_abs": 0.0078125,
           "max_utilisation": 0.3877790596045872,
@@ -456,6 +472,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 221616,
           "max_abs": 0.0078125,
           "max_utilisation": 0.2529026048129906,
@@ -482,6 +499,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 467376,
           "max_abs": 0.0078125,
           "max_utilisation": 0.4294334319325112,
@@ -508,6 +526,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -534,6 +553,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -560,6 +580,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 65536,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.47607380790435916,
@@ -586,6 +607,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 263168,
           "max_abs": 0.001953125,
           "max_utilisation": 0.48433959777022,
@@ -612,6 +634,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 5120,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -638,6 +661,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 10752,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4814851575374885,
@@ -664,6 +688,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 267968,
           "max_abs": 0.001953125,
           "max_utilisation": 0.39888442286563297,
@@ -690,6 +715,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 329552,
           "max_abs": 0.001953125,
           "max_utilisation": 0.45787884277462093,
@@ -716,6 +742,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 298776,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4705939757241349,
@@ -742,6 +769,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 574280,
           "max_abs": 0.001953125,
           "max_utilisation": 0.48407398320989037,
@@ -768,6 +796,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 585344,
           "max_abs": 0.001953125,
           "max_utilisation": 0.484167203640143,
@@ -794,6 +823,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 217152,
           "max_abs": 0.001953125,
           "max_utilisation": 0.4860800242178069,
@@ -820,6 +850,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 33376,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.31534999815526515,
@@ -846,6 +877,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 27600,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4880247302949632,
@@ -872,6 +904,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 35984,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.41572196019581165,
@@ -898,6 +931,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 129344,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.47876109854855187,
@@ -924,6 +958,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 602992,
           "max_abs": 0.001953125,
           "max_utilisation": 0.4666661705628447,
@@ -950,6 +985,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 343824,
           "max_abs": 0.001953125,
           "max_utilisation": 0.4632086986670471,
@@ -976,6 +1012,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1002,6 +1039,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1028,6 +1066,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 10752,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1054,6 +1093,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1080,6 +1120,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1106,6 +1147,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 10752,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1132,6 +1174,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1142,6 +1185,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1168,6 +1212,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 10240,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1178,6 +1223,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1204,6 +1250,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 67584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1214,6 +1261,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1240,6 +1288,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 18432,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1250,6 +1299,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 4608,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1276,6 +1326,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 26624,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1286,6 +1337,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 6656,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1312,6 +1364,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 131072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1322,6 +1375,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 32768,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1348,6 +1402,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 88064,
           "max_abs": 0.00390625,
           "max_utilisation": 0.26997549631033496,
@@ -1358,6 +1413,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 22016,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1384,6 +1440,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 129024,
           "max_abs": 0.00390625,
           "max_utilisation": 0.45977945652093477,
@@ -1394,6 +1451,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 32256,
           "max_abs": 0.0078125,
           "max_utilisation": 0.27945112014290774,
@@ -1420,6 +1478,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 4096,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1430,6 +1489,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1456,6 +1516,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 108544,
           "max_abs": 0.0078125,
           "max_utilisation": 0.3534723848365104,
@@ -1466,6 +1527,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 27136,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1492,6 +1554,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1502,6 +1565,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1528,6 +1592,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 96256,
           "max_abs": 0.00390625,
           "max_utilisation": 0.34959154114138125,
@@ -1538,6 +1603,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 24064,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1564,6 +1630,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 47104,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1574,6 +1641,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 11776,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1600,6 +1668,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 61440,
           "max_abs": 0.00390625,
           "max_utilisation": 0.2746150888443017,
@@ -1610,6 +1679,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 15360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1636,6 +1706,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 63488,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1646,6 +1717,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 15872,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1672,6 +1744,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 73728,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1682,6 +1755,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 18432,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1708,6 +1782,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1718,6 +1793,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1744,6 +1820,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 10240,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1754,6 +1831,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1780,6 +1858,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 67584,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.43049042855682634,
@@ -1790,6 +1869,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1816,6 +1896,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 18432,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4097052590061085,
@@ -1826,6 +1907,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 4608,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1852,6 +1934,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 77824,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4582958833299972,
@@ -1862,6 +1945,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 19456,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.482483490867988,
@@ -1888,6 +1972,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 47104,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.3963426646537685,
@@ -1898,6 +1983,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 11776,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -1924,6 +2010,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 65536,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4385628445261634,
@@ -1934,6 +2021,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 16384,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.31841111185755483,
@@ -1960,6 +2048,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 90112,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4401283643911488,
@@ -1970,6 +2059,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 22528,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3962330506805315,
@@ -1996,6 +2086,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 69632,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.33217599550494675,
@@ -2006,6 +2097,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2032,6 +2124,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 86016,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.464042836627598,
@@ -2042,6 +2135,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 21504,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2068,6 +2162,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 126976,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4524756096673238,
@@ -2078,6 +2173,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 31744,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.37443069103830284,
@@ -2104,6 +2200,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 8192,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.47330220780679527,
@@ -2114,6 +2211,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2140,6 +2238,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 112640,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.4347966980825416,
@@ -2150,6 +2249,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 28160,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3450186801484205,
@@ -2176,6 +2276,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 26624,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4268750812591105,
@@ -2186,6 +2287,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 6656,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.2480102649874959,
@@ -2212,6 +2314,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 12288,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.43060484460369786,
@@ -2222,6 +2325,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 3072,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.28262247956677233,
@@ -2248,6 +2352,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 114688,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.2765788520900085,
@@ -2258,6 +2363,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 28672,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3229935692637457,
@@ -2284,6 +2390,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2294,6 +2401,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2320,6 +2428,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 10240,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2330,6 +2439,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2356,6 +2466,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2366,6 +2477,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2392,6 +2504,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 10240,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2402,6 +2515,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2428,6 +2542,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2438,6 +2553,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2464,6 +2580,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 67584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2474,6 +2591,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2500,6 +2618,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 67584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2510,6 +2629,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2536,6 +2656,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 67584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2546,6 +2667,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2572,6 +2694,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2582,6 +2705,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 4224,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2608,6 +2732,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 67584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2618,6 +2743,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 33792,
           "max_abs": 0.0078125,
           "max_utilisation": 0.303314072742427,
@@ -2644,6 +2770,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2654,6 +2781,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8448,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2680,6 +2808,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 67584,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.24127986591202225,
@@ -2690,6 +2819,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2716,6 +2846,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 67584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2726,6 +2857,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2752,6 +2884,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2762,6 +2895,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8448,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2788,6 +2922,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2798,6 +2933,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2824,6 +2960,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 264192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2834,6 +2971,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 66048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2860,6 +2998,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 20480,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2870,6 +3009,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 5120,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2896,6 +3036,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 92160,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2906,6 +3047,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 23040,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2932,6 +3074,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 83968,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2942,6 +3085,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 20992,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2968,6 +3112,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 58368,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -2978,6 +3123,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 14592,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3004,6 +3150,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 153600,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3014,6 +3161,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 38400,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3040,6 +3188,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 180224,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3050,6 +3199,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 45056,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3076,6 +3226,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 131072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3086,6 +3237,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 32768,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3112,6 +3264,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 190464,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3122,6 +3275,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 47616,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3148,6 +3302,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 92160,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3158,6 +3313,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 23040,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3184,6 +3340,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 266240,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3194,6 +3351,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 133120,
           "max_abs": 0.00390625,
           "max_utilisation": 0.29493504154520556,
@@ -3220,6 +3378,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 46080,
           "max_abs": 0.00390625,
           "max_utilisation": 0.2949401503350088,
@@ -3230,6 +3389,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 11520,
           "max_abs": 0.00390625,
           "max_utilisation": 0.4353760692417513,
@@ -3256,6 +3416,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 32768,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3266,6 +3427,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3292,6 +3454,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3302,6 +3465,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3328,6 +3492,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 67584,
           "max_abs": 0.001953125,
           "max_utilisation": 0.4727763235206428,
@@ -3338,6 +3503,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3364,6 +3530,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 67584,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.40997789185117783,
@@ -3374,6 +3541,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3400,6 +3568,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 67584,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.3778495823255546,
@@ -3410,6 +3579,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 16896,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.45096914829712204,
@@ -3436,6 +3606,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3446,6 +3617,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 4224,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3472,6 +3644,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 67584,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4503011056086366,
@@ -3482,6 +3655,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 33792,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4432457207868832,
@@ -3508,6 +3682,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 33792,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.30167060196171824,
@@ -3518,6 +3693,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8448,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3544,6 +3720,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 67584,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.282091398176111,
@@ -3554,6 +3731,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3580,6 +3758,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 67584,
           "max_abs": 4.76837158203125E-07,
           "max_utilisation": 0.014711909683669422,
@@ -3590,6 +3769,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 16896,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3616,6 +3796,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 33792,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.39528134044776353,
@@ -3626,6 +3807,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8448,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3652,6 +3834,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3662,6 +3845,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3688,6 +3872,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 264192,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.35044413590829804,
@@ -3698,6 +3883,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 66048,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.30351125519029226,
@@ -3724,6 +3910,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 92160,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.3613272351638502,
@@ -3734,6 +3921,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 23040,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3760,6 +3948,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 98304,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.488991510413841,
@@ -3770,6 +3959,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 24576,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.42412788207499524,
@@ -3796,6 +3986,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 114688,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4463699931580098,
@@ -3806,6 +3997,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 28672,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3832,6 +4024,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 86016,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4207179832901278,
@@ -3842,6 +4035,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 21504,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3868,6 +4062,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 108544,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.3858696731351804,
@@ -3878,6 +4073,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 27136,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.3193863750423388,
@@ -3904,6 +4100,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 235520,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.36808076638288595,
@@ -3914,6 +4111,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 58880,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -3940,6 +4138,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 161792,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3379482332969786,
@@ -3950,6 +4149,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 40448,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.37784187016460336,
@@ -3976,6 +4176,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 284672,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4780459791785233,
@@ -3986,6 +4187,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 71168,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.38698072984785015,
@@ -4012,6 +4214,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4022,6 +4225,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 4096,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4048,6 +4252,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 212992,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.42073168141999134,
@@ -4058,6 +4263,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 53248,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4084,6 +4290,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 241664,
           "max_abs": 0.001953125,
           "max_utilisation": 0.47804552053268873,
@@ -4094,6 +4301,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 120832,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.4479483422924732,
@@ -4120,6 +4328,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 130048,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.43800752127432163,
@@ -4130,6 +4339,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 32512,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3213696959303418,
@@ -4156,6 +4366,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4166,6 +4377,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4192,6 +4404,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4202,6 +4415,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4228,6 +4442,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-bf16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4238,6 +4453,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4264,6 +4480,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4274,6 +4491,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4300,6 +4518,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4310,6 +4529,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4336,6 +4556,7 @@
       "outputs": [
         {
           "name": "q",
+          "class": "elementwise-f16",
           "count": 34816,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4346,6 +4567,7 @@
         },
         {
           "name": "k",
+          "class": "elementwise-f16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4372,6 +4594,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4398,6 +4621,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4424,6 +4648,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4450,6 +4675,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4476,6 +4702,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4502,6 +4729,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4528,6 +4756,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4554,6 +4783,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 204800,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4580,6 +4810,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 204800,
           "max_abs": 0.0001220703125,
           "max_utilisation": 0.00717850933767035,
@@ -4606,6 +4837,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 131072,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.04642727602466449,
@@ -4632,6 +4864,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 65536,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.05065294815987337,
@@ -4658,6 +4891,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 290816,
           "max_abs": 0.00390625,
           "max_utilisation": 0.17181208053691274,
@@ -4669,7 +4903,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 3 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/prefill-non-causal-32-of-200-q32-kv200-full-PagedNhd-ps16": {
@@ -4684,6 +4934,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 65536,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.02446950869814567,
@@ -4710,6 +4961,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 77824,
           "max_abs": 0.001953125,
           "max_utilisation": 0.09071580439404678,
@@ -4721,7 +4973,18 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 1 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/decode-single-6000-split-kv-q1-kv6000-causal-PagedNhd-ps16": {
@@ -4736,6 +4999,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 2048,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4762,6 +5026,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 16384,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4788,6 +5053,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 16384,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4814,6 +5080,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 1433600,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.04433668167648078,
@@ -4840,6 +5107,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 2097152,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.045535396655994306,
@@ -4866,6 +5134,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 262144,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.02587426723266626,
@@ -4892,6 +5161,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 174080,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.049786075457020615,
@@ -4918,6 +5188,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.02292674189503851,
@@ -4944,6 +5215,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 6144,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -4970,6 +5242,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 1050624,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.046766532700036535,
@@ -4981,7 +5254,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 1 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/random-4-prefill-q84.24.595.110-kv117.125.622.278\u002B-causal-PagedNhd-ps64": {
@@ -4996,6 +5285,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 2205696,
           "max_abs": 0.001953125,
           "max_utilisation": 0.08932309839497557,
@@ -5007,7 +5297,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 4 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/random-5-decode-q1.1.1.1-kv325.492.470.131\u002B-causal-PagedNhd-ps32": {
@@ -5022,6 +5328,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 10240,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5048,6 +5355,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 1531904,
           "max_abs": 0.001953125,
           "max_utilisation": 0.08642808912896692,
@@ -5059,7 +5367,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 4 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/random-7-decode-q1.1.1-kv475.574.401-causal-PagedNhd-ps32": {
@@ -5074,6 +5398,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 6144,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5100,6 +5425,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 1038336,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.04951644100580271,
@@ -5111,7 +5437,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 3 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/random-9-prefill-q137.328.283-kv319.587.655-causal-PagedHnd-ps16": {
@@ -5126,6 +5468,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 1531904,
           "max_abs": 0.001953125,
           "max_utilisation": 0.08737201365187713,
@@ -5137,7 +5480,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 1 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/random-10-decode-q1.1.1.1-kv654.352.5.14-causal-PagedHnd-ps64": {
@@ -5152,6 +5511,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5178,6 +5538,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 485376,
           "max_abs": 0.001953125,
           "max_utilisation": 0.08858131487889273,
@@ -5189,7 +5550,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 3 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/golden-PagedAttention-BF16-decode-mixed4": {
@@ -5204,6 +5581,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5230,6 +5608,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5256,6 +5635,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 204800,
           "max_abs": 0.001953125,
           "max_utilisation": 0.0974124809741248,
@@ -5282,6 +5662,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 131072,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.013199958750128906,
@@ -5308,6 +5689,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 167936,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.013273877424038162,
@@ -5319,7 +5701,23 @@
       ],
       "determinism": "pass",
       "batch_invariance": "n/a",
-      "checks": [],
+      "checks": [
+        {
+          "name": "prefill batch composition: sequence 0 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 2 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        },
+        {
+          "name": "prefill batch composition: sequence 1 alone equals its rows in the batch (bytes)",
+          "ok": true,
+          "detail": "status 0; gating"
+        }
+      ],
       "detail": ""
     },
     "PagedAttention/oracle/golden-PagedAttention-BF16-prefill-non-causal-32-of-200": {
@@ -5334,6 +5732,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "attention-bf16",
           "count": 65536,
           "max_abs": 6.103515625E-05,
           "max_utilisation": 0.0032755002814883055,
@@ -5360,6 +5759,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 3584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5386,6 +5786,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 28672,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5412,6 +5813,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 118272,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.2893673437467526,
@@ -5438,6 +5840,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 3000,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5464,6 +5867,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 3003,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5490,6 +5894,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 529920,
           "max_abs": 0.001953125,
           "max_utilisation": 0.31954786507157235,
@@ -5516,6 +5921,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 215784,
           "max_abs": 0.00390625,
           "max_utilisation": 0.31422588579440464,
@@ -5542,6 +5948,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 69715,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5568,6 +5975,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 303744,
           "max_abs": 0.00390625,
           "max_utilisation": 0.314330748878248,
@@ -5594,6 +6002,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 21798,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5620,6 +6029,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 13736,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5646,6 +6056,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 550824,
           "max_abs": 0.00390625,
           "max_utilisation": 0.31964224610148595,
@@ -5672,6 +6083,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 14976,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5698,6 +6110,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 181384,
           "max_abs": 0.001953125,
           "max_utilisation": 0.3195335891788839,
@@ -5724,6 +6137,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 87480,
           "max_abs": 0.00390625,
           "max_utilisation": 0.319521511632467,
@@ -5750,6 +6164,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 167936,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.2719777550402833,
@@ -5776,6 +6191,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 52923,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5802,6 +6218,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 3584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5828,6 +6245,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 28672,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.33218405842436216,
@@ -5854,6 +6272,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 118272,
           "max_abs": 0.00390625,
           "max_utilisation": 0.4275141718995451,
@@ -5880,6 +6299,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 3000,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -5906,6 +6326,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 3003,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3794632762412265,
@@ -5932,6 +6353,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 177408,
           "max_abs": 0.001953125,
           "max_utilisation": 0.44930605572770643,
@@ -5958,6 +6380,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 116224,
           "max_abs": 0.00390625,
           "max_utilisation": 0.36031638460742565,
@@ -5984,6 +6407,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 508464,
           "max_abs": 0.0078125,
           "max_utilisation": 0.476011204434594,
@@ -6010,6 +6434,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 11760,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.392794658291317,
@@ -6036,6 +6461,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 19200,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6062,6 +6488,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 127328,
           "max_abs": 0.00390625,
           "max_utilisation": 0.45215502098885174,
@@ -6088,6 +6515,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 232560,
           "max_abs": 0.00390625,
           "max_utilisation": 0.4550180893089881,
@@ -6114,6 +6542,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 708320,
           "max_abs": 0.015625,
           "max_utilisation": 0.492498557728536,
@@ -6140,6 +6569,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 10640,
           "max_abs": 0.00390625,
           "max_utilisation": 0.2817328617080765,
@@ -6166,6 +6596,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 374032,
           "max_abs": 0.00390625,
           "max_utilisation": 0.4103802300999221,
@@ -6192,6 +6623,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 640840,
           "max_abs": 0.015625,
           "max_utilisation": 0.4804620489182375,
@@ -6218,6 +6650,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 17030,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6244,6 +6677,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 3584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6270,6 +6704,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 28672,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6296,6 +6731,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 3003,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6322,6 +6758,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 3584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6348,6 +6785,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 28672,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6374,6 +6812,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 3003,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6400,6 +6839,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 4096,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6426,6 +6866,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 12288,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6452,6 +6893,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 69632,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6478,6 +6920,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 262144,
           "max_abs": 0.0001220703125,
           "max_utilisation": 0.05174878757880427,
@@ -6504,6 +6947,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6530,6 +6974,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6556,6 +7001,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 8704,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6582,6 +7028,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 32768,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6608,6 +7055,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6634,6 +7082,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 3072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6660,6 +7109,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6686,6 +7136,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 65536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6712,6 +7163,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6738,6 +7190,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 21504,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6764,6 +7217,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 121856,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6790,6 +7244,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 458752,
           "max_abs": 0.0078125,
           "max_utilisation": 0.40225162815695675,
@@ -6816,6 +7271,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6842,6 +7298,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 3072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6868,6 +7325,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6894,6 +7352,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 65536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6920,6 +7379,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6946,6 +7406,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6972,6 +7433,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -6998,6 +7460,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7024,6 +7487,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 256,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7031,6 +7495,33 @@
           "nonfinite": 0,
           "ref_rms": 0.8367405557984704,
           "scale": 0.8367405557984704
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "pass",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/oracle/fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.0-bucket0": {
+      "op": "Gemm",
+      "variant": "oracle",
+      "dtype": "BF16",
+      "source": "fixed",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "CpuOps",
+      "seed": "13045164904727934930",
+      "outputs": [
+        {
+          "name": "d",
+          "class": "gemm-bf16",
+          "count": 9984,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.4928934309948326,
+          "scale": 0.4928934309948326
         }
       ],
       "determinism": "pass",
@@ -7050,6 +7541,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7076,6 +7568,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7102,6 +7595,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7128,6 +7622,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.21668171105478892,
@@ -7135,6 +7630,33 @@
           "nonfinite": 0,
           "ref_rms": 1.2059695827311208,
           "scale": 1.2059695827311208
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "pass",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/oracle/fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.0-bucket49": {
+      "op": "Gemm",
+      "variant": "oracle",
+      "dtype": "BF16",
+      "source": "fixed",
+      "class": "gemm-bf16",
+      "outcome": "pass",
+      "reference": "CpuOps",
+      "seed": "5977830978266689037",
+      "outputs": [
+        {
+          "name": "d",
+          "class": "gemm-bf16",
+          "count": 9984,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.49901217067815234,
+          "scale": 0.49901217067815234
         }
       ],
       "determinism": "pass",
@@ -7154,6 +7676,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7180,6 +7703,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7206,6 +7730,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7232,6 +7757,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7258,6 +7784,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 28672,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7284,6 +7811,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 12064,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7310,6 +7838,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 33384,
           "max_abs": 0.0078125,
           "max_utilisation": 0.35038975190236776,
@@ -7336,6 +7865,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 6952,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7362,6 +7892,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7388,6 +7919,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 152,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7414,6 +7946,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 45368,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7440,6 +7973,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 15040,
           "max_abs": 0.00390625,
           "max_utilisation": 0.3956611638483808,
@@ -7466,6 +8000,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 3840,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7492,6 +8027,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 15840,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7518,6 +8054,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 7776,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7544,6 +8081,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7570,6 +8108,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 4096,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7596,6 +8135,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 12288,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.33058102237359516,
@@ -7622,6 +8162,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 69632,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.36295680491787397,
@@ -7648,6 +8189,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 262144,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.39562372959728553,
@@ -7674,6 +8216,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 512,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7700,6 +8243,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1536,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.24593126863171147,
@@ -7726,6 +8270,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 8704,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.39489683246059126,
@@ -7752,6 +8297,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 32768,
           "max_abs": 0.0001220703125,
           "max_utilisation": 0.22278246089955836,
@@ -7778,6 +8324,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7804,6 +8351,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 3072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7830,6 +8378,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.2862488209578505,
@@ -7856,6 +8405,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 65536,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.2765564959359989,
@@ -7882,6 +8432,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -7908,6 +8459,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 21504,
           "max_abs": 0.0001220703125,
           "max_utilisation": 0.22549137280285156,
@@ -7934,6 +8486,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 121856,
           "max_abs": 0.001953125,
           "max_utilisation": 0.41100986970942727,
@@ -7960,6 +8513,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 458752,
           "max_abs": 0.001953125,
           "max_utilisation": 0.45353995813698345,
@@ -7986,6 +8540,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8012,6 +8567,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 3072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8038,6 +8594,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8064,6 +8621,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 65536,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3210082664019403,
@@ -8090,6 +8648,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0.000244140625,
           "max_utilisation": 0.32565281192122236,
@@ -8116,6 +8675,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.23819450969747094,
@@ -8142,6 +8702,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8168,6 +8729,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8194,6 +8756,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 256,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8201,6 +8764,33 @@
           "nonfinite": 0,
           "ref_rms": 1.1698784460174607,
           "scale": 1.1698784460174607
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "pass",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/oracle/fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.0-bucket0": {
+      "op": "Gemm",
+      "variant": "oracle",
+      "dtype": "F16",
+      "source": "fixed",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "CpuOps",
+      "seed": "780590775799792266",
+      "outputs": [
+        {
+          "name": "d",
+          "class": "gemm-f16",
+          "count": 9984,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.5092787309541948,
+          "scale": 0.5092787309541948
         }
       ],
       "determinism": "pass",
@@ -8220,6 +8810,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8246,6 +8837,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.33327723692112654,
@@ -8272,6 +8864,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.30184658588331836,
@@ -8298,6 +8891,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8305,6 +8899,33 @@
           "nonfinite": 0,
           "ref_rms": 1.2168079722311997,
           "scale": 1.2168079722311997
+        }
+      ],
+      "determinism": "pass",
+      "batch_invariance": "pass",
+      "checks": [],
+      "detail": ""
+    },
+    "Gemm/oracle/fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.0-bucket49": {
+      "op": "Gemm",
+      "variant": "oracle",
+      "dtype": "F16",
+      "source": "fixed",
+      "class": "gemm-f16",
+      "outcome": "pass",
+      "reference": "CpuOps",
+      "seed": "16609693302379193957",
+      "outputs": [
+        {
+          "name": "d",
+          "class": "gemm-f16",
+          "count": 9984,
+          "max_abs": 0,
+          "max_utilisation": 0,
+          "violations": 0,
+          "nonfinite": 0,
+          "ref_rms": 0.4998595862642133,
+          "scale": 0.4998595862642133
         }
       ],
       "determinism": "pass",
@@ -8324,6 +8945,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.31724545558215156,
@@ -8350,6 +8972,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8376,6 +8999,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.346068980955567,
@@ -8402,6 +9026,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 9984,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.32291116531568403,
@@ -8428,6 +9053,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 21600,
           "max_abs": 6.103515625E-05,
           "max_utilisation": 0.16367257153060982,
@@ -8454,6 +9080,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 29960,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.32789789439785505,
@@ -8480,6 +9107,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 2080,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8506,6 +9134,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 7904,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8532,6 +9161,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 57024,
           "max_abs": 0.00048828125,
           "max_utilisation": 0.43577044564557693,
@@ -8558,6 +9188,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8584,6 +9215,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 19360,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.3182948347967865,
@@ -8610,6 +9242,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1344,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8636,6 +9269,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 8360,
           "max_abs": 0.001953125,
           "max_utilisation": 0.24082655974004813,
@@ -8662,6 +9296,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 13320,
           "max_abs": 0.0001220703125,
           "max_utilisation": 0.1694333090610194,
@@ -8688,6 +9323,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 16576,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.41051246314282785,
@@ -8714,6 +9350,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 62000,
           "max_abs": 0.0009765625,
           "max_utilisation": 0.37957203204958845,
@@ -8740,6 +9377,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8766,6 +9404,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8792,6 +9431,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 1536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8818,6 +9458,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8844,6 +9485,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8870,6 +9512,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-bf16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8896,6 +9539,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8922,6 +9566,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8948,6 +9593,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 1536,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -8974,6 +9620,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9000,6 +9647,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 17408,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9026,6 +9674,7 @@
       "outputs": [
         {
           "name": "d",
+          "class": "gemm-f16",
           "count": 2560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9052,6 +9701,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9078,6 +9728,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 307200,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9104,6 +9755,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 17017,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9130,6 +9782,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 17034,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9156,6 +9809,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 25680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9182,6 +9836,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 43072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9208,6 +9863,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 133200,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9234,6 +9890,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 53568,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9260,6 +9917,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 80454,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9286,6 +9944,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 11648,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9312,6 +9971,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 59472,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9338,6 +9998,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 4216,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9364,6 +10025,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 5828,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9390,6 +10052,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 30880,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9416,6 +10079,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 32450,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9442,6 +10106,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 1216,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9468,6 +10133,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9494,6 +10160,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 307200,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9520,6 +10187,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 3150,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9546,6 +10214,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 1302,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9572,6 +10241,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 55900,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9598,6 +10268,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 21248,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9624,6 +10295,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 84993,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9650,6 +10322,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 15920,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9676,6 +10349,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 13312,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9702,6 +10376,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 12320,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9728,6 +10403,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 54203,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9754,6 +10430,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 37887,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9780,6 +10457,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 54264,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9806,6 +10484,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 23504,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9832,6 +10511,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9858,6 +10538,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 307200,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9884,6 +10565,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 159430,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9910,6 +10592,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 102527,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9936,6 +10619,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 11259,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9962,6 +10646,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 221364,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -9988,6 +10673,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 67876,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10014,6 +10700,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 44450,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10040,6 +10727,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 12768,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10066,6 +10754,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 88608,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10092,6 +10781,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 19592,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10118,6 +10808,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 120780,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10144,6 +10835,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 147070,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10170,6 +10862,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 236384,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10196,6 +10889,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10222,6 +10916,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10248,6 +10943,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "exact",
           "count": 33792,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10274,6 +10970,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 4096,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10300,6 +10997,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 12288,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10326,6 +11024,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 20000,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10352,6 +11051,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10378,6 +11078,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 1056,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10404,6 +11105,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 16560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10430,6 +11132,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 24640,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10456,6 +11159,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 6576,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10482,6 +11186,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 12168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10508,6 +11213,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 368,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10534,6 +11240,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 10560,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10560,6 +11267,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 14464,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10586,6 +11294,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 31584,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10612,6 +11321,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 15648,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10638,6 +11348,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 2552,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10664,6 +11375,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 12400,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10690,6 +11402,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 4096,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10716,6 +11429,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 20000,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10742,6 +11456,7 @@
       "outputs": [
         {
           "name": "logits",
+          "class": "lm-head-f32",
           "count": 8192,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10768,6 +11483,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10794,6 +11510,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10820,6 +11537,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 1001,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10846,6 +11564,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 97505,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10872,6 +11591,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 19310,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10898,6 +11618,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 49806,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10924,6 +11645,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 11316,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10950,6 +11672,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 47409,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -10976,6 +11699,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 93736,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11002,6 +11726,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 2376,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11028,6 +11753,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 51183,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11054,6 +11780,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 54666,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11080,6 +11807,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 70417,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11106,6 +11834,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 96738,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11132,6 +11861,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 59674,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11158,6 +11888,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11184,6 +11915,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11210,6 +11942,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1001,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11236,6 +11969,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 50921,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11262,6 +11996,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 42669,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11288,6 +12023,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 43682,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11314,6 +12050,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 98904,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11340,6 +12077,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 22755,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11366,6 +12104,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 94511,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11392,6 +12131,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 29771,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11418,6 +12158,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 7025,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11444,6 +12185,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1968,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11470,6 +12212,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 80572,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11496,6 +12239,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 95819,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11522,6 +12266,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 50961,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11548,6 +12293,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11574,6 +12320,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11600,6 +12347,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 1001,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11626,6 +12374,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 78362,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11652,6 +12401,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 21748,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11678,6 +12428,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 93583,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11704,6 +12455,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 54771,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11730,6 +12482,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 55610,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11756,6 +12509,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 54274,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11782,6 +12536,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 73861,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11808,6 +12563,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 95441,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11834,6 +12590,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 47800,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11860,6 +12617,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 5216,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11886,6 +12644,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 52254,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11912,6 +12671,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 70226,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11938,6 +12698,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11964,6 +12725,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f32",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -11990,6 +12752,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12016,6 +12779,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-bf16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12042,6 +12806,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 1024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12068,6 +12833,7 @@
       "outputs": [
         {
           "name": "out",
+          "class": "elementwise-f16",
           "count": 7168,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12094,6 +12860,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12104,6 +12871,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12130,6 +12898,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12140,6 +12909,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12166,6 +12936,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12176,6 +12947,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12202,6 +12974,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12212,6 +12985,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12238,6 +13012,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12248,6 +13023,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12274,6 +13050,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12284,6 +13061,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12310,6 +13088,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12320,6 +13099,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12346,6 +13126,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12356,6 +13137,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12382,6 +13164,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12392,6 +13175,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12418,6 +13202,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12428,6 +13213,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12454,6 +13240,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12464,6 +13251,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12490,6 +13278,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12500,6 +13289,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12526,6 +13316,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12536,6 +13327,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12562,6 +13354,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12572,6 +13365,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12598,6 +13392,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12608,6 +13403,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12634,6 +13430,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12644,6 +13441,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12670,6 +13468,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12680,6 +13479,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12706,6 +13506,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12716,6 +13517,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12742,6 +13544,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12752,6 +13555,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 655360,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12778,6 +13582,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12788,6 +13593,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12814,6 +13620,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12824,6 +13631,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12850,6 +13658,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12860,6 +13669,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 1310720,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12886,6 +13696,7 @@
       "outputs": [
         {
           "name": "k_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12896,6 +13707,7 @@
         },
         {
           "name": "v_cache",
+          "class": "exact",
           "count": 327680,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12922,6 +13734,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 393216,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12948,6 +13761,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 393216,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -12974,6 +13788,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 24024,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13000,6 +13815,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 458752,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13026,6 +13842,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 589824,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13052,6 +13869,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 81920,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13078,6 +13896,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 7424,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13104,6 +13923,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 147456,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13130,6 +13950,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 81920,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13156,6 +13977,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 131072,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13182,6 +14004,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 22022,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13208,6 +14031,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 294912,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13234,6 +14058,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 159744,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13260,6 +14085,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 49152,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13286,6 +14112,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 73728,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13312,6 +14139,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 98304,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13338,6 +14166,7 @@
       "outputs": [
         {
           "name": "dst",
+          "class": "exact",
           "count": 98304,
           "max_abs": 0,
           "max_utilisation": 0,
@@ -13359,16 +14188,18 @@
       "case_profile": "full",
       "base_seed": "20261019",
       "random_cases_per_op_and_dtype": 12,
-      "passed": 469,
+      "passed": 473,
       "failed": 0,
       "errors": 0,
       "not_run": 0,
+      "refused": 0,
+      "recorded_check_failures_in_passing_cases": 0,
       "green": true,
       "determinism_checked": true,
       "batch_invariance_checked": true,
       "goldens_given": true,
       "goldens_sha256": "99b0726085266d8b003f29fa87087b15f7c82a6b1c5d3b4fcb9122cd91e1eeb4",
-      "tolerance_file_sha256": "08b1fb85f49f44e08521106f3b360887ef120c586e368199b0da5e8ede361f6d",
+      "tolerance_file_sha256": "738030e277e48a674caa77739f10e8fadfdbaff2382475b6070c3a15c58ad50a",
       "tolerance_file_status": "proposal"
     },
     "classes": {
@@ -13403,13 +14234,13 @@
         "violations": 0
       },
       "gemm-bf16": {
-        "cases": 51,
+        "cases": 53,
         "max_utilisation": 0.40225162815695675,
         "max_abs": 0.0078125,
         "violations": 0
       },
       "gemm-f16": {
-        "cases": 51,
+        "cases": 53,
         "max_utilisation": 0.45353995813698345,
         "max_abs": 0.001953125,
         "violations": 0
@@ -13429,6 +14260,7 @@
         "passed": 42,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13438,6 +14270,7 @@
         "passed": 36,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13447,6 +14280,7 @@
         "passed": 54,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13456,6 +14290,7 @@
         "passed": 38,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13465,15 +14300,17 @@
         "passed": 40,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
         "op": "Gemm",
         "variant": "oracle",
         "flags": "Deterministic, BatchInvariant",
-        "passed": 102,
+        "passed": 106,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13483,6 +14320,7 @@
         "passed": 47,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13492,6 +14330,7 @@
         "passed": 19,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13501,6 +14340,7 @@
         "passed": 51,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13510,6 +14350,7 @@
         "passed": 23,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       },
       {
@@ -13519,6 +14360,7 @@
         "passed": 17,
         "failed": 0,
         "not_run": 0,
+        "refused": 0,
         "abi_probe": "n/a"
       }
     ]

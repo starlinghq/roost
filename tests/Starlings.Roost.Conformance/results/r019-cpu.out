@@ -233,10 +233,12 @@ PASS    oracle fixed-bias-BF16-17x1024x2048-tb1-bias1-ab1.0-bucket0 class=gemm-b
 PASS    oracle fixed-alpha-beta-c-BF16-17x1024x2048-tb1-bias0-ab0.5.0.25-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-alpha-beta-c-bias-bucket64-BF16-5x512x1024-tb0-bias1-ab2.1-bucket64 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-small-k8-BF16-4x64x8-tb1-bias0-ab1.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.0-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.1-bucket0 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.1-bucket0 class=gemm-bf16 utilisation=0.217 violations=0 det=pass inv=pass
+PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.0-bucket49 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias1-ab0.5.0-bucket49 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias1-ab1.1-bucket49 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-BF16-39x256x200-tb1-bias0-ab0.5.1-bucket49 class=gemm-bf16 utilisation=0.000 violations=0 det=pass inv=pass
@@ -278,10 +280,12 @@ PASS    oracle fixed-bias-F16-17x1024x2048-tb1-bias1-ab1.0-bucket0 class=gemm-f1
 PASS    oracle fixed-alpha-beta-c-F16-17x1024x2048-tb1-bias0-ab0.5.0.25-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-alpha-beta-c-bias-bucket64-F16-5x512x1024-tb0-bias1-ab2.1-bucket64 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-small-k8-F16-4x64x8-tb1-bias0-ab1.0-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.0-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.0-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias1-ab1.1-bucket0 class=gemm-f16 utilisation=0.333 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.1-bucket0 class=gemm-f16 utilisation=0.302 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.1-bucket0 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
+PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.0-bucket49 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias1-ab0.5.0-bucket49 class=gemm-f16 utilisation=0.317 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias1-ab1.1-bucket49 class=gemm-f16 utilisation=0.000 violations=0 det=pass inv=pass
 PASS    oracle fixed-epilogue-F16-39x256x200-tb1-bias0-ab0.5.1-bucket49 class=gemm-f16 utilisation=0.346 violations=0 det=pass inv=pass
@@ -467,19 +471,19 @@ PASS    oracle random-10-bb4096-two-pools-n12 class=exact utilisation=0.000 viol
 PASS    oracle random-11-bb4096-one-pool-n18 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
 PASS    oracle golden-CacheCopy-bb4096-one-pool class=exact utilisation=0.000 violations=0 det=pass inv=n/a
 PASS    oracle golden-CacheCopy-bb4096-two-pools class=exact utilisation=0.000 violations=0 det=pass inv=n/a
-Oracle: 469 passed, 0 failed, 0 errors, 0 not run
-  RmsNorm         oracle                             pass=42   fail=0   not_run=0   abi=n/a
-  QkNorm          oracle                             pass=36   fail=0   not_run=0   abi=n/a
-  Rope            oracle                             pass=54   fail=0   not_run=0   abi=n/a
-  PagedAttention  oracle                             pass=38   fail=0   not_run=0   abi=n/a
-  SiluAndMul      oracle                             pass=40   fail=0   not_run=0   abi=n/a
-  Gemm            oracle                             pass=102  fail=0   not_run=0   abi=n/a
-  Embedding       oracle                             pass=47   fail=0   not_run=0   abi=n/a
-  LmHead          oracle                             pass=19   fail=0   not_run=0   abi=n/a
-  Residual        oracle                             pass=51   fail=0   not_run=0   abi=n/a
-  CacheWrite      oracle                             pass=23   fail=0   not_run=0   abi=n/a
-  CacheCopy       oracle                             pass=17   fail=0   not_run=0   abi=n/a
-results: ../envs/R-019/final/cpu/oracle.results.json
+Oracle: 473 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  RmsNorm         oracle                             pass=42   fail=0   not_run=0   refused=0   abi=n/a
+  QkNorm          oracle                             pass=36   fail=0   not_run=0   refused=0   abi=n/a
+  Rope            oracle                             pass=54   fail=0   not_run=0   refused=0   abi=n/a
+  PagedAttention  oracle                             pass=38   fail=0   not_run=0   refused=0   abi=n/a
+  SiluAndMul      oracle                             pass=40   fail=0   not_run=0   refused=0   abi=n/a
+  Gemm            oracle                             pass=106  fail=0   not_run=0   refused=0   abi=n/a
+  Embedding       oracle                             pass=47   fail=0   not_run=0   refused=0   abi=n/a
+  LmHead          oracle                             pass=19   fail=0   not_run=0   refused=0   abi=n/a
+  Residual        oracle                             pass=51   fail=0   not_run=0   refused=0   abi=n/a
+  CacheWrite      oracle                             pass=23   fail=0   not_run=0   refused=0   abi=n/a
+  CacheCopy       oracle                             pass=17   fail=0   not_run=0   refused=0   abi=n/a
+results: /home/mark/Projects/roost-evidence/R-019/cpu/oracle.results.json
 === green
 PASS    cpu-reference golden-RmsNorm-BF16-1x1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
 PASS    cpu-reference golden-RmsNorm-BF16-7x1024 class=elementwise-bf16 utilisation=0.000 violations=0 det=pass inv=n/a
@@ -538,17 +542,24 @@ PASS    cpu-reference golden-CacheWrite-BF16-layout3-ps64-t37 class=exact utilis
 PASS    cpu-reference golden-CacheWrite-F32-layout2-ps16-t9 class=exact utilisation=0.000 violations=0 det=pass inv=n/a
 PASS    cpu-reference golden-CacheCopy-bb4096-one-pool class=exact utilisation=0.000 violations=0 det=pass inv=n/a
 PASS    cpu-reference golden-CacheCopy-bb4096-two-pools class=exact utilisation=0.000 violations=0 det=pass inv=n/a
-CpuOps: 57 passed, 0 failed, 0 errors, 0 not run
-  RmsNorm         cpu-reference                      pass=6    fail=0   not_run=0   abi=n/a
-  QkNorm          cpu-reference                      pass=4    fail=0   not_run=0   abi=n/a
-  Rope            cpu-reference                      pass=6    fail=0   not_run=0   abi=n/a
-  PagedAttention  cpu-reference                      pass=6    fail=0   not_run=0   abi=n/a
-  SiluAndMul      cpu-reference                      pass=6    fail=0   not_run=0   abi=n/a
-  Gemm            cpu-reference                      pass=12   fail=0   not_run=0   abi=n/a
-  Embedding       cpu-reference                      pass=3    fail=0   not_run=0   abi=n/a
-  LmHead          cpu-reference                      pass=3    fail=0   not_run=0   abi=n/a
-  Residual        cpu-reference                      pass=6    fail=0   not_run=0   abi=n/a
-  CacheWrite      cpu-reference                      pass=3    fail=0   not_run=0   abi=n/a
-  CacheCopy       cpu-reference                      pass=2    fail=0   not_run=0   abi=n/a
-results: ../envs/R-019/final/cpu/cpuops-goldens.results.json
+CpuOps: 57 passed, 0 failed, 0 errors, 0 not run, 0 refused as registered
+  RmsNorm         cpu-reference                      pass=6    fail=0   not_run=0   refused=0   abi=n/a
+  QkNorm          cpu-reference                      pass=4    fail=0   not_run=0   refused=0   abi=n/a
+  Rope            cpu-reference                      pass=6    fail=0   not_run=0   refused=0   abi=n/a
+  PagedAttention  cpu-reference                      pass=6    fail=0   not_run=0   refused=0   abi=n/a
+  SiluAndMul      cpu-reference                      pass=6    fail=0   not_run=0   refused=0   abi=n/a
+  Gemm            cpu-reference                      pass=12   fail=0   not_run=0   refused=0   abi=n/a
+  Embedding       cpu-reference                      pass=3    fail=0   not_run=0   refused=0   abi=n/a
+  LmHead          cpu-reference                      pass=3    fail=0   not_run=0   refused=0   abi=n/a
+  Residual        cpu-reference                      pass=6    fail=0   not_run=0   refused=0   abi=n/a
+  CacheWrite      cpu-reference                      pass=3    fail=0   not_run=0   refused=0   abi=n/a
+  CacheCopy       cpu-reference                      pass=2    fail=0   not_run=0   refused=0   abi=n/a
+  GatedDeltaRule  cpu-reference                      pass=0    fail=0   not_run=0   refused=0   abi=n/a
+  CausalConv1d    cpu-reference                      pass=0    fail=0   not_run=0   refused=0   abi=n/a
+  RecurrentStateCopy cpu-reference                      pass=0    fail=0   not_run=0   refused=0   abi=n/a
+  RecurrentStateSnapshot cpu-reference                      pass=0    fail=0   not_run=0   refused=0   abi=n/a
+  GatedDeltaRuleGates cpu-reference                      pass=0    fail=0   not_run=0   refused=0   abi=n/a
+  GatedRmsNorm    cpu-reference                      pass=0    fail=0   not_run=0   refused=0   abi=n/a
+  SigmoidMul      cpu-reference                      pass=0    fail=0   not_run=0   refused=0   abi=n/a
+results: /home/mark/Projects/roost-evidence/R-019/cpu/cpuops-goldens.results.json
 === green
