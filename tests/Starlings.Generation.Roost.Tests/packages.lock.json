@@ -64,11 +64,6 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
-      "Starlings.Tokenizers": {
-        "type": "Transitive",
-        "resolved": "0.3.0",
-        "contentHash": "5VQxvrls4G1GQBsnJaHuMsgzGWGVDlUCQ4p3Z5/lAiMhTG4FZPZ4RbvGxegOtzqM/8kBVTMD8zvicspZyYlnTg=="
-      },
       "System.Security.AccessControl": {
         "type": "Transitive",
         "resolved": "6.0.1",
@@ -150,7 +145,8 @@
           "Starlings.Roost.Engine": "[0.0.0-dev, )",
           "Starlings.Roost.Generation": "[0.0.0-dev, )",
           "Starlings.Roost.Worker.Runtime.linux-x64": "[0.0.0-dev, )",
-          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
+          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )",
+          "Starlings.Tokenizers": "[0.3.0, 0.3.0]"
         }
       },
       "starlings.roost.abstractions": {
@@ -169,7 +165,8 @@
         "type": "Project",
         "dependencies": {
           "Starlings.Generation.OnnxGenAI": "[0.3.0, 0.3.0]",
-          "Starlings.Models.Qwen35": "[0.3.0, 0.3.0]"
+          "Starlings.Models.Qwen35": "[0.3.0, 0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0, 0.3.0]"
         }
       },
       "starlings.roost.graph": {
@@ -181,14 +178,6 @@
           "Starlings.Acquisition": "[0.3.0, 0.3.0]",
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Tomlyn": "[2.10.1, 2.10.1]"
-        }
-      },
-      "starlings.roost.models.qwen35": {
-        "type": "Project",
-        "dependencies": {
-          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
-          "Starlings.Roost.Graph": "[0.0.0-dev, )",
-          "Starlings.Roost.Ops": "[0.0.0-dev, )"
         }
       },
       "starlings.roost.models.tiny": {
@@ -216,21 +205,8 @@
           "Tomlyn": "[2.10.1, 2.10.1]"
         }
       },
-      "starlings.roost.worker.qwen35": {
-        "type": "Project",
-        "dependencies": {
-          "Starlings.Roost.Models.Qwen35": "[0.0.0-dev, )",
-          "Starlings.Roost.Worker": "[0.0.0-dev, )"
-        }
-      },
       "Starlings.Roost.Worker.Runtime.linux-x64": {
-        "type": "Project",
-        "dependencies": {
-          "Starlings.Roost.Kernels": "[0.0.0-dev, )",
-          "Starlings.Roost.Worker": "[0.0.0-dev, )",
-          "Starlings.Roost.Worker.Qwen35": "[0.0.0-dev, )",
-          "Starlings.Roost.WorkerHost": "[0.0.0-dev, )"
-        }
+        "type": "Project"
       },
       "starlings.roost.workerhost": {
         "type": "Project",
@@ -271,6 +247,12 @@
           "Starlings.Generation.OnnxGenAI": "[0.3.0]",
           "Starlings.Tokenizers": "[0.3.0]"
         }
+      },
+      "Starlings.Tokenizers": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "5VQxvrls4G1GQBsnJaHuMsgzGWGVDlUCQ4p3Z5/lAiMhTG4FZPZ4RbvGxegOtzqM/8kBVTMD8zvicspZyYlnTg=="
       },
       "Tomlyn": {
         "type": "CentralTransitive",
