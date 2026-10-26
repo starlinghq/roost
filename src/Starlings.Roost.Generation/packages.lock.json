@@ -23,6 +23,12 @@
           "Starlings.Tokenizers": "[0.3.0]"
         }
       },
+      "Starlings.Tokenizers": {
+        "type": "Direct",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "5VQxvrls4G1GQBsnJaHuMsgzGWGVDlUCQ4p3Z5/lAiMhTG4FZPZ4RbvGxegOtzqM/8kBVTMD8zvicspZyYlnTg=="
+      },
       "Microsoft.ML.OnnxRuntimeGenAI.Managed": {
         "type": "Transitive",
         "resolved": "0.17.1",
@@ -30,11 +36,6 @@
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "9.8.0"
         }
-      },
-      "Starlings.Tokenizers": {
-        "type": "Transitive",
-        "resolved": "0.3.0",
-        "contentHash": "5VQxvrls4G1GQBsnJaHuMsgzGWGVDlUCQ4p3Z5/lAiMhTG4FZPZ4RbvGxegOtzqM/8kBVTMD8zvicspZyYlnTg=="
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "CentralTransitive",

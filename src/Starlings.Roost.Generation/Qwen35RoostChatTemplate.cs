@@ -67,11 +67,8 @@ public sealed class Qwen35RoostChatTemplate : IRoostChatTemplate
                 string.Create(CultureInfo.InvariantCulture, $"Arguments of tool call '{call.Name}' must be a JSON object."), nameof(call));
         }
 
-        // Clone: the elements must outlive the parsed document.
-        var arguments = document.RootElement.EnumerateObject()
-            .Select(p => new KeyValuePair<string, JsonElement>(p.Name, p.Value.Clone()))
-            .ToList();
-        return Qwen35ToolCall.Create(call.Name, arguments);
+        // Clone: the element must outlive the parsed document.
+        return new Qwen35ToolCall(call.Name, document.RootElement.Clone());
     }
 
     private static Qwen35Tool Map(RoostToolDefinition tool)
