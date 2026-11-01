@@ -134,10 +134,9 @@ public readonly struct StubCpuOps : IRoostOps
 }
 
 /// <summary>
-/// <see cref="CpuOps"/> plus a fused AddRmsNorm, so the fused path and the generated Residual + RmsNorm fallback can be
-/// compared on the reference backend. CpuOps does not implement the fused ops (<c>SupportsAddRmsNorm</c> is false), so
-/// this test backend supplies one, written independently of CpuOps.RmsNorm and Residual: in double, one pass per row.
-/// Every other op is CpuOps itself.
+/// <see cref="CpuOps"/> with a second, independently written AddRmsNorm: in double, one pass per row, not a call of
+/// CpuOps.Residual and CpuOps.RmsNorm (which is how CpuOps defines its own, R-071). It checks the generated fused call
+/// against an implementation that does not share code with the fallback. Every other op is CpuOps itself.
 /// </summary>
 public readonly struct CpuFusedOps : IRoostOps
 {
@@ -166,6 +165,43 @@ public readonly struct CpuFusedOps : IRoostOps
             }
         }
     }
+
+    public static void RmsNorm(in RmsNormArgs a) => CpuOps.RmsNorm(a);
+
+    public static void QkNorm(in QkNormArgs a) => CpuOps.QkNorm(a);
+
+    public static void Rope(in RopeArgs a) => CpuOps.Rope(a);
+
+    public static void PagedAttention(in PagedAttentionArgs a) => CpuOps.PagedAttention(a);
+
+    public static void SiluAndMul(in SiluAndMulArgs a) => CpuOps.SiluAndMul(a);
+
+    public static void GeluAndMul(in GeluAndMulArgs a) => CpuOps.GeluAndMul(a);
+
+    public static void Gemm(in GemmArgs a) => CpuOps.Gemm(a);
+
+    public static void Embedding(in EmbeddingArgs a) => CpuOps.Embedding(a);
+
+    public static void LmHead(in LmHeadArgs a) => CpuOps.LmHead(a);
+
+    public static void Residual(in ResidualArgs a) => CpuOps.Residual(a);
+
+    public static void CacheWrite(in CacheWriteArgs a) => CpuOps.CacheWrite(a);
+
+    public static void CacheCopy(in CacheCopyArgs a) => CpuOps.CacheCopy(a);
+
+    public static void Argmax(in ArgmaxArgs a) => CpuOps.Argmax(a);
+
+    public static void Sample(in SampleArgs a) => CpuOps.Sample(a);
+}
+
+/// <summary>
+/// <see cref="CpuOps"/> without any fused op: every <c>SupportsX</c> keeps the interface default (false), so the generated
+/// forward takes the unfused fallback and the graph evaluator refuses a fused node. Every op is CpuOps itself.
+/// </summary>
+public readonly struct CpuUnfusedOps : IRoostOps
+{
+    public static bool Supports(OpId op) => CpuOps.Supports(op) && op is not (OpId.AddRmsNorm or OpId.QkvQkNormRopeCacheWrite);
 
     public static void RmsNorm(in RmsNormArgs a) => CpuOps.RmsNorm(a);
 

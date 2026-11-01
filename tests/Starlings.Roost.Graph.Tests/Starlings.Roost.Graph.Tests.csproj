@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Graph/Starlings.Roost.Graph.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <!-- The C7 checker (Checking.GraphChecker) lives in the model compiler; referenced here as a library. -->
+    <ProjectReference Include="../../src/Starlings.Roost.ModelCompiler/Starlings.Roost.ModelCompiler.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Models.Tiny/Starlings.Roost.Models.Tiny.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Models.Qwen35/Starlings.Roost.Models.Qwen35.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The reflection graph evaluator over CpuOps, its native buffers and the test passes and tolerances, shared with the model compiler tests. -->
+    <Compile Include="../Starlings.Roost.ModelCompiler.Tests/Support/GraphEvaluator.cs" Link="Support/GraphEvaluator.cs" />
+    <Compile Include="../Starlings.Roost.ModelCompiler.Tests/Support/Native.cs" Link="Support/Native.cs" />
+    <Compile Include="../Starlings.Roost.ModelCompiler.Tests/Support/Passes.cs" Link="Support/Passes.cs" />
+  </ItemGroup>
+</Project>

@@ -1,4 +1,5 @@
 using Starlings.Roost.Graph;
+using Starlings.Roost.Graph.Passes;
 
 namespace Starlings.Roost.ModelCompiler.Tests;
 
@@ -9,55 +10,24 @@ public sealed class TestTolerances(double absolute, double relative) : IToleranc
 }
 
 /// <summary>
-/// A test fusion pass, standing in for the real ones that stream L writes (R-071): Residual followed by the RmsNorm of
-/// its result becomes AddRmsNorm. <see cref="Epsilon"/> lets a test break it on purpose.
+/// The real AddRmsNorm fusion (<see cref="FuseAddRmsNormPass"/>, R-071) with the epsilon of every fused node replaced,
+/// so a test can break a pass on purpose and watch the checker catch it.
 /// </summary>
-public sealed class FuseAddRmsNormPass(string? epsilon = null) : IGraphPass
+public sealed class EpsilonOverridePass(string epsilon) : IGraphPass
 {
-    public string Name => "fuse-add-rmsnorm";
+    private readonly FuseAddRmsNormPass _inner = new();
+
+    public string Name => _inner.Name + "-eps-" + epsilon;
 
     public PassKind Kind => PassKind.Fusion;
 
-    public string? Epsilon { get; } = epsilon;
-
     public OpGraph Run(OpGraph graph, GraphTarget target)
     {
-        var nodes = new List<OpNode>();
-        var src = graph.Nodes;
-        for (int i = 0; i < src.Count; i++)
-        {
-            var r = src[i];
-            if (r.Op == "Residual" && i + 1 < src.Count && src[i + 1].Op == "RmsNorm" && src[i + 1].Inputs[0] == r.Outputs[0])
-            {
-                var norm = src[i + 1];
-                var attrs = new Dictionary<string, string>
-                {
-                    ["in"] = "Input,Residual,Weight",
-                    ["out"] = "Input,Residual",
-                    ["arg.Rows"] = norm.Attributes["arg.Rows"],
-                    ["arg.Dim"] = norm.Attributes["arg.Dim"],
-                    ["arg.Eps"] = Epsilon ?? norm.Attributes["arg.Eps"],
-                    ["arg.DType"] = norm.Attributes["arg.DType"],
-                    ["node"] = norm.Attributes["node"],
-                };
-                // Input := the add's second operand (overwritten with the normalised sum); Residual := its first (overwritten with the sum).
-                nodes.Add(new OpNode(
-                    nodes.Count,
-                    "AddRmsNorm",
-                    [r.Inputs[1], r.Inputs[0], norm.Inputs[1]],
-                    [norm.Outputs[0], r.Outputs[0]],
-                    attrs,
-                    [r.Id, norm.Id],
-                    null));
-                i++;
-            }
-            else
-            {
-                nodes.Add(new OpNode(nodes.Count, r.Op, r.Inputs, r.Outputs, r.Attributes, [r.Id], r.Variant));
-            }
-        }
-
-        return new OpGraph(graph.Name + "+" + Name, graph.Values, nodes, false);
+        var fused = _inner.Run(graph, target);
+        var nodes = fused.Nodes.Select(n => n.Op != FuseAddRmsNormPass.FusedOp
+            ? n
+            : new OpNode(n.Id, n.Op, n.Inputs, n.Outputs, new Dictionary<string, string>(n.Attributes) { ["arg.Eps"] = epsilon }, n.Origin, n.Variant)).ToList();
+        return new OpGraph(fused.Name, fused.Values, nodes, false);
     }
 }
 

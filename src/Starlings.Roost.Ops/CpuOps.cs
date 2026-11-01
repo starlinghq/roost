@@ -8,7 +8,8 @@ namespace Starlings.Roost.Ops;
 /// recurrent-state copies, the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul), RopeScaled (R-098, with its cache
 /// builders in <see cref="RopeScaling"/>), the MoE ops (MoeRouteTopK, MoePermute, MoeUnpermute, GroupedGemm, FusedMoe; R-080, bf16, fp16
 /// and fp32 weights only) and the M2 quantisation ops (Quantize, Dequantize, GemmW4A16, GemmFp8; R-077 and R-043), written as the plainest
-/// correct definition. Buffers are host addresses.
+/// correct definition, and the fused AddRmsNorm and QkvQkNormRopeCacheWrite as calls of their unfused parts (R-071). Buffers are host
+/// addresses.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,22 +25,24 @@ namespace Starlings.Roost.Ops;
 /// and are single-threaded. Spans are bounds-checked against their lengths and an out-of-range index or an
 /// undersized span throws <see cref="ArgumentException"/> before any write that depends on it.
 /// </para>
-/// <para>Inputs and outputs of one call must not overlap unless the op says so (Residual A and Output, RmsNorm Input and Output, in-place QkNorm, Rope and RopeScaled).</para>
+/// <para>Inputs and outputs of one call must not overlap unless the op says so (Residual A and Output, RmsNorm Input and Output, in-place QkNorm, Rope and RopeScaled, the in-place Input and Residual of AddRmsNorm).</para>
 /// </remarks>
 public readonly partial struct CpuOps : IRoostOps
 {
     private const int MaxHeadDim = 1024;
 
     /// <inheritdoc cref="IRoostOps.Supports(OpId)"/>
-    /// <remarks>The M0 ops, the seven hybrid and gating ops of Qwen3.5-0.8B, RopeScaled, the five MoE ops (R-080) and the four quantisation
-    /// ops of R-077 and R-043 (Quantize, Dequantize, GemmW4A16, GemmFp8; CPU references only, no GPU kernel yet). The MoE ops take bf16,
-    /// fp16 or fp32 weights; FP8 and INT4 MoE weights throw <see cref="NotSupportedException"/> (unsupported).</remarks>
+    /// <remarks>The M0 ops, the seven hybrid and gating ops of Qwen3.5-0.8B, RopeScaled, the five MoE ops (R-080), the four quantisation
+    /// ops of R-077 and R-043 (Quantize, Dequantize, GemmW4A16, GemmFp8; CPU references only, no GPU kernel yet), and the fused AddRmsNorm
+    /// and QkvQkNormRopeCacheWrite (R-071). The MoE ops take bf16, fp16 or fp32 weights; FP8 and INT4 MoE weights throw
+    /// <see cref="NotSupportedException"/> (unsupported).</remarks>
     public static bool Supports(OpId op) =>
         OpCatalog.IsM0(op)
         || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
             or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul or OpId.RopeScaled
             or OpId.MoeRouteTopK or OpId.MoePermute or OpId.MoeUnpermute or OpId.GroupedGemm or OpId.FusedMoe
-            or OpId.Quantize or OpId.Dequantize or OpId.GemmW4A16 or OpId.GemmFp8;
+            or OpId.Quantize or OpId.Dequantize or OpId.GemmW4A16 or OpId.GemmFp8
+            or OpId.AddRmsNorm or OpId.QkvQkNormRopeCacheWrite;
 
     /// <inheritdoc/>
     /// <remarks>Per row: <c>mean = sum(x^2) / Dim</c>, <c>Output = x / sqrt(mean + Eps) * Weight</c>, in double. Input may alias Output.</remarks>

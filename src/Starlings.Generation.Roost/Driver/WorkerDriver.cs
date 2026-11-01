@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Globalization;
 using System.Threading.Channels;
+using Starlings.Roost.Engine.Admission;
 using Starlings.Roost.Engine.Blocks;
 using Starlings.Roost.Engine.Scheduling;
 using Starlings.Roost.Plans;
@@ -38,6 +39,8 @@ internal sealed class WorkerDriver : IGenerationBackend
     private const int MinResultBufferBytes = 64 * 1024;
 
     private readonly RoostModelProfile _profile;
+    private readonly IDeviceMemorySource? _memory;
+    private readonly long _minFreeDeviceBytes;
     private readonly WorkerLaunch _launch;
     private readonly Func<IDriverTransport> _createTransport;
     private readonly object _gate = new();
@@ -54,6 +57,8 @@ internal sealed class WorkerDriver : IGenerationBackend
     private WorkerDriver(RoostModelProfile profile, RoostWorkerOptions worker, Func<IDriverTransport> createTransport)
     {
         _profile = profile;
+        _memory = worker.DeviceMemory;
+        _minFreeDeviceBytes = worker.MinFreeDeviceBytes;
         _createTransport = createTransport;
         _transport = createTransport();
         _planner = CreatePlanner(profile);
@@ -87,6 +92,7 @@ internal sealed class WorkerDriver : IGenerationBackend
     /// <exception cref="RoostChatException">The worker rejected the handshake or did not start.</exception>
     public static async Task<WorkerDriver> StartAsync(RoostModelProfile profile, RoostWorkerOptions worker, CancellationToken cancellationToken, Func<IDriverTransport, IDriverTransport>? decorate = null)
     {
+        ArgumentOutOfRangeException.ThrowIfNegative(worker.MinFreeDeviceBytes);
         var command = worker.Transport switch
         {
             TransportKind.Process => worker.Command ?? RoostWorkerRuntime.CommandFor(profile, worker),
@@ -296,6 +302,12 @@ internal sealed class WorkerDriver : IGenerationBackend
                 continue;
             }
 
+            if (!FloorHolds(out var refusal))
+            {
+                live.Fail(refusal!);
+                continue;
+            }
+
             if (!EnsureWorker(out var unavailable))
             {
                 live.Fail(unavailable!);
@@ -327,6 +339,35 @@ internal sealed class WorkerDriver : IGenerationBackend
                 _ => new RoostError(RoostErrorCode.InvalidOption, "The prompt is empty or the output limit is not positive.", "messages"),
             });
         }
+    }
+
+    // Co-tenant admission (R-044): a cached, non-blocking read of the device's free memory. Below the floor a new request is
+    // refused before it reaches the planner or the worker; running requests are untouched. An unreadable source decides nothing.
+    private bool FloorHolds(out RoostError? error)
+    {
+        error = null;
+        if (_memory is null || _minFreeDeviceBytes <= 0)
+        {
+            return true;
+        }
+
+        DeviceMemory memory;
+        try
+        {
+            if (!_memory.TryRead(out memory) || memory.FreeBytes >= _minFreeDeviceBytes)
+            {
+                return true;
+            }
+        }
+        catch (Exception)
+        {
+            return true; // a source must not throw; if one does, the pools decide, as when it cannot be read
+        }
+
+        error = new RoostError(
+            RoostErrorCode.InsufficientDeviceMemory,
+            string.Create(CultureInfo.InvariantCulture, $"{memory.FreeBytes} bytes of device memory are free; at least {_minFreeDeviceBytes} are needed to admit a request. Retry later."));
+        return false;
     }
 
     private bool EnsureWorker(out RoostError? error)
