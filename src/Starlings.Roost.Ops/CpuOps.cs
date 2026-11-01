@@ -5,8 +5,9 @@ namespace Starlings.Roost.Ops;
 
 /// <summary>
 /// The CPU reference backend (R-018): every M0 op of <see cref="IRoostOps"/> plus GatedDeltaRule, CausalConv1d, the
-/// recurrent-state copies and the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul), written as the
-/// plainest correct definition. Buffers are host addresses.
+/// recurrent-state copies, the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul) and the MoE ops (MoeRouteTopK,
+/// MoePermute, MoeUnpermute, GroupedGemm, FusedMoe; R-080, bf16, fp16 and fp32 weights only), written as the plainest correct
+/// definition. Buffers are host addresses.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -18,7 +19,7 @@ namespace Starlings.Roost.Ops;
 /// </para>
 /// <para>
 /// Allocation: calls allocate no managed memory. Small scratch is on the stack; scratch that scales with a model
-/// dimension (vocabulary, recurrent state) is native memory freed before the call returns. Calls do not synchronise
+/// dimension (vocabulary, recurrent state, FusedMoe's permuted rows) is native memory freed before the call returns. Calls do not synchronise
 /// and are single-threaded. Spans are bounds-checked against their lengths and an out-of-range index or an
 /// undersized span throws <see cref="ArgumentException"/> before any write that depends on it.
 /// </para>
@@ -29,11 +30,13 @@ public readonly partial struct CpuOps : IRoostOps
     private const int MaxHeadDim = 1024;
 
     /// <inheritdoc cref="IRoostOps.Supports(OpId)"/>
-    /// <remarks>The M0 ops plus the seven hybrid and gating ops of Qwen3.5-0.8B.</remarks>
+    /// <remarks>The M0 ops, the seven hybrid and gating ops of Qwen3.5-0.8B, and the five MoE ops (R-080). The MoE ops take bf16, fp16
+    /// or fp32 weights; FP8 and INT4 weights throw <see cref="NotSupportedException"/> (unsupported, R-077).</remarks>
     public static bool Supports(OpId op) =>
         OpCatalog.IsM0(op)
         || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
-            or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul;
+            or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul
+            or OpId.MoeRouteTopK or OpId.MoePermute or OpId.MoeUnpermute or OpId.GroupedGemm or OpId.FusedMoe;
 
     /// <inheritdoc/>
     /// <remarks>Per row: <c>mean = sum(x^2) / Dim</c>, <c>Output = x / sqrt(mean + Eps) * Weight</c>, in double. Input may alias Output.</remarks>

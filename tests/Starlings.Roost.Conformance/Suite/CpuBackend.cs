@@ -26,8 +26,11 @@ public sealed class CpuBackend : IKernelBackend
         OpId.GatedRmsNorm, OpId.SigmoidMul,
     ];
 
+    /// <summary>The MoE ops (R-080), which the independent oracle also implements.</summary>
+    public static readonly OpId[] MoeOps = [OpId.MoeRouteTopK, OpId.MoePermute, OpId.MoeUnpermute, OpId.GroupedGemm, OpId.FusedMoe];
+
     /// <summary>The ops this backend lists as variants: every op that has cases.</summary>
-    public static readonly OpId[] CoveredOps = [.. M0Ops, .. HybridOps];
+    public static readonly OpId[] CoveredOps = [.. M0Ops, .. HybridOps, .. MoeOps];
 
     private readonly List<VariantInfo> _variants =
     [
@@ -338,6 +341,42 @@ public sealed class CpuBackend : IKernelBackend
                     break;
                 }
 
+            case OpId.MoeRouteTopK:
+                CpuOps.MoeRouteTopK(new MoeRouteTopKArgs
+                {
+                    Logits = b["logits"].Span, Weights = b["weights"].Span, ExpertIds = b["ids"].Span, Tokens = c.I("tokens"), Experts = c.I("experts"),
+                    TopK = c.I("top_k"), Renormalize = c.I("renormalize") != 0, DType = dt,
+                });
+                break;
+            case OpId.MoePermute:
+                CpuOps.MoePermute(new MoePermuteArgs
+                {
+                    Input = b["x"].Span, ExpertIds = b["ids"].Span, Output = b["out"].Span, ExpertCounts = b["counts"].Span, ExpertOffsets = b["offsets"].Span,
+                    Permutation = b["perm"].Span, Tokens = c.I("tokens"), Dim = c.I("dim"), Experts = c.I("experts"), TopK = c.I("top_k"), DType = dt,
+                });
+                break;
+            case OpId.MoeUnpermute:
+                CpuOps.MoeUnpermute(new MoeUnpermuteArgs
+                {
+                    Input = b["y"].Span, Permutation = b["perm"].Span, Weights = b["weights"].Span, Output = b["out"].Span, Tokens = c.I("tokens"), Dim = c.I("dim"),
+                    TopK = c.I("top_k"), DType = dt,
+                });
+                break;
+            case OpId.GroupedGemm:
+                CpuOps.GroupedGemm(new GroupedGemmArgs
+                {
+                    A = b["a"].Span, B = b["b"].Span, D = b["d"].Span, ExpertOffsets = b["offsets"].Span, Experts = c.I("experts"), N = c.I("n"), K = c.I("k"),
+                    MaxRows = c.I("rows"), DType = dt, WeightDType = b["b"].Dtype,
+                });
+                break;
+            case OpId.FusedMoe:
+                CpuOps.FusedMoe(new FusedMoeArgs
+                {
+                    Input = b["x"].Span, RouterLogits = b["logits"].Span, W13 = b["w13"].Span, W2 = b["w2"].Span, Output = b["out"].Span, Tokens = c.I("tokens"),
+                    Dim = c.I("dim"), Intermediate = c.I("inter"), Experts = c.I("experts"), TopK = c.I("top_k"), Renormalize = c.I("renormalize") != 0, DType = dt,
+                    WeightDType = b["w13"].Dtype,
+                });
+                break;
             default:
                 throw new NotSupportedException($"No CPU case runner for {c.Op}.");
         }

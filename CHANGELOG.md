@@ -9,6 +9,8 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 ### Added
 
 - Release workflow (`.github/workflows/release.yml`), kernel release build (`tools/release-kernels.sh`) and release drill (`tools/release-drill.sh`) (R-060).
+- `Starlings.Roost.Ops`: `CpuOps` implements the MoE ops MoeRouteTopK, MoePermute, MoeUnpermute, GroupedGemm and FusedMoe (R-080, CPU half): double-precision references with deterministic tie order (lower expert first), a stable permutation and FusedMoe as the composition of the unfused ops; bf16, fp16 and fp32 weights, FP8 and INT4 `unsupported`. No GPU variant exists yet (`untested`).
+- `roost-tiny-moe` (`Starlings.Roost.Models.Tiny`, test and CI only): a Qwen3-MoE-shaped tiny model with seeded weights, run on `CpuOps` in CI.
 - `Starlings.Roost.Kernels`: `KernelLibraryResolver` fetches the per-SM kernel library of the package version from the GitHub release through `Starlings.Acquisition`, verified by size and SHA-256 against the embedded manifest (decision 12); `KernelManifest.Embedded()`.
 
 ### Changed

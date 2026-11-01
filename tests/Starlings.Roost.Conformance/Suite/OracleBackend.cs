@@ -3,19 +3,19 @@ using Starlings.Roost.Abi;
 namespace Starlings.Roost.Conformance;
 
 /// <summary>
-/// A second, independent implementation of the M0 ops, written from the op definitions in the C3 docs and the C1 header with
+/// A second, independent implementation of the M0 ops and the MoE ops (R-080), written from the op definitions in the C3 docs and the C1 header with
 /// plain loops over <see cref="HostBuf.Get"/> and <see cref="HostBuf.Set"/>. It shares no code with <c>CpuOps</c>. The CI half
 /// runs the suite with this backend as the candidate, so the reference every GPU result is judged by is itself checked on every
 /// push, whether or not a goldens file is at hand.
 /// </summary>
-public sealed class OracleBackend : IKernelBackend
+public sealed partial class OracleBackend : IKernelBackend
 {
     /// <summary>The variant id.</summary>
     public const string VariantId = "oracle";
 
     private readonly List<VariantInfo> _variants =
     [
-        .. CpuBackend.M0Ops.Select(op => new VariantInfo(op, VariantId, VariantTraits.Deterministic | VariantTraits.BatchInvariant, default)),
+        .. CpuBackend.M0Ops.Concat(CpuBackend.MoeOps).Select(op => new VariantInfo(op, VariantId, VariantTraits.Deterministic | VariantTraits.BatchInvariant, default)),
     ];
 
     /// <inheritdoc/>
@@ -54,6 +54,11 @@ public sealed class OracleBackend : IKernelBackend
                 case OpId.Residual: Residual(c, b); break;
                 case OpId.CacheWrite: CacheWrite(c, b); break;
                 case OpId.CacheCopy: CacheCopy(c, b); break;
+                case OpId.MoeRouteTopK: Route(c, b); break;
+                case OpId.MoePermute: Permute(c, b); break;
+                case OpId.MoeUnpermute: Unpermute(c, b); break;
+                case OpId.GroupedGemm: GroupedGemm(c, b); break;
+                case OpId.FusedMoe: FusedMoe(c, b); break;
                 default: throw new NotSupportedException(c.Op.ToString());
             }
 
