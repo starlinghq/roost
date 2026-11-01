@@ -20,6 +20,14 @@ internal sealed class Mem : IDisposable
         }
     }
 
+    private Mem(Mem owner, int count)
+    {
+        Dtype = owner.Dtype;
+        Count = count;
+        _elementSize = owner._elementSize;
+        Address = owner.Address;
+    }
+
     public nint Address { get; }
 
     public DType Dtype { get; }
@@ -58,6 +66,14 @@ internal sealed class Mem : IDisposable
         var m = Zeros(DType.BF16, v.Length);
         Marshal.Copy(v.Select(x => unchecked((short)(BitConverter.SingleToInt32Bits(x) >> 16))).ToArray(), 0, m.Address, v.Length);
         return m;
+    }
+
+    /// <summary>A buffer of <paramref name="count"/> logical elements (4-bit types: half as many bytes are used) starting with <paramref name="bytes"/>.</summary>
+    public static Mem Raw(DType dtype, int count, byte[] bytes)
+    {
+        var m = Zeros(dtype, Math.Max(count, bytes.Length));
+        Marshal.Copy(bytes, 0, m.Address, bytes.Length);
+        return new Mem(m, count);
     }
 
     public static Mem I32(params int[] v)

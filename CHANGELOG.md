@@ -9,6 +9,7 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 ### Added
 
 - Release workflow (`.github/workflows/release.yml`), kernel release build (`tools/release-kernels.sh`) and release drill (`tools/release-drill.sh`) (R-060).
+- `Starlings.Roost.Ops`: CPU references of `Quantize`, `Dequantize`, `GemmFp8` and `GemmW4A16`, FP8 E4M3 and E5M2 element support (round to nearest even, saturating) in `CpuOps` including an FP8 KV cache through `CacheWrite` and `PagedAttention` (unit scale only), and `Int4Weights` (AWQ and GPTQ scale and zero-point rules and checkpoint packing). CPU half only; no GPU kernel, fidelity profile or admission yet (R-077, R-043; `src/Starlings.Roost.Ops/STATUS.md`).
 - `Starlings.Roost.Kernels`: `KernelLibraryResolver` fetches the per-SM kernel library of the package version from the GitHub release through `Starlings.Acquisition`, verified by size and SHA-256 against the embedded manifest (decision 12); `KernelManifest.Embedded()`.
 
 ### Changed

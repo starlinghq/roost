@@ -26,8 +26,11 @@ public sealed class CpuBackend : IKernelBackend
         OpId.GatedRmsNorm, OpId.SigmoidMul,
     ];
 
+    /// <summary>The quantisation ops of R-077 and R-043, checked against <c>CpuOps</c> only; no GPU variant exists yet.</summary>
+    public static readonly OpId[] QuantOps = [OpId.Quantize, OpId.Dequantize, OpId.GemmFp8, OpId.GemmW4A16];
+
     /// <summary>The ops this backend lists as variants: every op that has cases.</summary>
-    public static readonly OpId[] CoveredOps = [.. M0Ops, .. HybridOps];
+    public static readonly OpId[] CoveredOps = [.. M0Ops, .. HybridOps, .. QuantOps];
 
     private readonly List<VariantInfo> _variants =
     [
@@ -338,6 +341,33 @@ public sealed class CpuBackend : IKernelBackend
                     break;
                 }
 
+            case OpId.Quantize:
+                CpuOps.Quantize(new QuantizeArgs
+                {
+                    Input = b["x"].Span, Output = b["out"].Span, Scales = b["scales"].Span, Rows = c.I("rows"), Dim = c.I("dim"), GroupSize = c.I("group"),
+                    DType = dt, OutputDType = (DType)c.I("out_dtype"),
+                });
+                break;
+            case OpId.Dequantize:
+                CpuOps.Dequantize(new DequantizeArgs
+                {
+                    Input = b["q"].Span, Scales = b["scales"].Span, Zeros = b.TryGetValue("zeros", out HostBuf? z) ? z.Span : default, Output = b["out"].Span,
+                    Rows = c.I("rows"), Dim = c.I("dim"), GroupSize = c.I("group"), InputDType = (DType)c.I("in_dtype"), DType = dt,
+                });
+                break;
+            case OpId.GemmFp8:
+                CpuOps.GemmFp8(new GemmFp8Args
+                {
+                    A = b["a"].Span, B = b["b"].Span, AScale = b["a_scale"].Span, BScale = b["b_scale"].Span, D = b["out"].Span, M = c.I("m"), N = c.I("n"), K = c.I("k"), DType = dt,
+                });
+                break;
+            case OpId.GemmW4A16:
+                CpuOps.GemmW4A16(new GemmW4A16Args
+                {
+                    A = b["a"].Span, B = b["b"].Span, Scales = b["scales"].Span, Zeros = b.TryGetValue("zeros", out HostBuf? wz) ? wz.Span : default, D = b["out"].Span,
+                    M = c.I("m"), N = c.I("n"), K = c.I("k"), GroupSize = c.I("group"), DType = dt,
+                });
+                break;
             default:
                 throw new NotSupportedException($"No CPU case runner for {c.Op}.");
         }

@@ -5,8 +5,8 @@ namespace Starlings.Roost.Ops;
 
 /// <summary>
 /// The CPU reference backend (R-018): every M0 op of <see cref="IRoostOps"/> plus GatedDeltaRule, CausalConv1d, the
-/// recurrent-state copies and the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul), written as the
-/// plainest correct definition. Buffers are host addresses.
+/// recurrent-state copies, the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul) and the M2 quantisation
+/// ops (Quantize, Dequantize, GemmW4A16, GemmFp8), written as the plainest correct definition. Buffers are host addresses.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -29,11 +29,13 @@ public readonly partial struct CpuOps : IRoostOps
     private const int MaxHeadDim = 1024;
 
     /// <inheritdoc cref="IRoostOps.Supports(OpId)"/>
-    /// <remarks>The M0 ops plus the seven hybrid and gating ops of Qwen3.5-0.8B.</remarks>
+    /// <remarks>The M0 ops, the seven hybrid and gating ops of Qwen3.5-0.8B, and the four quantisation ops of R-077 and R-043
+    /// (Quantize, Dequantize, GemmW4A16, GemmFp8; CPU references only, no GPU kernel yet).</remarks>
     public static bool Supports(OpId op) =>
         OpCatalog.IsM0(op)
         || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
-            or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul;
+            or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul
+            or OpId.Quantize or OpId.Dequantize or OpId.GemmW4A16 or OpId.GemmFp8;
 
     /// <inheritdoc/>
     /// <remarks>Per row: <c>mean = sum(x^2) / Dim</c>, <c>Output = x / sqrt(mean + Eps) * Weight</c>, in double. Input may alias Output.</remarks>
@@ -177,6 +179,8 @@ public readonly partial struct CpuOps : IRoostOps
     /// <para>Score = <c>q . k * Scale</c> (Scale 0 means 1/sqrt(HeadDim)); if SoftCap is not 0 the score becomes <c>SoftCap * tanh(score / SoftCap)</c>.
     /// Softmax and the weighted sum of V are in double with an online maximum; query head h reads KV head <c>h / (QHeads / KvHeads)</c>.
     /// A query that sees no key outputs zeros. Pools are indexed as PagedNhd or PagedHnd and read in KvDType. HeadDim is at most 1024.</para>
+    /// <para>An FP8 pool (F8E4M3 or F8E5M2) is read at unit scale: PagedAttentionArgs has no KScale or VScale, so a pool written by
+    /// CacheWrite with scales other than 1 is not dequantised here (a key scale can be folded into Scale; a value scale cannot).</para>
     /// </remarks>
     public static void PagedAttention(in PagedAttentionArgs a)
     {
@@ -458,6 +462,7 @@ public readonly partial struct CpuOps : IRoostOps
     /// <remarks>
     /// Token t goes to <c>slot = SlotMapping[t]</c> (block = slot / BlockSize, offset = slot % BlockSize); a negative slot skips the token.
     /// When KvDType differs from DType the value is divided by KScale (K) or VScale (V) and rounded into KvDType; when they match the copy is exact.
+    /// An FP8 KvDType (F8E4M3 or F8E5M2) rounds to nearest even and saturates finite overflow and infinities to the largest finite value (CUDA's satfinite).
     /// </remarks>
     public static void CacheWrite(in CacheWriteArgs a)
     {
