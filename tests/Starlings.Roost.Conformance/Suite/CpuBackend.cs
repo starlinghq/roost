@@ -26,8 +26,11 @@ public sealed class CpuBackend : IKernelBackend
         OpId.GatedRmsNorm, OpId.SigmoidMul,
     ];
 
+    /// <summary>The M2 ops with cases (R-098): RopeScaled, which the independent oracle also implements. No GPU variant exists yet.</summary>
+    public static readonly OpId[] M2Ops = [OpId.RopeScaled];
+
     /// <summary>The ops this backend lists as variants: every op that has cases.</summary>
-    public static readonly OpId[] CoveredOps = [.. M0Ops, .. HybridOps];
+    public static readonly OpId[] CoveredOps = [.. M0Ops, .. HybridOps, .. M2Ops];
 
     private readonly List<VariantInfo> _variants =
     [
@@ -338,6 +341,23 @@ public sealed class CpuBackend : IKernelBackend
                     break;
                 }
 
+            case OpId.RopeScaled:
+                CpuOps.RopeScaled(new RopeScaledArgs
+                {
+                    Q = b["q"].Span,
+                    K = b["k"].Span,
+                    Positions = b["pos"].Span,
+                    CosSinCache = b["cos_sin_cache"].Span,
+                    Tokens = c.I("tokens"),
+                    QHeads = c.I("q_heads"),
+                    KvHeads = c.I("kv_heads"),
+                    HeadDim = c.I("head_dim"),
+                    RotaryDim = c.I("rotary_dim"),
+                    ScalingKind = c.I("scaling_kind"),
+                    Factor = c.F("factor"),
+                    DType = dt,
+                });
+                break;
             default:
                 throw new NotSupportedException($"No CPU case runner for {c.Op}.");
         }

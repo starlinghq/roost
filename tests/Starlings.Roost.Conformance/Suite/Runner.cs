@@ -209,6 +209,25 @@ public static class ConformanceRunner
             }
         }
 
+        // An op whose GPU half is not built is reported, not silently left out, when the candidate registers no variant for it.
+        foreach ((OpId op, string why) in CaseCatalog.GpuHalfOpen.OrderBy(kv => (uint)kv.Key))
+        {
+            if ((options.Ops is null || options.Ops.Contains(op)) && options.Variants is null && !candidate.Variants.Any(v => v.Op == op))
+            {
+                report.Results.Add(new CaseResult
+                {
+                    Variant = "(none)",
+                    Case = "(no variant)",
+                    Op = op,
+                    Dtype = DType.Undefined,
+                    Source = "none",
+                    Class = string.Empty,
+                    Outcome = "not_run",
+                    Detail = why,
+                });
+            }
+        }
+
         return report;
     }
 

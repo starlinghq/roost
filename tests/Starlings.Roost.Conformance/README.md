@@ -80,6 +80,20 @@ dotnet build tests/Starlings.Roost.Conformance.Cuda -c Release -o <out dir>
 dotnet <out dir>/Starlings.Roost.Conformance.Cuda.dll --cpu --profile full --goldens <goldens file> --results <dir>
 ```
 
+### RopeScaled (R-098, CPU half only)
+
+`Suite/RopeScaledCases.cs` has cases for RopeScaled: YaRN (with and without the mscale attention factor), longrope with its short and
+its long factors, and dynamic NTK, each a float32 cos/sin cache of 8192 rows built by `RopeScaling` (`src/Starlings.Roost.Ops`) and
+applied to bf16 and f16 Q and K of the Qwen3.5-0.8B full-attention shape and of a 128-wide full-rotary head, class `elementwise-*`.
+`CpuBackend` runs them, and `OracleBackend` has its own implementation of the cache application, so the CI half checks CpuOps on
+them; the cache builders themselves are checked against transformers 5.20.1 in `tests/Starlings.Roost.Ops.Tests/RopeScalingTests.cs`.
+`RopeScaledTests` also shows that a backend rotating by the unscaled frequencies fails these cases.
+
+No kernel library registers a RopeScaled variant: on CUDA the op is **unsupported** and untested on every SM. So that this is
+visible rather than silent, the runner adds a `not_run` row (`RopeScaled/(none)/(no variant)`, with that reason) for any backend
+that has no variant for an op listed in `CaseCatalog.GpuHalfOpen`. The GPU half of RopeScaled, and long-context parity for a Qwen
+profile, remain open (`src/Starlings.Roost.Ops/STATUS.md`).
+
 ## Goldens
 
 Upstream goldens are made by `goldens/generate_goldens.py`, pinned to transformers 5.20.1 and torch 2.9.1 (the versions the
@@ -271,7 +285,8 @@ definition (R-049).
     reproduce only by rebuilding there; the release pipeline (R-060) replaces them.
 - The goldens file is not uploaded as a release asset (no release is made here) and CI does not fetch it; the real-goldens test is skipped there.
 - Only SM 86 and SM 89 have hardware evidence; other SMs stay `untested`. The manifest still lists SM 89 `untested`: setting it `experimental` with this evidence is the maintainer's (or stream C's) call, and `ManifestAndNamesTests` (stream F) asserts the current value.
-- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases.
+- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases. RopeScaled has CPU cases but no
+  GPU variant (see above).
 - No `graph` case: capturing a graph is not a conformance property here; the R-034 harness replays the graph-capturable hybrid ops once.
 - The suite does not run real Qwen3.5-0.8B weights (R-017's harness does); it uses seeded random data of the model's shapes.
 - CI timing of the Conformance assembly in Release: the CPU half took 67 to 135 s locally in Release (`dotnet test` reported 77 s for 51

@@ -17,13 +17,13 @@ public sealed class ContractTests
         where TOps : struct, IRoostOps => TOps.AddRmsNorm(default);
 
     [Fact]
-    public void CpuOpsSupportsTheM0OpsAndTheFourHybridOpsOnly()
+    public void CpuOpsSupportsTheM0OpsTheHybridOpsAndRopeScaledOnly()
     {
         foreach (OpId op in Enum.GetValues<OpId>().Where(o => o != OpId.None))
         {
             bool expected = OpCatalog.IsM0(op)
                 || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
-                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul;
+                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul or OpId.RopeScaled;
             Assert.Equal(expected, Reports<CpuOps>(op));
         }
 
@@ -108,6 +108,8 @@ public sealed class ContractTests
         var statePool = f.Add(Mem.Zeros(DType.F32, 8));
         var snapPool = f.Add(Mem.Zeros(DType.F32, 8));
         var snapPairs = f.Add(Mem.I32(0, 1));
+        var ropeCache = f.Add(Mem.Zeros(DType.F32, 8 * 8));
+        RopeScaling.WriteCosSinCache(RopeScaling.DynamicNtk(8, 10000, 2, 4, 8), ropeCache.Span, 8);
 
         void Everything()
         {
@@ -125,6 +127,7 @@ public sealed class ContractTests
             CpuOps.RmsNorm(new RmsNormArgs { Input = x.Span, Weight = w.Span, Output = y.Span, Rows = 8, Dim = 8, Eps = 1e-6f, DType = DType.F32 });
             CpuOps.QkNorm(new QkNormArgs { Q = x.Span, K = y.Span, QWeight = w.Span, KWeight = w.Span, Tokens = 4, QHeads = 1, KvHeads = 1, HeadDim = 8, Eps = 1e-6f, DType = DType.F32 });
             CpuOps.Rope(new RopeArgs { Q = x.Span, K = y.Span, Positions = pos.Span, Tokens = 8, QHeads = 1, KvHeads = 1, HeadDim = 8, Theta = 10000f, DType = DType.F32 });
+            CpuOps.RopeScaled(new RopeScaledArgs { Q = x.Span, K = y.Span, Positions = pos.Span, CosSinCache = ropeCache.Span, Tokens = 8, QHeads = 1, KvHeads = 1, HeadDim = 8, ScalingKind = 3, Factor = 2f, DType = DType.F32 });
             CpuOps.Argmax(new ArgmaxArgs { Logits = logits.Span, Ids = ids.Span, Rows = 8, Vocab = 8 });
             CpuOps.Sample(new SampleArgs { Logits = logits.Span, Temperature = temp.Span, TopK = topK.Span, TopP = topP.Span, MinP = minP.Span, Seeds = seeds.Span, Offsets = offsets.Span, Ids = ids.Span, Rows = 8, Vocab = 8, Stride = 8 });
             CpuOps.GatedDeltaRule(new GatedDeltaRuleArgs
