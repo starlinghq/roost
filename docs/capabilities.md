@@ -87,9 +87,9 @@ Status of each op on CUDA through the kernel library. Every registered variant p
 | `RopeScaled` | `unsupported` | — | No kernel. The CPU reference (YaRN, longrope, dynamic NTK, llama3) is experimental on the CPU (`src/Starlings.Roost.Ops/STATUS.md`, R-098). |
 | `SlidingWindowAttention` | `unsupported` | — | No kernel. CPU reference for `PagedAttention` with a window exists (R-113). |
 | Fused ops (`AddRmsNorm`, `AddRmsNormQuant`, `SiluMulQuant`, `QkvQkNormRopeCacheWrite`, `GemmLoraEpilogue`) | `unsupported` | — | Reserved op ids; no kernel and no CPU reference. R-071. |
-| Quantisation ops (`Quantize`, `Dequantize`, `GemmW4A16`, `GemmFp8`, `DequantizeGguf`) | `unsupported` | — | Reserved op ids. R-043, R-077, R-108. |
+| Quantisation ops (`Quantize`, `Dequantize`, `GemmW4A16`, `GemmFp8`, `DequantizeGguf`) | `unsupported` | — | No kernel. `CpuOps` has references for the first four (R-043, R-077; `src/Starlings.Roost.Ops/STATUS.md`); `DequantizeGguf` is a reserved op id (R-108). |
 | Speculation ops (`TreeAttention`, `RejectSample`) | `unsupported` | — | Reserved op ids. R-083 to R-085. |
-| MoE ops (`MoeRouteTopK`, `MoePermute`, `MoeUnpermute`, `GroupedGemm`, `FusedMoe`) | `unsupported` | — | Reserved op ids. S6 measured candidates on SM 86 (`docs/m0/roost-s6-moe-kernels.md`); nothing is in the library. R-080, R-081. |
+| MoE ops (`MoeRouteTopK`, `MoePermute`, `MoeUnpermute`, `GroupedGemm`, `FusedMoe`) | `unsupported` | — | Reserved op ids. S6 measured candidates on SM 86 (`docs/m0/roost-s6-moe-kernels.md`); nothing is in the library. `CpuOps` has bf16 references and conformance CPU cases (R-080). R-080, R-081. |
 | LoRA ops (`LoraShrink`, `LoraExpand`) | `unsupported` | — | Reserved op ids. R-050. |
 | Collectives (`AllReduce`, `AllGather`, `ReduceScatter`, `AllToAll`) | `unsupported` | — | Reserved op ids. R-089, R-091. |
 | `MlaAttention` | `unsupported` | — | Reserved op id. R-093. |
@@ -148,6 +148,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `conversation_state` | `unsupported` | — | `ConversationId`. |
 | `continuous_batching` | `unsupported` | — | M0 runs one sequence per step; concurrent requests take turns. R-029 wiring, M1. |
 | `worker_recovery` | `unsupported` | — | A worker fault fails the requests it carried. R-070. |
+| `co_tenant_admission` | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | Refuses new requests with `InsufficientDeviceMemory` while free device memory is below `MinFreeDeviceBytes` (R-044). CPU only: the co-tenant GPU test is open and no NVML source is the default yet. |
 
 ## OpenAI-compatible server (`roost serve`, R-037)
 
@@ -178,7 +179,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Prefix caching, hybrid (recurrent state) | `unsupported` | — | R-094. |
 | Async scheduling | `unsupported` | — | R-032. |
 | CUDA graphs, full and piecewise | `unsupported` | — | The worker is eager. The one R-017 capture on SM 86 replayed with a mismatch (`kernels/results/r017-graph-sm86.log`). R-032, R-033. |
-| Compiler fusion passes | `unsupported` | — | R-071, R-089. |
+| Compiler fusion passes | `unsupported` | — | No CUDA fused variant. The AddRmsNorm and QkvQkNormRopeCacheWrite passes and their `CpuOps` definitions exist and are checked against the unfused graph on CPU (R-071). R-089. |
 | Batch-invariant mode | `unsupported` | — | R-106. FA2 prefill output depends on batch composition (R-019). |
 
 ## Worker process and transports (contract C8)
@@ -213,7 +214,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | --- | --- | --- | --- |
 | bf16 weights, activations and KV cache | `experimental` | `tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm86.log`<br>`tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm89.log` | The one served profile. |
 | f16 activations | `untested` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out` | Kernels pass f16 conformance on SM 86 and SM 89; no model profile runs f16. |
-| FP8 weights and activations, FP8 KV | `unsupported` | — | R-043, R-077. |
+| FP8 weights and activations, FP8 KV | `unsupported` | — | No kernel; CPU references only (R-043, R-077). |
 | AWQ and GPTQ INT4 (Marlin) | `unsupported` | — | R-077. S6 has compile evidence only. |
 | MXFP4 and NVFP4 | `unsupported` | — | R-078. |
 | AutoRound weight formats, 2-bit KV cache | `unsupported` | — | R-109. |
@@ -236,7 +237,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
 | Paged KV cache with recurrent state pool | `experimental` | `tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm86.log` | Block manager (R-028) and recurrent slots, one sequence per step. |
-| CPU, disk and remote KV offload | `unsupported` | — | R-094, R-096. |
+| CPU, disk and remote KV offload | `unsupported` | — | The host-memory tier is planned and cache-managed in the engine and CPU-tested (R-094, off by default); the CUDA worker does not execute tier moves. Disk and remote: R-096. |
 | Disaggregated prefill and decode | `unsupported` | — | R-095. |
 | Encoder disaggregation | `unsupported` | — | R-099. |
 
