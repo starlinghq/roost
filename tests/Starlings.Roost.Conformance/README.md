@@ -74,6 +74,18 @@ The suite never injects a fault: it launches nothing outside a variant's registe
 
 The goldens asset is not in CI yet: fetching a release asset needs a step in `.github/workflows/ci.yml`, which is stream A's.
 
+### Quantisation cases (R-077, R-043; CPU half only)
+
+`Suite/QuantCases.cs` generates cases for Quantize, Dequantize, GemmFp8 and GemmW4A16 (`CpuBackend.QuantOps`): Qwen3.5-0.8B
+projection widths (1024, 3584), group 128, and random shapes, with random FP8 codes (never NaN or, for E5M2, infinity) and random
+packed 4-bit bytes. B of GemmW4A16 is in C3's plain layout ([N, K] U4 or I4, low nibble first); a Marlin kernel would repack it
+first, since C3 does not define the Marlin layout. There is no oracle for these ops and no kernel library registers a variant of
+them, so in CI they only run on `CpuOps` through the runner (`QuantCaseTests`), and their GPU half is `untested`. Classes, as
+proposals with no kernel measured: Quantize `exact` (codes and scales byte for byte; a kernel that multiplies by a reciprocal
+scale will need its own class), Dequantize the elementwise class of its output type, the two GEMMs `gemm-bf16` or `gemm-f16`. No
+class was added to or changed in `op-class-tolerances.proposal.json`. What is and is not done for quantisation is in
+`src/Starlings.Roost.Ops/STATUS.md`.
+
 ```sh
 # CPU half with the goldens, full profile, and the stage-results files:
 dotnet build tests/Starlings.Roost.Conformance.Cuda -c Release -o <out dir>
@@ -326,8 +338,8 @@ other case has utilisation 0. Log: `results/r080-moe-cpu-full.out`.
     reproduce only by rebuilding there; the release pipeline (R-060) replaces them.
 - The goldens file is not uploaded as a release asset (no release is made here) and CI does not fetch it; the real-goldens test is skipped there.
 - Only SM 86 and SM 89 have hardware evidence; other SMs stay `untested`. The manifest still lists SM 89 `untested`: setting it `experimental` with this evidence is the maintainer's (or stream C's) call, and `ManifestAndNamesTests` (stream F) asserts the current value.
-- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases. RopeScaled and the MoE ops
-  have CPU cases but no GPU variant, and the MoE ops have no upstream golden (above).
+- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases. RopeScaled, the MoE ops and
+  the quantisation ops have CPU-half cases but no GPU variant, and the MoE ops have no upstream golden (above).
 - No `graph` case: capturing a graph is not a conformance property here; the R-034 harness replays the graph-capturable hybrid ops once.
 - The suite does not run real Qwen3.5-0.8B weights (R-017's harness does); it uses seeded random data of the model's shapes.
 - CI timing of the Conformance assembly in Release: the CPU half took 67 to 135 s locally in Release (`dotnet test` reported 77 s for 51
