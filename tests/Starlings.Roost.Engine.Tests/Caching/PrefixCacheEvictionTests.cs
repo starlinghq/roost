@@ -21,7 +21,7 @@ public sealed class PrefixCacheEvictionTests
     {
         List<int>[] tables = [[]];
         var found = new List<PrefixCache.Node>();
-        var hit = cache.TryAttach(Seq(from, 9).ToArray(), 0, tables, found, out var computed, out _);
+        var hit = cache.TryAttach(Seq(from, 9).ToArray(), 0, tables, found, out var computed, out _, out _);
         if (hit && !hold)
         {
             blocks.GetPool(0).Release(tables[0].ToArray());
