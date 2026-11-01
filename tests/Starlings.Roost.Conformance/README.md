@@ -46,7 +46,8 @@ A NaN or infinity in a candidate is never a pass. Beyond the comparison, per var
 - **ABI**: a call with a `struct_size` 8 bytes short must return `ABI_MISMATCH` before any launch.
 - **Plan**: a `NEEDS_PLAN` variant run before `plan()` must return `NOT_PLANNED`.
 - **Padding**: elements between strided rows (RmsNorm, QkNorm, LmHead) must be untouched.
-- **Registered refusals** (`Suite/Refusals.cs`): a combination a variant is registered to refuse (today `gemm-cublaslt` with a C input, `beta != 0`, or a bias, in any dtype, R-019)
+- **Registered refusals** (`Suite/Refusals.cs`): a combination a variant is registered to refuse (today `gemm-cublaslt` with a C input, `beta != 0`, or a bias, in any dtype, R-019;
+  and `paged-attention-flashinfer-fa2` with a sliding window, R-113, below)
   must return the rule's typed status (`UNSUPPORTED`) from `plan()`; the outcome is `refused`, which is neither a pass nor a failure, is counted separately,
   and keeps the run green. Serving the combination, another status, or a refusal no rule predicts is a failure.
 - **Prefill batch composition** (PagedAttention, prefill, more than one sequence): the first, middle and last sequence are run alone over the same K/V
@@ -78,6 +79,20 @@ The goldens asset is not in CI yet: fetching a release asset needs a step in `.g
 dotnet build tests/Starlings.Roost.Conformance.Cuda -c Release -o <out dir>
 dotnet <out dir>/Starlings.Roost.Conformance.Cuda.dll --cpu --profile full --goldens <goldens file> --results <dir>
 ```
+
+### RopeScaled (R-098, CPU half only)
+
+`Suite/RopeScaledCases.cs` has cases for RopeScaled: YaRN (with and without the mscale attention factor), longrope with its short and
+its long factors, and dynamic NTK, each a float32 cos/sin cache of 8192 rows built by `RopeScaling` (`src/Starlings.Roost.Ops`) and
+applied to bf16 and f16 Q and K of the Qwen3.5-0.8B full-attention shape and of a 128-wide full-rotary head, class `elementwise-*`.
+`CpuBackend` runs them, and `OracleBackend` has its own implementation of the cache application, so the CI half checks CpuOps on
+them; the cache builders themselves are checked against transformers 5.20.1 in `tests/Starlings.Roost.Ops.Tests/RopeScalingTests.cs`.
+`RopeScaledTests` also shows that a backend rotating by the unscaled frequencies fails these cases.
+
+No kernel library registers a RopeScaled variant: on CUDA the op is **unsupported** and untested on every SM. So that this is
+visible rather than silent, the runner adds a `not_run` row (`RopeScaled/(none)/(no variant)`, with that reason) for any backend
+that has no variant for an op listed in `CaseCatalog.GpuHalfOpen`. The GPU half of RopeScaled, and long-context parity for a Qwen
+profile, remain open (`src/Starlings.Roost.Ops/STATUS.md`).
 
 ## Goldens
 
@@ -230,6 +245,32 @@ depends on that path. RTX 3090 (SM 86) and RTX 4060 Ti (SM 89), driver 610.57, `
   unchanged; only `gemm.cu` changed).
 - **Hybrid ops**: every variant the current library registers has cases and ran on both SMs (above); none needed a refusal or an exception.
 
+## Sliding-window attention (R-113): partial, CPU groundwork only
+
+R-113 asks for sliding-window paged attention and window release with CPU references and conformance. What this suite and the CPU
+reference cover today, and what is open:
+
+| Part | Status | Where |
+| --- | --- | --- |
+| `CpuOps.PagedAttention` with `WindowLeft > 0` (decode and prefill, GQA, causal and not, window edges, window 1, window longer than the context, released `-1` pages outside every window) | done on the CPU; it is the reference, not a served capability | `src/Starlings.Roost.Ops/CpuOps.cs`; `tests/Starlings.Roost.Ops.Tests/SlidingWindowAttentionTests.cs` (hand-computed cases and 300 randomized calls against a dense definition, 1e-12) |
+| `WindowLeft == 0` | rejected, unchanged (C3 documentation: an unbound field) | `AttentionTests.AWindowOfZeroThrowsNamingTheOpAndLeavesTheOutputUntouched` |
+| Window release in the block manager (R-028) | existed; tests added that tie it to the attention op | `BlockPool.ReleaseOutOfWindow`, `LeadingReleasableBlocks`; `tests/Starlings.Roost.Engine.Tests/Blocks/SlidingWindowReleaseAttentionTests.cs` |
+| Conformance cases with a window | CPU half runs in CI: the independent oracle agrees with `CpuOps` on every one | `Suite/SlidingWindowCases.cs` (13 cases in `ci`, 19 in `full`); `Tests/SlidingWindowTests.cs` |
+| CUDA sliding-window variant | **unsupported**: `paged-attention-flashinfer-fa2` returns `UNSUPPORTED` for `window_left != -1` before any launch | `kernels/src/paged_attention.cu` (`Validate`), stream C |
+| GPU conformance of the window | **untested**: the GPU half reports every window case `refused` by the registered rule `RefusalRules.PagedAttentionSlidingWindow`, never `pass`; no GPU run has included these cases | `Suite/Refusals.cs` |
+
+Window convention: a query at position p reads keys `p - WindowLeft` to p (FlashInfer's `window_left`), `WindowLeft + 1` keys with its own.
+A Hugging Face `sliding_window` of W is therefore `WindowLeft = W - 1`; a model definition maps it (R-049 for Gemma 4). The block manager
+keeps keys from `tokens - Window` on, so a group whose `Window` equals the attention's `WindowLeft` (or exceeds it) never loses a key a
+query reads; the engine test checks that this rule is also tight (it keeps no block it could release for that `WindowLeft`).
+
+The window cases are synthetic shapes of the M0 attention layer (8 query heads over 2 KV heads, head_dim 256, bf16); no model's window size is
+claimed. They have no upstream golden (the goldens file and its lock are unchanged), and the SM 86 and SM 89 results above predate them.
+
+Open for R-113: a CUDA variant with the window built in (stream C), removing `PagedAttentionSlidingWindow` in that same change so the cases are
+compared, a GPU conformance run and sanitizer run through `tools/gpu-lease`, upstream goldens for windowed attention, and a windowed model
+definition (R-049).
+
 ## Not done
 
 - Open decisions and requests (deferred, not guessed):
@@ -244,7 +285,8 @@ depends on that path. RTX 3090 (SM 86) and RTX 4060 Ti (SM 89), driver 610.57, `
     reproduce only by rebuilding there; the release pipeline (R-060) replaces them.
 - The goldens file is not uploaded as a release asset (no release is made here) and CI does not fetch it; the real-goldens test is skipped there.
 - Only SM 86 and SM 89 have hardware evidence; other SMs stay `untested`. The manifest still lists SM 89 `untested`: setting it `experimental` with this evidence is the maintainer's (or stream C's) call, and `ManifestAndNamesTests` (stream F) asserts the current value.
-- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases.
+- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases. RopeScaled has CPU cases but no
+  GPU variant (see above).
 - No `graph` case: capturing a graph is not a conformance property here; the R-034 harness replays the graph-capturable hybrid ops once.
 - The suite does not run real Qwen3.5-0.8B weights (R-017's harness does); it uses seeded random data of the model's shapes.
 - CI timing of the Conformance assembly in Release: the CPU half took 67 to 135 s locally in Release (`dotnet test` reported 77 s for 51

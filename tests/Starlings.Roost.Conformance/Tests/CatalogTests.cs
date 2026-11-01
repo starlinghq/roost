@@ -97,7 +97,7 @@ public sealed class CatalogTests
     [Fact]
     public void SingleRowFormsExistForTheRowWiseOps()
     {
-        foreach (OpId op in new[] { OpId.RmsNorm, OpId.QkNorm, OpId.Rope, OpId.SiluAndMul, OpId.Gemm, OpId.Embedding, OpId.LmHead })
+        foreach (OpId op in new[] { OpId.RmsNorm, OpId.QkNorm, OpId.Rope, OpId.SiluAndMul, OpId.Gemm, OpId.Embedding, OpId.LmHead, OpId.RopeScaled })
         {
             bool any = false;
             foreach (OpCase c in CaseCatalog.Generate(op, 1, CaseProfile.Ci))

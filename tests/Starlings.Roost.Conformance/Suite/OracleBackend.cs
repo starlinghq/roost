@@ -3,7 +3,7 @@ using Starlings.Roost.Abi;
 namespace Starlings.Roost.Conformance;
 
 /// <summary>
-/// A second, independent implementation of the M0 ops, written from the op definitions in the C3 docs and the C1 header with
+/// A second, independent implementation of the M0 ops and RopeScaled, written from the op definitions in the C3 docs and the C1 header with
 /// plain loops over <see cref="HostBuf.Get"/> and <see cref="HostBuf.Set"/>. It shares no code with <c>CpuOps</c>. The CI half
 /// runs the suite with this backend as the candidate, so the reference every GPU result is judged by is itself checked on every
 /// push, whether or not a goldens file is at hand.
@@ -15,7 +15,7 @@ public sealed class OracleBackend : IKernelBackend
 
     private readonly List<VariantInfo> _variants =
     [
-        .. CpuBackend.M0Ops.Select(op => new VariantInfo(op, VariantId, VariantTraits.Deterministic | VariantTraits.BatchInvariant, default)),
+        .. CpuBackend.M0Ops.Concat(CpuBackend.M2Ops).Select(op => new VariantInfo(op, VariantId, VariantTraits.Deterministic | VariantTraits.BatchInvariant, default)),
     ];
 
     /// <inheritdoc/>
@@ -54,6 +54,7 @@ public sealed class OracleBackend : IKernelBackend
                 case OpId.Residual: Residual(c, b); break;
                 case OpId.CacheWrite: CacheWrite(c, b); break;
                 case OpId.CacheCopy: CacheCopy(c, b); break;
+                case OpId.RopeScaled: RopeScaled(c, b); break;
                 default: throw new NotSupportedException(c.Op.ToString());
             }
 
@@ -115,6 +116,34 @@ public sealed class OracleBackend : IKernelBackend
             {
                 long off = (((long)t * c.I("kv_heads")) + h) * hd;
                 NormRow(b["k"], off, b["kw"], b["k"], off, hd, c.Num["eps"]);
+            }
+        }
+    }
+
+    // RopeScaled: pair (i, i + R/2) of every head turned by row Positions[t] of the cache, which holds R/2 cosines then R/2 sines.
+    private static void RopeScaled(OpCase c, Dictionary<string, HostBuf> b)
+    {
+        int hd = c.I("head_dim");
+        int rot = c.I("rotary_dim") == 0 ? hd : c.I("rotary_dim");
+        int half = rot / 2;
+        HostBuf cache = b["cos_sin_cache"];
+        foreach ((string name, int heads) in new[] { ("q", c.I("q_heads")), ("k", c.I("kv_heads")) })
+        {
+            HostBuf x = b[name];
+            for (int t = 0; t < c.I("tokens"); t++)
+            {
+                long row = (long)b["pos"].Get(t) * rot;
+                for (int h = 0; h < heads; h++)
+                {
+                    long off = (((long)t * heads) + h) * hd;
+                    for (int i = 0; i < half; i++)
+                    {
+                        double cos = cache.Get(row + i), sin = cache.Get(row + half + i);
+                        double a = x.Get(off + i), z = x.Get(off + half + i);
+                        x.Set(off + i, (a * cos) - (z * sin));
+                        x.Set(off + half + i, (z * cos) + (a * sin));
+                    }
+                }
             }
         }
     }
@@ -197,12 +226,16 @@ public sealed class OracleBackend : IKernelBackend
                     visible = kvLen;
                 }
 
+                // Sliding window (R-113, C3 PagedAttentionArgs.WindowLeft): the query at position kvLen - n + i reads no key before
+                // that position minus the window; the pages before it may be released (-1) and are never looked up.
+                int window = c.IOr("window_left", -1);
+                int first = window < 0 ? 0 : Math.Max(0, kvLen - n + i - window);
                 for (int h = 0; h < qh; h++)
                 {
                     int g = h / group;
                     var score = new double[visible];
                     double max = double.NegativeInfinity;
-                    for (int j = 0; j < visible; j++)
+                    for (int j = first; j < visible; j++)
                     {
                         long page = (long)idx.Get(p0 + (j / ps));
                         double dot = 0;
@@ -216,7 +249,7 @@ public sealed class OracleBackend : IKernelBackend
                     }
 
                     double sum = 0;
-                    for (int j = 0; j < visible; j++)
+                    for (int j = first; j < visible; j++)
                     {
                         score[j] = Math.Exp(score[j] - max);
                         sum += score[j];
@@ -225,7 +258,7 @@ public sealed class OracleBackend : IKernelBackend
                     for (int d = 0; d < hd; d++)
                     {
                         double acc = 0;
-                        for (int j = 0; j < visible; j++)
+                        for (int j = first; j < visible; j++)
                         {
                             long page = (long)idx.Get(p0 + (j / ps));
                             acc += score[j] * b["v_cache"].Get(CacheIndex(layout, ps, kh, hd, page, j % ps, g, d));

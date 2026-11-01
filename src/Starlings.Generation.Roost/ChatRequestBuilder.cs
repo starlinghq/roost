@@ -11,6 +11,13 @@ namespace Starlings.Generation.Roost;
 /// <param name="MaxOutputTokens">Requested output tokens before the context cap.</param>
 internal sealed record PreparedChat(IReadOnlyList<RoostChatMessage> Messages, IReadOnlyList<string> StopSequences, IStopMatcher StopMatcher, int MaxOutputTokens);
 
+/// <summary>A validated raw-text completion request: the prompt as given, the stop strings and the output limit.</summary>
+/// <param name="Prompt">The prompt text, tokenised without a chat template.</param>
+/// <param name="StopSequences">The request's stop strings.</param>
+/// <param name="StopMatcher">The matcher for them, made by the client's factory.</param>
+/// <param name="MaxOutputTokens">Requested output tokens before the context cap.</param>
+internal sealed record PreparedPrompt(string Prompt, IReadOnlyList<string> StopSequences, IStopMatcher StopMatcher, int MaxOutputTokens);
+
 /// <summary>
 /// Checks a conversation and its <see cref="ChatOptions"/> against what M0 runs, before any work starts. Every option that is
 /// set and not supported is refused with <see cref="Starlings.Roost.Requests.RoostErrorCode.InvalidOption"/> naming it (the
@@ -23,31 +30,11 @@ internal static class ChatRequestBuilder
     public static PreparedChat Build(IEnumerable<ChatMessage> messages, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens)
     {
         ArgumentNullException.ThrowIfNull(messages);
-        var maxOutput = defaultMaxOutputTokens;
-        IReadOnlyList<string> stops = [];
-        string? instructions = null;
-        if (options is not null)
-        {
-            CheckOptions(options, modelId);
-            if (options.MaxOutputTokens is { } max)
-            {
-                maxOutput = max > 0 ? max : throw RoostChatException.InvalidOption("max_tokens", string.Create(CultureInfo.InvariantCulture, $"MaxOutputTokens must be positive; got {max}."));
-            }
+        var (stops, maxOutput) = CheckCommon(options, modelId, defaultMaxOutputTokens);
 
-            if (options.StopSequences is { Count: > 0 } s)
-            {
-                if (s.Any(string.IsNullOrEmpty))
-                {
-                    throw RoostChatException.InvalidOption("stop", "Stop sequences must be non-empty strings.");
-                }
-
-                stops = [.. s];
-            }
-
-            // An empty Instructions string means no instructions, as null does: an empty system message would change the
-            // rendered prompt without saying anything.
-            instructions = string.IsNullOrEmpty(options.Instructions) ? null : options.Instructions;
-        }
+        // An empty Instructions string means no instructions, as null does: an empty system message would change the
+        // rendered prompt without saying anything.
+        string? instructions = options?.Instructions is { Length: > 0 } given ? given : null;
 
         var conversation = new List<RoostChatMessage>();
         if (instructions is not null)
@@ -74,17 +61,68 @@ internal static class ChatRequestBuilder
             throw RoostChatException.InvalidOption("messages", "The conversation is empty.");
         }
 
-        IStopMatcher matcher;
+        return new PreparedChat(conversation, stops, CreateMatcher(stopFactory, stops), maxOutput);
+    }
+
+    /// <summary>
+    /// Checks a raw-text completion: the same options as a chat, except <c>Instructions</c>, which a prompt without a chat
+    /// template has nowhere to put.
+    /// </summary>
+    public static PreparedPrompt BuildRaw(string prompt, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        var (stops, maxOutput) = CheckCommon(options, modelId, defaultMaxOutputTokens);
+        if (options?.Instructions is { Length: > 0 })
+        {
+            throw Refuse("instructions", "Instructions are unsupported for a raw completion: the prompt is not rendered by a chat template.");
+        }
+
+        if (prompt.Length == 0)
+        {
+            throw Refuse("prompt", "The prompt is empty.");
+        }
+
+        return new PreparedPrompt(prompt, stops, CreateMatcher(stopFactory, stops), maxOutput);
+    }
+
+    private static (IReadOnlyList<string> Stops, int MaxOutput) CheckCommon(ChatOptions? options, string modelId, int defaultMaxOutputTokens)
+    {
+        var maxOutput = defaultMaxOutputTokens;
+        IReadOnlyList<string> stops = [];
+        if (options is null)
+        {
+            return (stops, maxOutput);
+        }
+
+        CheckOptions(options, modelId);
+        if (options.MaxOutputTokens is { } max)
+        {
+            maxOutput = max > 0 ? max : throw RoostChatException.InvalidOption("max_tokens", string.Create(CultureInfo.InvariantCulture, $"MaxOutputTokens must be positive; got {max}."));
+        }
+
+        if (options.StopSequences is { Count: > 0 } s)
+        {
+            if (s.Any(string.IsNullOrEmpty))
+            {
+                throw RoostChatException.InvalidOption("stop", "Stop sequences must be non-empty strings.");
+            }
+
+            stops = [.. s];
+        }
+
+        return (stops, maxOutput);
+    }
+
+    private static IStopMatcher CreateMatcher(IStopMatcherFactory stopFactory, IReadOnlyList<string> stops)
+    {
         try
         {
-            matcher = stopFactory.Create(stops);
+            return stopFactory.Create(stops);
         }
         catch (Exception e) when (e is NotSupportedException or ArgumentException)
         {
             throw new RoostChatException(new Starlings.Roost.Requests.RoostError(Starlings.Roost.Requests.RoostErrorCode.InvalidOption, "The stop matcher refused the stop sequences: " + e.Message, "stop"), e);
         }
-
-        return new PreparedChat(conversation, stops, matcher, maxOutput);
     }
 
     private static void CheckOptions(ChatOptions o, string modelId)

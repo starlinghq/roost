@@ -5,8 +5,8 @@ namespace Starlings.Roost.Ops;
 
 /// <summary>
 /// The CPU reference backend (R-018): every M0 op of <see cref="IRoostOps"/> plus GatedDeltaRule, CausalConv1d, the
-/// recurrent-state copies and the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul), written as the
-/// plainest correct definition. Buffers are host addresses.
+/// recurrent-state copies, the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul) and RopeScaled (R-098,
+/// with its cache builders in <see cref="RopeScaling"/>), written as the plainest correct definition. Buffers are host addresses.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -22,18 +22,18 @@ namespace Starlings.Roost.Ops;
 /// and are single-threaded. Spans are bounds-checked against their lengths and an out-of-range index or an
 /// undersized span throws <see cref="ArgumentException"/> before any write that depends on it.
 /// </para>
-/// <para>Inputs and outputs of one call must not overlap unless the op says so (Residual A and Output, RmsNorm Input and Output, in-place QkNorm and Rope).</para>
+/// <para>Inputs and outputs of one call must not overlap unless the op says so (Residual A and Output, RmsNorm Input and Output, in-place QkNorm, Rope and RopeScaled).</para>
 /// </remarks>
 public readonly partial struct CpuOps : IRoostOps
 {
     private const int MaxHeadDim = 1024;
 
     /// <inheritdoc cref="IRoostOps.Supports(OpId)"/>
-    /// <remarks>The M0 ops plus the seven hybrid and gating ops of Qwen3.5-0.8B.</remarks>
+    /// <remarks>The M0 ops, the seven hybrid and gating ops of Qwen3.5-0.8B, and RopeScaled.</remarks>
     public static bool Supports(OpId op) =>
         OpCatalog.IsM0(op)
         || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
-            or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul;
+            or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul or OpId.RopeScaled;
 
     /// <inheritdoc/>
     /// <remarks>Per row: <c>mean = sum(x^2) / Dim</c>, <c>Output = x / sqrt(mean + Eps) * Weight</c>, in double. Input may alias Output.</remarks>
@@ -173,7 +173,13 @@ public readonly partial struct CpuOps : IRoostOps
     /// keys, pages being <c>KvIndptr[b+1] - KvIndptr[b]</c>. Query i sits at key position <c>kvLen - n + i</c> (the last n keys).
     /// Key j is visible when j &lt;= that position (only if Causal; a decode query sees every key) and, when WindowLeft is not
     /// negative, j &gt;= position - WindowLeft. WindowLeft == 0 is rejected (ArgumentException naming PagedAttention), as the GPU kernel refuses
-    /// any window but -1: an unbound field is 0, and a one-token window is almost never intended; bind -1 for no window.</para>
+    /// any window but -1: an unbound field is 0, and a one-token window is almost never intended; bind -1 for no window.
+    /// A window of w therefore spans w + 1 keys, the query's own included (FlashInfer's <c>window_left</c>; a Hugging Face
+    /// <c>sliding_window</c> of W is WindowLeft W - 1). A window at least as long as the context reads every key, as -1 does.</para>
+    /// <para>A KvIndices entry may be negative (the block manager's NullBlock, a block released out of a sliding window, R-028) only
+    /// when no query of its sequence reads any key of that page; a released page inside some query's window is rejected
+    /// (ArgumentException naming the sequence and the entry). Every sequence is checked before the first output row is written, so a
+    /// rejected call leaves Output untouched.</para>
     /// <para>Score = <c>q . k * Scale</c> (Scale 0 means 1/sqrt(HeadDim)); if SoftCap is not 0 the score becomes <c>SoftCap * tanh(score / SoftCap)</c>.
     /// Softmax and the weighted sum of V are in double with an online maximum; query head h reads KV head <c>h / (QHeads / KvHeads)</c>.
     /// A query that sees no key outputs zeros. Pools are indexed as PagedNhd or PagedHnd and read in KvDType. HeadDim is at most 1024.</para>
@@ -220,30 +226,12 @@ public readonly partial struct CpuOps : IRoostOps
         Span<double> acc = stackalloc double[MaxHeadDim];
         for (int b = 0; b < a.Batch; b++)
         {
-            long q0 = LoadInt(a.QIndptr.Address, a.QIndptr.Dtype, b);
-            long q1 = LoadInt(a.QIndptr.Address, a.QIndptr.Dtype, b + 1L);
-            long p0 = LoadInt(a.KvIndptr.Address, a.KvIndptr.Dtype, b);
-            long p1 = LoadInt(a.KvIndptr.Address, a.KvIndptr.Dtype, b + 1L);
-            long pages = p1 - p0;
-            long n = q1 - q0;
-            if (n < 0 || pages < 0 || q1 > a.Tokens)
-            {
-                throw new ArgumentException($"Sequence {b} has an invalid QIndptr or KvIndptr range.", nameof(a));
-            }
+            CheckAttentionSequence(a, b);
+        }
 
-            long last = LoadInt(a.KvLastPageLength.Address, a.KvLastPageLength.Dtype, b);
-            if (pages > 0 && (last < 1 || last > a.BlockSize))
-            {
-                throw new ArgumentException($"Sequence {b} has KvLastPageLength {last} outside [1, {a.BlockSize}].", nameof(a));
-            }
-
-            long kvLen = pages == 0 ? 0 : ((pages - 1) * a.BlockSize) + last;
-            if (kvLen < n && a.Causal)
-            {
-                throw new ArgumentException($"Sequence {b} has {n} query tokens but only {kvLen} keys.", nameof(a));
-            }
-
-            Need(a.KvIndices, p1, nameof(a.KvIndices));
+        for (int b = 0; b < a.Batch; b++)
+        {
+            (long q0, long n, long p0, long kvLen) = AttentionSequence(a, b);
             for (long i = 0; i < n; i++)
             {
                 long qpos = kvLen - n + i;
@@ -294,6 +282,59 @@ public readonly partial struct CpuOps : IRoostOps
                         Store(a.Output.Address, qt, qo + d, denom == 0 ? 0.0 : acc[d] / denom);
                     }
                 }
+            }
+        }
+    }
+
+    // Sequence b of a PagedAttention call, validated: its first query row, query count, first KvIndices entry and key count.
+    private static (long Q0, long N, long P0, long KvLen) AttentionSequence(in PagedAttentionArgs a, int b)
+    {
+        long q0 = LoadInt(a.QIndptr.Address, a.QIndptr.Dtype, b);
+        long q1 = LoadInt(a.QIndptr.Address, a.QIndptr.Dtype, b + 1L);
+        long p0 = LoadInt(a.KvIndptr.Address, a.KvIndptr.Dtype, b);
+        long p1 = LoadInt(a.KvIndptr.Address, a.KvIndptr.Dtype, b + 1L);
+        long pages = p1 - p0;
+        long n = q1 - q0;
+        if (n < 0 || pages < 0 || q0 < 0 || p0 < 0 || q1 > a.Tokens)
+        {
+            throw new ArgumentException($"Sequence {b} has an invalid QIndptr or KvIndptr range.", nameof(a));
+        }
+
+        long last = LoadInt(a.KvLastPageLength.Address, a.KvLastPageLength.Dtype, b);
+        if (pages > 0 && (last < 1 || last > a.BlockSize))
+        {
+            throw new ArgumentException($"Sequence {b} has KvLastPageLength {last} outside [1, {a.BlockSize}].", nameof(a));
+        }
+
+        long kvLen = pages == 0 ? 0 : ((pages - 1) * a.BlockSize) + last;
+        if (kvLen < n && a.Causal)
+        {
+            throw new ArgumentException($"Sequence {b} has {n} query tokens but only {kvLen} keys.", nameof(a));
+        }
+
+        Need(a.KvIndices, p1, nameof(a.KvIndices));
+        return (q0, n, p0, kvLen);
+    }
+
+    // Checks sequence b before any output is written. Its first query has the lowest position, so that query's window start is the
+    // lowest key any query of the sequence reads; every page from there to the last key must hold a block (no released entry).
+    private static void CheckAttentionSequence(in PagedAttentionArgs a, int b)
+    {
+        (_, long n, long p0, long kvLen) = AttentionSequence(a, b);
+        if (n == 0 || kvLen == 0)
+        {
+            return;
+        }
+
+        long firstKey = a.WindowLeft >= 0 ? Math.Max(0, kvLen - n - a.WindowLeft) : 0;
+        for (long page = firstKey / a.BlockSize; page <= (kvLen - 1) / a.BlockSize; page++)
+        {
+            long block = LoadInt(a.KvIndices.Address, a.KvIndices.Dtype, p0 + page);
+            if (block < 0)
+            {
+                throw new ArgumentException(
+                    $"PagedAttention: sequence {b} reads page {page}, but KvIndices entry {p0 + page} is {block} (a released block) inside the window of one of its queries.",
+                    nameof(a));
             }
         }
     }

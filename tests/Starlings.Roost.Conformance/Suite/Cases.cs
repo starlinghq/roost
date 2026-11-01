@@ -72,6 +72,7 @@ public static partial class CaseCatalog
         OpId.Residual => ResidualCases(baseSeed, p),
         OpId.CacheWrite => CacheWriteCases(baseSeed, p),
         OpId.CacheCopy => CacheCopyCases(baseSeed, p),
+        OpId.RopeScaled => RopeScaledCases(baseSeed, p),
         _ => HybridCases(op, baseSeed, p),
     };
 
@@ -355,6 +356,11 @@ public static partial class CaseCatalog
                 yield return Attention($"random-{i}-prefill", AttentionMode.Prefill, seqs, ps, layout, rng.Int(0, 4) != 0, baseSeed);
             }
         }
+
+        foreach (OpCase c in SlidingWindowAttentionCases(baseSeed, p))
+        {
+            yield return c;
+        }
     }
 
     /// <summary>
@@ -403,9 +409,12 @@ public static partial class CaseCatalog
 
     private static Seq[] Decode(params int[] kvLens) => kvLens.Select(l => new Seq(1, l)).ToArray();
 
-    private static OpCase Attention(string label, AttentionMode mode, Seq[] seqs, int ps, TensorLayout layout, bool causal, ulong baseSeed)
+    // windowLeft -1 is no window (the case then has no window_left parameter, as before R-113). With release, the leading pages no
+    // query of a sequence can read are released: their kv_indices entries are -1, as the block manager leaves them (R-028).
+    private static OpCase Attention(string label, AttentionMode mode, Seq[] seqs, int ps, TensorLayout layout, bool causal, ulong baseSeed, int windowLeft = -1, bool release = false)
     {
-        string id = $"{label}-q{string.Join('.', seqs.Take(4).Select(s => s.QLen))}-kv{string.Join('.', seqs.Take(4).Select(s => s.KvLen))}{(seqs.Length > 4 ? "+" : string.Empty)}-{(causal ? "causal" : "full")}-{layout}-ps{ps}";
+        string window = windowLeft == -1 ? string.Empty : $"-w{windowLeft}{(release ? "-released" : string.Empty)}";
+        string id = $"{label}-q{string.Join('.', seqs.Take(4).Select(s => s.QLen))}-kv{string.Join('.', seqs.Take(4).Select(s => s.KvLen))}{(seqs.Length > 4 ? "+" : string.Empty)}-{(causal ? "causal" : "full")}-{layout}-ps{ps}{window}";
         ulong seed = SeedFor(OpId.PagedAttention, id, baseSeed);
         var rng = new Rng(seed);
         int batch = seqs.Length;
@@ -450,12 +459,27 @@ public static partial class CaseCatalog
         c.Num["page_size"] = ps;
         c.Num["kv_layout"] = (double)layout;
         c.Num["causal"] = causal ? 1 : 0;
+        int[] indices = perm.Take(total).ToArray();
+        if (windowLeft != -1)
+        {
+            c.Num["window_left"] = windowLeft;
+            for (int b = 0; release && b < batch; b++)
+            {
+                // The first query of a sequence has the lowest position, so its window start bounds every read of the sequence.
+                int firstKey = Math.Max(0, seqs[b].KvLen - seqs[b].QLen - windowLeft);
+                for (int page = 0; page < firstKey / ps; page++)
+                {
+                    indices[kvIndptr[b] + page] = -1;
+                }
+            }
+        }
+
         c.Buffers["q"] = new HostBuf(DType.BF16, (long)tokens * QHeads * HeadDim).Randn(rng);
         c.Buffers["k_cache"] = new HostBuf(DType.BF16, poolElems).Randn(rng);
         c.Buffers["v_cache"] = new HostBuf(DType.BF16, poolElems).Randn(rng);
         c.Buffers["q_indptr"] = HostBuf.Ints(qIndptr);
         c.Buffers["kv_indptr"] = HostBuf.Ints(kvIndptr);
-        c.Buffers["kv_indices"] = HostBuf.Ints(perm.Take(total).ToArray());
+        c.Buffers["kv_indices"] = HostBuf.Ints(indices);
         c.Buffers["last_page_len"] = HostBuf.Ints(last);
         c.Buffers["out"] = new HostBuf(DType.BF16, (long)tokens * QHeads * HeadDim);
         c.Outputs.Add("out");

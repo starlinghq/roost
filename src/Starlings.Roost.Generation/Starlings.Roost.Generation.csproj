@@ -5,6 +5,7 @@
   <ItemGroup>
     <PackageReference Include="Starlings.Generation.OnnxGenAI" />
     <PackageReference Include="Starlings.Models.Qwen35" />
+    <PackageReference Include="Starlings.Models.QwenChat" />
     <PackageReference Include="Starlings.Tokenizers" />
   </ItemGroup>
 </Project>

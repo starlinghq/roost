@@ -30,6 +30,9 @@ public sealed class RoostCapabilities
     /// <summary>Chat completion through <c>IChatClient.GetResponseAsync</c>.</summary>
     public const string Chat = "chat";
 
+    /// <summary>Raw-text completion through <see cref="RoostChatClient.GetStreamingCompletionAsync"/> (no chat template).</summary>
+    public const string RawCompletion = "raw_completion";
+
     /// <summary>Token streaming through <c>IChatClient.GetStreamingResponseAsync</c>.</summary>
     public const string Streaming = "streaming";
 
@@ -93,6 +96,7 @@ public sealed class RoostCapabilities
         _statuses = new Dictionary<string, RoostCapabilityStatus>
         {
             [Chat] = untested,
+            [RawCompletion] = untested,
             [Streaming] = untested,
             [Cancellation] = untested,
             [Usage] = untested,
