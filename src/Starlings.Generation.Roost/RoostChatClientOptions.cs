@@ -1,3 +1,4 @@
+using Starlings.Roost.Engine.Admission;
 using Starlings.Roost.Generation;
 using Starlings.Roost.Transport;
 using Starlings.Roost.WorkerHost;
@@ -40,6 +41,26 @@ public sealed record RoostWorkerOptions
 
     /// <summary>Host-side transport settings (startup and shutdown timeouts, segment directory); defaults when null.</summary>
     public WorkerTransportOptions? TransportOptions { get; init; }
+
+    /// <summary>
+    /// Where the driver reads the device's free memory before it queues a request (R-044, co-tenant admission), or null to
+    /// decide from the worker's pools alone (the default). Read on the driver thread with
+    /// <see cref="IDeviceMemorySource.TryRead"/>, so it must not block: a <see cref="PolledDeviceMemorySource"/> over an NVML
+    /// reader is the intended source. The client does not dispose it. An unreadable source leaves the decision to the pools.
+    /// </summary>
+    /// <remarks>
+    /// No NVML source is the default yet for <see cref="TransportKind.Process"/>: the NVML reader is worker-side code, which
+    /// this host package may not reference (decision 21), so how a free-memory reading reaches the host (an NVML reader the
+    /// host may load, or the worker reporting it over C8) is a stream A decision.
+    /// </remarks>
+    public IDeviceMemorySource? DeviceMemory { get; init; }
+
+    /// <summary>
+    /// Free device bytes below which a new request is refused with <c>InsufficientDeviceMemory</c> instead of being queued,
+    /// because a co-tenant has taken memory the worker may still need. Zero (the default) disables the check; it needs
+    /// <see cref="DeviceMemory"/>. Requests already running are never aborted by it.
+    /// </summary>
+    public long MinFreeDeviceBytes { get; init; }
 }
 
 /// <summary>Settings of a <see cref="RoostChatClient"/>.</summary>

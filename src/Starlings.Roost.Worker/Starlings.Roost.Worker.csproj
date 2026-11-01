@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Roost worker library (stream F, R-024): streams a locked safetensors checkpoint to device memory in slot order, verifying its SHA-256 as it is read, so a substituted file fails before the first forward. Worker-side: never loads ONNX Runtime.</Description>
+    <Description>Roost worker library (stream F, R-024): streams a locked safetensors checkpoint to device memory in slot order, verifying its SHA-256 as it is read, so a substituted file fails before the first forward; R-044: the NVML device memory reader for co-tenant admission. Worker-side: never loads ONNX Runtime.</Description>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsAotCompatible>true</IsAotCompatible>
   </PropertyGroup>
