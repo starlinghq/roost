@@ -166,6 +166,7 @@
         "dependencies": {
           "Starlings.Generation.OnnxGenAI": "[0.3.0, 0.3.0]",
           "Starlings.Models.Qwen35": "[0.3.0, 0.3.0]",
+          "Starlings.Models.QwenChat": "[0.3.0, 0.3.0]",
           "Starlings.Tokenizers": "[0.3.0, 0.3.0]"
         }
       },
@@ -242,6 +243,17 @@
         "requested": "[0.3.0, 0.3.0]",
         "resolved": "0.3.0",
         "contentHash": "TrdhyICuESdW5rjc3sun7lujkBouxHrZ9HhE6rpeY4hsUrxYI5iYxBer87HcnD1t5p8WYUm9JBDcWOq/0wNuEA==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Generation.OnnxGenAI": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Starlings.Models.QwenChat": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "JwN8Xw6oat3K3vXIZnquKKWH4uFmGt7M0DZQL3lT0m8P4udkg8jKZTCHahBb1/l8UvRARn2Yp5uj9O1jkQ2laQ==",
         "dependencies": {
           "Starlings.Acquisition": "[0.3.0]",
           "Starlings.Generation.OnnxGenAI": "[0.3.0]",
