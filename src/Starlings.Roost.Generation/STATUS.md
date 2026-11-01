@@ -25,8 +25,7 @@ Tests: `tests/Starlings.Roost.Generation.Tests` (`ChatTemplateTests` for Qwen3.5
 detokenizer and the stop-matching seam). They compare Roost's rendering with Starling's direct rendering; they are CPU only.
 
 Starling consumption (plan section 3.1): `Starlings.Generation.OnnxGenAI`, `Starlings.Models.Qwen35`, `Starlings.Models.QwenChat`
-and `Starlings.Tokenizers`, all `[0.3.0]`. `Starlings.Models.Kev` is still not pinned (R-086). The plan's section 3.1 row still
-says `Starlings.Models.QwenChat` is not yet pinned; that row is stream A's to update.
+and `Starlings.Tokenizers`, all `[0.3.0]`. `Starlings.Models.Kev` is still not pinned (R-086).
 
 Maintainer ruling needed: `tests/Starlings.Roost.Generation.Tests` is outside the single path plan section 4 lists for B1. It
 follows the existing `Abstractions.Tests` convention.
