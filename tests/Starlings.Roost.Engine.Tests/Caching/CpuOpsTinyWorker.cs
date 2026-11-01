@@ -14,7 +14,9 @@ namespace Starlings.Roost.Engine.Tests.Caching;
 /// with seeded weights generated here, whose cache writes, paged attention, residual adds, LM head and argmax all run on
 /// <see cref="CpuOps"/> in fp32 against real block pools. It stands in for <c>roost-tiny</c> (R-021 is not merged at this
 /// base). The linear maps are plain loops over each token alone, so a token's result never depends on how the plan was
-/// batched; any difference between a cached and an uncached run is then the cache's.
+/// batched; any difference between a cached and an uncached run is then the cache's. With a host tier (R-094) it keeps
+/// host-memory copies of the key and value pools and executes <see cref="CacheOpKind.TierMove"/> ops between them; a
+/// demotion clears the device source afterwards, so a restore that is skipped or wrong changes the logits.
 /// </summary>
 internal sealed unsafe class CpuOpsTinyWorker : IPlanWorker, IDisposable
 {
@@ -29,20 +31,26 @@ internal sealed unsafe class CpuOpsTinyWorker : IPlanWorker, IDisposable
     private readonly int _blocks;
     private readonly nint[] _k = new nint[Layers];
     private readonly nint[] _v = new nint[Layers];
+    private readonly int _hostBlocks;
+    private readonly nint[] _hostK = new nint[Layers];
+    private readonly nint[] _hostV = new nint[Layers];
     private readonly float[][] _wq = new float[Layers][];
     private readonly float[][] _wk = new float[Layers][];
     private readonly float[][] _wv = new float[Layers][];
     private readonly nint _wout;
 
-    public CpuOpsTinyWorker(BlockManager blocks)
+    public CpuOpsTinyWorker(BlockManager blocks, BlockManager? host = null)
     {
         var g = blocks.Groups.Single();
         _blockSize = g.BlockSize;
         _blocks = blocks.GetPool(0).Capacity;
+        _hostBlocks = host?.GetPool(0).Capacity ?? 0;
         for (var l = 0; l < Layers; l++)
         {
             _k[l] = Alloc(_blocks * _blockSize * KvHeads * HeadDim);
             _v[l] = Alloc(_blocks * _blockSize * KvHeads * HeadDim);
+            _hostK[l] = Alloc(_hostBlocks * _blockSize * KvHeads * HeadDim);
+            _hostV[l] = Alloc(_hostBlocks * _blockSize * KvHeads * HeadDim);
             _wq[l] = Weights((ulong)(l * 3) + 1, Dim * Dim, Dim);
             _wk[l] = Weights((ulong)(l * 3) + 2, Dim * HeadDim, Dim);
             _wv[l] = Weights((ulong)(l * 3) + 3, Dim * HeadDim, Dim);
@@ -72,31 +80,60 @@ internal sealed unsafe class CpuOpsTinyWorker : IPlanWorker, IDisposable
 
     public void Dispose()
     {
-        foreach (var p in _k.Concat(_v).Append(_wout))
+        foreach (var p in _k.Concat(_v).Concat(_hostK).Concat(_hostV).Append(_wout))
         {
             Marshal.FreeHGlobal(p);
         }
     }
 
-    public StepOutcome Execute(PlannedStep plan)
+    /// <summary>Executes cache ops alone, as the worker does ahead of a forward: copies within the device pools and tier moves.</summary>
+    public void ApplyCacheOps(ReadOnlySpan<PlanCacheOp> ops)
     {
-        foreach (var op in plan.CacheOps)
+        foreach (var op in ops)
         {
-            if (op.Kind != CacheOpKind.Copy)
-            {
-                throw new InvalidOperationException($"The attention-only model got a {op.Kind} op.");
-            }
-
             for (var k = 0; k < (int)op.Count; k++)
             {
-                int[] pairs = [(int)op.Src + k, (int)op.Dst + k];
+                var src = (int)op.Src + k;
+                var dst = (int)op.Dst + k;
                 for (var l = 0; l < Layers; l++)
                 {
-                    CopyBlock(_k[l], pairs);
-                    CopyBlock(_v[l], pairs);
+                    switch (op.Kind)
+                    {
+                        case CacheOpKind.Copy when op.SrcTier == BlockTier.Device && op.DstTier == BlockTier.Device:
+                            CopyBlock(_k[l], src, _k[l], dst);
+                            CopyBlock(_v[l], src, _v[l], dst);
+                            break;
+                        case CacheOpKind.TierMove when op.SrcTier == BlockTier.Device && op.DstTier == BlockTier.Host:
+                            CheckHost(dst);
+                            CopyBlock(_k[l], src, _hostK[l], dst);
+                            CopyBlock(_v[l], src, _hostV[l], dst);
+                            ScribbleBlock(src, l);
+                            break;
+                        case CacheOpKind.TierMove when op.SrcTier == BlockTier.Host && op.DstTier == BlockTier.Device:
+                            CheckHost(src);
+                            CopyBlock(_hostK[l], src, _k[l], dst);
+                            CopyBlock(_hostV[l], src, _v[l], dst);
+                            break;
+                        default:
+                            throw new InvalidOperationException($"The attention-only model got a {op.Kind} op from {op.SrcTier} to {op.DstTier}.");
+                    }
                 }
             }
         }
+    }
+
+    /// <summary>Overwrites a device block in every layer, as a later user of a freed block would.</summary>
+    public void Scribble(int block)
+    {
+        for (var l = 0; l < Layers; l++)
+        {
+            ScribbleBlock(block, l);
+        }
+    }
+
+    public StepOutcome Execute(PlannedStep plan)
+    {
+        ApplyCacheOps(plan.CacheOps.AsSpan());
 
         var rows = plan.Sequences;
         foreach (var s in rows)
@@ -303,9 +340,24 @@ internal sealed unsafe class CpuOpsTinyWorker : IPlanWorker, IDisposable
         }
     }
 
-    private void CopyBlock(nint pool, int[] pair)
+    private void CopyBlock(nint from, int src, nint to, int dst)
     {
         var bytes = _blockSize * KvHeads * HeadDim * sizeof(float);
-        Buffer.MemoryCopy((byte*)pool + ((long)pair[0] * bytes), (byte*)pool + ((long)pair[1] * bytes), bytes, bytes);
+        Buffer.MemoryCopy((byte*)from + ((long)src * bytes), (byte*)to + ((long)dst * bytes), bytes, bytes);
+    }
+
+    private void ScribbleBlock(int block, int layer)
+    {
+        var floats = _blockSize * KvHeads * HeadDim;
+        new Span<float>((float*)_k[layer] + ((long)block * floats), floats).Fill(1e6f);
+        new Span<float>((float*)_v[layer] + ((long)block * floats), floats).Fill(-1e6f);
+    }
+
+    private void CheckHost(int block)
+    {
+        if ((uint)block >= (uint)_hostBlocks)
+        {
+            throw new InvalidOperationException($"Host block {block} is outside the {_hostBlocks}-block host tier.");
+        }
     }
 }

@@ -20,6 +20,17 @@ namespace Starlings.Roost.Engine.Caching;
 /// cache alone (count 1) and is not pinned by an uncompleted plan: only those are evicted, and only leaves (a node with
 /// children is kept, so no suffix is stranded without its prefix), least recently used first. Recency is a counter of
 /// touches, never the clock, so a recorded run replays to the same evictions.</para>
+/// <para><b>Host tier (R-094).</b> With a host-tier manager (<see cref="HostTier"/>), a node lives on one tier: its blocks
+/// are device ids or host ids. Device eviction then demotes instead of dropping: the least recently used device node that
+/// only the cache holds, is not pinned and has no device child gets host blocks and a <see cref="CacheOpKind.TierMove"/>
+/// op (device to host) for the next plan, and its device blocks go back to the pool at once. That is safe because the
+/// block is held by the cache alone and named by no uncompleted plan, and the op is queued ahead of every later op and
+/// forward, so the copy reads the block before anything can write it. When the host tier is full, the least recently
+/// used host leaf that is not pinned is dropped; when nothing on the host can go, the device leaf is dropped as without the
+/// tier. A lookup that reaches host nodes restores them in chain order: device blocks (evicting or demoting other nodes if
+/// needed), a <see cref="CacheOpKind.TierMove"/> op host to device, and the host blocks released once the plan that
+/// carries the op completes (the planner pins both sides). The recurrent snapshot of a node stays in the device snapshot
+/// pool whatever the tier of its attention blocks, so a hybrid model restores the same snapshot as before.</para>
 /// <para><b>Threading.</b> Engine thread only, like the pools.</para>
 /// </remarks>
 public sealed class PrefixCache
@@ -27,6 +38,9 @@ public sealed class PrefixCache
     private readonly BlockManager _blocks;
     private readonly PrefixCacheOptions _options;
     private readonly Func<long, bool> _isPinned;
+    private readonly BlockManager? _host;
+    private readonly Action<PlanCacheOp>? _emitTierMove;
+    private readonly Action<long>? _releaseHost;
     private readonly int[] _attention;
     private readonly int _recurrent = -1;
     private readonly Dictionary<PrefixKey, Node> _index = [];
@@ -40,6 +54,12 @@ public sealed class PrefixCache
     private long _evicted;
     private long _snapshotsTaken;
     private long _snapshotsDropped;
+    private long _demoted;
+    private long _restored;
+    private long _hostHits;
+    private long _hostHitTokens;
+    private long _hostEvicted;
+    private int _hostCount;
 
     /// <summary>Creates a cache over a block manager.</summary>
     /// <param name="blocks">The block manager.</param>
@@ -48,14 +68,40 @@ public sealed class PrefixCache
     /// <exception cref="NotSupportedException">A group kind or block size the cache cannot serve.</exception>
     /// <exception cref="InvalidOperationException">A recurrent group without snapshot slots.</exception>
     internal PrefixCache(BlockManager blocks, PrefixCacheOptions options, Func<long, bool> isPinned)
+        : this(blocks, options, isPinned, null, null, null)
+    {
+    }
+
+    /// <summary>Creates a cache over a block manager with a host tier (R-094).</summary>
+    /// <param name="blocks">The device block manager.</param>
+    /// <param name="options">Settings.</param>
+    /// <param name="isPinned">Whether a pool slot (a <see cref="BlockKey"/>, host keys included) is named by an uncompleted plan or a queued op.</param>
+    /// <param name="host">The host-tier manager (<see cref="HostTier.Create"/>), or null for no host tier.</param>
+    /// <param name="emitTierMove">Queues a <see cref="CacheOpKind.TierMove"/> op for the next plan and pins its host side (and, for a restore, its device side).</param>
+    /// <param name="releaseHost">Drops the cache's reference to a host block, parking it while a plan or queued op names it.</param>
+    internal PrefixCache(
+        BlockManager blocks, PrefixCacheOptions options, Func<long, bool> isPinned, BlockManager? host, Action<PlanCacheOp>? emitTierMove, Action<long>? releaseHost)
     {
         ArgumentNullException.ThrowIfNull(blocks);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(isPinned);
         options.Validate();
+        if (host is not null)
+        {
+            ArgumentNullException.ThrowIfNull(emitTierMove);
+            ArgumentNullException.ThrowIfNull(releaseHost);
+            if (host.Groups.Length != blocks.Groups.Length)
+            {
+                throw new ArgumentException("The host tier must have the device groups.", nameof(host));
+            }
+        }
+
         _blocks = blocks;
         _options = options;
         _isPinned = isPinned;
+        _host = host;
+        _emitTierMove = emitTierMove;
+        _releaseHost = releaseHost;
         var attention = new List<int>();
         foreach (var g in blocks.Groups)
         {
@@ -90,6 +136,18 @@ public sealed class PrefixCache
 
         _attention = [.. attention];
         BlockSize = blocks.Groups[_attention[0]].BlockSize;
+        if (host is not null)
+        {
+            foreach (var a in _attention)
+            {
+                var h = host.GetPool(a).Group;
+                var d = blocks.Groups[a];
+                if (h.Tier != BlockTier.Host || h.Kind != d.Kind || h.BlockSize != d.BlockSize || h.BytesPerBlock != d.BytesPerBlock)
+                {
+                    throw new ArgumentException($"Host group {a} does not match device group {d.Name}.", nameof(host));
+                }
+            }
+        }
     }
 
     /// <summary>Tokens per attention block, the unit of reuse.</summary>
@@ -104,6 +162,12 @@ public sealed class PrefixCache
     /// <summary>The counters.</summary>
     public PrefixCacheStats Stats => new(_lookups, _hits, _hitTokens, _inserted, _evicted, _snapshotsTaken, _snapshotsDropped);
 
+    /// <summary>The host-tier counters (R-094); all zero without a host tier.</summary>
+    public HostTierStats HostStats => new(_demoted, _restored, _hostHits, _hostHitTokens, _hostEvicted, _hostCount);
+
+    /// <summary>Whether the cache has a host tier.</summary>
+    public bool HasHostTier => _host is not null;
+
     /// <summary>Tokens at which a snapshot is taken for a recurrent group: a multiple of this, in tokens.</summary>
     internal int SnapshotStrideTokens => _options.SnapshotStrideBlocks * BlockSize;
 
@@ -117,12 +181,14 @@ public sealed class PrefixCache
     /// <param name="nodes">The sequence's node chain; the reused nodes are appended.</param>
     /// <param name="computed">Tokens covered by the reused blocks (0 for a miss).</param>
     /// <param name="snapshot">The held snapshot id to restore from, or -1.</param>
+    /// <param name="restored">Reused nodes that were on the host tier: their restore ops are queued for the next plan.</param>
     /// <returns>True on a hit.</returns>
-    internal bool TryAttach(ReadOnlySpan<int> tokens, ulong lora, List<int>[] tables, List<Node> nodes, out int computed, out int snapshot)
+    internal bool TryAttach(ReadOnlySpan<int> tokens, ulong lora, List<int>[] tables, List<Node> nodes, out int computed, out int snapshot, out int restored)
     {
         _lookups++;
         computed = 0;
         snapshot = -1;
+        restored = 0;
         var maxBlocks = (tokens.Length - 1) / BlockSize;
         Node? parent = null;
         var chain = new List<Node>();
@@ -140,15 +206,33 @@ public sealed class PrefixCache
             parent = node;
         }
 
-        var depth = chain.Count;
-        while (depth > 0 && _recurrent >= 0 && chain[depth - 1].Snapshot < 0)
-        {
-            depth--;
-        }
-
+        var depth = TrimToSnapshot(chain, chain.Count);
         if (depth == 0)
         {
             return false;
+        }
+
+        if (_host is not null)
+        {
+            depth = RestoreChain(chain, depth);
+            if (depth == 0)
+            {
+                return false; // the nodes restored before the failure stay cached on the device
+            }
+
+            for (var k = 0; k < depth; k++)
+            {
+                if (chain[k].RestoredBy == _lookups)
+                {
+                    restored++;
+                }
+            }
+
+            if (restored > 0)
+            {
+                _hostHits++;
+                _hostHitTokens += (long)restored * BlockSize;
+            }
         }
 
         for (var k = depth - 1; k >= 0; k--)
@@ -233,6 +317,7 @@ public sealed class PrefixCache
             if (parent is not null)
             {
                 parent.Children++;
+                parent.DeviceChildren++;
             }
 
             _index.Add(keys[0], node);
@@ -277,7 +362,7 @@ public sealed class PrefixCache
         var n = 0;
         for (var node = _lru; node is not null; node = node.MoreRecent)
         {
-            if (IsZeroReference(node))
+            if (_host is null ? IsZeroReference(node) : node.Tier == BlockTier.Device && !node.Locked && DeviceBlocksFree(node))
             {
                 n++;
             }
@@ -286,13 +371,43 @@ public sealed class PrefixCache
         return n;
     }
 
-    /// <summary>Evicts the least recently used leaf whose blocks and snapshot only the cache holds, and is not pinned.</summary>
+    /// <summary>
+    /// Frees one device block in every attention group. Without a host tier, evicts the least recently used leaf whose
+    /// blocks and snapshot only the cache holds and are not pinned. With one, demotes the least recently used device node
+    /// whose blocks only the cache holds, unpinned and with no device child, to the host tier (dropping a host leaf first
+    /// when the host tier is full), or drops it when it is a leaf and the host tier has no room.
+    /// </summary>
     /// <returns>False when there is none.</returns>
     internal bool EvictOne()
     {
+        if (_host is null)
+        {
+            for (var node = _lru; node is not null; node = node.MoreRecent)
+            {
+                if (node.Children == 0 && IsZeroReference(node))
+                {
+                    Remove(node);
+                    _evicted++;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         for (var node = _lru; node is not null; node = node.MoreRecent)
         {
-            if (node.Children == 0 && IsZeroReference(node))
+            if (node.Tier != BlockTier.Device || node.Locked || node.DeviceChildren != 0 || !DeviceBlocksFree(node))
+            {
+                continue;
+            }
+
+            if (TryDemote(node))
+            {
+                return true;
+            }
+
+            if (node.Children == 0 && SnapshotFree(node))
             {
                 Remove(node);
                 _evicted++;
@@ -314,7 +429,7 @@ public sealed class PrefixCache
         _index.Clear();
     }
 
-    /// <summary>Adds the references the cache holds to <paramref name="expected"/>, keyed by <see cref="BlockKey"/>.</summary>
+    /// <summary>Adds the references the cache holds to <paramref name="expected"/>, keyed by <see cref="BlockKey"/> (host keys for host-tier nodes).</summary>
     /// <param name="expected">The map to add to.</param>
     internal void CountReferences(Dictionary<long, int> expected)
     {
@@ -322,7 +437,7 @@ public sealed class PrefixCache
         {
             for (var a = 0; a < _attention.Length; a++)
             {
-                var key = BlockKey.Live(_attention[a], node.Blocks[a]);
+                var key = BlockId(node, a);
                 expected[key] = expected.GetValueOrDefault(key) + 1;
             }
 
@@ -339,7 +454,9 @@ public sealed class PrefixCache
     public void CheckInvariants()
     {
         var seen = 0;
+        var host = 0;
         var children = new Dictionary<Node, int>();
+        var deviceChildren = new Dictionary<Node, int>();
         Node? previous = null;
         for (var node = _mru; node is not null; node = node.Older)
         {
@@ -349,22 +466,36 @@ public sealed class PrefixCache
                 throw new InvalidOperationException("The LRU list and the index disagree.");
             }
 
+            if (node.Locked || (node.Tier == BlockTier.Host && _host is null))
+            {
+                throw new InvalidOperationException("A node is locked outside a lookup, or on a tier the cache does not have.");
+            }
+
             if (node.Parent is { } p)
             {
                 children[p] = children.GetValueOrDefault(p) + 1;
+                if (node.Tier == BlockTier.Device)
+                {
+                    deviceChildren[p] = deviceChildren.GetValueOrDefault(p) + 1;
+                }
+            }
+
+            if (node.Tier == BlockTier.Host)
+            {
+                host++;
             }
 
             previous = node;
         }
 
-        if (previous != _lru || seen != _count || seen != _index.Count)
+        if (previous != _lru || seen != _count || seen != _index.Count || host != _hostCount)
         {
-            throw new InvalidOperationException($"LRU list holds {seen} nodes, count {_count}, index {_index.Count}.");
+            throw new InvalidOperationException($"LRU list holds {seen} nodes ({host} on the host), count {_count} ({_hostCount}), index {_index.Count}.");
         }
 
         for (var node = _mru; node is not null; node = node.Older)
         {
-            if (node.Children != children.GetValueOrDefault(node))
+            if (node.Children != children.GetValueOrDefault(node) || node.DeviceChildren != deviceChildren.GetValueOrDefault(node))
             {
                 throw new InvalidOperationException("A node's child count is wrong.");
             }
@@ -382,7 +513,23 @@ public sealed class PrefixCache
         }
     }
 
-    private bool IsZeroReference(Node node)
+    private int TrimToSnapshot(List<Node> chain, int depth)
+    {
+        while (depth > 0 && _recurrent >= 0 && chain[depth - 1].Snapshot < 0)
+        {
+            depth--;
+        }
+
+        return depth;
+    }
+
+    private long BlockId(Node node, int a) =>
+        node.Tier == BlockTier.Host ? BlockKey.Host(_attention[a], node.Blocks[a]) : BlockKey.Live(_attention[a], node.Blocks[a]);
+
+    private bool IsZeroReference(Node node) => node.Tier == BlockTier.Device && DeviceBlocksFree(node) && SnapshotFree(node);
+
+    /// <summary>The node's device blocks are held by the cache alone and named by no uncompleted plan or queued op.</summary>
+    private bool DeviceBlocksFree(Node node)
     {
         for (var a = 0; a < _attention.Length; a++)
         {
@@ -392,8 +539,168 @@ public sealed class PrefixCache
             }
         }
 
-        return node.Snapshot < 0
-            || (_blocks.GetSnapshotPool(_recurrent).RefCount(node.Snapshot) == 1 && !_isPinned(BlockKey.Snapshot(_recurrent, node.Snapshot)));
+        return true;
+    }
+
+    private bool SnapshotFree(Node node) =>
+        node.Snapshot < 0
+        || (_blocks.GetSnapshotPool(_recurrent).RefCount(node.Snapshot) == 1 && !_isPinned(BlockKey.Snapshot(_recurrent, node.Snapshot)));
+
+    /// <summary>Restores the host nodes of <c>chain[0..depth)</c> in order; returns how far the chain is now on the device, trimmed to a snapshot.</summary>
+    private int RestoreChain(List<Node> chain, int depth)
+    {
+        for (var k = 0; k < depth; k++)
+        {
+            chain[k].Locked = true; // neither demoted, dropped nor used as room for its own chain
+        }
+
+        var reached = depth;
+        try
+        {
+            for (var k = 0; k < depth; k++)
+            {
+                if (chain[k].Tier == BlockTier.Host && !TryRestore(chain[k]))
+                {
+                    reached = k;
+                    break;
+                }
+            }
+        }
+        finally
+        {
+            for (var k = 0; k < depth; k++)
+            {
+                chain[k].Locked = false;
+            }
+        }
+
+        return TrimToSnapshot(chain, reached);
+    }
+
+    private bool HasRoom(BlockManager manager)
+    {
+        foreach (var a in _attention)
+        {
+            if (manager.GetPool(a).FreeCount == 0)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>Moves a host node to new device blocks: one <see cref="CacheOpKind.TierMove"/> per group, host to device.</summary>
+    private bool TryRestore(Node node)
+    {
+        while (!HasRoom(_blocks))
+        {
+            if (!EvictOne())
+            {
+                return false;
+            }
+        }
+
+        Span<int> one = stackalloc int[1];
+        for (var a = 0; a < _attention.Length; a++)
+        {
+            var g = _attention[a];
+            _blocks.GetPool(g).TryAllocate(one);
+            var hostId = node.Blocks[a];
+            _emitTierMove!(new PlanCacheOp
+            {
+                Kind = CacheOpKind.TierMove,
+                Group = (uint)g,
+                Src = (uint)hostId,
+                Dst = (uint)one[0],
+                Count = 1,
+                SrcTier = BlockTier.Host,
+                DstTier = BlockTier.Device,
+            });
+            _releaseHost!(BlockKey.Host(g, hostId)); // pinned by the op just queued, so parked until that plan completes
+            node.Blocks[a] = one[0];
+        }
+
+        node.Tier = BlockTier.Device;
+        node.RestoredBy = _lookups;
+        if (node.Parent is not null)
+        {
+            node.Parent.DeviceChildren++;
+        }
+
+        _hostCount--;
+        _restored++;
+        return true;
+    }
+
+    /// <summary>Moves a device node to new host blocks: one <see cref="CacheOpKind.TierMove"/> per group, device to host (see the class remarks).</summary>
+    private bool TryDemote(Node node)
+    {
+        while (!HasRoom(_host!))
+        {
+            if (!EvictHostOne())
+            {
+                return false;
+            }
+        }
+
+        Span<int> one = stackalloc int[1];
+        for (var a = 0; a < _attention.Length; a++)
+        {
+            var g = _attention[a];
+            _host!.GetPool(g).TryAllocate(one);
+            var deviceId = node.Blocks[a];
+            _emitTierMove!(new PlanCacheOp
+            {
+                Kind = CacheOpKind.TierMove,
+                Group = (uint)g,
+                Src = (uint)deviceId,
+                Dst = (uint)one[0],
+                Count = 1,
+                SrcTier = BlockTier.Device,
+                DstTier = BlockTier.Host,
+            });
+            _blocks.GetPool(g).Release([deviceId]);
+            node.Blocks[a] = one[0];
+        }
+
+        node.Tier = BlockTier.Host;
+        if (node.Parent is not null)
+        {
+            node.Parent.DeviceChildren--;
+        }
+
+        _hostCount++;
+        _demoted++;
+        return true;
+    }
+
+    /// <summary>Drops the least recently used host leaf that no plan or queued op names. Host pressure only.</summary>
+    private bool EvictHostOne()
+    {
+        for (var node = _lru; node is not null; node = node.MoreRecent)
+        {
+            if (node.Tier != BlockTier.Host || node.Locked || node.Children != 0 || !SnapshotFree(node))
+            {
+                continue;
+            }
+
+            var pinned = false;
+            for (var a = 0; a < _attention.Length && !pinned; a++)
+            {
+                pinned = _isPinned(BlockKey.Host(_attention[a], node.Blocks[a]));
+            }
+
+            if (!pinned)
+            {
+                Remove(node);
+                _hostEvicted++;
+                _evicted++;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private bool DropOneSnapshot(Node except)
@@ -421,9 +728,10 @@ public sealed class PrefixCache
         }
 
         Unlink(node);
+        var tier = node.Tier == BlockTier.Host ? _host! : _blocks;
         for (var a = 0; a < _attention.Length; a++)
         {
-            _blocks.GetPool(_attention[a]).Release([node.Blocks[a]]);
+            tier.GetPool(_attention[a]).Release([node.Blocks[a]]);
         }
 
         if (node.Snapshot >= 0)
@@ -436,6 +744,15 @@ public sealed class PrefixCache
         if (node.Parent is not null)
         {
             node.Parent.Children--;
+            if (node.Tier == BlockTier.Device)
+            {
+                node.Parent.DeviceChildren--;
+            }
+        }
+
+        if (node.Tier == BlockTier.Host)
+        {
+            _hostCount--;
         }
 
         node.Dead = true;
@@ -506,6 +823,18 @@ public sealed class PrefixCache
         public int Snapshot { get; set; } = -1;
 
         public int Children { get; set; }
+
+        /// <summary>Children whose blocks are on the device (R-094); a device node is demoted only when this is 0.</summary>
+        public int DeviceChildren { get; set; }
+
+        /// <summary>The tier of <see cref="Blocks"/>: device ids, or host ids after a demotion (R-094).</summary>
+        public BlockTier Tier { get; set; } = BlockTier.Device;
+
+        /// <summary>Held by the lookup in progress: not demoted, dropped or restored over.</summary>
+        public bool Locked { get; set; }
+
+        /// <summary>The lookup number that last restored this node from the host tier, or 0.</summary>
+        public long RestoredBy { get; set; }
 
         public bool Dead { get; set; }
 

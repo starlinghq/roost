@@ -20,6 +20,7 @@ public sealed class OracleTests
         Assert.Empty(bad);
         Assert.True(r.Count("pass") > 150, $"only {r.Count("pass")} cases ran");
         Assert.All(CpuBackend.M0Ops.Concat(CpuBackend.M2Ops), op => Assert.Contains(r.Results, x => x.Op == op && x.Outcome == "pass"));
+        Assert.All(CpuBackend.MoeOps, op => Assert.Contains(r.Results, x => x.Op == op && x.Outcome == "pass"));
     }
 
     [Fact]

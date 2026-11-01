@@ -17,13 +17,15 @@ public sealed class ContractTests
         where TOps : struct, IRoostOps => TOps.AddRmsNorm(default);
 
     [Fact]
-    public void CpuOpsSupportsTheM0OpsTheHybridOpsAndRopeScaledOnly()
+    public void CpuOpsSupportsTheM0TheHybridRopeScaledTheMoeAndTheQuantisationOpsOnly()
     {
         foreach (OpId op in Enum.GetValues<OpId>().Where(o => o != OpId.None))
         {
             bool expected = OpCatalog.IsM0(op)
                 || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
-                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul or OpId.RopeScaled;
+                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul or OpId.RopeScaled
+                    or OpId.MoeRouteTopK or OpId.MoePermute or OpId.MoeUnpermute or OpId.GroupedGemm or OpId.FusedMoe
+                    or OpId.Quantize or OpId.Dequantize or OpId.GemmW4A16 or OpId.GemmFp8;
             Assert.Equal(expected, Reports<CpuOps>(op));
         }
 
@@ -110,6 +112,12 @@ public sealed class ContractTests
         var snapPairs = f.Add(Mem.I32(0, 1));
         var ropeCache = f.Add(Mem.Zeros(DType.F32, 8 * 8));
         RopeScaling.WriteCosSinCache(RopeScaling.DynamicNtk(8, 10000, 2, 4, 8), ropeCache.Span, 8);
+        var qIn = f.Add(Mem.F32(1, -2, 3, -4, 5, -6, 7, -8));
+        var q8 = f.Add(Mem.Zeros(DType.F8E4M3, 8));
+        var q4 = f.Add(Mem.Zeros(DType.I4, 8));
+        var qScales = f.Add(Mem.Zeros(DType.F32, 2));
+        var qOut = f.Add(Mem.Zeros(DType.F32, 8));
+        var fp8D = f.Add(Mem.Zeros(DType.F32, 4));
 
         void Everything()
         {
@@ -147,6 +155,11 @@ public sealed class ContractTests
                 KvLayout = TensorLayout.PagedNhd, WindowLeft = -1, Causal = true, KvDType = DType.F32, DType = DType.F32,
             });
             CpuOps.CacheCopy(new CacheCopyArgs { Source = x.Span, Destination = x.Span, Pairs = pairs.Span, BlockBytes = 8, Count = 1 });
+            CpuOps.Quantize(new QuantizeArgs { Input = qIn.Span, Output = q8.Span, Scales = qScales.Span, Rows = 2, Dim = 4, DType = DType.F32, OutputDType = DType.F8E4M3 });
+            CpuOps.Dequantize(new DequantizeArgs { Input = q8.Span, Scales = qScales.Span, Output = qOut.Span, Rows = 2, Dim = 4, InputDType = DType.F8E4M3, DType = DType.F32 });
+            CpuOps.GemmFp8(new GemmFp8Args { A = q8.Span, B = q8.Span, AScale = qScales.Span, BScale = qScales.Span, D = fp8D.Span, M = 2, N = 2, K = 4, DType = DType.F32 });
+            CpuOps.Quantize(new QuantizeArgs { Input = qIn.Span, Output = q4.Span, Scales = qScales.Span, Rows = 2, Dim = 4, DType = DType.F32, OutputDType = DType.I4 });
+            CpuOps.GemmW4A16(new GemmW4A16Args { A = qIn.Span, B = q4.Span, Scales = qScales.Span, D = fp8D.Span, M = 2, N = 2, K = 4, GroupSize = 4, DType = DType.F32 });
         }
 
         Everything();
