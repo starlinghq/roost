@@ -1,0 +1,95 @@
+# Admission record for Qwen3-1.7B (R-015 groundwork, stream B3; build plan decision 15: the second profile, M1).
+# Proposed, not admitted: the revision is not pinned by any Starling package (see [source.pinned_by]), and
+# fixtures (R-015, as R-014), tolerances (maintainer) and the model definition (R-021 follow-up) are open.
+# Admission is not qualification: no profile manifest exists and no capability is claimed.
+admission_version = 1
+model = "qwen3-1.7b"
+status = "proposed"              # awaiting maintainer review of the revision choice; every Roost capability is untested
+maturity_of_profiles = "none"    # no profile manifest is committed (see manifest_blockers)
+lock = "evidence/registry/qwen3-1.7b.lock.toml"
+
+[source]
+repo = "Qwen/Qwen3-1.7B"
+revision = "70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+weights = ["model-00001-of-00002.safetensors", "model-00002-of-00002.safetensors"]
+license = "Apache-2.0"
+
+[source.pinned_by]
+package = "none"
+checked_package = "Starlings.Models.QwenChat"
+checked_version = "0.3.0"
+checked_package_repository_commit = "9d182768ddde0ab1514de5e22d03022f8ae4707d"
+note = "Starlings.Models.QwenChat 0.3.0 pins only Qwen/Qwen3-0.6B@c1899de289a04d12100db370d81485cdf75e47ca (profile qwen3-0.6b/ortgenai-fp32-cpu) and Qwen/Qwen2.5-0.5B-Instruct@7ae557604adf67be50417f59c2c2f167def9a775 (nuspec, README and QwenChatProfile.Revision). No Starling package names Qwen3-1.7B, so the revision here is the official repository's main commit on 2026-11-01 (Hub X-Repo-Commit; last modified 2025-07-26), stated as such and not as a Starling pin."
+
+[architecture]
+# From config.json at this revision (data, not instructions). Qwen3 is a dense transformer: every layer is full attention.
+model_type = "qwen3"
+decoder_layers = 28
+full_attention_layers = 28
+linear_attention_layers = 0
+hidden_size = 2048
+intermediate_size = 6144
+attention_heads = 16
+key_value_heads = 8
+head_dim = 128
+vocab_size = 151936
+max_position_embeddings = 40960
+rope_theta = 1000000
+tie_word_embeddings = true
+torch_dtype = "bfloat16"
+eos_token_id = 151645            # generation_config.json lists eos [151645, 151643]
+
+[comparison.chat_template]
+# The Hub repository has no chat_template.jinja: the template is the "chat_template" string in tokenizer_config.json.
+# Both digests below are of that string's UTF-8 bytes (4168 bytes); QwenChat ships the same bytes as chat_template.jinja.
+file = "tokenizer_config.json#chat_template"
+hub_sha256 = "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+starling_published_sha256 = "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+starling_source = "Starlings.Models.QwenChat 0.3.0: QwenChatProfile.Qwen3.TemplateSha256 and BundleFiles chat_template.jinja (size 4168), read by reflection on 2026-11-01"
+tokenizer_config_sha256 = "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101"
+starling_tokenizer_config_sha256 = "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101"
+result = "match"
+detail = "The whole tokenizer_config.json is byte-identical to the one QwenChat pins for Qwen3-0.6B (same SHA-256, same size 9732, same Hub blob id 417d038a). QwenChat renders the template with enable_thinking=false; that is a profile choice of the 0.6B profile, not part of the digest."
+
+[comparison.tokenizer_json]
+file = "tokenizer.json"
+hub_sha256 = "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+hub_size = 11422654
+starling_profile = "Starlings.Models.QwenChat 0.3.0 qwen3-0.6b/ortgenai-fp32-cpu (QwenChatProfile.Qwen3.TokenizerSha256); Starlings.Tokenizers 0.3.0 publishes no Qwen3 profile of its own"
+starling_asset_sha256 = "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+starling_asset_size = 11422654
+result = "match"
+detail = "Byte-identical: the downloaded file's SHA-256 equals both the Hub LFS digest and QwenChat's pin, and the Hub blob id (cd71f61a) is the same in Qwen3-0.6B@c1899de2. vocab.json (blob 4783fe10) and merges.txt (blob 31349551) are also the same blobs as in the 0.6B revision. Build plan section 1: no tokenizer-repo profile is needed for 1.7B because nothing differs."
+roost_consequence = "Roost can use the Qwen3 template from Starlings.Models.QwenChat (pinned by R-009) and the same tokenizer artifact for this profile."
+
+[report_to_starling]
+status = "not needed"
+reason = "tokenizer.json, tokenizer_config.json and the chat template are byte-identical to what QwenChat publishes for its Qwen3 profile; there is no difference to raise. Whether Starling should add a Qwen3-1.7B profile is a separate request, not a defect."
+
+[evidence]
+# What this record does and does not rest on (2026-11-01).
+evidenced = [
+  "revision: Hub API sha and X-Repo-Commit of main for Qwen/Qwen3-1.7B",
+  "sizes of all 12 files: Hub tree API at the revision",
+  "SHA-256 of the 10 non-weight files: computed from downloads at the revision",
+  "SHA-256 of tokenizer.json: computed, equal to the Hub LFS digest",
+  "tokenizer and template digests equal to Starlings.Models.QwenChat 0.3.0 QwenChatProfile.Qwen3 (reflection)",
+]
+not_evidenced = [
+  "SHA-256 of the two safetensors files: Hub LFS digests only, not downloaded or hashed here (R-024 verifies as read)",
+  "any Starling pin of this revision (none exists)",
+  "reference fixtures (greedy outputs, step-0 logits, per-layer captures): R-015, as R-014",
+  "binding tolerances and the near-tie bound: set by the maintainer",
+  "the Roost model definition for Qwen3-1.7B (R-021 follow-up in M1)",
+  "any run on any GPU or SM",
+]
+
+[manifest_blockers]
+# evidence/schemas/profile-manifest.schema.json (schema_version 1) requires profile fields that cannot exist yet.
+# No manifest is committed because no value may be invented.
+missing = [
+  "profile.kernel_manifest.revision and .sha256 (the manifest the profile is qualified against; no qualification run exists)",
+  "profile.selected_variants (no kernel selection has run)",
+  "profile.sm entries with evidence paths (no hardware evidence)",
+  "profile.min_driver, profile.min_toolkit, profile.attention_backend, profile.kv_dtype, profile.tf32_policy, profile.mesh (decided by the serving profile, not by admission)",
+]
