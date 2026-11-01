@@ -73,6 +73,7 @@ public static partial class CaseCatalog
         OpId.CacheWrite => CacheWriteCases(baseSeed, p),
         OpId.CacheCopy => CacheCopyCases(baseSeed, p),
         OpId.RopeScaled => RopeScaledCases(baseSeed, p),
+        OpId.MoeRouteTopK or OpId.MoePermute or OpId.MoeUnpermute or OpId.GroupedGemm or OpId.FusedMoe => MoeCases(op, baseSeed, p),
         _ => HybridCases(op, baseSeed, p),
     };
 

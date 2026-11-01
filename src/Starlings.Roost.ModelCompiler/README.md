@@ -123,6 +123,8 @@ A node whose op or arguments fail is reported once; nodes that read its outputs 
   emission over a per-layer weight table is not built (S4 "first thing to try").
 * A view is a column slice of one value's last dimension and nothing else (no row slices, no reshape), and the stride
   scalars of an op that takes them are the definition's to bind (nothing checks that `QStride` matches the viewed value's width).
+* Activations are token-major only, so values such as MoE's permuted rows (`[tokens * top_k, hidden]`) or per-expert counts and offsets
+  (`[experts]` int32) cannot be node outputs: `roost-tiny-moe` uses the one-node `FusedMoe` and the unfused MoE chain is not expressible yet.
 * Only `AddRmsNorm` has an unfused form in the lowering; other fused ops come from passes (stream L).
 * Plan-input auto-fill goes by field name, so an unbound `Ids` span is the token-id input for every op that has one. For
   `Argmax` and `Sample`, `Ids` is an output; bind it explicitly if a definition ever includes them (the forward ends at

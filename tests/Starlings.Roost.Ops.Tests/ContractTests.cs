@@ -17,13 +17,14 @@ public sealed class ContractTests
         where TOps : struct, IRoostOps => TOps.AddRmsNorm(default);
 
     [Fact]
-    public void CpuOpsSupportsTheM0OpsTheHybridOpsAndRopeScaledOnly()
+    public void CpuOpsSupportsTheM0OpsTheHybridOpsRopeScaledAndTheMoeOpsOnly()
     {
         foreach (OpId op in Enum.GetValues<OpId>().Where(o => o != OpId.None))
         {
             bool expected = OpCatalog.IsM0(op)
                 || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
-                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul or OpId.RopeScaled;
+                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul or OpId.RopeScaled
+                    or OpId.MoeRouteTopK or OpId.MoePermute or OpId.MoeUnpermute or OpId.GroupedGemm or OpId.FusedMoe;
             Assert.Equal(expected, Reports<CpuOps>(op));
         }
 

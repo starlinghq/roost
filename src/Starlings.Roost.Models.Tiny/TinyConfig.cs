@@ -14,7 +14,7 @@ public enum TinyLayerType
 
 /// <summary>
 /// A tiny CI model's configuration: the seed its weights are generated from and the widths its definition declares.
-/// The definitions (<see cref="RoostTiny"/>, <see cref="RoostTinyHybrid"/>) are the source of truth for shapes; these
+/// The definitions (<see cref="RoostTiny"/>, <see cref="RoostTinyHybrid"/>, <see cref="RoostTinyMoe"/>) are the source of truth for shapes; these
 /// numbers repeat them for tests and tools, and a test compares the two so they cannot drift.
 /// </summary>
 /// <param name="Name">Model name, as in the definition's <c>RoostModel</c> attribute.</param>
@@ -22,7 +22,7 @@ public enum TinyLayerType
 /// <param name="Layers">Number of decoder layers.</param>
 /// <param name="FullAttentionInterval">Every <c>FullAttentionInterval</c>-th layer (the last of each group) is full attention and the others are linear; 1 means all layers are full attention.</param>
 /// <param name="Hidden">Hidden size.</param>
-/// <param name="Intermediate">MLP width (per gate and per up projection).</param>
+/// <param name="Intermediate">Dense MLP width (per gate and per up projection); 0 when every MLP is a MoE block.</param>
 /// <param name="Vocab">Vocabulary size.</param>
 /// <param name="Heads">Query heads of a full-attention layer.</param>
 /// <param name="KvHeads">KV heads of a full-attention layer.</param>
@@ -34,6 +34,9 @@ public enum TinyLayerType
 /// <param name="LinearValueDim">Value head size of a linear-attention layer.</param>
 /// <param name="ConvWidth">Kernel width of the linear-attention convolution.</param>
 /// <param name="TiedHead">Whether the language-model head is the embedding table.</param>
+/// <param name="Experts">Routed experts of a MoE layer (0 for a dense MLP).</param>
+/// <param name="ExpertsPerToken">Experts each token is routed to (top-k).</param>
+/// <param name="MoeIntermediate">Width of one expert's gate and of its up projection.</param>
 public sealed record TinyConfig(
     string Name,
     ulong Seed,
@@ -51,7 +54,10 @@ public sealed record TinyConfig(
     int LinearKeyDim,
     int LinearValueDim,
     int ConvWidth,
-    bool TiedHead)
+    bool TiedHead,
+    int Experts = 0,
+    int ExpertsPerToken = 0,
+    int MoeIntermediate = 0)
 {
     /// <summary>roost-tiny: Qwen3-shaped, four full-attention layers.</summary>
     public static TinyConfig Dense { get; } = new(
@@ -65,8 +71,15 @@ public sealed record TinyConfig(
         Heads: 4, KvHeads: 2, HeadDim: 16, BlockSize: 16,
         LinearKeyHeads: 4, LinearValueHeads: 4, LinearKeyDim: 16, LinearValueDim: 16, ConvWidth: 4, TiedHead: true);
 
+    /// <summary>roost-tiny-moe: Qwen3-MoE-shaped, four full-attention layers each with a routed-expert MLP (8 experts, top 2).</summary>
+    public static TinyConfig Moe { get; } = new(
+        "roost-tiny-moe", 0x524F4F5354_0003UL, Layers: 4, FullAttentionInterval: 1, Hidden: 64, Intermediate: 0, Vocab: 256,
+        Heads: 4, KvHeads: 2, HeadDim: 16, BlockSize: 16,
+        LinearKeyHeads: 0, LinearValueHeads: 0, LinearKeyDim: 0, LinearValueDim: 0, ConvWidth: 0, TiedHead: false,
+        Experts: 8, ExpertsPerToken: 2, MoeIntermediate: 32);
+
     /// <summary>Every tiny configuration.</summary>
-    public static ImmutableArray<TinyConfig> All { get; } = [Dense, Hybrid];
+    public static ImmutableArray<TinyConfig> All { get; } = [Dense, Hybrid, Moe];
 
     /// <summary>Channels of the fused linear-attention projection and of its convolution: q, k and v side by side.</summary>
     public int LinearConvDim => (2 * LinearKeyHeads * LinearKeyDim) + (LinearValueHeads * LinearValueDim);

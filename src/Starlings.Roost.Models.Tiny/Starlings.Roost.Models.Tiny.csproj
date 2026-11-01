@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Roost tiny CI models (R-021): roost-tiny (Qwen3-shaped) and roost-tiny-hybrid (Qwen3.5-shaped) as model-compiler definitions, with seeded weights generated at run time. Test and CI use only; never packed.</Description>
+    <Description>Roost tiny CI models (R-021): roost-tiny (Qwen3-shaped), roost-tiny-hybrid (Qwen3.5-shaped) and roost-tiny-moe (Qwen3-MoE-shaped) as model-compiler definitions, with seeded weights generated at run time. Test and CI use only; never packed.</Description>
     <IsPackable>false</IsPackable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <!-- The generated model members are public and carry no XML docs; the hand-written files here document theirs. -->

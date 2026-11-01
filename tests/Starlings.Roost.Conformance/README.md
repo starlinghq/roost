@@ -63,8 +63,8 @@ The suite never injects a fault: it launches nothing outside a variant's registe
 
 `dotnet test --solution Roost.slnx` runs the following (the timing was not measured in Release; in Debug the Conformance assembly took about 2.5 minutes in the review):
 
-- the full `ci` profile with `OracleBackend` as the candidate. The oracle is a second implementation of the M0 ops written from the
-  C3 definitions with no code shared with `CpuOps`; agreement checks the reference every GPU result is judged by;
+- the full `ci` profile with `OracleBackend` as the candidate. The oracle is a second implementation of the M0 ops and the MoE ops
+  (R-080) written from the C3 definitions with no code shared with `CpuOps`; agreement checks the reference every GPU result is judged by;
 - mutation tests: `CpuOps` damaged in one way at a time (a flipped bit in an exact op, a NaN, an error of four ulp, a determinism
   or batch-invariance break, a refusal, a failing backend check, an exception) must be reported as the matching failure, and an
   error inside the class must not;
@@ -271,6 +271,47 @@ Open for R-113: a CUDA variant with the window built in (stream C), removing `Pa
 compared, a GPU conformance run and sanitizer run through `tools/gpu-lease`, upstream goldens for windowed attention, and a windowed model
 definition (R-049).
 
+## MoE ops (R-080, CPU half only)
+
+`Suite/MoeCases.cs` holds cases for MoeRouteTopK, MoePermute, MoeUnpermute, GroupedGemm and FusedMoe, bf16 activations and bf16 expert
+weights, at Qwen3-30B-A3B's widths as the S6 report read them (hidden 2048, expert width 768, 128 experts, top 8). GroupedGemm and FusedMoe
+hold every expert's weights, so their Qwen3-width cases use 16 of the 128 experts and run in the `full` profile only; `ci` uses scaled-down
+shapes. Each op has the edge cases R-080 asks for: experts that receive no rows (including a GroupedGemm call where every expert is empty),
+all tokens identical (8 of 128 experts take every row), and near-tie routing (per token, two logits one bf16 ulp apart, 5 and 5.03125, and
+an exact tie at 2.5 that straddles the top-k boundary; the lower expert must win). `Suite/OracleBackend.Moe.cs` is the oracle's
+independent implementation (routing by sorting, permutation by buckets, FusedMoe one token at a time). `Tests/MoeCaseTests.cs` checks that
+the edge cases exist and do what they name, and that a router breaking ties the other way, an unstable permutation and a four-ulp
+FusedMoe error all fail.
+
+The definitions `CpuOps` implements (R-080): routing picks the top k by logit, ties to the lower expert, NaN last; weights are the
+softmax over all experts of the chosen ones, renormalised when asked, stored as float32. The permutation is a stable counting sort by
+expert in flat `(token, k)` order; `Permutation[t * TopK + k]` is the permuted row of pair `(t, k)`. GroupedGemm reads `B` as
+`[experts, N, K]`. FusedMoe is exactly the unfused chain with bf16 intermediates (gate and up, SiLU-and-mul, down), as in the S6 pipeline.
+FP8 and INT4 weights throw `NotSupportedException`: `unsupported` on `CpuOps`.
+
+The cases borrow existing tolerance classes (no proposal file was changed): `exact` for ids, counts, offsets, permutations and permuted
+rows; `hybrid-f32` for the float32 routing weights; `elementwise-bf16` for MoeUnpermute; `gemm-bf16` for GroupedGemm and FusedMoe. None
+was sized against a GPU kernel. FusedMoe chains three bf16 roundings, and one flipped intermediate rounding is enough to leave
+`gemm-bf16`: the oracle's first run stored its intermediates through `HostBuf.Set`, which rounds double to float to bf16, and one
+element of the 16-token Qwen3-width case reached utilisation 1.14 (`results/r080-moe-cpu-full-first-run.out`). The oracle now rounds once;
+a GPU kernel accumulating in float will flip such roundings far more often, so FusedMoe on a GPU needs its own class or stage-isolated
+comparison (the S6 report used the latter), sized on hardware by the maintainer.
+
+Run of the `full` profile, oracle against `CpuOps`, on the development container (no GPU):
+
+```sh
+dotnet build tests/Starlings.Roost.Conformance.Cuda -c Release -o <out dir>
+dotnet <out dir>/Starlings.Roost.Conformance.Cuda.dll --cpu --profile full --ops MoeRouteTopK,MoePermute,MoeUnpermute,GroupedGemm,FusedMoe
+```
+
+92 of 92 cases pass (the 5 `not_run` rows are the goldens placeholder, one per op; no MoE golden exists); 57 s wall time for the first
+run. Largest utilisation 0.38 (`elementwise-bf16`, MoeUnpermute 128 x 2048, from the oracle's double rounding of the output); every
+other case has utilisation 0. Log: `results/r080-moe-cpu-full.out`.
+
+**GPU side: `untested`.** No kernel library registers a MoE variant yet (stream C's half of R-080), so a GPU run reports every MoE case
+`not_run`. C1 has op ids for the five ops (167 to 171) but no params structs for them; adding them is a C1 change (stream A) and
+`CudaBackend` needs a case for each op once they exist.
+
 ## Not done
 
 - Open decisions and requests (deferred, not guessed):
@@ -285,8 +326,8 @@ definition (R-049).
     reproduce only by rebuilding there; the release pipeline (R-060) replaces them.
 - The goldens file is not uploaded as a release asset (no release is made here) and CI does not fetch it; the real-goldens test is skipped there.
 - Only SM 86 and SM 89 have hardware evidence; other SMs stay `untested`. The manifest still lists SM 89 `untested`: setting it `experimental` with this evidence is the maintainer's (or stream C's) call, and `ManifestAndNamesTests` (stream F) asserts the current value.
-- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases. RopeScaled has CPU cases but no
-  GPU variant (see above).
+- Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases. RopeScaled and the MoE ops
+  have CPU cases but no GPU variant, and the MoE ops have no upstream golden (above).
 - No `graph` case: capturing a graph is not a conformance property here; the R-034 harness replays the graph-capturable hybrid ops once.
 - The suite does not run real Qwen3.5-0.8B weights (R-017's harness does); it uses seeded random data of the model's shapes.
 - CI timing of the Conformance assembly in Release: the CPU half took 67 to 135 s locally in Release (`dotnet test` reported 77 s for 51
