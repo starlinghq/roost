@@ -149,6 +149,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `continuous_batching` | `unsupported` | — | M0 runs one sequence per step; concurrent requests take turns. R-029 wiring, M1. |
 | `worker_recovery` | `unsupported` | — | A worker fault fails the requests it carried. R-070. |
 | `co_tenant_admission` | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | Refuses new requests with `InsufficientDeviceMemory` while free device memory is below `MinFreeDeviceBytes` (R-044). CPU only: the co-tenant GPU test is open and no NVML source is the default yet. |
+| `telemetry` | `untested` | `tests/Starlings.Roost.Server.Tests/`<br>`src/Starlings.Roost.Server/STATUS.md` | `RoostChatClient.Telemetry` (R-038): a `Meter` per client (request counts by finish reason, token counters and histograms, time to first token, inter-token and end-to-end latency, running and waiting requests, KV block usage) and one `roost.request` activity per request tagged with its id, token counts and finish reason, never its text. CPU only; no GPU run has been scraped. |
 
 ## OpenAI-compatible server (`roost serve`, R-037, R-074)
 
@@ -166,7 +167,10 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Prompt-embeddings input | `unsupported` | — | `prompt_embeds` is refused by name: `RoostChatClient` exposes no embedding input for contract C2's `Embeddings` part (R-074). |
 | Embeddings, rerank, score, classify, pooling | `unsupported` | — | R-052, R-087. |
 | Runtime LoRA load and unload | `unsupported` | — | R-050, R-074. |
-| vLLM CLI flags, environment and Prometheus names | `unsupported` | — | R-038, R-075. |
+| `GET /metrics` (Prometheus text format) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | R-038: every family under a `roost_` name and under vLLM's `vllm:` names (`request_success_total`, `prompt_tokens_total`, `generation_tokens_total`, `time_to_first_token_seconds`, `inter_token_latency_seconds`, `time_per_output_token_seconds`, `e2e_request_latency_seconds`, `request_prompt_tokens`, `request_generation_tokens`, `num_requests_running`, `num_requests_waiting`, `kv_cache_usage_perc`, `gpu_cache_usage_perc`) with the `model_name` label. No exporter package. Prefix-cache, preemption and queue-time metrics are not exported (the M0 driver has no prefix cache). |
+| One activity per request | `untested` | `tests/Starlings.Roost.Server.Tests/` | `roost.request` on the `Starlings.Roost` `ActivitySource`: request id, model, input and output tokens, finish reason, and the C6 code name on failure. No exporter is wired; a host adds its own `ActivityListener` or OpenTelemetry SDK. |
+| No prompt or output text in logs | `untested` | `tests/Starlings.Roost.Server.Tests/` | A test captures every log category at `Trace` over every route, refusals included, and finds neither the prompt nor the reply. |
+| vLLM CLI flags and environment | `unsupported` | — | R-075. |
 | OpenAI client library compatibility suite | `unsupported` | — | R-040. |
 
 ## Scheduling and engine
@@ -252,7 +256,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | LoRA on MoE experts and multimodal backbones | `unsupported` | — | R-050, R-099. |
 | Sleep and wake, in-place weight update | `unsupported` | — | R-100. |
 | Per-GPU weight cache and engine snapshots | `unsupported` | — | R-046, R-100. |
-| Metrics and traces | `unsupported` | — | R-038. |
+| Metrics and traces | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | See `GET /metrics` and one activity per request above (R-038). CPU only. |
 | Container image, Kubernetes, router integration | `unsupported` | — | R-046, R-101. |
 | Model definitions as the plugin equivalent | `unsupported` | — | R-055 (section 13.2). |
 | .NET launcher as the Ray equivalent | `unsupported` | — | R-092 (section 13.2). |

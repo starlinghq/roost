@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.AI;
@@ -25,6 +26,8 @@ namespace Starlings.Generation.Roost;
 /// (generated tokens include a stop token).</para>
 /// <para><b>Cancellation.</b> Cancelling the token, or ending the enumeration early, drops the request from the worker's
 /// next step and frees its blocks.</para>
+/// <para><b>Telemetry.</b> Every request submitted to the worker records metrics on <see cref="Telemetry"/> and one activity
+/// (<see cref="RoostTelemetry.RequestActivityName"/>) tagged with its id, token counts and finish reason, never its text.</para>
 /// </remarks>
 public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 {
@@ -40,7 +43,11 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         _backend = backend;
         _metadata = new ChatClientMetadata("roost", null, options.Model.ModelId);
         Capabilities = new RoostCapabilities();
+        Telemetry = new RoostTelemetry(options.Model.ModelId, () => backend.KvCacheUsage);
     }
+
+    /// <summary>This client's metrics and per-request activities (R-038).</summary>
+    public RoostTelemetry Telemetry { get; }
 
     /// <summary>What this client supports; anything not listed is unsupported.</summary>
     public RoostCapabilities Capabilities { get; }
@@ -152,7 +159,14 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     {
         if (Interlocked.Exchange(ref _disposed, 1) == 0)
         {
-            await _backend.DisposeAsync().ConfigureAwait(false);
+            try
+            {
+                await _backend.DisposeAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                Telemetry.Dispose();
+            }
         }
     }
 
@@ -172,6 +186,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+        long started = Stopwatch.GetTimestamp();
         var model = _options.Model;
         int[] ids = [.. model.Tokenizer.Encode(prompt, false).Ids];
         if (ids.Length == 0)
@@ -200,10 +215,12 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         string responseId = "roost-" + id.Value.ToString(CultureInfo.InvariantCulture);
         var created = DateTimeOffset.UtcNow;
         var detokenizer = new RoostIncrementalDetokenizer(model.Tokenizer, skipSpecialTokens: true);
+        var telemetry = Telemetry.Start(responseId, started, ids.Length);
         var channel = _backend.Submit(request);
         var done = false;
         var ended = false; // the backend finished or failed the request itself
         ChatFinishReason? finish = null;
+        RoostError? failure = null;
         (int Prompt, int Completion) usage = (ids.Length, 0);
         try
         {
@@ -216,6 +233,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
                     {
                         case TokenEventKind.Tokens:
                             var tokens = ev.TokenIds;
+                            telemetry.Tokens(tokens.Length);
                             for (var i = 0; i < tokens.Length; i++)
                             {
                                 var match = matcher.Push(detokenizer.Push(tokens.Span[i]));
@@ -243,12 +261,19 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 
                             ended = true;
                             finish = tail.Matched is not null ? ChatFinishReason.Stop : MapFinish(ev.Finish);
+                            if (finish is null)
+                            {
+                                failure = new RoostError(RoostErrorCode.Internal, $"The worker finished the sequence with {ev.Finish}.");
+                                throw new RoostChatException(failure);
+                            }
+
                             done = true;
                             break;
                         case TokenEventKind.Failed:
                             ended = true;
                             done = true;
-                            throw new RoostChatException(ev.Error ?? new RoostError(RoostErrorCode.Internal, "The request failed."));
+                            failure = ev.Error ?? new RoostError(RoostErrorCode.Internal, "The request failed.");
+                            throw new RoostChatException(failure);
                         default:
                             break;
                     }
@@ -257,7 +282,8 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 
             if (!done)
             {
-                throw new RoostChatException(new RoostError(RoostErrorCode.Internal, "The request ended without a finish event."));
+                failure = new RoostError(RoostErrorCode.Internal, "The request ended without a finish event.");
+                throw new RoostChatException(failure);
             }
         }
         finally
@@ -266,6 +292,9 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             {
                 channel.Cancel(); // cancelled, abandoned or stopped on a string: drop it from the next step
             }
+
+            string reason = failure is not null ? "error" : finish == ChatFinishReason.Stop ? "stop" : finish == ChatFinishReason.Length ? "length" : "abort";
+            telemetry.End(reason, usage.Prompt, usage.Completion, failure);
         }
 
         yield return new ChatResponseUpdate(ChatRole.Assistant, [new UsageContent(new UsageDetails
@@ -291,11 +320,11 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         CreatedAt = created,
     };
 
-    private static ChatFinishReason MapFinish(FinishReason reason) => reason switch
+    private static ChatFinishReason? MapFinish(FinishReason reason) => reason switch
     {
         FinishReason.Eos or FinishReason.Grammar => ChatFinishReason.Stop,
         FinishReason.Length => ChatFinishReason.Length,
-        _ => throw new RoostChatException(new RoostError(RoostErrorCode.Internal, $"The worker finished the sequence with {reason}.")),
+        _ => null,
     };
 
     private static string Render(IRoostChatTemplate template, IReadOnlyList<RoostChatMessage> messages)

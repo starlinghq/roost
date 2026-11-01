@@ -14,6 +14,12 @@ internal interface IGenerationBackend : IAsyncDisposable
     /// <param name="request">The request.</param>
     /// <returns>Its event channel.</returns>
     IRequestChannel Submit(Request request);
+
+    /// <summary>
+    /// The share of the KV cache's attention blocks in use, 0 to 1, as of the last step the backend planned; null when it does not
+    /// know (R-038). Read from any thread.
+    /// </summary>
+    double? KvCacheUsage { get; }
 }
 
 /// <summary>An <see cref="IRequestChannel"/> over a channel reader and a cancel callback.</summary>

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Starlings.Generation.Roost;
 using Starlings.Generation.Roost.Tests.Support;
@@ -46,7 +47,7 @@ internal sealed class ServerRig : IAsyncDisposable
 
     public static int[] Encode(string text) => [.. Tokenizer.Encode(text, false).Ids];
 
-    public static async Task<ServerRig> StartAsync(Script script, RoostServerOptions? options = null)
+    public static async Task<ServerRig> StartAsync(Script script, RoostServerOptions? options = null, Action<IWebHostBuilder>? configureWebHost = null)
     {
         ScriptedExecutor? executor = null;
         var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
@@ -75,7 +76,11 @@ internal sealed class ServerRig : IAsyncDisposable
 
         try
         {
-            var app = RoostServer.Create(client, options, web => web.UseTestServer());
+            var app = RoostServer.Create(client, options, web =>
+            {
+                web.UseTestServer();
+                configureWebHost?.Invoke(web);
+            });
             await app.StartAsync(TestContext.Current.CancellationToken);
             return new ServerRig(client, app, executor!);
         }

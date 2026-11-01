@@ -94,6 +94,13 @@ public sealed class RoostCapabilities
     /// </summary>
     public const string CoTenantAdmission = "co_tenant_admission";
 
+    /// <summary>
+    /// Metrics on <see cref="RoostChatClient.Telemetry"/> (request counts by finish reason, token counters, time to first token,
+    /// inter-token and end-to-end latency, running and waiting requests, KV cache usage) and one activity per request, with no
+    /// prompt or output text (R-038). CPU-tested only.
+    /// </summary>
+    public const string Telemetry = "telemetry";
+
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
     internal RoostCapabilities()
@@ -113,6 +120,7 @@ public sealed class RoostCapabilities
             [Instructions] = untested,
             [StopSequences] = untested,
             [CoTenantAdmission] = untested,
+            [Telemetry] = untested,
             [Sampling] = unsupported,
             [Penalties] = unsupported,
             [Tools] = unsupported,

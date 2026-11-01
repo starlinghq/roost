@@ -1,4 +1,4 @@
-# R-037 and R-074 status: partial (CPU-tested; no GPU evidence)
+# R-037, R-074 and R-038 status: partial (CPU-tested; no GPU evidence)
 
 `Starlings.Roost.Server` is an ASP.NET Core minimal API host over `Starlings.Generation.Roost`'s `RoostChatClient`, and it builds
 the `roost` executable. The routes, the error body, the option checks and loopback-only listening are built and tested on the
@@ -29,6 +29,36 @@ to check the loopback default. No request has reached a GPU through the server, 
 | `GET /health`, `GET`/`POST /ping` | untested | Liveness, vLLM's names: 200 with an empty body while the process serves HTTP. `RoostChatClient` exposes no worker liveness, so a dead worker shows as failed requests, not a failed health check. |
 | `GET /ready` | untested | Readiness: the server is built over a client whose worker has started (spawn, handshake, weight load), so it answers 200 `{"status":"ready","model"}` once listening, and 503 `stopping` once the host begins to stop. |
 | `GET /version` | untested | vLLM's name: `{"version"}`, the `roost` assembly's informational version. |
+
+## Metrics, traces and logs (R-038)
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| `GET /metrics` | untested | Prometheus text format 0.0.4 (`text/plain; version=0.0.4`), written by `Metrics/PrometheusExporter` from a `MeterListener` over the client's `RoostTelemetry.Meter`; no exporter package. Every series has vLLM's `model_name` label. |
+| Recorded in `Starlings.Generation.Roost` | untested | `RoostChatClient.Telemetry` records for every request submitted to the worker, whichever route (or library caller) sent it: finish reason `stop`, `length`, `abort` (cancelled or abandoned) or `error`; prompt and generated tokens; time to first token, inter-token latency and end-to-end latency, measured in the host from the start of tokenisation; requests waiting (submitted, no token yet) and running (first token received); the share of the KV cache's attention blocks in use after the last planned step. A request refused while it is read records nothing. |
+| One activity per request | untested | `roost.request` on `ActivitySource` `Starlings.Roost`, tagged `roost.request_id` (the id the route returns without its `chatcmpl-`, `cmpl-` or other prefix), `gen_ai.request.model`, `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.response.finish_reasons`, and `error.type` with the C6 code name on failure. Never prompt or output text. |
+| Log hygiene | untested | The server's only own log message is an unexpected exception (Roost's exception messages carry no prompt text, C6). `TracesAndLogsTests` captures every category at `Trace` over every route, streamed and whole, and over refusals, and finds neither the prompt nor the reply. |
+
+Metric families (Roost name, then vLLM's names, which are aliases of the same values):
+
+| Roost | vLLM | Type |
+| --- | --- | --- |
+| `roost_requests_total{finish_reason}` | `vllm:request_success_total{finished_reason}` (stop, length, abort; `error` is Roost's only) | counter |
+| `roost_prompt_tokens_total` | `vllm:prompt_tokens_total` | counter |
+| `roost_generation_tokens_total` | `vllm:generation_tokens_total` | counter |
+| `roost_request_prompt_tokens` | `vllm:request_prompt_tokens` | histogram |
+| `roost_request_generation_tokens` | `vllm:request_generation_tokens` | histogram |
+| `roost_time_to_first_token_seconds` | `vllm:time_to_first_token_seconds` | histogram |
+| `roost_inter_token_latency_seconds` | `vllm:inter_token_latency_seconds`, `vllm:time_per_output_token_seconds` | histogram |
+| `roost_e2e_request_latency_seconds` | `vllm:e2e_request_latency_seconds` | histogram |
+| `roost_requests_running` | `vllm:num_requests_running` | gauge |
+| `roost_requests_waiting` | `vllm:num_requests_waiting` | gauge |
+| `roost_kv_cache_usage_ratio` | `vllm:kv_cache_usage_perc`, `vllm:gpu_cache_usage_perc` (a 0 to 1 fraction, as in vLLM) | gauge |
+
+Not exported: prefix-cache queries and hits (the M0 driver does not use the prefix cache, R-030), preemptions, queue time,
+prefill and decode time, and vLLM's `engine` label. Bucket boundaries span the ranges of vLLM's histograms but are Roost's
+own. M0 runs one sequence per step, so `running` is at most 1 and concurrent requests show as `waiting`. No number from this
+endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
 
 ## Behaviour
 
@@ -83,8 +113,8 @@ to check the loopback default. No request has reached a GPU through the server, 
   until one is committed with its log, every route stays `untested`. The S1 RSS and SSE figures (docs/m0/roost-s1-aot-cuda.md)
   are from the spike, not from this server.
 - **OpenAI client libraries** against the server: the compatibility suite is R-040.
-- **Metrics, traces and log hygiene** (`/metrics`, one Activity per request): R-038. The server logs no prompt or output text;
-  the only log message is an unexpected exception.
+- **R-038 gaps.** No GPU run has been scraped; prefix-cache, preemption and queue-time families wait on the engine (R-030,
+  R-032); no OpenTelemetry exporter is wired (a host adds one over the `Starlings.Roost` meter and activity source).
 - **R-074 gaps.** Prompt-embeddings input waits on an embedding input in `RoostChatClient`. `stop_reason`
   `stop_sequence` is never reported on `/v1/messages` (the client reports a stop string and a stop token alike, so both are
   `end_turn`), and a stream's `message_start` carries 0 input tokens (usage arrives with the last update; `message_delta` has

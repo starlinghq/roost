@@ -1,5 +1,6 @@
 using Starlings.Generation.Roost;
 using Starlings.Roost.Server.Anthropic;
+using Starlings.Roost.Server.Metrics;
 using Starlings.Roost.Server.OpenAi;
 using Starlings.Roost.Server.Responses;
 using Starlings.Roost.Server.Utility;
@@ -11,7 +12,8 @@ namespace Starlings.Roost.Server;
 /// <c>POST /v1/chat/completions</c>, <c>POST /v1/completions</c>, <c>GET /v1/models</c> and the Responses API
 /// (<c>POST /v1/responses</c>, <c>GET /v1/responses/{id}</c>, <c>POST /v1/responses/{id}/cancel</c>), the Anthropic Messages API
 /// (<c>POST /v1/messages</c>, <c>POST /v1/messages/count_tokens</c>), and vLLM's utility routes (<c>POST /tokenize</c>,
-/// <c>POST /detokenize</c>, <c>GET /health</c>, <c>/ping</c>, <c>GET /version</c>) with Roost's <c>GET /ready</c>. It listens on
+/// <c>POST /detokenize</c>, <c>GET /health</c>, <c>/ping</c>, <c>GET /version</c>) with Roost's <c>GET /ready</c>, and
+/// <c>GET /metrics</c> in Prometheus text format with vLLM's metric names as aliases (R-038). It listens on
 /// loopback unless non-loopback listening is allowed explicitly (<see cref="RoostServerOptions.AllowNonLoopback"/>). Every
 /// failure, including an unknown route, answers with one error body, <c>{"error":{"message","type","param","code"}}</c>, except
 /// on the Anthropic routes, which answer with Anthropic's; an unsupported or unknown request option is a 400 that names it.
@@ -62,6 +64,10 @@ public static class RoostServer
         app.MapMethods("/ping", [HttpMethods.Get, HttpMethods.Post], (RequestDelegate)UtilityRoutes.HealthAsync);
         app.MapGet("/version", (RequestDelegate)utility.VersionAsync);
         app.MapGet("/ready", (RequestDelegate)utility.ReadyAsync);
+
+        var metrics = new PrometheusExporter(client.Telemetry, client.Model.ModelId);
+        _ = app.Lifetime.ApplicationStopped.Register(metrics.Dispose);
+        app.MapGet("/metrics", (RequestDelegate)metrics.ScrapeAsync);
         return app;
     }
 }
