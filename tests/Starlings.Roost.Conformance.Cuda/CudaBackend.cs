@@ -321,7 +321,7 @@ internal sealed unsafe class CudaBackend : IKernelBackend
             KvLayout = (TensorLayout)c.I("kv_layout"),
             SmScale = 0f,
             LogitsSoftCap = 0f,
-            WindowLeft = -1,
+            WindowLeft = c.IOr("window_left", -1),
             Causal = (uint)c.I("causal"),
         };
         Launch(v, ref p, res);

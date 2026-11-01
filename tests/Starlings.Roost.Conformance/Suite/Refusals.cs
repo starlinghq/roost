@@ -30,6 +30,19 @@ public static class RefusalRules
         KernelStatus.Unsupported,
         "Gemm with a C input (beta != 0) or a bias: an epilogue no model uses, refused at plan time (R-019 ruling)");
 
+    /// <summary>
+    /// <c>paged-attention-flashinfer-fa2</c> with a sliding window (<c>window_left != -1</c>). The M0 kernel is built without one and
+    /// returns <c>UNSUPPORTED</c> before any launch (<c>kernels/src/paged_attention.cu</c>, <c>Validate</c>, reached from the workspace
+    /// query and <c>plan()</c>), as the C3 documentation of <c>PagedAttentionArgs.WindowLeft</c> records for M0. The sliding-window
+    /// cases (R-113) are therefore <c>refused</c> on the GPU, never passed: the CUDA sliding-window variant and its GPU conformance are
+    /// open. Remove this rule in the change that builds the window into a registered variant, so its cases are compared again.
+    /// </summary>
+    public static readonly RefusalRule PagedAttentionSlidingWindow = new(
+        "paged-attention-flashinfer-fa2",
+        c => c.Op == OpId.PagedAttention && c.IOr("window_left", -1) != -1,
+        KernelStatus.Unsupported,
+        "PagedAttention with a sliding window: not built in the M0 FA2 variant (R-113 CUDA variant open); the window is untested on the GPU");
+
     /// <summary>The rules applied by default.</summary>
-    public static readonly IReadOnlyList<RefusalRule> Registered = [GemmEpilogueWithCOrBias];
+    public static readonly IReadOnlyList<RefusalRule> Registered = [GemmEpilogueWithCOrBias, PagedAttentionSlidingWindow];
 }

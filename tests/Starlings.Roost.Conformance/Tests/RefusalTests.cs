@@ -100,9 +100,9 @@ public sealed partial class RefusalTests
     }
 
     [Fact]
-    public void TheRegisteredRulesAreOnlyTheGemmRule()
+    public void TheRegisteredRulesAreOnlyTheGemmAndSlidingWindowRules()
     {
-        Assert.Equal(["gemm-cublaslt"], RefusalRules.Registered.Select(r => r.Variant));
+        Assert.Equal(["gemm-cublaslt", "paged-attention-flashinfer-fa2"], RefusalRules.Registered.Select(r => r.Variant));
     }
 
     [Fact]

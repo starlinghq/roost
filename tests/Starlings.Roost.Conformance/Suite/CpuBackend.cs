@@ -176,7 +176,7 @@ public sealed class CpuBackend : IKernelBackend
                     KvLayout = (TensorLayout)c.I("kv_layout"),
                     Scale = 0f,
                     SoftCap = 0f,
-                    WindowLeft = -1,
+                    WindowLeft = c.IOr("window_left", -1),
                     Causal = c.I("causal") != 0,
                     KvDType = dt,
                     DType = dt,

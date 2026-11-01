@@ -197,12 +197,16 @@ public sealed class OracleBackend : IKernelBackend
                     visible = kvLen;
                 }
 
+                // Sliding window (R-113, C3 PagedAttentionArgs.WindowLeft): the query at position kvLen - n + i reads no key before
+                // that position minus the window; the pages before it may be released (-1) and are never looked up.
+                int window = c.IOr("window_left", -1);
+                int first = window < 0 ? 0 : Math.Max(0, kvLen - n + i - window);
                 for (int h = 0; h < qh; h++)
                 {
                     int g = h / group;
                     var score = new double[visible];
                     double max = double.NegativeInfinity;
-                    for (int j = 0; j < visible; j++)
+                    for (int j = first; j < visible; j++)
                     {
                         long page = (long)idx.Get(p0 + (j / ps));
                         double dot = 0;
@@ -216,7 +220,7 @@ public sealed class OracleBackend : IKernelBackend
                     }
 
                     double sum = 0;
-                    for (int j = 0; j < visible; j++)
+                    for (int j = first; j < visible; j++)
                     {
                         score[j] = Math.Exp(score[j] - max);
                         sum += score[j];
@@ -225,7 +229,7 @@ public sealed class OracleBackend : IKernelBackend
                     for (int d = 0; d < hd; d++)
                     {
                         double acc = 0;
-                        for (int j = 0; j < visible; j++)
+                        for (int j = first; j < visible; j++)
                         {
                             long page = (long)idx.Get(p0 + (j / ps));
                             acc += score[j] * b["v_cache"].Get(CacheIndex(layout, ps, kh, hd, page, j % ps, g, d));
