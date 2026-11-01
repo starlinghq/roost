@@ -24,4 +24,8 @@
     <!-- R-036: the IChatClient contract of Starlings.Generation.Roost; a floor so consumers on a newer Microsoft.Extensions.AI do not conflict (lock files keep 9.8.0). -->
     <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.8.0" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- R-037: the in-memory server for Starlings.Roost.Server.Tests (test only), matched to the ASP.NET Core 10.0.12 shared framework the SDK pins. -->
+    <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
+  </ItemGroup>
 </Project>

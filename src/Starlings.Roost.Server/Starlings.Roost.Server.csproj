@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <Description>Roost's HTTP server (R-037, stream H): an ASP.NET Core minimal API host over Starlings.Generation.Roost's RoostChatClient with the OpenAI chat completions, completions and models routes, one OpenAI-shaped error body and loopback-only listening by default. Builds the `roost` executable. Host process only (decision 30).</Description>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>roost</AssemblyName>
+    <RootNamespace>Starlings.Roost.Server</RootNamespace>
+    <!-- Native AOT publish per S1 (R-005, docs/m0/roost-s1-aot-cuda.md): source-generated JSON only, no reflection-based
+         serialization. PublishAot adds the build host's RID to the restore, so both CI hosts (Linux, Windows) are listed and locked. -->
+    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Generation.Roost/Starlings.Generation.Roost.csproj" />
+    <!-- The Qwen3.5-0.8B state groups for the `roost serve` profile (the pure managed model definition; no worker code). -->
+    <ProjectReference Include="../Starlings.Roost.Models.Qwen35/Starlings.Roost.Models.Qwen35.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Starlings.Roost.Server.Tests" />
+  </ItemGroup>
+</Project>
