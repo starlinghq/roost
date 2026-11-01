@@ -8,26 +8,33 @@ public sealed class ContractTests
         where TOps : struct, IRoostOps => TOps.Supports(op);
 
     private static bool FusedSupported<TOps>()
-        where TOps : struct, IRoostOps => TOps.SupportsAddRmsNorm;
+        where TOps : struct, IRoostOps => TOps.SupportsAddRmsNorm && TOps.SupportsQkvQkNormRopeCacheWrite;
+
+    private static bool QuantFusedSupported<TOps>()
+        where TOps : struct, IRoostOps => TOps.SupportsAddRmsNormQuant || TOps.SupportsSiluMulQuant || TOps.SupportsGemmLoraEpilogue;
 
     private static void Sliding<TOps>()
         where TOps : struct, IRoostOps => TOps.SlidingWindowAttention(default);
 
     private static void Fused<TOps>()
-        where TOps : struct, IRoostOps => TOps.AddRmsNorm(default);
+        where TOps : struct, IRoostOps => TOps.AddRmsNormQuant(default);
 
     [Fact]
-    public void CpuOpsSupportsTheM0OpsAndTheFourHybridOpsOnly()
+    public void CpuOpsSupportsTheM0OpsTheHybridOpsAndTheTwoUnquantisedFusionsOnly()
     {
         foreach (OpId op in Enum.GetValues<OpId>().Where(o => o != OpId.None))
         {
             bool expected = OpCatalog.IsM0(op)
                 || op is OpId.GatedDeltaRule or OpId.CausalConv1d or OpId.RecurrentStateCopy or OpId.RecurrentStateSnapshot
-                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul;
+                    or OpId.GatedDeltaRuleGates or OpId.GatedRmsNorm or OpId.SigmoidMul
+                    or OpId.AddRmsNorm or OpId.QkvQkNormRopeCacheWrite;
             Assert.Equal(expected, Reports<CpuOps>(op));
         }
 
-        Assert.False(FusedSupported<CpuOps>());
+        Assert.True(FusedSupported<CpuOps>());
+
+        // The quantising fusions need Quantize, which CpuOps does not implement (R-071 leaves them to M2).
+        Assert.False(QuantFusedSupported<CpuOps>());
     }
 
     [Fact]
@@ -108,6 +115,10 @@ public sealed class ContractTests
         var statePool = f.Add(Mem.Zeros(DType.F32, 8));
         var snapPool = f.Add(Mem.Zeros(DType.F32, 8));
         var snapPairs = f.Add(Mem.I32(0, 1));
+        var fIn = f.Add(Mem.F32(1, 2, 3, 4, 5, 6, 7, 8));
+        var fRes = f.Add(Mem.F32(8, 7, 6, 5, 4, 3, 2, 1));
+        var qkv = f.Add(Mem.F32(Enumerable.Range(0, 12).Select(i => (float)Math.Sin(i)).ToArray()));
+        var qOut = f.Add(Mem.Zeros(DType.F32, 4));
 
         void Everything()
         {
@@ -144,6 +155,13 @@ public sealed class ContractTests
                 KvLayout = TensorLayout.PagedNhd, WindowLeft = -1, Causal = true, KvDType = DType.F32, DType = DType.F32,
             });
             CpuOps.CacheCopy(new CacheCopyArgs { Source = x.Span, Destination = x.Span, Pairs = pairs.Span, BlockBytes = 8, Count = 1 });
+            CpuOps.AddRmsNorm(new AddRmsNormArgs { Input = fIn.Span, Residual = fRes.Span, Weight = w.Span, Rows = 1, Dim = 8, Eps = 1e-6f, DType = DType.F32 });
+            CpuOps.QkvQkNormRopeCacheWrite(new QkvQkNormRopeCacheWriteArgs
+            {
+                Qkv = qkv.Span, Q = qOut.Span, QWeight = w.Span, KWeight = w.Span, Positions = pos.Span, KCache = kvPool.Span, VCache = kvPool.Span,
+                SlotMapping = slotMap.Span, Tokens = 2, QHeads = 1, KvHeads = 1, HeadDim = 2, BlockSize = 2, Eps = 1e-6f, Theta = 10000f,
+                DType = DType.F32, KvDType = DType.F32,
+            });
         }
 
         Everything();

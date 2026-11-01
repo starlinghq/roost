@@ -11,7 +11,7 @@ namespace Starlings.Roost.ModelCompiler.Tests;
 /// Evaluates an OpGraph by running each node on <typeparamref name="TOps"/>. A node's argument struct is built by
 /// reflection from the graph alone: the <c>in</c> and <c>out</c> attributes name the field of each input and output
 /// position and <c>arg.FIELD</c> holds the scalars, which is the same information the generated Forward uses. Test-time
-/// code only (reflection is not AOT-safe). Every value gets its own buffer, so every intermediate can be read back.
+/// code only (reflection is not AOT-safe). Every value gets its own buffer, so every intermediate can be read back. Values are float32, bfloat16, float64, int32 or int64.
 /// </summary>
 public sealed unsafe class GraphEvaluator<TOps> : IGraphEvaluator
     where TOps : struct, IRoostOps
@@ -156,13 +156,24 @@ public sealed unsafe class GraphEvaluator<TOps> : IGraphEvaluator
                 case DType.F64:
                     ((double*)span.Address)[i] = data[i];
                     break;
+                case DType.BF16:
+                    ((ushort*)span.Address)[i] = ToBFloat16(data[i]);
+                    break;
                 default:
                     throw new NotSupportedException(span.Dtype.ToString());
             }
         }
     }
 
-    private static double[] Read(DeviceSpan span)
+    // Rounds through float32 to bfloat16, nearest even; callers write values that are already exact in bfloat16
+    // (seeded weights and small integers), so the double rounding never shows.
+    private static ushort ToBFloat16(double v)
+    {
+        uint u = BitConverter.SingleToUInt32Bits((float)v);
+        return float.IsNaN((float)v) ? (ushort)0x7FC0 : (ushort)((u + 0x7FFFu + ((u >> 16) & 1u)) >> 16);
+    }
+
+        private static double[] Read(DeviceSpan span)
     {
         var r = new double[span.Length];
         for (int i = 0; i < r.Length; i++)
@@ -173,6 +184,7 @@ public sealed unsafe class GraphEvaluator<TOps> : IGraphEvaluator
                 DType.I32 => ((int*)span.Address)[i],
                 DType.I64 => ((long*)span.Address)[i],
                 DType.F64 => ((double*)span.Address)[i],
+                DType.BF16 => BitConverter.Int32BitsToSingle(((ushort*)span.Address)[i] << 16),
                 _ => throw new NotSupportedException(span.Dtype.ToString()),
             };
         }

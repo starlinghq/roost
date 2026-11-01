@@ -92,8 +92,10 @@ inputs and activations in order of first use. Plan inputs are `ValueKind.Input` 
 the same `IGraphEvaluator` and compares, for every candidate node, each value it produces with the reference value of
 the same id, with the tolerance the `IToleranceSource` gives for the op and dtype. A mismatch names the candidate node and
 the reference nodes it replaced (`Origin`); a reference model output the candidate does not produce is a mismatch too.
-`CheckPass` runs a pass first. The evaluator on `CpuOps` is stream D's; the tests use a stub backend and a reflection
-evaluator over the node attributes above.
+`CheckPass` runs a pass first. The evaluator on `CpuOps` is stream D's; the tests use a reflection evaluator over the node
+attributes above, on `CpuOps`. The fusion passes live in `Starlings.Roost.Graph.Passes` (stream L, R-071); `CpuOps` implements
+the fused ops they emit as calls of their unfused parts, so a fused graph is checked against the unfused one with zero tolerance
+(`tests/Starlings.Roost.Graph.Tests`).
 
 ## Diagnostics
 
@@ -124,6 +126,8 @@ A node whose op or arguments fail is reported once; nodes that read its outputs 
 * A view is a column slice of one value's last dimension and nothing else (no row slices, no reshape), and the stride
   scalars of an op that takes them are the definition's to bind (nothing checks that `QStride` matches the viewed value's width).
 * Only `AddRmsNorm` has an unfused form in the lowering; other fused ops come from passes (stream L).
+* `Forward<TOps>` is lowered from the unfused definition graph. A pass output (for example `FuseAddRmsNormPass`) is checked
+  and can be evaluated, but is not yet lowered to a forward: that needs the generator to run passes before lowering (R-071).
 * Plan-input auto-fill goes by field name, so an unbound `Ids` span is the token-id input for every op that has one. For
   `Argmax` and `Sample`, `Ids` is an output; bind it explicitly if a definition ever includes them (the forward ends at
   the logits and the worker launches the sampler).

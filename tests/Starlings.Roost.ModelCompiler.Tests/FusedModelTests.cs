@@ -61,7 +61,7 @@ public sealed unsafe class FusedModelTests : IDisposable
     [Fact]
     public void FusedAndFallbackLoweringsGiveTheSameLogits()
     {
-        float[] fallback = Run<CpuOps>();
+        float[] fallback = Run<CpuUnfusedOps>();
         float[] fused = Run<CpuFusedOps>();
         Assert.Equal(64, fallback.Length);
         Assert.Contains(fallback, x => Math.Abs(x) > 1e-3f);
@@ -69,6 +69,9 @@ public sealed unsafe class FusedModelTests : IDisposable
         {
             Assert.Equal(fused[i], fallback[i], 1e-5f);
         }
+
+        // CpuOps runs the fused call and defines it as the fallback's two ops, so it equals the fallback exactly (R-071).
+        Assert.Equal(fallback, Run<CpuOps>());
     }
 
     [Fact]
@@ -77,7 +80,7 @@ public sealed unsafe class FusedModelTests : IDisposable
         void Fallback()
         {
             var ctx = new FusedModel.StepContext(_layout, _arena, _weights, default, _plan, Tokens, Rows.Length, 1, 0);
-            FusedModel.Forward<CpuOps>(in ctx);
+            FusedModel.Forward<CpuUnfusedOps>(in ctx);
         }
 
         void Fused()
@@ -86,8 +89,15 @@ public sealed unsafe class FusedModelTests : IDisposable
             FusedModel.Forward<CpuFusedOps>(in ctx);
         }
 
+        void CpuFused()
+        {
+            var ctx = new FusedModel.StepContext(_layout, _arena, _weights, default, _plan, Tokens, Rows.Length, 1, 0);
+            FusedModel.Forward<CpuOps>(in ctx);
+        }
+
         AllocationProbe.AssertSteady(Fallback);
         AllocationProbe.AssertSteady(Fused);
+        AllocationProbe.AssertSteady(CpuFused);
     }
 
     [Fact]
@@ -122,7 +132,7 @@ public sealed unsafe class FusedModelTests : IDisposable
     public void TheGraphEvaluatorRefusesAFusedOpTheBackendLacks()
     {
         var g = FusedModel.BuildGraph();
-        var ev = new GraphEvaluator<CpuOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = 1, ["seqs"] = 1, ["kv_blocks"] = 0 });
+        var ev = new GraphEvaluator<CpuUnfusedOps>(new Dictionary<string, long> { ["tokens"] = Tokens, ["selected"] = 1, ["seqs"] = 1, ["kv_blocks"] = 0 });
         var inputs = new Dictionary<int, double[]>();
         for (int i = 0; i < _weightData.Length; i++)
         {

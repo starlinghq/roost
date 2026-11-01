@@ -22,6 +22,7 @@
     <Project Path="tests/Starlings.Roost.Conformance/Starlings.Roost.Conformance.csproj" />
     <Project Path="tests/Starlings.Roost.Engine.Tests/Starlings.Roost.Engine.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Generation.Tests/Starlings.Roost.Generation.Tests.csproj" />
+    <Project Path="tests/Starlings.Roost.Graph.Tests/Starlings.Roost.Graph.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Kernels.Tests/Starlings.Roost.Kernels.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.ModelCompiler.Tests/Starlings.Roost.ModelCompiler.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Models.Tiny.Tests/Starlings.Roost.Models.Tiny.Tests.csproj" />
