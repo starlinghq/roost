@@ -99,11 +99,58 @@ jobs:
           cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && python -I tools/abi-layout.py msvc"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+  # Kernel library under MSVC (R-114): GitHub-hosted Windows runners ship no CUDA toolkit, so the job installs CUDA 13.3.0
+  # (the Linux container's version) from NVIDIA's network installer, checked against a recorded SHA-256 before it runs
+  # (NVIDIA's published MD5 for the same file is 18e161b5363877a7294580d5c3768383), with only the subpackages the build
+  # needs. cl.exe comes from the runner's Visual Studio through vcvars64. Build only, once per SM: no GPU, and no
+  # reproducibility claim for the Windows bytes, so every SM's Windows status stays untested (kernels/README.md).
+  kernels-msvc:
+    name: kernels (MSVC, every SM)
+    runs-on: windows-latest
+    timeout-minutes: 180
+    env:
+      CUDA_INSTALLER_URL: https://developer.download.nvidia.com/compute/cuda/13.3.0/network_installers/cuda_13.3.0_windows_network.exe
+      CUDA_INSTALLER_SHA256: 5bceff28c46ec39f3fbf8650b6640f70ef39811742c51db504e2250658759c38
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: Install the CUDA 13.3.0 toolkit (pinned installer, compiler and libraries only)
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP 'cuda_network.exe'
+          Invoke-WebRequest -Uri $env:CUDA_INSTALLER_URL -OutFile $exe
+          $hash = (Get-FileHash -Algorithm SHA256 $exe).Hash.ToLowerInvariant()
+          if ($hash -ne $env:CUDA_INSTALLER_SHA256) { throw "CUDA installer SHA-256 $hash, expected $env:CUDA_INSTALLER_SHA256" }
+          $packages = 'nvcc_13.3', 'crt_13.3', 'nvvm_13.3', 'cudart_13.3', 'cublas_13.3', 'cublas_dev_13.3', 'thrust_13.3', 'visual_studio_integration_13.3'
+          $p = Start-Process -FilePath $exe -ArgumentList (@('-s') + $packages) -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "CUDA installer exited with $($p.ExitCode)" }
+          $cuda = 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v13.3'
+          if (-not (Test-Path "$cuda\bin\nvcc.exe")) { throw "nvcc.exe not found under $cuda" }
+          "CUDA_PATH=$cuda" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          "$cuda\bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          "$cuda\bin\x64" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+      - name: Manifest validates (C5)
+        run: python -I tools/validate-kernel-manifest.py
+      - name: Build every SM with cl.exe, check the registration tables
+        shell: pwsh
+        env:
+          ROOST_DIGESTS_OUT: ${{ runner.temp }}/kernel-digests-msvc.json
+          CMAKE_BUILD_PARALLEL_LEVEL: 4
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'no Visual Studio with the x64 C++ tools on this runner' }
+          cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && pwsh -NoProfile -File kernels/ci/build-all-sm-msvc.ps1 `"$env:RUNNER_TEMP\kernels`""
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+        with:
+          name: kernel-digests-msvc
+          path: ${{ runner.temp }}/kernel-digests-msvc.json
+
   # Kernel library (R-016): the manifest validates, a pin change carries its provenance files, and the library compiles
   # for every SM in kernels/manifest.toml (80, 86, 89, 90, 100, 120) inside a CUDA container pinned by digest. Build
   # only: the runners have no GPU, so every SM but the one that ran locally stays untested. The container is CUDA
   # 13.3.0 on Ubuntu 24.04; its digest is the multi-architecture index digest. MSVC: GitHub-hosted Windows runners
-  # ship no CUDA toolkit, so the MSVC kernel build is not done (kernels/README.md).
+  # ship no CUDA toolkit; the MSVC kernel build installs one in the kernels-msvc job above (R-114).
   kernels:
     name: kernels (build every SM, provenance)
     runs-on: [self-hosted, omarchy]

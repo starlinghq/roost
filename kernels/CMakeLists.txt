@@ -68,11 +68,23 @@ foreach(arch IN LISTS ROOST_SM_LIST)
   target_compile_definitions(${target} PRIVATE ROOST_SM=${arch} ROOST_BUILDING_LIBRARY=1)
   # SASS for exactly this SM and no PTX: a library for another SM is a different file, so a missing SM is a typed
   # startup failure (R-023) and the digest in the manifest is per SM.
-  set_target_properties(${target} PROPERTIES CUDA_ARCHITECTURES "${arch}-real" PREFIX "lib" OUTPUT_NAME ${target})
-  target_compile_options(${target} PRIVATE
-    $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr -Xcompiler=-Wall,-Werror>
-    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffile-prefix-map=${ROOST_REPO_ROOT}=.>
-    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffile-prefix-map=${ROOST_UPSTREAM_DIR}=upstream>)
+  # The loader's names (src/Starlings.Roost.Kernels/KernelLibraryNames.cs): libroost_kernels_sm86.so, roost_kernels_sm86.dll.
+  if(WIN32)
+    set(prefix "")
+  else()
+    set(prefix "lib")
+  endif()
+  set_target_properties(${target} PROPERTIES CUDA_ARCHITECTURES "${arch}-real" PREFIX "${prefix}" OUTPUT_NAME ${target})
+  target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)
+  if(MSVC)
+    # R-114: cl.exe as nvcc's host compiler. Build only; no reproducibility claim for the Windows bytes.
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/W3,/utf-8>)
+  else()
+    target_compile_options(${target} PRIVATE
+      $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Werror>
+      $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffile-prefix-map=${ROOST_REPO_ROOT}=.>
+      $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-ffile-prefix-map=${ROOST_UPSTREAM_DIR}=upstream>)
+  endif()
   if(UNIX)
     # Same inputs, same bytes: no line info (it records source mtimes), no build id and no local symbols (nvcc names
     # them after the process id), so the digest recorded in the manifest can be reproduced.
