@@ -1,0 +1,525 @@
+{
+  "format": "roost.stage-results",
+  "format_version": 3,
+  "task": "generation",
+  "profile": "roost-tiny-hybrid/cpuops-bf16",
+  "stage": "dotnet",
+  "candidate": "roost-engine-cpuops",
+  "producer": {
+    "name": "Starlings.Roost.EngineGates.Tests",
+    "repository_commit": null
+  },
+  "environment": {
+    "provider": "cpu",
+    "provider_options": {}
+  },
+  "cases": {
+    "short": {
+      "prompt_ids": [
+        72,
+        101,
+        108,
+        108,
+        111,
+        44,
+        32,
+        114,
+        111,
+        111,
+        115,
+        116,
+        33
+      ],
+      "output_ids": [
+        107,
+        218,
+        218,
+        218,
+        218,
+        218
+      ],
+      "finish_reason": "length",
+      "step0_top": [
+        [
+          107,
+          -0.6998601957419222
+        ],
+        [
+          106,
+          -1.7718254133322542
+        ],
+        [
+          136,
+          -2.591136555300028
+        ],
+        [
+          33,
+          -2.6185689970114536
+        ],
+        [
+          27,
+          -3.0188118024924107
+        ]
+      ],
+      "stream_text_equals_result": true,
+      "stream_ids_equal_result": true,
+      "stream_text_equals_decode": true,
+      "usage": {
+        "prompt_tokens": 13,
+        "completion_tokens": 6
+      }
+    },
+    "digits": {
+      "prompt_ids": [
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56,
+        57,
+        32,
+        57,
+        56,
+        55,
+        54,
+        53,
+        52,
+        51,
+        50,
+        49,
+        48,
+        32,
+        65,
+        66,
+        67
+      ],
+      "output_ids": [
+        67,
+        163,
+        218,
+        218,
+        218,
+        218,
+        218,
+        218
+      ],
+      "finish_reason": "length",
+      "step0_top": [
+        [
+          67,
+          -0.014586406628642754
+        ],
+        [
+          121,
+          -5.643288570324932
+        ],
+        [
+          138,
+          -5.910922008435284
+        ],
+        [
+          213,
+          -6.541572528759991
+        ],
+        [
+          52,
+          -6.791084247509991
+        ]
+      ],
+      "stream_text_equals_result": true,
+      "stream_ids_equal_result": true,
+      "stream_text_equals_decode": true,
+      "usage": {
+        "prompt_tokens": 25,
+        "completion_tokens": 8
+      }
+    },
+    "shared-a": {
+      "prompt_ids": [
+        82,
+        111,
+        111,
+        115,
+        116,
+        32,
+        101,
+        110,
+        103,
+        105,
+        110,
+        101,
+        32,
+        103,
+        97,
+        116,
+        101,
+        115,
+        44,
+        32,
+        99,
+        97,
+        115,
+        101,
+        32,
+        112,
+        114,
+        101,
+        102,
+        105,
+        120,
+        58,
+        32,
+        97,
+        108,
+        112,
+        104,
+        97,
+        32,
+        98,
+        114,
+        97,
+        118,
+        111
+      ],
+      "output_ids": [
+        111,
+        171,
+        171,
+        93,
+        93,
+        188,
+        206,
+        92
+      ],
+      "finish_reason": "length",
+      "step0_top": [
+        [
+          111,
+          -0.06014462297895192
+        ],
+        [
+          70,
+          -3.1552526552055142
+        ],
+        [
+          227,
+          -5.578682144341257
+        ],
+        [
+          83,
+          -6.078164299187448
+        ],
+        [
+          183,
+          -6.161964615044382
+        ]
+      ],
+      "stream_text_equals_result": true,
+      "stream_ids_equal_result": true,
+      "stream_text_equals_decode": true,
+      "usage": {
+        "prompt_tokens": 44,
+        "completion_tokens": 8
+      }
+    },
+    "shared-b": {
+      "prompt_ids": [
+        82,
+        111,
+        111,
+        115,
+        116,
+        32,
+        101,
+        110,
+        103,
+        105,
+        110,
+        101,
+        32,
+        103,
+        97,
+        116,
+        101,
+        115,
+        44,
+        32,
+        99,
+        97,
+        115,
+        101,
+        32,
+        112,
+        114,
+        101,
+        102,
+        105,
+        120,
+        58,
+        32,
+        122,
+        117,
+        108,
+        117,
+        32,
+        121,
+        97,
+        110,
+        107,
+        101,
+        101,
+        32,
+        120,
+        45,
+        114,
+        97,
+        121
+      ],
+      "output_ids": [
+        227,
+        166,
+        187,
+        187,
+        187,
+        187,
+        187,
+        187
+      ],
+      "finish_reason": "length",
+      "step0_top": [
+        [
+          227,
+          -1.379525259575753
+        ],
+        [
+          9,
+          -1.6082917009209678
+        ],
+        [
+          66,
+          -1.8856163774346397
+        ],
+        [
+          121,
+          -2.5190621171807335
+        ],
+        [
+          163,
+          -2.751163557610421
+        ]
+      ],
+      "stream_text_equals_result": true,
+      "stream_ids_equal_result": true,
+      "stream_text_equals_decode": true,
+      "usage": {
+        "prompt_tokens": 50,
+        "completion_tokens": 8
+      }
+    },
+    "long": {
+      "prompt_ids": [
+        80,
+        114,
+        101,
+        102,
+        105,
+        108,
+        108,
+        32,
+        97,
+        32,
+        112,
+        114,
+        111,
+        109,
+        112,
+        116,
+        32,
+        108,
+        111,
+        110,
+        103,
+        101,
+        114,
+        32,
+        97,
+        115,
+        32,
+        111,
+        110,
+        101,
+        32,
+        98,
+        108,
+        111,
+        99,
+        107,
+        44,
+        32,
+        115,
+        111,
+        32,
+        99,
+        104,
+        117,
+        110,
+        107,
+        115,
+        32,
+        99,
+        114,
+        111,
+        115,
+        115,
+        32,
+        98,
+        108,
+        111,
+        99,
+        107,
+        32,
+        98,
+        111,
+        117,
+        110,
+        100,
+        97,
+        114,
+        105,
+        101,
+        115,
+        58,
+        32,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106
+      ],
+      "output_ids": [
+        106,
+        51,
+        51,
+        51,
+        51,
+        51,
+        51,
+        51
+      ],
+      "finish_reason": "length",
+      "step0_top": [
+        [
+          106,
+          -0.6829982014969717
+        ],
+        [
+          148,
+          -2.529143831379784
+        ],
+        [
+          79,
+          -2.5446009847000965
+        ],
+        [
+          54,
+          -2.9972214909867176
+        ],
+        [
+          51,
+          -3.0728745671585926
+        ]
+      ],
+      "stream_text_equals_result": true,
+      "stream_ids_equal_result": true,
+      "stream_text_equals_decode": true,
+      "usage": {
+        "prompt_tokens": 82,
+        "completion_tokens": 8
+      }
+    }
+  },
+  "sections": {
+    "cached_vs_uncached": {
+      "case": "shared-b",
+      "steps": 8,
+      "max_abs_logprob": 0,
+      "tokens_equal": true
+    },
+    "chunked_prefill": {
+      "digits/1": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "digits/16": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "digits/5": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "long/1": {
+        "step0_max_abs_logprob_vs_whole": 0.1545224603479749,
+        "tokens_equal_whole": true
+      },
+      "long/16": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "long/5": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "shared-a/1": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "shared-a/16": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "shared-a/5": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "shared-b/1": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "shared-b/16": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "shared-b/5": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "short/1": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      },
+      "short/5": {
+        "step0_max_abs_logprob_vs_whole": 0,
+        "tokens_equal_whole": true
+      }
+    },
+    "concurrency": {
+      "results": {
+        "short": true,
+        "digits": true,
+        "shared-a": true,
+        "shared-b": true,
+        "long": true
+      }
+    }
+  }
+}
