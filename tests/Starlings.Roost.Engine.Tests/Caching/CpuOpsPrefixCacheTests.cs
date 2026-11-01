@@ -12,7 +12,7 @@ public sealed class CpuOpsPrefixCacheTests
     private static readonly PlannerOptions On = Off with { PrefixCache = new PrefixCacheOptions() };
 
     private static CacheRunResult RunOnCpu(int blocks, PlannerOptions options, Request[][] waves, int inFlight, bool corrupt = false) =>
-        Run(() => Attention(blocks), options, waves, inFlight, b => new CpuOpsTinyWorker(b) { CorruptFirstCachedBlock = corrupt });
+        Run(() => Attention(blocks), options, waves, inFlight, (b, h) => new CpuOpsTinyWorker(b, h) { CorruptFirstCachedBlock = corrupt });
 
     private static void AssertBitIdentical(CacheRunResult a, CacheRunResult b)
     {

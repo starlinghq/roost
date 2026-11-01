@@ -185,9 +185,9 @@ public sealed class PrefixCacheTests
 
         List<int>[] other = [[]];
         var found = new List<PrefixCache.Node>();
-        Assert.False(cache.TryAttach(tokens, 8, other, found, out var computed, out _));
+        Assert.False(cache.TryAttach(tokens, 8, other, found, out var computed, out _, out _));
         Assert.Equal(0, computed);
-        Assert.True(cache.TryAttach(tokens, 7, other, found, out computed, out _));
+        Assert.True(cache.TryAttach(tokens, 7, other, found, out computed, out _, out _));
         Assert.Equal(12, computed);
         Assert.Equal(ids, other[0]);
     }

@@ -17,7 +17,9 @@ internal sealed record CacheRunResult(
     int Restores,
     int SnapshotWrites,
     int Preemptions,
-    IPlanWorker Worker);
+    IPlanWorker Worker,
+    HostTierStats? Host = null,
+    int TierMoves = 0);
 
 /// <summary>Executes plans, in order, against real contents.</summary>
 internal interface IPlanWorker
@@ -125,14 +127,15 @@ internal static class CacheRun
             replay.Transcript.Count(l => l.Contains("Preempted", StringComparison.Ordinal)), worker);
     }
 
-    public static CacheRunResult Run(Func<BlockManager> makeBlocks, PlannerOptions options, IReadOnlyList<Request[]> waves, int maxInFlight = 1, Func<BlockManager, IPlanWorker>? makeWorker = null)
+    public static CacheRunResult Run(
+        Func<BlockManager> makeBlocks, PlannerOptions options, IReadOnlyList<Request[]> waves, int maxInFlight = 1, Func<BlockManager, BlockManager?, IPlanWorker>? makeWorker = null)
     {
         var blocks = makeBlocks();
         var planner = new StepPlanner(blocks, options);
         var replay = new PlannerReplay(planner);
-        var worker = makeWorker is null ? new ContentWorker(blocks) : makeWorker(blocks);
+        var worker = makeWorker is null ? new ContentWorker(blocks, planner.HostBlocks) : makeWorker(blocks, planner.HostBlocks);
         var outputs = new Dictionary<ulong, List<int>>();
-        int restores = 0, writes = 0;
+        int restores = 0, writes = 0, tierMoves = 0;
         foreach (var wave in waves)
         {
             foreach (var r in wave)
@@ -151,6 +154,7 @@ internal static class CacheRun
                     {
                         restores += plan.CacheOps.Count(o => o.Kind == CacheOpKind.SnapshotRestore);
                         writes += plan.CacheOps.Count(o => o.Kind == CacheOpKind.SnapshotWrite);
+                        tierMoves += plan.CacheOps.Count(o => o.Kind == CacheOpKind.TierMove);
                         pending.Enqueue(worker.Execute(plan));
                     }
                 }
@@ -189,6 +193,8 @@ internal static class CacheRun
             restores,
             writes,
             replay.Transcript.Count(l => l.Contains("Preempted", StringComparison.Ordinal)),
-            worker);
+            worker,
+            planner.PrefixCache?.HostStats,
+            tierMoves);
     }
 }

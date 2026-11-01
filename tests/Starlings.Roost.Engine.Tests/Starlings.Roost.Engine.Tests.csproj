@@ -11,6 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Scheduling/Recordings/*.txt" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Caching/Recordings/*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />

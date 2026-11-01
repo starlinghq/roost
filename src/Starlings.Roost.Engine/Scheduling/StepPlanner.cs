@@ -75,6 +75,12 @@ public enum ForkResult
 /// grammar, multimodal input, pooling and decision rows, speculation, more than one recurrent group, and the cross,
 /// draft, adapter, expert and encoder-output group kinds. Prefix-cache hits start a sequence at a nonzero computed
 /// count in R-030; admission refusals live in AdmissionController and AdmittedPlanner (R-031), above this class.</para>
+/// <para><b>Host KV tier (R-094).</b> With <see cref="PrefixCacheOptions.HostTierBytes"/> set, the planner owns a host-tier
+/// manager (<see cref="HostBlocks"/>) and the cache demotes instead of dropping (see <see cref="Caching.PrefixCache"/>).
+/// Tier moves ride in the next plan, ahead of its other ops. A demotion pins its host block until that plan completes; a
+/// restore pins both its host and its device block. A sequence whose lookup restored host blocks holds its reference to
+/// them and is planned from the plan after the one that carries the restores, so the copy runs one step ahead of the
+/// row that reads it; when no other row could be planned, it runs in the same plan, behind its restore ops.</para>
 /// </remarks>
 public sealed class StepPlanner
 {
@@ -92,6 +98,7 @@ public sealed class StepPlanner
     private readonly List<PlannerNotice> _notices = [];
     private readonly int[] _need;
     private readonly PrefixCache? _cache;
+    private readonly BlockManager? _host;
     private long _arrival;
     private ulong _lastStep;
 
@@ -131,7 +138,12 @@ public sealed class StepPlanner
 
         if (options.PrefixCache is { } cacheOptions)
         {
-            _cache = new PrefixCache(blocks, cacheOptions, key => _named.ContainsKey(key));
+            if (cacheOptions.HostTierBytes > 0)
+            {
+                _host = HostTier.Create(blocks.Groups, cacheOptions.HostTierBytes);
+            }
+
+            _cache = new PrefixCache(blocks, cacheOptions, key => _named.ContainsKey(key), _host, QueueTierMove, ReleaseHostBlock);
         }
     }
 
@@ -146,6 +158,9 @@ public sealed class StepPlanner
 
     /// <summary>The prefix cache (R-030), or null when <see cref="PlannerOptions.PrefixCache"/> is not set.</summary>
     public PrefixCache? PrefixCache => _cache;
+
+    /// <summary>The host KV tier's pools (R-094), or null when <see cref="PrefixCacheOptions.HostTierBytes"/> is 0 or there is no cache.</summary>
+    public BlockManager? HostBlocks => _host;
 
     /// <summary>Queues a request.</summary>
     /// <param name="request">The request. Its id value is the sequence handle.</param>
@@ -392,6 +407,10 @@ public sealed class StepPlanner
             {
                 Preempt(s);
             }
+            else if (s.HoldsPrefix)
+            {
+                DetachPrefix(s); // waiting for a restore that the restarted worker will never run
+            }
         }
 
         _cache?.Clear(); // the restarted worker holds none of the cached blocks or snapshots
@@ -478,6 +497,20 @@ public sealed class StepPlanner
                     }
                 }
             }
+
+            if (_host is not null)
+            {
+                var host = _host.GetPool(g.Index);
+                host.CheckInvariants();
+                for (var b = 0; b < host.Capacity; b++)
+                {
+                    expected.TryGetValue(BlockKey.Host(g.Index, b), out var want);
+                    if (host.RefCount(b) != want)
+                    {
+                        throw new InvalidOperationException($"Group {g.Index} host block {b}: count {host.RefCount(b)}, planner state names it {want} times.");
+                    }
+                }
+            }
         }
 
         foreach (var (k, v) in _named)
@@ -521,36 +554,54 @@ public sealed class StepPlanner
         var pins = new List<long>();
         var budget = _options.MaxTokensPerStep;
 
-        for (var i = 0; i < order.Count && rows.Count < _options.MaxSequencesPerStep && budget > 0; i++)
+        // Pass 1 runs only when pass 0 planned no row but deferred a sequence for its host-tier restore (R-094): with
+        // nothing to overlap the copy with, the row runs in this plan, behind its restore ops.
+        var deferred = false;
+        for (var pass = 0; pass < 2 && rows.Count == 0 && (pass == 0 || deferred); pass++)
         {
-            var s = order[i];
-            if (s.Computed >= s.Tokens.Count || (!s.Resident && s.InFlight > 0))
+            for (var i = 0; i < order.Count && rows.Count < _options.MaxSequencesPerStep && budget > 0; i++)
             {
-                continue; // waits for its sampled token, or for the plan that still names its old state
-            }
-
-            var attached = _cache is not null && !s.Resident && s.Computed == 0 && AttachPrefix(s);
-            var n = Math.Min(Math.Min(s.Tokens.Count - s.Computed, budget), _options.MaxChunkTokens);
-            n = CapAtSnapshotBoundary(s, n);
-            if (!TryReserve(s, n, order, i, ops, pins))
-            {
-                if (attached)
+                var s = order[i];
+                if (s.Computed >= s.Tokens.Count || (!s.Resident && s.InFlight > 0))
                 {
-                    DetachPrefix(s);
+                    continue; // waits for its sampled token, or for the plan that still names its old state
                 }
 
-                stalledHead ??= s;
-                continue;
-            }
+                if (_cache is not null && !s.Resident && s.Computed == 0 && !s.HoldsPrefix)
+                {
+                    AttachPrefix(s);
+                }
 
-            if (_cache is not null)
-            {
-                SnapshotAtRowStart(s, ops, pins);
-            }
+                if (pass == 0 && s.RestoreStep > _lastStep)
+                {
+                    deferred = true;
+                    continue; // its restore ops ride in the plan being built; the row follows in the next one
+                }
 
-            rows.Add((s, s.Computed, n));
-            budget -= n;
-            s.Computed += n;
+                var n = Math.Min(Math.Min(s.Tokens.Count - s.Computed, budget), _options.MaxChunkTokens);
+                n = CapAtSnapshotBoundary(s, n);
+                if (!TryReserve(s, n, order, i, ops, pins))
+                {
+                    if (s.HoldsPrefix)
+                    {
+                        DetachPrefix(s);
+                    }
+
+                    stalledHead ??= s;
+                    continue;
+                }
+
+                s.HoldsPrefix = false;
+                s.RestoreStep = 0;
+                if (_cache is not null)
+                {
+                    SnapshotAtRowStart(s, ops, pins);
+                }
+
+                rows.Add((s, s.Computed, n));
+                budget -= n;
+                s.Computed += n;
+            }
         }
 
         if (rows.Count == 0)
@@ -895,6 +946,8 @@ public sealed class StepPlanner
 
         s.Nodes.Clear();
         s.CacheStuck = false;
+        s.HoldsPrefix = false;
+        s.RestoreStep = 0;
         s.Slot = -1;
         s.Resident = false;
     }
@@ -935,19 +988,62 @@ public sealed class StepPlanner
         }
     }
 
-    // Prefix cache (R-030).
+    // Prefix cache (R-030) and its host tier (R-094).
 
     /// <summary>Reuses the longest cached prefix of a sequence that is not resident. Returns whether any was reused.</summary>
     private bool AttachPrefix(SchedSeq s)
     {
-        if (!_cache!.TryAttach(CollectionsMarshal.AsSpan(s.Tokens), s.Request.Lora.Value, s.Tables, s.Nodes, out var computed, out var snapshot))
+        if (!_cache!.TryAttach(CollectionsMarshal.AsSpan(s.Tokens), s.Request.Lora.Value, s.Tables, s.Nodes, out var computed, out var snapshot, out var restored))
         {
             return false;
         }
 
         s.Computed = computed;
         s.PendingSnapshot = snapshot;
+        s.HoldsPrefix = true;
+        if (restored > 0)
+        {
+            s.RestoreStep = _lastStep + 1; // the plan that will carry the restore ops
+        }
+
         return true;
+    }
+
+    /// <summary>
+    /// Queues a tier move from the cache for the next plan. A demotion pins only its host block: the device block was held
+    /// by the cache alone and goes back to its pool now (see <see cref="Caching.PrefixCache"/>). A restore pins both sides.
+    /// </summary>
+    private void QueueTierMove(PlanCacheOp op)
+    {
+        if (op.Kind != CacheOpKind.TierMove || op.Count != 1)
+        {
+            throw new InvalidOperationException("The cache queues one-block tier moves only.");
+        }
+
+        _pendingOps.Add(op);
+        var group = (int)op.Group;
+        if (op.SrcTier == BlockTier.Host)
+        {
+            Pin(_pendingPins, BlockKey.Host(group, (int)op.Src));
+            Pin(_pendingPins, Key(group, (int)op.Dst));
+        }
+        else
+        {
+            Pin(_pendingPins, BlockKey.Host(group, (int)op.Dst));
+        }
+    }
+
+    /// <summary>Drops the cache's reference to a host block, parking it while a plan or queued op names it.</summary>
+    private void ReleaseHostBlock(long key)
+    {
+        if (_named.ContainsKey(key))
+        {
+            _parked.Add(key);
+        }
+        else
+        {
+            _host!.GetPool(BlockKey.Group(key)).Release([BlockKey.Id(key)]);
+        }
     }
 
     /// <summary>Gives back what <see cref="AttachPrefix"/> took when the sequence could not be made resident.</summary>
@@ -979,6 +1075,8 @@ public sealed class StepPlanner
 
         s.Nodes.Clear();
         s.Computed = 0;
+        s.HoldsPrefix = false;
+        s.RestoreStep = 0;
     }
 
     /// <summary>
@@ -1061,7 +1159,9 @@ public sealed class StepPlanner
             }
             else
             {
-                var pool = BlockKey.IsSnapshot(k) ? _blocks.GetSnapshotPool(BlockKey.Group(k)) : _blocks.GetPool(BlockKey.Group(k));
+                var pool = BlockKey.IsSnapshot(k) ? _blocks.GetSnapshotPool(BlockKey.Group(k))
+                    : BlockKey.IsHost(k) ? _host!.GetPool(BlockKey.Group(k))
+                    : _blocks.GetPool(BlockKey.Group(k));
                 pool.Release([BlockKey.Id(k)]);
             }
         }
@@ -1102,6 +1202,12 @@ public sealed class StepPlanner
 
         /// <summary>A hash collision stopped this sequence's chain; it adds no more nodes.</summary>
         public bool CacheStuck { get; set; }
+
+        /// <summary>Not resident, but holds references to a reused prefix (prefix cache) until it is made resident or detached.</summary>
+        public bool HoldsPrefix { get; set; }
+
+        /// <summary>The step id of the plan that carries this sequence's host-tier restores (R-094), or 0; the row waits for a later plan.</summary>
+        public ulong RestoreStep { get; set; }
 
         public int InFlight { get; set; }
 

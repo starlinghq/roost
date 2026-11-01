@@ -17,6 +17,9 @@ namespace Starlings.Roost.Engine.Tests.Caching;
 /// The recurrent state is folded token by token, so it does not depend on how a prompt was chunked. The attention
 /// value is a function of the token, the position and the recurrent state at that position, like a hybrid layer stack.
 /// This is a stand-in for <c>roost-tiny</c> and <c>roost-tiny-hybrid</c> on CpuOps (R-021 is not merged at this base).
+/// With a host tier (R-094) it also keeps host blocks: a <see cref="CacheOpKind.TierMove"/> copies a block between the
+/// tiers and then clears the source, because the planner reuses the source at once; a stale or wrong restore therefore
+/// reads a cleared slot and throws.
 /// </remarks>
 internal sealed class ContentWorker : IPlanWorker
 {
@@ -24,14 +27,16 @@ internal sealed class ContentWorker : IPlanWorker
     private readonly ulong[][][] _attention; // group, block, slot in block
     private readonly ulong[][] _live; // recurrent group -> slot
     private readonly ulong[][] _snapshots;
+    private readonly ulong[][][] _host; // group, host block, slot in block
     private readonly int _recurrent = -1;
 
-    public ContentWorker(BlockManager blocks)
+    public ContentWorker(BlockManager blocks, BlockManager? host = null)
     {
         _groups = blocks.Groups;
         _attention = new ulong[_groups.Length][][];
         _live = new ulong[_groups.Length][];
         _snapshots = new ulong[_groups.Length][];
+        _host = new ulong[_groups.Length][][];
         foreach (var g in _groups)
         {
             if (g.Kind == StateGroupKind.Recurrent)
@@ -43,12 +48,19 @@ internal sealed class ContentWorker : IPlanWorker
             else
             {
                 _attention[g.Index] = [.. Enumerable.Range(0, blocks.GetPool(g.Index).Capacity).Select(_ => new ulong[g.BlockSize])];
+                _host[g.Index] = [.. Enumerable.Range(0, host?.GetPool(g.Index).Capacity ?? 0).Select(_ => new ulong[g.BlockSize])];
             }
         }
     }
 
     /// <summary>Tokens the worker computed (rows' token counts), for comparing work done.</summary>
     public long ComputedTokens { get; private set; }
+
+    /// <summary>Blocks copied device to host.</summary>
+    public long Demotions { get; private set; }
+
+    /// <summary>Blocks copied host to device.</summary>
+    public long Restores { get; private set; }
 
     public StepOutcome Execute(PlannedStep plan)
     {
@@ -163,6 +175,16 @@ internal sealed class ContentWorker : IPlanWorker
                     break;
                 case CacheOpKind.SnapshotRestore:
                     _live[g][dst] = _snapshots[g][src];
+                    break;
+                case CacheOpKind.TierMove when op.SrcTier == BlockTier.Device && op.DstTier == BlockTier.Host:
+                    Array.Copy(_attention[g][src], _host[g][dst], _host[g][dst].Length);
+                    Array.Clear(_attention[g][src]);
+                    Demotions++;
+                    break;
+                case CacheOpKind.TierMove when op.SrcTier == BlockTier.Host && op.DstTier == BlockTier.Device:
+                    Array.Copy(_host[g][src], _attention[g][dst], _attention[g][dst].Length);
+                    Array.Clear(_host[g][src]);
+                    Restores++;
                     break;
                 default:
                     throw new InvalidOperationException($"Unexpected op {op.Kind}.");
