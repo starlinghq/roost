@@ -23,6 +23,21 @@ public sealed record RoostServerOptions
     /// <summary>Allows a <see cref="Host"/> that is not a loopback address. Off by default.</summary>
     public bool AllowNonLoopback { get; init; }
 
+    /// <summary>The default <see cref="ResponseStoreCapacity"/>.</summary>
+    public const int DefaultResponseStoreCapacity = 1024;
+
+    /// <summary>
+    /// The most Responses API responses kept in memory for <c>GET /v1/responses/{id}</c> (R-074). When the store is full the
+    /// oldest finished response makes room; when every stored response is still running, a new stored one is refused (429).
+    /// </summary>
+    public int ResponseStoreCapacity { get; init; } = DefaultResponseStoreCapacity;
+
+    /// <summary>How long a stored response is kept after it was created; a running one is kept until it finishes. One hour by default.</summary>
+    public TimeSpan ResponseStoreTtl { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>The clock of the response store's expiry (tests replace it).</summary>
+    internal TimeProvider TimeProvider { get; init; } = TimeProvider.System;
+
     /// <summary>Resolves <see cref="Host"/> and checks it and <see cref="Port"/>.</summary>
     /// <returns>The address to listen on.</returns>
     /// <exception cref="ArgumentException">The host is not an IP address or <c>localhost</c>, the port is out of range, or the

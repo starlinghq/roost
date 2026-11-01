@@ -150,7 +150,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `worker_recovery` | `unsupported` | — | A worker fault fails the requests it carried. R-070. |
 | `co_tenant_admission` | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | Refuses new requests with `InsufficientDeviceMemory` while free device memory is below `MinFreeDeviceBytes` (R-044). CPU only: the co-tenant GPU test is open and no NVML source is the default yet. |
 
-## OpenAI-compatible server (`roost serve`, R-037)
+## OpenAI-compatible server (`roost serve`, R-037, R-074)
 
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
@@ -159,8 +159,11 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `GET /v1/models` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | As above. |
 | Native AOT `roost` binary (linux-x64) | `untested` | `src/Starlings.Roost.Server/STATUS.md` | One local publish with zero trim or AOT warnings; a build check, not serving evidence. S1 measured AOT with CUDA interop on SM 86 (`docs/m0/roost-s1-aot-cuda.md`). |
 | Loopback-only listening by default | `untested` | `tests/Starlings.Roost.Server.Tests/` | Non-loopback needs `--allow-non-loopback`; there is no authentication. |
-| Responses API, Anthropic Messages, tokenize and detokenize, health and readiness | `unsupported` | — | R-074. |
-| Prompt-embeddings input | `unsupported` | — | R-074. |
+| `POST /v1/responses`, `GET /v1/responses/{id}`, `POST /v1/responses/{id}/cancel` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Whole, SSE and background, over an in-memory bounded store with expiry; text input only. CPU tests over a scripted in-process worker (R-074). |
+| `POST /v1/messages`, `POST /v1/messages/count_tokens` (Anthropic Messages API) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Whole and SSE with Anthropic's events and error body; text blocks only; `stop_reason` `stop_sequence` is not reported (R-074). |
+| `POST /tokenize`, `POST /detokenize` (vLLM bodies) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Prompt and chat-message forms over the model's tokenizer and template (R-074). |
+| `GET /health`, `/ping`, `GET /version`, `GET /ready` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Liveness (vLLM's names) and readiness (worker started, host not stopping); no worker liveness probe (R-074). |
+| Prompt-embeddings input | `unsupported` | — | `prompt_embeds` is refused by name: `RoostChatClient` exposes no embedding input for contract C2's `Embeddings` part (R-074). |
 | Embeddings, rerank, score, classify, pooling | `unsupported` | — | R-052, R-087. |
 | Runtime LoRA load and unload | `unsupported` | — | R-050, R-074. |
 | vLLM CLI flags, environment and Prometheus names | `unsupported` | — | R-038, R-075. |

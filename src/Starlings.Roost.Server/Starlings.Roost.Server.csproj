@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <Description>Roost's HTTP server (R-037, stream H): an ASP.NET Core minimal API host over Starlings.Generation.Roost's RoostChatClient with the OpenAI chat completions, completions and models routes, one OpenAI-shaped error body and loopback-only listening by default. Builds the `roost` executable. Host process only (decision 30).</Description>
+    <Description>Roost's HTTP server (R-037 and R-074, stream H): an ASP.NET Core minimal API host over Starlings.Generation.Roost's RoostChatClient with the OpenAI chat completions, completions, models and Responses routes, the Anthropic Messages routes and vLLM's tokenize, detokenize, health, ping and version routes, one OpenAI-shaped error body (Anthropic's on the Messages routes) and loopback-only listening by default. Builds the `roost` executable. Host process only (decision 30).</Description>
     <OutputType>Exe</OutputType>
     <AssemblyName>roost</AssemblyName>
     <RootNamespace>Starlings.Roost.Server</RootNamespace>

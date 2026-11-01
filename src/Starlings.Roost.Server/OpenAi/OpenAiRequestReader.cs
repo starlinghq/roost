@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Requests;
+using static Starlings.Roost.Server.Routing.RequestFields;
 
 namespace Starlings.Roost.Server.OpenAi;
 
@@ -31,6 +32,13 @@ internal static class OpenAiRequestReader
     /// <summary>The completions route's <c>max_tokens</c> default, as in OpenAI's API and vLLM.</summary>
     public const int CompletionsDefaultMaxTokens = 16;
 
+    /// <summary>
+    /// Why vLLM's <c>prompt_embeds</c> is refused: contract C2 carries embeddings as a <c>MultimodalPart</c> of kind
+    /// <c>Embeddings</c>, but <see cref="RoostChatClient"/> exposes no way to pass one (R-074).
+    /// </summary>
+    public const string PromptEmbedsUnsupported =
+        "Prompt-embeddings input is unsupported: Starlings.Generation.Roost's RoostChatClient exposes no embedding input (contract C2's Embeddings part).";
+
     public static ChatCompletionRequest ReadChat(JsonElement body)
     {
         var options = new ChatOptions();
@@ -45,7 +53,7 @@ internal static class OpenAiRequestReader
             switch (field.Name)
             {
                 case "model":
-                    model = String(v, "model");
+                    model = StringValue(v, "model");
                     break;
                 case "messages":
                     messages = Messages(v);
@@ -123,7 +131,7 @@ internal static class OpenAiRequestReader
             switch (field.Name)
             {
                 case "model":
-                    model = String(v, "model");
+                    model = StringValue(v, "model");
                     break;
                 case "prompt":
                     prompt = Prompt(v);
@@ -153,6 +161,8 @@ internal static class OpenAiRequestReader
                     }
 
                     break;
+                case "prompt_embeds": // vLLM's extension
+                    throw Refuse("prompt_embeds", PromptEmbedsUnsupported);
                 case "suffix":
                     if (v.ValueKind != JsonValueKind.String || v.GetString()!.Length != 0)
                     {
@@ -211,7 +221,7 @@ internal static class OpenAiRequestReader
                 return true;
             case "user":
                 // An end-user identifier for the caller's own records; it changes nothing about the output. Checked, not used.
-                String(v, name);
+                StringValue(v, name);
                 return true;
             case "logit_bias":
                 if (v.ValueKind != JsonValueKind.Object || v.EnumerateObject().Any())
@@ -232,17 +242,7 @@ internal static class OpenAiRequestReader
         }
     }
 
-    private static IEnumerable<JsonProperty> Fields(JsonElement body)
-    {
-        if (body.ValueKind != JsonValueKind.Object)
-        {
-            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The request body must be a JSON object."));
-        }
-
-        return Fields(body, null);
-    }
-
-    private static List<ChatMessage> Messages(JsonElement v)
+    internal static List<ChatMessage> Messages(JsonElement v)
     {
         if (v.ValueKind != JsonValueKind.Array)
         {
@@ -275,7 +275,7 @@ internal static class OpenAiRequestReader
             switch (field.Name)
             {
                 case "role":
-                    role = String(f, param) switch
+                    role = StringValue(f, param) switch
                     {
                         "system" or "developer" => ChatRole.System,
                         "user" => ChatRole.User,
@@ -288,7 +288,7 @@ internal static class OpenAiRequestReader
                     Content(f, param, contents);
                     break;
                 case "name":
-                    name = String(f, param);
+                    name = StringValue(f, param);
                     break;
                 default:
                     // tool_calls, tool_call_id, function_call, audio, refusal and anything else: not supported.
@@ -297,25 +297,6 @@ internal static class OpenAiRequestReader
         }
 
         return new ChatMessage(role ?? throw Refuse(at + ".role", "role is required."), contents) { AuthorName = name };
-    }
-
-    /// <summary>The set fields of an object (null means unset), refusing a field that appears twice.</summary>
-    private static IEnumerable<JsonProperty> Fields(JsonElement v, string? at)
-    {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var field in v.EnumerateObject())
-        {
-            string param = at is null ? field.Name : at + "." + field.Name;
-            if (!seen.Add(field.Name))
-            {
-                throw Refuse(param, $"'{field.Name}' appears more than once.");
-            }
-
-            if (field.Value.ValueKind != JsonValueKind.Null)
-            {
-                yield return field;
-            }
-        }
     }
 
     private static void Content(JsonElement v, string param, List<AIContent> contents)
@@ -347,10 +328,10 @@ internal static class OpenAiRequestReader
                 switch (field.Name)
                 {
                     case "type":
-                        type = String(field.Value, at + ".type");
+                        type = StringValue(field.Value, at + ".type");
                         break;
                     case "text":
-                        text = String(field.Value, at + ".text");
+                        text = StringValue(field.Value, at + ".text");
                         break;
                     default:
                         throw Refuse(at + "." + field.Name, $"Content part field '{field.Name}' is unsupported; only text parts are accepted.");
@@ -445,34 +426,4 @@ internal static class OpenAiRequestReader
 
         return includeUsage;
     }
-
-    private static string String(JsonElement v, string param) =>
-        v.ValueKind == JsonValueKind.String ? v.GetString()! : throw Refuse(param, $"{param} must be a string.");
-
-    private static bool Bool(JsonElement v, string param) => v.ValueKind switch
-    {
-        JsonValueKind.True => true,
-        JsonValueKind.False => false,
-        _ => throw Refuse(param, $"{param} must be a boolean."),
-    };
-
-    private static float Number(JsonElement v, string param) =>
-        v.ValueKind == JsonValueKind.Number ? (float)v.GetDouble() : throw Refuse(param, $"{param} must be a number.");
-
-    private static int Int(JsonElement v, string param) =>
-        v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : throw Refuse(param, $"{param} must be an integer.");
-
-    private static int PositiveInt(JsonElement v, string param)
-    {
-        var i = Int(v, param);
-        return i > 0 ? i : throw Refuse(param, Inv($"{param} must be positive; got {i}."));
-    }
-
-    private static string Inv(FormattableString text) => FormattableString.Invariant(text);
-
-    private static RoostChatException Unknown(string name) =>
-        Refuse(name, $"Unknown or unsupported option '{name}'.");
-
-    private static RoostChatException Refuse(string param, string message) =>
-        new(new RoostError(RoostErrorCode.InvalidOption, message, param));
 }

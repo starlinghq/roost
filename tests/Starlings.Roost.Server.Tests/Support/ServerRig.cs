@@ -46,7 +46,7 @@ internal sealed class ServerRig : IAsyncDisposable
 
     public static int[] Encode(string text) => [.. Tokenizer.Encode(text, false).Ids];
 
-    public static async Task<ServerRig> StartAsync(Script script)
+    public static async Task<ServerRig> StartAsync(Script script, RoostServerOptions? options = null)
     {
         ScriptedExecutor? executor = null;
         var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
@@ -75,7 +75,7 @@ internal sealed class ServerRig : IAsyncDisposable
 
         try
         {
-            var app = RoostServer.Create(client, configureWebHost: web => web.UseTestServer());
+            var app = RoostServer.Create(client, options, web => web.UseTestServer());
             await app.StartAsync(TestContext.Current.CancellationToken);
             return new ServerRig(client, app, executor!);
         }
