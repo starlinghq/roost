@@ -23,6 +23,17 @@
           "Starlings.Tokenizers": "[0.3.0]"
         }
       },
+      "Starlings.Models.QwenChat": {
+        "type": "Direct",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "JwN8Xw6oat3K3vXIZnquKKWH4uFmGt7M0DZQL3lT0m8P4udkg8jKZTCHahBb1/l8UvRARn2Yp5uj9O1jkQ2laQ==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Generation.OnnxGenAI": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
       "Starlings.Tokenizers": {
         "type": "Direct",
         "requested": "[0.3.0, 0.3.0]",

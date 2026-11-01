@@ -9,6 +9,7 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 ### Added
 
 - Release workflow (`.github/workflows/release.yml`), kernel release build (`tools/release-kernels.sh`) and release drill (`tools/release-drill.sh`) (R-060).
+- `Starlings.Roost.Generation`: `Qwen3RoostChatTemplate`, the Qwen3 template over Starling's published `QwenChatTemplate` (`QwenChatProfile.Qwen3`, text only, `enable_thinking=false`; experimental), with `Starlings.Models.QwenChat` pinned exactly at `[0.3.0]` (host side only, decision 30). Completes R-009.
 - `Starlings.Roost.Kernels`: `KernelLibraryResolver` fetches the per-SM kernel library of the package version from the GitHub release through `Starlings.Acquisition`, verified by size and SHA-256 against the embedded manifest (decision 12); `KernelManifest.Embedded()`.
 
 ### Changed
