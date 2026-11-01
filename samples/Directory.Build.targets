@@ -1,0 +1,3 @@
+<Project>
+  <!-- Stops MSBuild's upward search, so the repository's Directory.Build.targets does not apply to the samples. -->
+</Project>
