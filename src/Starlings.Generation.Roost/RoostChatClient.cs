@@ -89,8 +89,35 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 
         // Validate before anything is enumerated, so a refused option throws at the call.
         var prepared = ChatRequestBuilder.Build(messages, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
-        return StreamAsync(prepared, cancellationToken);
+        return StreamChatAsync(prepared, cancellationToken);
     }
+
+    /// <summary>
+    /// Completes a raw text prompt (the OpenAI completions route, R-037): the prompt is tokenised as given, with no chat
+    /// template and no special tokens added, and decoded as a chat request is. The options are checked as for a chat, and
+    /// <c>Instructions</c> is refused. Updates, finish reasons, usage and cancellation are those of
+    /// <see cref="GetStreamingResponseAsync"/>.
+    /// </summary>
+    /// <param name="prompt">The prompt text.</param>
+    /// <param name="options">The request options.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The streamed completion.</returns>
+    /// <exception cref="RoostChatException">An option is unsupported or invalid (thrown at the call), or the request failed.</exception>
+    public IAsyncEnumerable<ChatResponseUpdate> GetStreamingCompletionAsync(string prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
+        return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, cancellationToken);
+    }
+
+    /// <summary>Completes a raw text prompt; see <see cref="GetStreamingCompletionAsync"/>.</summary>
+    /// <param name="prompt">The prompt text.</param>
+    /// <param name="options">The request options.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>The completion.</returns>
+    /// <exception cref="RoostChatException">An option is unsupported or invalid, or the request failed.</exception>
+    public async Task<ChatResponse> GetCompletionAsync(string prompt, ChatOptions? options = null, CancellationToken cancellationToken = default) =>
+        await GetStreamingCompletionAsync(prompt, options, cancellationToken).ToChatResponseAsync(cancellationToken).ConfigureAwait(false);
 
     /// <inheritdoc />
     public object? GetService(Type serviceType, object? serviceKey = null)
@@ -132,15 +159,24 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     /// <summary>Stops the worker; blocks until it has exited. Prefer <see cref="DisposeAsync"/>.</summary>
     public void Dispose() => DisposeAsync().AsTask().GetAwaiter().GetResult();
 
-    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(PreparedChat prepared, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<ChatResponseUpdate> StreamChatAsync(PreparedChat prepared, [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var prompt = Render(_options.Model.ChatTemplate, prepared.Messages);
+        await foreach (var update in StreamAsync(prompt, "messages", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, cancellationToken).ConfigureAwait(false))
+        {
+            yield return update;
+        }
+    }
+
+    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var model = _options.Model;
-        var prompt = Render(model.ChatTemplate, prepared.Messages);
         int[] ids = [.. model.Tokenizer.Encode(prompt, false).Ids];
         if (ids.Length == 0)
         {
-            throw RoostChatException.InvalidOption("messages", "The rendered prompt has no tokens.");
+            throw RoostChatException.InvalidOption(promptParam, "The prompt has no tokens.");
         }
 
         int room = model.ContextTokens - ids.Length;
@@ -149,7 +185,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             throw new RoostChatException(new RoostError(
                 RoostErrorCode.PromptTooLong,
                 string.Create(CultureInfo.InvariantCulture, $"The prompt has {ids.Length} tokens; the worker's context holds {model.ContextTokens}, including at least one output token."),
-                "messages"));
+                promptParam));
         }
 
         var id = new RequestId((ulong)Interlocked.Increment(ref _nextId));
@@ -157,14 +193,13 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         {
             Id = id,
             PromptTokenIds = [.. ids],
-            Sampling = new SamplingParameters { Temperature = 0f, MaxTokens = Math.Min(prepared.MaxOutputTokens, room) },
-            StopSequences = [.. prepared.StopSequences],
+            Sampling = new SamplingParameters { Temperature = 0f, MaxTokens = Math.Min(maxOutputTokens, room) },
+            StopSequences = [.. stopSequences],
         };
 
         string responseId = "roost-" + id.Value.ToString(CultureInfo.InvariantCulture);
         var created = DateTimeOffset.UtcNow;
         var detokenizer = new RoostIncrementalDetokenizer(model.Tokenizer, skipSpecialTokens: true);
-        var matcher = prepared.StopMatcher;
         var channel = _backend.Submit(request);
         var done = false;
         var ended = false; // the backend finished or failed the request itself
