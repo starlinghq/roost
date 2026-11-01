@@ -139,6 +139,8 @@ jobs:
           $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
           $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
           if (-not $vs) { throw 'no Visual Studio with the x64 C++ tools on this runner' }
+          # Upstream checkouts (FlashInfer) have paths longer than MAX_PATH.
+          git config --global core.longpaths true
           cmd /c "call `"$vs\VC\Auxiliary\Build\vcvars64.bat`" >nul && pwsh -NoProfile -File kernels/ci/build-all-sm-msvc.ps1 `"$env:RUNNER_TEMP\kernels`""
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
