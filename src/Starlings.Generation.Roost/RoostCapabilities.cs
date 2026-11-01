@@ -87,6 +87,13 @@ public sealed class RoostCapabilities
     /// <summary>Resuming requests on a respawned worker (R-070). In M0 a worker fault fails the requests it carried.</summary>
     public const string WorkerRecovery = "worker_recovery";
 
+    /// <summary>
+    /// Refusing new requests with <c>InsufficientDeviceMemory</c> while a co-tenant holds the device's free memory below
+    /// <see cref="RoostWorkerOptions.MinFreeDeviceBytes"/> (R-044), from <see cref="RoostWorkerOptions.DeviceMemory"/>. CPU-tested
+    /// only; the co-tenant GPU test is open and no NVML source is the default yet.
+    /// </summary>
+    public const string CoTenantAdmission = "co_tenant_admission";
+
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
     internal RoostCapabilities()
@@ -105,6 +112,7 @@ public sealed class RoostCapabilities
             [MaxOutputTokens] = untested,
             [Instructions] = untested,
             [StopSequences] = untested,
+            [CoTenantAdmission] = untested,
             [Sampling] = unsupported,
             [Penalties] = unsupported,
             [Tools] = unsupported,
