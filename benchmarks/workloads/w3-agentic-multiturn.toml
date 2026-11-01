@@ -1,0 +1,28 @@
+# W3 agentic multi-turn with heavy prefix reuse (build plan section 14.3). Shape values are proposals pending
+# decision 25. Each session shares one of `groups` system prefixes and runs `turns` sequential requests, each carrying
+# the earlier turns and the server's replies, so most of every prompt is a cached prefix.
+schema = "roost-bench-workload/0"
+id = "w3-agentic-multiturn"
+title = "Agentic multi-turn, heavy prefix reuse"
+status = "untested"
+api = "chat"
+requests = 200
+
+[load]
+mode = "concurrency"  # closed loop: concurrent sessions
+levels = [1, 2, 4, 8, 16, 32]
+
+[prefix]
+shared_tokens = 4096
+groups = 4
+turns = 6
+
+[prompt]
+source = "synthetic"
+tokens = { dist = "lognormal", median = 128, sigma = 0.7, min = 16, max = 1024 }
+
+[output]
+tokens = { dist = "lognormal", median = 160, sigma = 0.6, min = 16, max = 512 }
+
+[body]
+temperature = 0.0

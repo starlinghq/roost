@@ -1,0 +1,35 @@
+# W5 Kev decisions (build plan section 14.3, bet X3). Shape values are proposals pending decision 25.
+# This is the OpenAI-compatible equivalent that X3 compares against: one shared context per session and one
+# max_tokens=1 chat request per question, sent at once so prefix caching can share the context. Roost's own decision
+# route (R-086) takes the System One request body and is not driven by this file; until R-086 defines that route the
+# Roost side of W5 is not measurable here. Decisions per second = completed requests / window; p99 latency per
+# question is latency_s.p99. logprobs are requested because a decision needs probabilities; Roost's chat route
+# refuses logprobs today (src/Starlings.Roost.Server/STATUS.md).
+schema = "roost-bench-workload/0"
+id = "w5-kev-decisions"
+title = "Kev decisions, 3 to 16 questions per state"
+status = "untested"
+api = "chat"
+requests = 200
+
+[load]
+mode = "concurrency"
+levels = [1, 2, 4, 8, 16]
+
+[prompt]
+source = "synthetic"
+tokens = { dist = "lognormal", median = 1024, sigma = 0.5, min = 256, max = 4096 }
+
+[output]
+tokens = { dist = "fixed", value = 1 }
+
+[decision]
+questions = { dist = "uniform", min = 3, max = 16 }
+question_tokens = { dist = "uniform", min = 16, max = 64 }
+parallel = true
+
+[decision.body]
+max_tokens = 1
+temperature = 0.0
+logprobs = true
+top_logprobs = 5
