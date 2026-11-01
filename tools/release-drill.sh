@@ -14,7 +14,7 @@
 #   6. builds a consumer outside the checkout whose NuGet.config knows only that feed and nuget.org (Starlings.Roost.*
 #      mapped to the feed), with its own empty package cache; checks that the restored packages are the packed bytes and
 #      that no worker-side package reaches Microsoft.ML.OnnxRuntime* (decision 30), then compiles and runs it. The
-#      consumer prints RESULT: PASS.
+#      consumer prints RESULT: PASS. It then builds samples/ChatConsole (R-062) against the same feed (build only, no GPU).
 #
 #   tools/release-drill.sh --version 0.0.1-drill.1 --no-kernels       # local, CPU only
 #   tools/release-drill.sh --version 0.1.0-preview.1 --kernel-assets <dir>   # what the release workflow runs
@@ -339,6 +339,31 @@ fi
 echo "ok:   consumer compiled against the packages; no consumer file names the repository path"
 (cd "$consumer" && "$dotnet" run --configuration Release --no-build) | tee "$work/consumer.log" || fail "consumer run failed"
 grep -qx 'RESULT: PASS' "$work/consumer.log" || fail "consumer did not pass"
+
+# The R-062 sample (samples/ChatConsole), copied out of the clean checkout and built against the same feed and NuGet.config,
+# referencing the packages by version as a consumer does. Build only: running it needs a GPU, weights and a kernel library.
+if [[ -f "$pack/Starlings.Generation.Roost.$version.nupkg" && -f "$pack/Starlings.Roost.Models.Qwen35.$version.nupkg" ]]; then
+    sample="$work/sample/ChatConsole"
+    mkdir -p "$sample"
+    cp "$src/samples/ChatConsole/ChatConsole.csproj" "$src/samples/ChatConsole/Program.cs" "$sample/"
+    cp "$consumer/NuGet.config" "$work/sample/"
+    # The sample pins the Roost packages exactly; point both pins at this version (a consumer's `dotnet add package --version`).
+    python3 -I - "$sample/ChatConsole.csproj" "$version" <<'EOF' || fail "could not pin samples/ChatConsole to $version"
+import re, sys
+path, version = sys.argv[1], sys.argv[2]
+text = open(path, encoding="utf-8").read()
+pattern = r'(<PackageReference Include="(?:Starlings\.Generation\.Roost|Starlings\.Roost\.Models\.Qwen35)" Version=")\[[^\]]+\]"'
+text, count = re.subn(pattern, lambda m: f'{m.group(1)}[{version}]"', text)
+if count != 2:
+    sys.exit(f"expected 2 Roost package pins in {path}, found {count}")
+open(path, "w", encoding="utf-8").write(text)
+EOF
+    (cd "$sample" && "$dotnet" build --configuration Release "${msbuild_extra[@]}") \
+        >"$work/sample-build.log" 2>&1 || { tail -40 "$work/sample-build.log"; fail "sample build failed: samples/ChatConsole"; }
+    echo "ok:   samples/ChatConsole builds against the packages (CPU build only; not run)"
+else
+    echo "note: samples/ChatConsole not built: Starlings.Generation.Roost or Starlings.Roost.Models.Qwen35 is not in this release"
+fi
 
 mkdir -p "$out"
 rm -f "$out"/*.nupkg "$out"/*.snupkg

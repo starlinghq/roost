@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- R-062 sample, kept out of Roost.slnx. It references Roost by package, as a consumer does after
+       `dotnet add package Starlings.Generation.Roost`; build it against nuget.org or the release drill's local feed
+       (tools/release-drill.sh builds it there, CPU only). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <!-- The Roost release to build against, as exact pins: every Roost package of a release has the same version
+       (docs/releasing.md). The release drill rewrites both pins to the drilled version in its copy of this file. -->
+  <ItemGroup>
+    <!-- RoostChatClient, and through it the packaged roost-worker (Starlings.Roost.Worker.Runtime.linux-x64). -->
+    <PackageReference Include="Starlings.Generation.Roost" Version="[0.1.0-preview.1]" />
+    <!-- Qwen35Model.CreateStateGroups(): the state groups the host profile names. Managed code only, no CUDA. -->
+    <PackageReference Include="Starlings.Roost.Models.Qwen35" Version="[0.1.0-preview.1]" />
+  </ItemGroup>
+</Project>

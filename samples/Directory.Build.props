@@ -1,0 +1,4 @@
+<Project>
+  <!-- Samples build as a consumer's project would: against Roost's published packages, without the repository's
+       Directory.Build.props (central package versions, lock files, analyzers). This file stops MSBuild's upward search. -->
+</Project>
