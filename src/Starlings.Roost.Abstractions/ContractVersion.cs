@@ -8,14 +8,16 @@ namespace Starlings.Roost;
 /// Version 1 is the first frozen set, the <c>v0</c> stage of the plan. Version 2 (2026-10-19) adds row strides for the
 /// GatedDeltaRule q, k and v views (C3) and <c>RoostGatedDeltaRuleParams</c> (C1 ABI 1.1). Version 3 (2026-10-19) adds the
 /// Qwen3.5 gating ops GatedDeltaRuleGates, GatedRmsNorm and SigmoidMul (C3) with their params, and the params of CausalConv1d,
-/// RecurrentStateCopy and RecurrentStateSnapshot (C1 ABI 1.2). Until the M0 gate (R-026) a contract may
+/// RecurrentStateCopy and RecurrentStateSnapshot (C1 ABI 1.2). Version 4 (2026-11-01, R-042) extends SampleArgs (C3) and
+/// <c>RoostSampleParams</c> (C1 ABI 1.3) with repetition, presence and frequency penalties over per-row token counts, a stop
+/// flag, top-k logprobs and the sampling math mode. Until the M0 gate (R-026) a contract may
 /// still change through a stream A pull request; each such change raises <see cref="Current"/> and updates every
 /// consumer in the same change. The M0 gate promotes the contracts to the <c>v1</c> stage.
 /// </remarks>
 public static class ContractVersion
 {
     /// <summary>The current contract version, carried in the C8 handshake and segment header.</summary>
-    public const int Current = 3;
+    public const int Current = 4;
 
     /// <summary>The plan's name for the current stage: <c>v0</c> until the M0 gate, then <c>v1</c>.</summary>
     public const string Stage = "v0";

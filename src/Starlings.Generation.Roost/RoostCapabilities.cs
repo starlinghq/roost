@@ -22,8 +22,10 @@ public enum RoostCapabilityStatus
 /// The capability table of a <see cref="RoostChatClient"/>. M0 (R-036): greedy decoding over the eager worker, streaming,
 /// cancellation, usage, stop token ids and stop strings are built and CPU-tested, with no GPU evidence yet
 /// (<see cref="RoostCapabilityStatus.Untested"/>; what passes the Preview 1 drill, R-062, moves to
-/// <see cref="RoostCapabilityStatus.Experimental"/>). Everything not built is <see cref="RoostCapabilityStatus.Unsupported"/>
-/// and is refused with a typed error naming the option.
+/// <see cref="RoostCapabilityStatus.Experimental"/>). Sampling, penalties and logprobs (R-042, CPU half) are
+/// <see cref="RoostCapabilityStatus.Untested"/> for a client whose worker runs the CPU sampler (<see cref="RoostSampler.Cpu"/>)
+/// and <see cref="RoostCapabilityStatus.Unsupported"/> on the CUDA worker until the GPU sampler exists. Everything not built is
+/// <see cref="RoostCapabilityStatus.Unsupported"/> and is refused with a typed error naming the option.
 /// </summary>
 public sealed class RoostCapabilities
 {
@@ -57,10 +59,14 @@ public sealed class RoostCapabilities
     /// <summary><c>ChatOptions.StopSequences</c>, matched on detokenized text in the host process.</summary>
     public const string StopSequences = "stop_sequences";
 
-    /// <summary>Temperature, top-p and top-k sampling. (A seed is accepted under greedy decoding, where it changes nothing.)</summary>
+    /// <summary>
+    /// Temperature, top-p, top-k and min-p sampling with a per-request seed (Philox per sequence: the same seed gives the same
+    /// output whatever else is batched), on the CPU sampler only. (A seed is accepted under greedy decoding, where it changes
+    /// nothing.)
+    /// </summary>
     public const string Sampling = "sampling";
 
-    /// <summary>Frequency and presence penalties.</summary>
+    /// <summary>Frequency, presence and repetition penalties, on the CPU sampler only.</summary>
     public const string Penalties = "penalties";
 
     /// <summary>Tool definitions and tool calls.</summary>
@@ -69,7 +75,7 @@ public sealed class RoostCapabilities
     /// <summary>JSON and JSON-schema response formats (structured output).</summary>
     public const string ResponseFormat = "response_format";
 
-    /// <summary>Log probabilities.</summary>
+    /// <summary>Log probabilities of the chosen token and up to 20 alternatives per token, on the CPU sampler only.</summary>
     public const string Logprobs = "logprobs";
 
     /// <summary>Reasoning (think block) output.</summary>
@@ -94,13 +100,15 @@ public sealed class RoostCapabilities
     /// </summary>
     public const string CoTenantAdmission = "co_tenant_admission";
 
+    private static readonly string[] SamplerRows = [Sampling, Penalties, Logprobs];
+
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
-    internal RoostCapabilities()
+    internal RoostCapabilities(RoostSampler sampler = RoostSampler.GreedyOnly)
     {
         var untested = RoostCapabilityStatus.Untested;
         var unsupported = RoostCapabilityStatus.Unsupported;
-        _statuses = new Dictionary<string, RoostCapabilityStatus>
+        var table = new Dictionary<string, RoostCapabilityStatus>
         {
             [Chat] = untested,
             [RawCompletion] = untested,
@@ -113,17 +121,28 @@ public sealed class RoostCapabilities
             [Instructions] = untested,
             [StopSequences] = untested,
             [CoTenantAdmission] = untested,
-            [Sampling] = unsupported,
-            [Penalties] = unsupported,
+            [Sampling] = untested,
+            [Penalties] = untested,
             [Tools] = unsupported,
             [ResponseFormat] = unsupported,
-            [Logprobs] = unsupported,
+            [Logprobs] = untested,
             [Reasoning] = unsupported,
             [MultimodalInput] = unsupported,
             [ConversationState] = unsupported,
             [ContinuousBatching] = unsupported,
             [WorkerRecovery] = unsupported,
-        }.ToFrozenDictionary(StringComparer.Ordinal);
+        };
+
+        // The rows above are the CPU sampler's (docs/capabilities.md lists them so); the CUDA worker has no sampler yet.
+        if (sampler != RoostSampler.Cpu)
+        {
+            foreach (var name in SamplerRows)
+            {
+                table[name] = unsupported;
+            }
+        }
+
+        _statuses = table.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
     /// <summary>Every listed capability and its status.</summary>

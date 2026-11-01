@@ -75,7 +75,7 @@ Status of each op on CUDA through the kernel library. Every registered variant p
 | `CacheWrite` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out` | `cache-write-roost`. |
 | `CacheCopy` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out` | `cache-copy-roost`. |
 | `Argmax` | `experimental` | `tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm86.log`<br>`tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm89.log` | No kernel: the eager worker copies the logits to the host and runs `CpuOps.Argmax`. Not in the conformance suite. The GPU sampler is R-042. |
-| `Sample` | `unsupported` | — | No kernel; the worker refuses sampling plans (code 1003 in the R-025 logs). R-042. |
+| `Sample` | `unsupported` | — | No kernel; the CUDA worker refuses sampling plans (code 1003 in the R-025 logs) and `CudaOps.Sample` refuses every call, naming the contract version 4 features it asked for. `CpuOps.Sample` is the CPU reference, with the float32 mode a GPU kernel must match bit for bit (contract version 4, C1 ABI 1.3). R-042 (GPU half). |
 | `GeluAndMul` | `unsupported` | — | CPU reference only; no kernel. |
 | `GatedDeltaRule` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out`<br>`kernels/results/r034-hybrid-conformance-sm86.log` | `gated-delta-rule-chunk-aot` and `gated-delta-rule-recurrent-aot`, Triton AOT cubins from flash-linear-attention. |
 | `CausalConv1d` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out` | `causal-conv1d-cuda`. |
@@ -138,11 +138,11 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `max_output_tokens` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`tests/Starlings.Generation.Roost.Tests.Cuda/results/r036-chat-sm86.log` | Ends with `ChatFinishReason.Length`. |
 | `instructions` | `untested` | `tests/Starlings.Generation.Roost.Tests/` | A leading system message. CPU only. |
 | `stop_sequences` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`tests/Starlings.Roost.Generation.Tests/` | Matched on detokenized text in the host (Starling's `StopSequenceMatcher`). CPU only. |
-| `sampling` | `unsupported` | — | Temperature, top-p, top-k. A seed is accepted under greedy decoding, where it changes nothing. R-042. |
-| `penalties` | `unsupported` | — | Frequency and presence. R-042. |
+| `sampling` | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | Temperature, top-p, top-k, min-p and a per-request seed (Philox per sequence), with `RoostWorkerOptions.Sampler = Cpu`: a worker that runs the CPU sampler (`HostSampler` over `CpuOps.Sample`). On the CUDA worker (the default `GreedyOnly`) the client reports and refuses it as `unsupported` until the GPU sampler (R-042). A seed is accepted under greedy decoding, where it changes nothing. CPU only. |
+| `penalties` | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | Frequency, presence and repetition (vLLM's order and prompt/output split), CPU sampler only; `unsupported` on the CUDA worker. CPU only. |
 | `tools` | `unsupported` | — | R-053. |
 | `response_format` | `unsupported` | — | JSON and JSON-schema structured output. S10 (`docs/m0/roost-s10-llguidance-abi.md`) is a spike, not a feature. R-051, R-042. |
-| `logprobs` | `unsupported` | — | R-042. |
+| `logprobs` | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | The chosen token and up to 20 alternatives per token, of the raw distribution, in each update's `AdditionalProperties["logprobs"]`; CPU sampler only, `unsupported` on the CUDA worker. The server still refuses `logprobs` and `top_logprobs` (its response bodies carry no logprobs yet). CPU only. |
 | `reasoning` | `unsupported` | — | Think-block output and reasoning parsers. R-053. |
 | `multimodal_input` | `unsupported` | — | R-099, R-107. |
 | `conversation_state` | `unsupported` | — | `ConversationId`. |
@@ -196,7 +196,8 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
 | Greedy decoding | `untested` | `tests/Starlings.Generation.Roost.Tests.Cuda/results/r036-chat-sm86.log` | See `greedy_decoding`. |
-| All sampling parameters, logprobs, seeds | `unsupported` | — | R-042. |
+| Sampling parameters, penalties, logprobs, seeds on the CPU sampler | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | `CpuOps.Sample` in double (reference) and float32 (the definition a GPU sampler must match bit for bit) with stop flags, top-k logprobs and grammar bitmasks; `HostSampler` keeps each sequence's token history for the penalties. See `sampling`. |
+| Sampling parameters, penalties, logprobs, seeds on the GPU | `unsupported` | — | The fused GPU sampler, R-042 (GPU half); the CUDA worker is greedy only. |
 | n > 1, best_of, beam search | `unsupported` | — | R-076. The server accepts `n` 1 and `best_of` 1 only. |
 | Speculative decoding (n-gram, suffix, draft model, MTP, EAGLE, newer proposers) | `unsupported` | — | R-083 to R-085. |
 

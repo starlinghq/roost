@@ -95,12 +95,17 @@ internal static class TestRig
         return RoostChatClient.StartAsync(configure?.Invoke(options) ?? options, decorate, TestContext.Current.CancellationToken);
     }
 
+    /// <summary>A client over the in-process transport whose executor runs the CPU sampler, with <see cref="RoostSampler.Cpu"/>.</summary>
+    public static Task<RoostChatClient> SamplingAsync(Script script, List<ScriptedExecutor>? executors = null) =>
+        InProcessAsync(script with { Sample = true }, executors, o => o with { Worker = o.Worker with { Sampler = RoostSampler.Cpu } });
+
     /// <summary>A client over the default (process) transport: this test executable re-run as the worker.</summary>
     public static Task<RoostChatClient> ProcessAsync(Script script, TimeSpan? stepDeadline = null) => RoostChatClient.StartAsync(new RoostChatClientOptions
     {
         Model = Profile(),
         Worker = new RoostWorkerOptions
         {
+            Sampler = script.Sample ? RoostSampler.Cpu : RoostSampler.GreedyOnly,
             Command = WorkerCommand.ForCurrentProcess(WorkerFlag, ScriptPrefix + script.Encode()),
             StepDeadline = stepDeadline ?? TimeSpan.FromSeconds(10),
             TransportOptions = new WorkerTransportOptions { StartupTimeout = TimeSpan.FromSeconds(60) },

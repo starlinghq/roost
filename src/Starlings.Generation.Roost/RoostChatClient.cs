@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost.Driver;
 using Starlings.Roost.Generation;
@@ -14,10 +15,18 @@ namespace Starlings.Generation.Roost;
 /// (decision 21); <see cref="Starlings.Roost.Transport.TransportKind.InProcess"/> is for tests and development.
 /// </summary>
 /// <remarks>
-/// <para><b>M0 scope.</b> Greedy decoding only. Every <see cref="ChatOptions"/> member that is set and not supported is
-/// refused with a <see cref="RoostChatException"/> whose <see cref="RoostError.Code"/> is
-/// <see cref="RoostErrorCode.InvalidOption"/> and whose <see cref="RoostError.Param"/> names the option; see
-/// <see cref="Capabilities"/>. Requests may be issued concurrently; M0 runs one sequence per step, so they take turns.</para>
+/// <para><b>Scope.</b> Greedy decoding on the CUDA worker; with <see cref="RoostSampler.Cpu"/> (a worker that runs the CPU
+/// sampler) also temperature, top-p, top-k, min-p, seeds, penalties and logprobs (R-042, CPU half). Every
+/// <see cref="ChatOptions"/> member that is set and not supported is refused with a <see cref="RoostChatException"/> whose
+/// <see cref="RoostError.Code"/> is <see cref="RoostErrorCode.InvalidOption"/> and whose <see cref="RoostError.Param"/> names the
+/// option; see <see cref="Capabilities"/>. Requests may be issued concurrently; M0 runs one sequence per step, so they take
+/// turns.</para>
+/// <para><b>Seeds.</b> A request without <c>Seed</c> gets a random one, so two unseeded requests do not draw the same tokens.
+/// With a seed, the draws depend only on the seed and the token position (Philox per sequence), never on other requests.</para>
+/// <para><b>Logprobs.</b> With <see cref="LogprobsKey"/> set, each update's <c>AdditionalProperties</c> carries, under
+/// <see cref="LogprobsKey"/>, an <c>IReadOnlyList&lt;</c><see cref="RoostTokenLogprob"/><c>&gt;</c> for the tokens decoded since
+/// the previous update (the final update carries any left), each with up to <see cref="TopLogprobsKey"/> alternatives.
+/// Logprobs are of the model's raw distribution, before penalties and temperature.</para>
 /// <para><b>Streaming.</b> Each update carries text that can no longer change: incomplete UTF-8 is held back by the
 /// detokenizer and a possible stop string by the stop matcher. The last update carries the finish reason
 /// (<see cref="ChatFinishReason.Stop"/> for a stop token or stop string, <see cref="ChatFinishReason.Length"/> for the
@@ -28,6 +37,21 @@ namespace Starlings.Generation.Roost;
 /// </remarks>
 public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 {
+    /// <summary>The <c>ChatOptions.AdditionalProperties</c> key for <c>min_p</c> (a number in [0, 1]); CPU sampler only.</summary>
+    public const string MinPKey = "min_p";
+
+    /// <summary>The <c>ChatOptions.AdditionalProperties</c> key for <c>repetition_penalty</c> (a positive number, 1 disables); CPU sampler only.</summary>
+    public const string RepetitionPenaltyKey = "repetition_penalty";
+
+    /// <summary>
+    /// The <c>ChatOptions.AdditionalProperties</c> key for <c>logprobs</c> (a boolean; CPU sampler only), and the
+    /// <c>ChatResponseUpdate.AdditionalProperties</c> key under which the logprobs come back.
+    /// </summary>
+    public const string LogprobsKey = "logprobs";
+
+    /// <summary>The <c>ChatOptions.AdditionalProperties</c> key for <c>top_logprobs</c> (an integer in [0, 20], needs <see cref="LogprobsKey"/>); CPU sampler only.</summary>
+    public const string TopLogprobsKey = "top_logprobs";
+
     private readonly RoostChatClientOptions _options;
     private readonly IGenerationBackend _backend;
     private readonly ChatClientMetadata _metadata;
@@ -39,7 +63,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         _options = options;
         _backend = backend;
         _metadata = new ChatClientMetadata("roost", null, options.Model.ModelId);
-        Capabilities = new RoostCapabilities();
+        Capabilities = new RoostCapabilities(options.Worker.Sampler);
     }
 
     /// <summary>What this client supports; anything not listed is unsupported.</summary>
@@ -88,7 +112,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
 
         // Validate before anything is enumerated, so a refused option throws at the call.
-        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
+        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Worker.Sampler);
         return StreamChatAsync(prepared, cancellationToken);
     }
 
@@ -106,8 +130,8 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     public IAsyncEnumerable<ChatResponseUpdate> GetStreamingCompletionAsync(string prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-        var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
-        return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, cancellationToken);
+        var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Worker.Sampler);
+        return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, prepared.Sampling, cancellationToken);
     }
 
     /// <summary>Completes a raw text prompt; see <see cref="GetStreamingCompletionAsync"/>.</summary>
@@ -163,13 +187,13 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
         var prompt = Render(_options.Model.ChatTemplate, prepared.Messages);
-        await foreach (var update in StreamAsync(prompt, "messages", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, cancellationToken).ConfigureAwait(false))
+        await foreach (var update in StreamAsync(prompt, "messages", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, prepared.Sampling, cancellationToken).ConfigureAwait(false))
         {
             yield return update;
         }
     }
 
-    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, SamplingParameters sampling, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var model = _options.Model;
@@ -193,7 +217,11 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         {
             Id = id,
             PromptTokenIds = [.. ids],
-            Sampling = new SamplingParameters { Temperature = 0f, MaxTokens = Math.Min(maxOutputTokens, room) },
+            Sampling = sampling with
+            {
+                MaxTokens = Math.Min(maxOutputTokens, room),
+                Seed = sampling.Seed ?? BitConverter.ToUInt64(RandomNumberGenerator.GetBytes(sizeof(ulong))),
+            },
             StopSequences = [.. stopSequences],
         };
 
@@ -205,6 +233,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         var ended = false; // the backend finished or failed the request itself
         ChatFinishReason? finish = null;
         (int Prompt, int Completion) usage = (ids.Length, 0);
+        var pending = sampling.Logprobs ? new List<RoostTokenLogprob>() : null;
         try
         {
             while (!done && await channel.Events.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
@@ -216,12 +245,18 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
                     {
                         case TokenEventKind.Tokens:
                             var tokens = ev.TokenIds;
+                            int perToken = pending is null || tokens.Length == 0 ? 0 : ev.Logprobs.Length / tokens.Length;
                             for (var i = 0; i < tokens.Length; i++)
                             {
+                                if (perToken > 0)
+                                {
+                                    pending!.Add(ToLogprob(ev.Logprobs.Span.Slice(i * perToken, perToken), sampling.TopLogprobs));
+                                }
+
                                 var match = matcher.Push(detokenizer.Push(tokens.Span[i]));
                                 if (match.Emit.Length > 0)
                                 {
-                                    yield return Update(responseId, created, match.Emit);
+                                    yield return Update(responseId, created, match.Emit, pending);
                                 }
 
                                 if (match.Matched is not null)
@@ -238,7 +273,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
                             var text = tail.Matched is null ? tail.Emit + matcher.Flush() : tail.Emit;
                             if (text.Length > 0)
                             {
-                                yield return Update(responseId, created, text);
+                                yield return Update(responseId, created, text, pending);
                             }
 
                             ended = true;
@@ -280,16 +315,35 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             ModelId = model.ModelId,
             CreatedAt = created,
             FinishReason = finish,
+            AdditionalProperties = TakeLogprobs(pending),
         };
     }
 
-    private ChatResponseUpdate Update(string responseId, DateTimeOffset created, string text) => new(ChatRole.Assistant, text)
+    private ChatResponseUpdate Update(string responseId, DateTimeOffset created, string text, List<RoostTokenLogprob>? pending) => new(ChatRole.Assistant, text)
     {
         ResponseId = responseId,
         MessageId = responseId,
         ModelId = _options.Model.ModelId,
         CreatedAt = created,
+        AdditionalProperties = TakeLogprobs(pending),
     };
+
+    // The logprobs gathered since the last update, moved into the update's properties; null when there are none.
+    private static AdditionalPropertiesDictionary? TakeLogprobs(List<RoostTokenLogprob>? pending)
+    {
+        if (pending is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        var taken = pending.ToArray();
+        pending.Clear();
+        return new AdditionalPropertiesDictionary { [LogprobsKey] = (IReadOnlyList<RoostTokenLogprob>)taken };
+    }
+
+    // One token's rows: the chosen token first, then the worker's alternatives, of which the request asked for `top`.
+    private static RoostTokenLogprob ToLogprob(ReadOnlySpan<TokenLogprob> rows, int top) =>
+        new(rows[0].TokenId, rows[0].Logprob, rows.Slice(1, Math.Min(top, rows.Length - 1)).ToArray());
 
     private static ChatFinishReason MapFinish(FinishReason reason) => reason switch
     {

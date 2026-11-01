@@ -24,6 +24,7 @@ public sealed class HeaderConstantTests
         ("ROOST_PLAN_FLAG_", typeof(PlanOptions)),
         ("ROOST_SEQ_FLAG_", typeof(SequenceOptions)),
         ("ROOST_SAMPLE_FLAG_", typeof(SamplingOptions)),
+        ("ROOST_SAMPLE_MATH_", typeof(SampleMath)),
         ("ROOST_CACHE_OP_", typeof(CacheOpKind)),
         ("ROOST_TIER_", typeof(BlockTier)),
         ("ROOST_KV_TRANSFER_", typeof(KvTransferKind)),

@@ -5,6 +5,24 @@ using Starlings.Roost.WorkerHost;
 
 namespace Starlings.Generation.Roost;
 
+/// <summary>Where a worker samples, which decides the sampling options a client accepts (R-042).</summary>
+public enum RoostSampler
+{
+    /// <summary>
+    /// Greedy decoding only: the CUDA eager worker, which refuses sampling, penalty and logprob plans until the GPU sampler of
+    /// R-042 exists. The default.
+    /// </summary>
+    GreedyOnly = 0,
+
+    /// <summary>
+    /// The worker runs the CPU sampler (<c>HostSampler</c> over <c>CpuOps.Sample</c>) and accepts the whole C2 sampling table:
+    /// temperature, top-p, top-k, min-p, seeds, penalties and logprobs. Only a CPU worker or an executor built on that sampler
+    /// may claim it; the packaged CUDA <c>roost-worker</c> may not (<see cref="RoostChatClient.StartAsync(RoostChatClientOptions, CancellationToken)"/>
+    /// refuses the combination).
+    /// </summary>
+    Cpu = 1,
+}
+
 /// <summary>How the worker is started and reached (contract C8).</summary>
 public sealed record RoostWorkerOptions
 {
@@ -29,6 +47,15 @@ public sealed record RoostWorkerOptions
 
     /// <summary>Makes the step executor for <see cref="TransportKind.InProcess"/>; required for it.</summary>
     public Func<IStepExecutor>? InProcessExecutor { get; init; }
+
+    /// <summary>
+    /// Where the worker samples. <see cref="RoostSampler.GreedyOnly"/> (the default, and the only value the packaged CUDA
+    /// worker takes) refuses every sampling option that is not greedy-equivalent; <see cref="RoostSampler.Cpu"/> accepts them,
+    /// for a worker that runs the CPU sampler (an in-process executor or a custom <see cref="Command"/>). The handshake does
+    /// not carry this, so the setting must match the worker: a worker without the CPU sampler refuses a sampling plan and the
+    /// request fails with <c>DeviceFault</c>.
+    /// </summary>
+    public RoostSampler Sampler { get; init; } = RoostSampler.GreedyOnly;
 
     /// <summary>CUDA device ordinal the worker opens.</summary>
     public int DeviceOrdinal { get; init; }

@@ -239,7 +239,7 @@ struct RoostArgmaxParams size=72 align=8
   vocab 60 4 u32
   stride 64 4 u32
   reserved0 68 4 u32
-struct RoostSampleParams size=264 align=8
+struct RoostSampleParams size=512 align=8
   struct_size 0 4 u32
   abi_minor 4 4 u32
   logits 8 24 RoostDeviceSpan
@@ -256,6 +256,18 @@ struct RoostSampleParams size=264 align=8
   vocab 252 4 u32
   stride 256 4 u32
   reserved0 260 4 u32
+  repetition_penalty 264 24 RoostDeviceSpan
+  presence_penalty 288 24 RoostDeviceSpan
+  frequency_penalty 312 24 RoostDeviceSpan
+  token_counts 336 24 RoostDeviceSpan
+  prompt_mask 360 24 RoostDeviceSpan
+  stop_ids 384 24 RoostDeviceSpan
+  stop_ranges 408 24 RoostDeviceSpan
+  stop_flags 432 24 RoostDeviceSpan
+  top_logprob_ids 456 24 RoostDeviceSpan
+  top_logprob_values 480 24 RoostDeviceSpan
+  top_logprobs 504 4 u32
+  math 508 4 u32
 struct RoostGatedDeltaRuleParams size=280 align=8
   struct_size 0 4 u32
   abi_minor 4 4 u32

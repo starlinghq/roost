@@ -33,8 +33,15 @@ internal sealed record Script
     /// <summary>1-based step number that sleeps 30 s (past any test deadline: a hang), 0 for none.</summary>
     public int HangAtStep { get; init; }
 
+    /// <summary>
+    /// Run the CPU sampler: instead of emitting the script's token, make a logits row in which it leads (by
+    /// <see cref="ScriptedExecutor.Lead"/>, over a fixed spread of the other tokens) and sample it with <see cref="HostSampler"/>,
+    /// so greedy requests still follow the script and sampled ones draw from a known distribution.
+    /// </summary>
+    public bool Sample { get; init; }
+
     public string Encode() => string.Create(CultureInfo.InvariantCulture,
-        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs};{HangAtStep};{ThrowAtStep}");
+        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs};{HangAtStep};{ThrowAtStep};{(Sample ? 1 : 0)}");
 
     public static Script Decode(string text)
     {
@@ -48,6 +55,7 @@ internal sealed record Script
             DelayMs = int.Parse(p[4], CultureInfo.InvariantCulture),
             HangAtStep = int.Parse(p[5], CultureInfo.InvariantCulture),
             ThrowAtStep = int.Parse(p[6], CultureInfo.InvariantCulture),
+            Sample = p.Length > 7 && p[7] == "1",
         };
     }
 }
@@ -63,6 +71,9 @@ internal sealed record SeenStep(ulong StepId, int Sequences, int Tokens, int[] C
 /// </summary>
 internal sealed class ScriptedExecutor : IStepExecutor
 {
+    /// <summary>How far the script's token leads the best other token in the sampling mode's logits.</summary>
+    public const float Lead = 4f;
+
     public static readonly ImmutableArray<byte> ManifestDigest = [.. SHA256.HashData(Encoding.UTF8.GetBytes("roost-chat-test-manifest"))];
     public static readonly ImmutableArray<byte> WeightsDigest = [.. SHA256.HashData(Encoding.UTF8.GetBytes("roost-chat-test-weights"))];
 
@@ -70,14 +81,19 @@ internal sealed class ScriptedExecutor : IStepExecutor
     private readonly PlanLimits _limits;
     private readonly int _stopId;
     private readonly Dictionary<ulong, int> _promptLength = [];
+    private readonly HostSampler? _sampler;
     private int _steps;
 
     public ScriptedExecutor(Script script, PlanLimits limits, int stopId)
     {
         _script = script;
-        _limits = limits;
+        _limits = script.Sample ? limits with { Sampling = true } : limits;
         _stopId = stopId;
+        _sampler = script.Sample ? new HostSampler(limits.Vocab, limits.MaxSequences) : null;
     }
+
+    /// <summary>The sampling records of every sampling row seen, in order (in-process only).</summary>
+    public ConcurrentQueue<PlanSampling> Sampling { get; } = new();
 
     /// <summary>Every step seen, in order (in-process only).</summary>
     public ConcurrentQueue<SeenStep> Steps { get; } = new();
@@ -159,10 +175,30 @@ internal sealed class ScriptedExecutor : IStepExecutor
 
             var n = s.KvLength - promptLength;
             tokens.Add(n < _script.Tokens.Length ? _script.Tokens[n] : _script.NeverStop ? _script.Tokens[^1] : _stopId);
+            Sampling.Enqueue(s.Sampling);
         }
 
-        int bytes = StepResultWriter.Write(result, parsed, [.. tokens], default);
-        return StepOutcome.Ok(bytes);
+        if (_sampler is null)
+        {
+            int bytes = StepResultWriter.Write(result, parsed, [.. tokens], default);
+            return StepOutcome.Ok(bytes);
+        }
+
+        // Sampling mode: a row per sampling sequence in which the scripted token leads, then the CPU sampler.
+        int vocab = _limits.Vocab;
+        var logits = new float[tokens.Count * vocab];
+        for (int r = 0; r < tokens.Count; r++)
+        {
+            for (int v = 0; v < vocab; v++)
+            {
+                logits[(r * vocab) + v] = (v % 7) * 0.25f;
+            }
+
+            logits[(r * vocab) + tokens[r]] = (6 * 0.25f) + Lead;
+        }
+
+        var sampled = _sampler.Sample(parsed, logits);
+        return StepOutcome.Ok(StepResultWriter.Write(result, parsed, sampled.Tokens, sampled.Logprobs, default));
     }
 
     public void Dispose()

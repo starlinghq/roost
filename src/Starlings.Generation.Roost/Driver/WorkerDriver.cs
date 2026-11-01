@@ -38,6 +38,9 @@ internal sealed class WorkerDriver : IGenerationBackend
 {
     private const int MinResultBufferBytes = 64 * 1024;
 
+    // Per row of a step result: the sequence record, one token and (1 + 20) logprob rows of 8 bytes, with room to spare.
+    private const long ResultBytesPerRow = 64 + ((1 + 20) * 8);
+
     private readonly RoostModelProfile _profile;
     private readonly IDeviceMemorySource? _memory;
     private readonly long _minFreeDeviceBytes;
@@ -72,7 +75,7 @@ internal sealed class WorkerDriver : IGenerationBackend
             StepDeadline = worker.StepDeadline,
             HeartbeatPeriod = worker.HeartbeatPeriod,
             PlanBufferBytes = planBytes,
-            ResultBufferBytes = Math.Max(MinResultBufferBytes, 4096 + (profile.MaxSequencesPerStep * 64L)),
+            ResultBufferBytes = Math.Max(MinResultBufferBytes, 4096 + (profile.MaxSequencesPerStep * ResultBytesPerRow)),
         };
         _thread = new Thread(Run) { Name = "roost-chat-driver", IsBackground = true };
     }
@@ -93,6 +96,11 @@ internal sealed class WorkerDriver : IGenerationBackend
     public static async Task<WorkerDriver> StartAsync(RoostModelProfile profile, RoostWorkerOptions worker, CancellationToken cancellationToken, Func<IDriverTransport, IDriverTransport>? decorate = null)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(worker.MinFreeDeviceBytes);
+        if (worker.Sampler == RoostSampler.Cpu && worker.Transport == TransportKind.Process && worker.Command is null)
+        {
+            throw new ArgumentException("The packaged roost-worker is the CUDA worker, which has no CPU sampler; RoostSampler.Cpu needs an in-process executor or a custom Command that runs one.", nameof(worker));
+        }
+
         var command = worker.Transport switch
         {
             TransportKind.Process => worker.Command ?? RoostWorkerRuntime.CommandFor(profile, worker),
@@ -445,6 +453,7 @@ internal sealed class WorkerDriver : IGenerationBackend
         }
 
         StepOutcome? outcome = null;
+        IReadOnlyDictionary<ulong, TokenLogprob[]>? logprobs = null;
         StepResultHeader header = default;
         try
         {
@@ -465,6 +474,7 @@ internal sealed class WorkerDriver : IGenerationBackend
                         if (header.Fault == FaultClass.None)
                         {
                             outcome = PlanBuffer.ReadResult(buffer, step.StepId);
+                            logprobs = PlanBuffer.ReadLogprobs(buffer, header);
                         }
                     }
                     finally
@@ -494,7 +504,7 @@ internal sealed class WorkerDriver : IGenerationBackend
 
         if (outcome is not null)
         {
-            Apply(outcome);
+            Apply(outcome, logprobs);
         }
         else if (header.Fault == FaultClass.Recoverable)
         {
@@ -518,14 +528,14 @@ internal sealed class WorkerDriver : IGenerationBackend
         _ => new RoostError(RoostErrorCode.DeviceFault, string.Create(CultureInfo.InvariantCulture, $"The worker failed the step (recoverable fault, status {errorCode}); the worker is kept.")),
     };
 
-    private void Apply(StepOutcome outcome)
+    private void Apply(StepOutcome outcome, IReadOnlyDictionary<ulong, TokenLogprob[]>? logprobs)
     {
         var finished = _planner.ApplyResult(outcome);
         foreach (var row in outcome.Sequences)
         {
             if (!row.Tokens.IsDefaultOrEmpty && _live.TryGetValue(row.Handle, out var live))
             {
-                live.Tokens(row.Tokens);
+                live.Tokens(row.Tokens, logprobs is not null && logprobs.TryGetValue(row.Handle, out var lp) ? lp : null);
             }
         }
 
@@ -627,7 +637,7 @@ internal sealed class WorkerDriver : IGenerationBackend
 
         public Channel<TokenEvent> Channel { get; } = System.Threading.Channels.Channel.CreateUnbounded<TokenEvent>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
-        public void Tokens(ImmutableArray<int> tokens)
+        public void Tokens(ImmutableArray<int> tokens, TokenLogprob[]? logprobs)
         {
             _completion += tokens.Length;
             _ = Channel.Writer.TryWrite(new TokenEvent
@@ -635,6 +645,7 @@ internal sealed class WorkerDriver : IGenerationBackend
                 RequestId = id,
                 Kind = TokenEventKind.Tokens,
                 TokenIds = tokens.ToArray(),
+                Logprobs = logprobs,
                 Usage = (promptTokens, _completion),
             });
         }
