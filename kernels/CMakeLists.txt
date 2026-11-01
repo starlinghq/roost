@@ -65,7 +65,8 @@ foreach(arch IN LISTS ROOST_SM_LIST)
   # R-017: the M0 ops use FlashInfer's headers (SYSTEM: -Wall -Werror applies to our code, not the upstream's) and cuBLASLt.
   target_include_directories(${target} SYSTEM PRIVATE "${ROOST_FLASHINFER_DIR}/include")
   target_link_libraries(${target} PRIVATE CUDA::cublasLt)
-  target_compile_definitions(${target} PRIVATE ROOST_SM=${arch} ROOST_BUILDING_LIBRARY=1)
+  # ROOST_KERNELS_BUILD makes ROOST_API dllexport on Windows (C1 header); it has no effect elsewhere.
+  target_compile_definitions(${target} PRIVATE ROOST_SM=${arch} ROOST_BUILDING_LIBRARY=1 ROOST_KERNELS_BUILD=1)
   # SASS for exactly this SM and no PTX: a library for another SM is a different file, so a missing SM is a typed
   # startup failure (R-023) and the digest in the manifest is per SM.
   # The loader's names (src/Starlings.Roost.Kernels/KernelLibraryNames.cs): libroost_kernels_sm86.so, roost_kernels_sm86.dll.
@@ -78,7 +79,7 @@ foreach(arch IN LISTS ROOST_SM_LIST)
   target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>)
   if(MSVC)
     # R-114: cl.exe as nvcc's host compiler. Build only; no reproducibility claim for the Windows bytes.
-    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/W3,/utf-8>)
+    target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=/W3,/utf-8,/Zc:preprocessor>)
   else()
     target_compile_options(${target} PRIVATE
       $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Werror>
