@@ -1,15 +1,26 @@
+using System.Collections.Immutable;
 using System.Globalization;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Roost.Generation;
+using Starlings.Roost.Requests;
 
 namespace Starlings.Generation.Roost;
 
-/// <summary>A validated chat request: the conversation for the template, the stop strings and the output limit.</summary>
+/// <summary>A validated chat request: the conversation and tools for the template, the stop strings and the output limit.</summary>
 /// <param name="Messages">The conversation, with <c>Instructions</c> as a leading system message.</param>
+/// <param name="Tools">The tools to render and parse calls for; empty for none (also when <c>ToolMode</c> is none).</param>
+/// <param name="EnableThinking">Whether the template opens the think block and the completion is parsed for reasoning.</param>
 /// <param name="StopSequences">The request's stop strings.</param>
 /// <param name="StopMatcher">The matcher for them, made by the client's factory.</param>
 /// <param name="MaxOutputTokens">Requested output tokens before the context cap.</param>
-internal sealed record PreparedChat(IReadOnlyList<RoostChatMessage> Messages, IReadOnlyList<string> StopSequences, IStopMatcher StopMatcher, int MaxOutputTokens);
+internal sealed record PreparedChat(
+    IReadOnlyList<RoostChatMessage> Messages,
+    ImmutableArray<RoostToolDefinition> Tools,
+    bool EnableThinking,
+    IReadOnlyList<string> StopSequences,
+    IStopMatcher StopMatcher,
+    int MaxOutputTokens);
 
 /// <summary>A validated raw-text completion request: the prompt as given, the stop strings and the output limit.</summary>
 /// <param name="Prompt">The prompt text, tokenised without a chat template.</param>
@@ -19,18 +30,21 @@ internal sealed record PreparedChat(IReadOnlyList<RoostChatMessage> Messages, IR
 internal sealed record PreparedPrompt(string Prompt, IReadOnlyList<string> StopSequences, IStopMatcher StopMatcher, int MaxOutputTokens);
 
 /// <summary>
-/// Checks a conversation and its <see cref="ChatOptions"/> against what M0 runs, before any work starts. Every option that is
-/// set and not supported is refused with <see cref="Starlings.Roost.Requests.RoostErrorCode.InvalidOption"/> naming it (the
-/// OpenAI parameter name, as the server's 400 body will, R-037); nothing is ignored.
+/// Checks a conversation and its <see cref="ChatOptions"/> against what Roost runs, before any work starts. Every option that is
+/// set and not supported is refused with <see cref="RoostErrorCode.InvalidOption"/> naming it (the OpenAI parameter name, as the
+/// server's 400 body does, R-037); nothing is ignored.
 /// </summary>
 internal static class ChatRequestBuilder
 {
     private const string GreedyOnly = "M0 decodes greedily only (decision 15, R-025); sampling is unsupported until the fused sampler (R-042).";
+    private const string NoTemplate = "unsupported for a raw completion: the prompt is not rendered by a chat template.";
 
-    public static PreparedChat Build(IEnumerable<ChatMessage> messages, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens)
+    public static PreparedChat Build(IEnumerable<ChatMessage> messages, ChatOptions? options, RoostModelProfile model, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens)
     {
         ArgumentNullException.ThrowIfNull(messages);
-        var (stops, maxOutput) = CheckCommon(options, modelId, defaultMaxOutputTokens);
+        var (stops, maxOutput) = CheckCommon(options, model.ModelId, defaultMaxOutputTokens);
+        var tools = Tools(options, model.EffectiveToolCallFormat);
+        var enableThinking = Thinking(options, model.EffectiveReasoningFormat);
 
         // An empty Instructions string means no instructions, as null does: an empty system message would change the
         // rendered prompt without saying anything.
@@ -47,12 +61,12 @@ internal static class ChatRequestBuilder
         {
             ArgumentNullException.ThrowIfNull(message);
             var mapped = Map(message, index);
-            if (mapped.Role == RoostChatRole.System && instructions is not null)
+            if (mapped[0].Role == RoostChatRole.System && instructions is not null)
             {
                 throw RoostChatException.InvalidOption("instructions", "Instructions are rendered as the system message; the conversation already has one.");
             }
 
-            conversation.Add(mapped);
+            conversation.AddRange(mapped);
             index++;
         }
 
@@ -61,20 +75,44 @@ internal static class ChatRequestBuilder
             throw RoostChatException.InvalidOption("messages", "The conversation is empty.");
         }
 
-        return new PreparedChat(conversation, stops, CreateMatcher(stopFactory, stops), maxOutput);
+        return new PreparedChat(conversation, tools, enableThinking, stops, CreateMatcher(stopFactory, stops), maxOutput);
     }
 
     /// <summary>
-    /// Checks a raw-text completion: the same options as a chat, except <c>Instructions</c>, which a prompt without a chat
-    /// template has nowhere to put.
+    /// Checks a raw-text completion: the same options as a chat, except <c>Instructions</c>, tools and thinking, which a prompt
+    /// without a chat template has nowhere to put.
     /// </summary>
     public static PreparedPrompt BuildRaw(string prompt, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens)
     {
         ArgumentNullException.ThrowIfNull(prompt);
         var (stops, maxOutput) = CheckCommon(options, modelId, defaultMaxOutputTokens);
-        if (options?.Instructions is { Length: > 0 })
+        if (options is not null)
         {
-            throw Refuse("instructions", "Instructions are unsupported for a raw completion: the prompt is not rendered by a chat template.");
+            if (options.Instructions is { Length: > 0 })
+            {
+                throw Refuse("instructions", "Instructions are " + NoTemplate);
+            }
+
+            if (options.Tools is { Count: > 0 })
+            {
+                throw Refuse("tools", "Tools are " + NoTemplate);
+            }
+
+            if (options.ToolMode is not null and not NoneChatToolMode)
+            {
+                throw Refuse("tool_choice", "ToolMode is " + NoTemplate);
+            }
+
+            if (options.AllowMultipleToolCalls is not null)
+            {
+                throw Refuse("parallel_tool_calls", "AllowMultipleToolCalls is " + NoTemplate);
+            }
+
+            if (options.AdditionalProperties is { Count: > 0 } extra)
+            {
+                var key = extra.Keys.First();
+                throw RefuseInvariant(key, $"Additional property '{key}' is {NoTemplate}");
+            }
         }
 
         if (prompt.Length == 0)
@@ -121,7 +159,7 @@ internal static class ChatRequestBuilder
         }
         catch (Exception e) when (e is NotSupportedException or ArgumentException)
         {
-            throw new RoostChatException(new Starlings.Roost.Requests.RoostError(Starlings.Roost.Requests.RoostErrorCode.InvalidOption, "The stop matcher refused the stop sequences: " + e.Message, "stop"), e);
+            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The stop matcher refused the stop sequences: " + e.Message, "stop"), e);
         }
     }
 
@@ -154,21 +192,6 @@ internal static class ChatRequestBuilder
             throw Refuse("presence_penalty", "PresencePenalty is unsupported in M0 (the eager worker applies no penalties).");
         }
 
-        if (o.Tools is { Count: > 0 })
-        {
-            throw Refuse("tools", "Tools are unsupported in M0; tool calling arrives with the server in M1 (R-037).");
-        }
-
-        if (o.ToolMode is not null and not NoneChatToolMode)
-        {
-            throw Refuse("tool_choice", "ToolMode is unsupported in M0: tools are unsupported.");
-        }
-
-        if (o.AllowMultipleToolCalls is not null)
-        {
-            throw Refuse("parallel_tool_calls", "AllowMultipleToolCalls is unsupported in M0: tools are unsupported.");
-        }
-
         if (o.ResponseFormat is not null and not ChatResponseFormatText)
         {
             throw Refuse("response_format", "JSON and JSON-schema response formats are unsupported in M0; structured output arrives in M1 (R-051).");
@@ -191,12 +214,102 @@ internal static class ChatRequestBuilder
 
         if (o.AdditionalProperties is { Count: > 0 } extra)
         {
-            var key = extra.Keys.First();
-            throw RefuseInvariant(key, $"Additional property '{key}' is unsupported; Roost accepts no additional properties in M0.");
+            foreach (var key in extra.Keys)
+            {
+                if (!string.Equals(key, RoostChatClient.EnableThinkingProperty, StringComparison.Ordinal))
+                {
+                    throw RefuseInvariant(key, $"Additional property '{key}' is unsupported; Roost accepts only '{RoostChatClient.EnableThinkingProperty}'.");
+                }
+            }
         }
     }
 
-    private static RoostChatMessage Map(ChatMessage message, int index)
+    /// <summary>
+    /// The tools to render and parse: <c>AIFunction</c> declarations (name, description, JSON schema), refused when the model has
+    /// no tool-call format. <c>ToolMode</c> none accepts the tools and renders none of them, so no call is parsed; requiring a
+    /// call is refused because nothing constrains decoding to one (structured output, R-051).
+    /// </summary>
+    private static ImmutableArray<RoostToolDefinition> Tools(ChatOptions? o, RoostToolCallFormat format)
+    {
+        if (o is null)
+        {
+            return [];
+        }
+
+        if (o.ToolMode is RequiredChatToolMode)
+        {
+            throw Refuse("tool_choice", "Requiring a tool call (ToolMode RequireAny or RequireSpecific) is unsupported: nothing constrains decoding to a call (structured output, R-051). Use auto or none.");
+        }
+
+        if (o.AllowMultipleToolCalls == false)
+        {
+            throw Refuse("parallel_tool_calls", "AllowMultipleToolCalls false is unsupported: nothing constrains decoding to one call. Leave it unset or true.");
+        }
+
+        if (o.Tools is not { Count: > 0 } given)
+        {
+            return [];
+        }
+
+        if (format == RoostToolCallFormat.None)
+        {
+            throw Refuse("tools", "Tools are unsupported for this model profile: it has no tool-call format (RoostModelProfile.ToolCallFormat).");
+        }
+
+        var tools = ImmutableArray.CreateBuilder<RoostToolDefinition>(given.Count);
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var tool in given)
+        {
+            if (tool is not AIFunction function)
+            {
+                throw RefuseInvariant("tools", $"Tool '{tool?.Name}' of type {tool?.GetType().Name} is unsupported; only function declarations (AIFunction) are accepted.");
+            }
+
+            if (string.IsNullOrEmpty(function.Name) || !names.Add(function.Name))
+            {
+                throw RefuseInvariant("tools", $"Tool names must be non-empty and distinct; got '{function.Name}'.");
+            }
+
+            string? parameters = function.JsonSchema.ValueKind switch
+            {
+                JsonValueKind.Object => function.JsonSchema.GetRawText(),
+                JsonValueKind.Undefined or JsonValueKind.Null => null,
+                _ => throw RefuseInvariant("tools", $"The parameters schema of tool '{function.Name}' must be a JSON object."),
+            };
+            tools.Add(new RoostToolDefinition(function.Name, function.Description ?? string.Empty, parameters));
+        }
+
+        return o.ToolMode is NoneChatToolMode ? [] : tools.MoveToImmutable();
+    }
+
+    /// <summary>Reads <see cref="RoostChatClient.EnableThinkingProperty"/>: a Boolean, refused when the model has no reasoning format.</summary>
+    private static bool Thinking(ChatOptions? o, RoostReasoningFormat format)
+    {
+        if (o?.AdditionalProperties is null || !o.AdditionalProperties.TryGetValue(RoostChatClient.EnableThinkingProperty, out var value))
+        {
+            return false;
+        }
+
+        bool enabled = value switch
+        {
+            bool b => b,
+            JsonElement { ValueKind: JsonValueKind.True } => true,
+            JsonElement { ValueKind: JsonValueKind.False } => false,
+            _ => throw Refuse(RoostChatClient.EnableThinkingProperty, "enable_thinking must be a Boolean."),
+        };
+        if (enabled && format == RoostReasoningFormat.None)
+        {
+            throw Refuse(RoostChatClient.EnableThinkingProperty, "Thinking is unsupported for this model profile: it has no reasoning format (RoostModelProfile.ReasoningFormat).");
+        }
+
+        return enabled;
+    }
+
+    /// <summary>
+    /// Maps one message. A tool message becomes one template message per result (each <c>FunctionResultContent</c>, or its text
+    /// as one result), as the Qwen templates take one tool message per call.
+    /// </summary>
+    private static List<RoostChatMessage> Map(ChatMessage message, int index)
     {
         string param = string.Create(CultureInfo.InvariantCulture, $"messages[{index}]");
         RoostChatRole role;
@@ -214,7 +327,7 @@ internal static class ChatRequestBuilder
         }
         else if (message.Role == ChatRole.Tool)
         {
-            throw Refuse(param + ".role", "Tool messages are unsupported in M0: tools are unsupported.");
+            role = RoostChatRole.Tool;
         }
         else
         {
@@ -233,6 +346,8 @@ internal static class ChatRequestBuilder
 
         var text = new System.Text.StringBuilder();
         string? reasoning = null;
+        var calls = ImmutableArray.CreateBuilder<RoostToolCall>();
+        var results = new List<RoostChatMessage>();
         foreach (var content in message.Contents)
         {
             if (content.Annotations is { Count: > 0 })
@@ -253,12 +368,71 @@ internal static class ChatRequestBuilder
                 case TextReasoningContent r when role == RoostChatRole.Assistant:
                     reasoning = (reasoning ?? string.Empty) + r.Text;
                     break;
+                case FunctionCallContent call when role == RoostChatRole.Assistant:
+                    calls.Add(new RoostToolCall(call.Name, ArgumentsJson(call, param)));
+                    break;
+                case FunctionResultContent result when role == RoostChatRole.Tool:
+                    results.Add(RoostChatMessage.Tool(ResultText(result.Result, param)));
+                    break;
                 default:
-                    throw RefuseInvariant(param + ".content", $"Content of type {content.GetType().Name} is unsupported in M0; only text is accepted (and reasoning text on assistant messages).");
+                    throw RefuseInvariant(param + ".content", $"Content of type {content.GetType().Name} is unsupported on a {message.Role} message; accepted: text, reasoning and function calls on assistant messages, function results on tool messages.");
             }
         }
 
-        return new RoostChatMessage(role, text.ToString(), reasoning);
+        if (role != RoostChatRole.Tool)
+        {
+            return [new RoostChatMessage(role, text.ToString(), reasoning, calls.Count == 0 ? default : calls.ToImmutable())];
+        }
+
+        if (results.Count > 0 && text.Length > 0)
+        {
+            throw Refuse(param + ".content", "A tool message holds function results or text, not both.");
+        }
+
+        return results.Count > 0 ? results : [RoostChatMessage.Tool(text.ToString())];
+    }
+
+    /// <summary>A call's arguments as a JSON object, serialized with Microsoft.Extensions.AI's default options.</summary>
+    private static string ArgumentsJson(FunctionCallContent call, string param)
+    {
+        if (call.Arguments is null)
+        {
+            return "{}";
+        }
+
+        try
+        {
+            return JsonSerializer.Serialize(call.Arguments, AIJsonUtilities.DefaultOptions.GetTypeInfo(typeof(IDictionary<string, object?>)));
+        }
+        catch (Exception e) when (e is NotSupportedException or JsonException or InvalidOperationException)
+        {
+            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The arguments of function call '" + call.Name + "' cannot be serialized to JSON: " + e.Message, param + ".content"), e);
+        }
+    }
+
+    /// <summary>A function result as the tool message's text: a string as is, anything else as JSON.</summary>
+    private static string ResultText(object? result, string param)
+    {
+        switch (result)
+        {
+            case null:
+                return string.Empty;
+            case string s:
+                return s;
+            case JsonElement { ValueKind: JsonValueKind.String } e:
+                return e.GetString()!;
+            case JsonElement e:
+                return e.GetRawText();
+        }
+
+        try
+        {
+            return JsonSerializer.Serialize(result, AIJsonUtilities.DefaultOptions.GetTypeInfo(result.GetType()));
+        }
+        catch (Exception e) when (e is NotSupportedException or JsonException or InvalidOperationException)
+        {
+            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "A function result cannot be serialized to JSON: " + e.Message, param + ".content"), e);
+        }
     }
 
     private static RoostChatException RefuseInvariant(string param, FormattableString message) =>

@@ -154,6 +154,7 @@
         "type": "Project",
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "[9.8.0, )",
+          "Starlings.Models.Qwen35": "[0.3.0, 0.3.0]",
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Engine": "[0.0.0-dev, )",
           "Starlings.Roost.Generation": "[0.0.0-dev, )",

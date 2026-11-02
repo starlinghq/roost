@@ -140,10 +140,10 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `stop_sequences` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`tests/Starlings.Roost.Generation.Tests/` | Matched on detokenized text in the host (Starling's `StopSequenceMatcher`). CPU only. |
 | `sampling` | `unsupported` | — | Temperature, top-p, top-k. A seed is accepted under greedy decoding, where it changes nothing. R-042. |
 | `penalties` | `unsupported` | — | Frequency and presence. R-042. |
-| `tools` | `unsupported` | — | R-053. |
+| `tools` | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/`<br>`src/Starlings.Roost.Server/STATUS.md` | R-053: `ChatOptions.Tools` (`AIFunction` declarations) rendered by the chat template; calls parsed incrementally into `FunctionCallContent`, finish reason `ToolCalls`. Qwen3.5 format through Starling's `Qwen35ToolCallParser`; Hermes (`<tool_call>` JSON) for a profile that declares it. `ToolMode` auto and none; a required or named call and `AllowMultipleToolCalls` false are refused (nothing constrains decoding). The Qwen3 template still refuses tools. CPU only, on a local corpus of template renderings (P-029 is not in this repository); no model has run with tools on Roost. |
 | `response_format` | `unsupported` | — | JSON and JSON-schema structured output. S10 (`docs/m0/roost-s10-llguidance-abi.md`) is a spike, not a feature. R-051, R-042. |
 | `logprobs` | `unsupported` | — | R-042. |
-| `reasoning` | `unsupported` | — | Think-block output and reasoning parsers. R-053. |
+| `reasoning` | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/`<br>`src/Starlings.Roost.Server/STATUS.md` | R-053: `ChatOptions.AdditionalProperties["enable_thinking"]` opens the template's think block, and the completion is split incrementally into `TextReasoningContent` and the answer. Qwen3.5 only (the Qwen3 template still refuses thinking). CPU only, on a local corpus; no model has run with thinking on Roost. |
 | `multimodal_input` | `unsupported` | — | R-099, R-107. |
 | `conversation_state` | `unsupported` | — | `ConversationId`. |
 | `continuous_batching` | `unsupported` | — | M0 runs one sequence per step; concurrent requests take turns. R-029 wiring, M1. |
@@ -212,8 +212,9 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
 | Structured output (JSON schema, regex, grammar) | `unsupported` | — | See `response_format`. R-051, R-042. |
-| Tool calling parsers | `unsupported` | — | See `tools`. R-053. |
-| Reasoning parsers | `unsupported` | — | See `reasoning`. R-053. |
+| Tool calling parsers | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/` | See `tools`. Qwen3.5 (Starling's parser) and Hermes; both streaming, every split of a corpus completion giving the whole parse. Other families: `unsupported`. R-053. |
+| Reasoning parsers | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/` | See `reasoning`. Qwen think blocks (`</think>` after an opened block). Other families: `unsupported`. R-053. |
+| OpenAI `tools`, `tool_choice`, `tool_calls` and vLLM `reasoning_content` | `untested` | `tests/Starlings.Roost.Server.Tests/`<br>`src/Starlings.Roost.Server/STATUS.md` | `POST /v1/chat/completions` only, whole and SSE (one `tool_calls` delta per call); vLLM's `chat_template_kwargs.enable_thinking`. The Responses, Messages and tokenize routes still refuse tools. R-053. |
 
 ## Quantisation and data types
 

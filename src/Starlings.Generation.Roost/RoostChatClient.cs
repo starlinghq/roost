@@ -1,8 +1,10 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost.Driver;
+using Starlings.Generation.Roost.Parsing;
 using Starlings.Roost.Generation;
 using Starlings.Roost.Plans;
 using Starlings.Roost.Requests;
@@ -24,6 +26,12 @@ namespace Starlings.Generation.Roost;
 /// (<see cref="ChatFinishReason.Stop"/> for a stop token or stop string, <see cref="ChatFinishReason.Length"/> for the
 /// output limit or the end of the context) and a <see cref="UsageContent"/> with the prompt and generated token counts
 /// (generated tokens include a stop token).</para>
+/// <para><b>Tools and reasoning (R-053).</b> <see cref="ChatOptions.Tools"/> (function declarations) are rendered by the chat
+/// template and the model's calls come back as <see cref="FunctionCallContent"/>, with <see cref="ChatFinishReason.ToolCalls"/>;
+/// <see cref="EnableThinkingProperty"/> enables thinking mode and the reasoning comes back as <see cref="TextReasoningContent"/>.
+/// Both are parsed incrementally in the formats of <see cref="RoostModelProfile.EffectiveToolCallFormat"/> and
+/// <see cref="RoostModelProfile.EffectiveReasoningFormat"/>; nothing constrains decoding, so the model may answer in text, call an
+/// undeclared tool or omit arguments. A malformed call is returned as text.</para>
 /// <para><b>Cancellation.</b> Cancelling the token, or ending the enumeration early, drops the request from the worker's
 /// next step and frees its blocks.</para>
 /// <para><b>Telemetry.</b> Every request submitted to the worker records metrics on <see cref="Telemetry"/> and one activity
@@ -31,6 +39,14 @@ namespace Starlings.Generation.Roost;
 /// </remarks>
 public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 {
+    /// <summary>
+    /// The <see cref="ChatOptions.AdditionalProperties"/> key that enables the model's thinking mode (a Boolean; the chat
+    /// template's <c>enable_thinking</c>). The completion is then split into <see cref="TextReasoningContent"/> and the answer.
+    /// Refused for a model with no reasoning format (<see cref="RoostModelProfile.EffectiveReasoningFormat"/>) and by the
+    /// Qwen3 template. Every other additional property is refused.
+    /// </summary>
+    public const string EnableThinkingProperty = "enable_thinking";
+
     private readonly RoostChatClientOptions _options;
     private readonly IGenerationBackend _backend;
     private readonly ChatClientMetadata _metadata;
@@ -95,7 +111,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
 
         // Validate before anything is enumerated, so a refused option throws at the call.
-        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
+        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
         return StreamChatAsync(prepared, cancellationToken);
     }
 
@@ -114,7 +130,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
         var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
-        return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, cancellationToken);
+        return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, null, cancellationToken);
     }
 
     /// <summary>Completes a raw text prompt; see <see cref="GetStreamingCompletionAsync"/>.</summary>
@@ -176,14 +192,16 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     private async IAsyncEnumerable<ChatResponseUpdate> StreamChatAsync(PreparedChat prepared, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var prompt = Render(_options.Model.ChatTemplate, prepared.Messages);
-        await foreach (var update in StreamAsync(prompt, "messages", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, cancellationToken).ConfigureAwait(false))
+        var model = _options.Model;
+        var prompt = Render(model.ChatTemplate, prepared);
+        var parser = RoostOutputParser.Create(prepared.EnableThinking, model.EffectiveReasoningFormat, prepared.Tools, model.EffectiveToolCallFormat);
+        await foreach (var update in StreamAsync(prompt, "messages", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, parser, cancellationToken).ConfigureAwait(false))
         {
             yield return update;
         }
     }
 
-    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, RoostOutputParser? parser, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         long started = Stopwatch.GetTimestamp();
@@ -217,6 +235,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         var detokenizer = new RoostIncrementalDetokenizer(model.Tokenizer, skipSpecialTokens: true);
         var telemetry = Telemetry.Start(responseId, started, ids.Length);
         var channel = _backend.Submit(request);
+        var calls = new StrongBox<int>(0); // tool calls returned so far, for their ids
         var done = false;
         var ended = false; // the backend finished or failed the request itself
         ChatFinishReason? finish = null;
@@ -237,9 +256,9 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
                             for (var i = 0; i < tokens.Length; i++)
                             {
                                 var match = matcher.Push(detokenizer.Push(tokens.Span[i]));
-                                if (match.Emit.Length > 0)
+                                if (match.Emit.Length > 0 && Shape(match.Emit, parser, calls, responseId, created) is { } update)
                                 {
-                                    yield return Update(responseId, created, match.Emit);
+                                    yield return update;
                                 }
 
                                 if (match.Matched is not null)
@@ -254,9 +273,9 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
                         case TokenEventKind.Finished:
                             var tail = matcher.Push(detokenizer.Flush());
                             var text = tail.Matched is null ? tail.Emit + matcher.Flush() : tail.Emit;
-                            if (text.Length > 0)
+                            if (text.Length > 0 && Shape(text, parser, calls, responseId, created) is { } tailUpdate)
                             {
-                                yield return Update(responseId, created, text);
+                                yield return tailUpdate;
                             }
 
                             ended = true;
@@ -297,6 +316,16 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             telemetry.End(reason, usage.Prompt, usage.Completion, failure);
         }
 
+        if (parser is not null && Shape(null, parser, calls, responseId, created) is { } last)
+        {
+            yield return last;
+        }
+
+        if (calls.Value > 0 && finish == ChatFinishReason.Stop)
+        {
+            finish = ChatFinishReason.ToolCalls; // the model stopped after calling tools
+        }
+
         yield return new ChatResponseUpdate(ChatRole.Assistant, [new UsageContent(new UsageDetails
         {
             InputTokenCount = usage.Prompt,
@@ -312,13 +341,68 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         };
     }
 
-    private ChatResponseUpdate Update(string responseId, DateTimeOffset created, string text) => new(ChatRole.Assistant, text)
+    /// <summary>
+    /// The update for a text delta: the text itself without a parser; otherwise the parts the parser has made final, as
+    /// <see cref="TextContent"/>, <see cref="TextReasoningContent"/> and <see cref="FunctionCallContent"/> (null when there are
+    /// none yet). A null <paramref name="text"/> completes the parser.
+    /// </summary>
+    private ChatResponseUpdate? Shape(string? text, RoostOutputParser? parser, StrongBox<int> calls, string responseId, DateTimeOffset created)
     {
-        ResponseId = responseId,
-        MessageId = responseId,
-        ModelId = _options.Model.ModelId,
-        CreatedAt = created,
-    };
+        List<AIContent> contents;
+        if (parser is null)
+        {
+            contents = [new TextContent(text)];
+        }
+        else
+        {
+            var parts = text is null ? parser.Complete() : parser.Append(text);
+            if (parts.Count == 0)
+            {
+                return null;
+            }
+
+            contents = new List<AIContent>(parts.Count);
+            foreach (var part in parts)
+            {
+                contents.Add(part.Kind switch
+                {
+                    OutputPartKind.Reasoning => new TextReasoningContent(part.Text),
+                    OutputPartKind.ToolCall => ToolCall(part.ToolCall!, responseId, calls.Value++),
+                    _ => new TextContent(part.Text),
+                });
+            }
+        }
+
+        return new ChatResponseUpdate(ChatRole.Assistant, contents)
+        {
+            ResponseId = responseId,
+            MessageId = responseId,
+            ModelId = _options.Model.ModelId,
+            CreatedAt = created,
+        };
+    }
+
+    /// <summary>
+    /// A parsed call as <see cref="FunctionCallContent"/>: the id is <c>call_</c>, the response id and the call's index; the
+    /// arguments are the JSON object's members as <see cref="JsonElement"/> values; <see cref="AIContent.RawRepresentation"/> is
+    /// the <see cref="RoostToolCall"/>, whose JSON keeps the model's member order (after schema casting for Qwen3.5).
+    /// </summary>
+    private static FunctionCallContent ToolCall(RoostToolCall call, string responseId, int index)
+    {
+        var arguments = new Dictionary<string, object?>(StringComparer.Ordinal);
+        using (var document = JsonDocument.Parse(call.ArgumentsJson))
+        {
+            foreach (var member in document.RootElement.EnumerateObject())
+            {
+                arguments[member.Name] = member.Value.Clone();
+            }
+        }
+
+        return new FunctionCallContent("call_" + responseId + "_" + index.ToString(CultureInfo.InvariantCulture), call.Name, arguments)
+        {
+            RawRepresentation = call,
+        };
+    }
 
     private static ChatFinishReason? MapFinish(FinishReason reason) => reason switch
     {
@@ -327,11 +411,17 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         _ => null,
     };
 
-    private static string Render(IRoostChatTemplate template, IReadOnlyList<RoostChatMessage> messages)
+    private static string Render(IRoostChatTemplate template, PreparedChat prepared)
     {
         try
         {
-            return template.Render(messages);
+            return template.Render(prepared.Messages, prepared.Tools, prepared.EnableThinking);
+        }
+        catch (NotSupportedException e) when (!prepared.Tools.IsDefaultOrEmpty || prepared.EnableThinking)
+        {
+            // The Qwen3 template refuses tools and thinking mode, which Starling's published template does not support.
+            var param = prepared.Tools.IsDefaultOrEmpty ? EnableThinkingProperty : "tools";
+            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The chat template does not support this request: " + e.Message, param), e);
         }
         catch (Exception e) when (e is not OutOfMemoryException and not OperationCanceledException)
         {

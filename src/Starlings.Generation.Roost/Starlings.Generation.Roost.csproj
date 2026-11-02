@@ -9,6 +9,9 @@
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <!-- Starlings.Tokenizers.Tokenizer is in this package's public API (RoostModelProfile): a direct, exact pin rather than a transitive one. -->
     <PackageReference Include="Starlings.Tokenizers" />
+    <!-- R-053: Starling's Qwen35ToolCallParser parses the Qwen3.5 tool-call format. Already in the closure through
+         Starlings.Roost.Generation; a direct pin because this project's code calls it. -->
+    <PackageReference Include="Starlings.Models.Qwen35" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />

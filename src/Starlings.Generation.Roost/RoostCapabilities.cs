@@ -63,7 +63,12 @@ public sealed class RoostCapabilities
     /// <summary>Frequency and presence penalties.</summary>
     public const string Penalties = "penalties";
 
-    /// <summary>Tool definitions and tool calls.</summary>
+    /// <summary>
+    /// Tool definitions rendered by the chat template and tool calls parsed incrementally from the completion into
+    /// <c>FunctionCallContent</c> (R-053): the Qwen3.5 format through Starling's <c>Qwen35ToolCallParser</c>, and Hermes
+    /// (<c>&lt;tool_call&gt;</c> JSON) for templates that render tools in it. <c>ToolMode</c> auto and none; a required call is refused
+    /// (nothing constrains decoding). CPU-tested on a local corpus of template renderings; no model has run with tools on Roost.
+    /// </summary>
     public const string Tools = "tools";
 
     /// <summary>JSON and JSON-schema response formats (structured output).</summary>
@@ -72,7 +77,10 @@ public sealed class RoostCapabilities
     /// <summary>Log probabilities.</summary>
     public const string Logprobs = "logprobs";
 
-    /// <summary>Reasoning (think block) output.</summary>
+    /// <summary>
+    /// Thinking mode (<see cref="RoostChatClient.EnableThinkingProperty"/>) with the think block parsed incrementally into
+    /// <c>TextReasoningContent</c> (R-053). CPU-tested on template renderings only; no model has run with thinking on Roost.
+    /// </summary>
     public const string Reasoning = "reasoning";
 
     /// <summary>Image, audio and other non-text input.</summary>
@@ -121,12 +129,12 @@ public sealed class RoostCapabilities
             [StopSequences] = untested,
             [CoTenantAdmission] = untested,
             [Telemetry] = untested,
+            [Tools] = untested,
+            [Reasoning] = untested,
             [Sampling] = unsupported,
             [Penalties] = unsupported,
-            [Tools] = unsupported,
             [ResponseFormat] = unsupported,
             [Logprobs] = unsupported,
-            [Reasoning] = unsupported,
             [MultimodalInput] = unsupported,
             [ConversationState] = unsupported,
             [ContinuousBatching] = unsupported,

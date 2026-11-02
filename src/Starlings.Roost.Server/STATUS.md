@@ -1,4 +1,4 @@
-# R-037, R-074 and R-038 status: partial (CPU-tested; no GPU evidence)
+# R-037, R-074, R-038 and R-053 status: partial (CPU-tested; no GPU evidence)
 
 `Starlings.Roost.Server` is an ASP.NET Core minimal API host over `Starlings.Generation.Roost`'s `RoostChatClient`, and it builds
 the `roost` executable. The routes, the error body, the option checks and loopback-only listening are built and tested on the
@@ -60,6 +60,15 @@ prefill and decode time, and vLLM's `engine` label. Bucket boundaries span the r
 own. M0 runs one sequence per step, so `running` is at most 1 and concurrent requests show as `waiting`. No number from this
 endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
 
+## Tool calls and reasoning (R-053)
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| Parsers in `Starlings.Generation.Roost` | untested | `Parsing/`: `ThinkBlockParser` (Qwen think blocks: with thinking enabled the completion is reasoning up to the first `</think>`, then the answer; a repeated leading `<think>` is dropped; line feeds trimmed as the Qwen3.5 template trims them when it reads a think block back), `HermesToolCallParser` (`<tool_call>{"name","arguments"}</tool_call>`, the Qwen2.5 and Qwen3 format) and `Qwen35ToolCallStream` over Starling's published `Qwen35ToolCallParser` (the Qwen3.5 `<function=...><parameter=...>` format, values cast with the tool's schema). All incremental: text is released as soon as it cannot start a tag, a call when its block closes, and malformed or unfinished blocks come back as text, verbatim. Calls are parsed only when the request rendered tools, reasoning only when it enabled thinking, so other requests and the other routes see the completion as before. |
+| `RoostChatClient` | untested | `ChatOptions.Tools` (`AIFunction` declarations: name, description, JSON schema) and `AdditionalProperties["enable_thinking"]` (`RoostChatClient.EnableThinkingProperty`) reach `IRoostChatTemplate.Render`. Output: `TextReasoningContent`, `TextContent` and `FunctionCallContent` (id `call_<response id>_<index>`, arguments as `JsonElement` values, `RawRepresentation` the `RoostToolCall`); finish reason `ToolCalls` when a call was returned and the model stopped. History: assistant `FunctionCallContent` and `TextReasoningContent`, and tool messages of `FunctionResultContent` (one template tool message per result) or text. `ToolMode` none renders no tools and parses no calls; `RequireAny`, `RequireSpecific` and `AllowMultipleToolCalls` false are refused (nothing constrains decoding until R-051). The format comes from `RoostModelProfile.ToolCallFormat` and `ReasoningFormat`, by default from the template: Qwen3.5 for `Qwen35RoostChatTemplate`, Hermes and think tags for `Qwen3RoostChatTemplate`, whose published template still refuses tools and thinking (`InvalidOption` naming `tools` or `enable_thinking`). |
+| `POST /v1/chat/completions` | untested | Request: `tools` (`type` `function`; `strict` true refused), `tool_choice` (`none`, `auto`; `required` and a named function are refused by the client), `parallel_tool_calls` (true; false refused), vLLM's `chat_template_kwargs` with `enable_thinking` only, assistant `tool_calls` (arguments a JSON object in a string) and `reasoning_content`, `tool` messages with `tool_call_id`. Response: `message.tool_calls` (`content` null when the message is only calls) and `message.reasoning_content` (omitted when empty); stream deltas carry `reasoning_content` text and one `tool_calls` delta per call with its whole arguments (OpenAI allows the arguments in one delta; vLLM splits them). |
+| Corpus | untested | `tests/Starlings.Generation.Roost.Tests/Parsing/TemplateCorpus.cs`. P-029 (the template corpus the build plan names) is not in this repository, so the tests use a local corpus: Qwen3.5 assistant turns rendered by Starling's published template, which writes the think block and tool calls as it instructs the model to answer, parsed back into their reasoning, content and calls; hand-written Hermes completions in the upstream Qwen2.5/Qwen3 format (Starling's Qwen3 template has no tools); think-block edge cases. Every case is also parsed from single-character deltas and from every split in two. The corpus is not a fixture: no status flips on it. |
+
 ## Behaviour
 
 - **One error body.** Every failure outside the Anthropic routes answers `{"error":{"message","type","param","code"}}` with `type` `roost_error`. Request
@@ -79,7 +88,7 @@ endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
   streamed one from `response.created`, a background one at creation. Nothing survives a restart. `background` needs `store`,
   and `background` with `stream` is refused.
 - **Options.** Request bodies are read field by field (`OpenAiRequestReader`). Every field is mapped, accepted at a value that
-  changes nothing (`n` 1, `logprobs` false, `tool_choice` `"none"`, `response_format` `{"type":"text"}`, `store` false, empty
+  changes nothing (`n` 1, `logprobs` false, `response_format` `{"type":"text"}`, `store` false, empty
   `logit_bias`, `best_of` 1, `echo` false, empty `suffix`, `user`), or refused with a 400 whose `param` names it; an unknown
   field is refused the same way. JSON `null` means unset. Sampling, penalties, `top_k`, `stop`, `max_tokens` and `model` are
   passed to `RoostChatClient`, whose refusals (greedy decoding only in M0) name the same OpenAI parameter. Message fields are
@@ -121,7 +130,13 @@ endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
   both counts). Not built: `DELETE /v1/responses/{id}`, `GET /v1/responses/{id}/input_items`, streaming a stored response,
   and vLLM's other utility routes (`/load`, `/is_sleeping`, `/server_info` and the like). Official OpenAI and Anthropic client
   libraries against these routes are R-040.
-- **Tool calling, structured output, sampling, log probabilities, `n` > 1, multimodal input**: refused with a 400 naming the
-  option until R-053, R-051 and R-042 land.
+- **R-053 gaps.** No model has run with tools or thinking on Roost (no GPU run; `tools` and `reasoning` stay `untested` until
+  fixtures exist). Tools are on `/v1/chat/completions` only: `/v1/responses` (`function_call` items), `/v1/messages`
+  (`tool_use` blocks) and `/tokenize` still refuse them, and thinking is not mapped to Anthropic's `thinking` or OpenAI's
+  `reasoning_effort`. A tool without a description renders `"description": ""`, because `RoostToolDefinition.Description` (stream
+  B1's type) is not nullable. Parsers for other families (Llama, Mistral, DeepSeek and so on) come per family with their
+  templates.
+- **Structured output, sampling, log probabilities, `n` > 1, multimodal input**: refused with a 400 naming the option until
+  R-051 and R-042 land.
 - **vLLM's CLI flags and environment variables**: R-075.
 - **Concurrency**: M0 runs one sequence per step, so concurrent requests take turns (`continuous_batching` `unsupported`).

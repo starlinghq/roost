@@ -28,14 +28,15 @@ internal static class TestRig
 
     public static Tokenizer Tokenizer => s_tokenizer.Value;
 
-    public static RoostModelProfile Profile() => new()
+    /// <summary>The test profile; <paramref name="attentionBlocks"/> enlarges the context (a tools prompt needs about 2,000 byte tokens).</summary>
+    public static RoostModelProfile Profile(int attentionBlocks = AttentionBlocks) => new()
     {
         ModelId = ModelId,
         Tokenizer = Tokenizer,
         ChatTemplate = Qwen35RoostChatTemplate.Instance,
         StopTokenIds = [StopId],
         StateGroups = RoostTinyHybrid.CreateStateGroups(),
-        AttentionBlocks = AttentionBlocks,
+        AttentionBlocks = attentionBlocks,
         RecurrentSlots = 1,
         MaxTokensPerStep = MaxTokensPerStep,
         MaxSequencesPerStep = 1,
@@ -44,14 +45,14 @@ internal static class TestRig
     };
 
     /// <summary>The eager worker's limits for <see cref="Profile"/> (what <c>EagerWorker.Limits</c> would be for the same options).</summary>
-    public static PlanLimits Limits() => new(
+    public static PlanLimits Limits(int attentionBlocks = AttentionBlocks) => new(
         MaxTokens: MaxTokensPerStep,
         MaxSequences: 1,
-        MaxKvBlocks: AttentionBlocks,
+        MaxKvBlocks: attentionBlocks,
         MaxSelected: 1,
         Vocab: Tokenizer.GetVocabularySize(true),
         BlockSize: 16,
-        AttentionBlocks: AttentionBlocks,
+        AttentionBlocks: attentionBlocks,
         RecurrentSlots: 1,
         AttentionGroup: 0,
         GroupCount: 2);
