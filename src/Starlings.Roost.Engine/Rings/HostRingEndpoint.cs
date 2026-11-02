@@ -78,11 +78,11 @@ public sealed unsafe class HostRingEndpoint
     }
 
     /// <summary>Publishes a plan slot.</summary>
-    /// <param name="slot">The slot; for a step, <c>BufferIndex</c> must be <see cref="NextPlanBufferIndex"/>.</param>
+    /// <param name="slot">The slot; for a step or a control message, <c>BufferIndex</c> must be <see cref="NextPlanBufferIndex"/>.</param>
     /// <returns>False when the ring is full.</returns>
     public bool TryPublish(in RingSlot slot)
     {
-        if (slot.Kind == RingSlotKind.Step && slot.BufferIndex != (uint)NextPlanBufferIndex)
+        if (slot.Kind.NamesBuffer() && slot.BufferIndex != (uint)NextPlanBufferIndex)
         {
             ThrowWrongBuffer();
         }
@@ -101,7 +101,7 @@ public sealed unsafe class HostRingEndpoint
             return false;
         }
 
-        if (slot.Kind == RingSlotKind.Step && slot.BufferIndex != (uint)(sequence % (ulong)_resultBufferCount))
+        if (slot.Kind.NamesBuffer() && slot.BufferIndex != (uint)(sequence % (ulong)_resultBufferCount))
         {
             ThrowWrongBuffer();
         }

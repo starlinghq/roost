@@ -8,7 +8,8 @@ namespace Starlings.Roost.Server;
 /// <c>POST /v1/chat/completions</c>, <c>POST /v1/completions</c> and <c>GET /v1/models</c>. It listens on loopback unless
 /// non-loopback listening is allowed explicitly (<see cref="RoostServerOptions.AllowNonLoopback"/>). Every failure, including
 /// an unknown route, answers with one error body, <c>{"error":{"message","type","param","code"}}</c>, and an unsupported or
-/// unknown request option is a 400 whose <c>param</c> names it.
+/// unknown request option is a 400 whose <c>param</c> names it. With <see cref="RoostServerOptions.EnableSleepMode"/> it also maps
+/// the sleep-mode routes (<see cref="AdminRoutes"/>, R-100), which answer loopback clients only.
 /// </summary>
 public static class RoostServer
 {
@@ -36,6 +37,11 @@ public static class RoostServer
         app.MapPost("/v1/chat/completions", (RequestDelegate)routes.ChatCompletionsAsync);
         app.MapPost("/v1/completions", (RequestDelegate)routes.CompletionsAsync);
         app.MapGet("/v1/models", (RequestDelegate)routes.ModelsAsync);
+        if (options.EnableSleepMode)
+        {
+            new AdminRoutes(client, app.Logger).Map(app);
+        }
+
         return app;
     }
 }

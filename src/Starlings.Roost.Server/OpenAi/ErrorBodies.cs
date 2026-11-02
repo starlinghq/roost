@@ -25,6 +25,31 @@ internal static class ErrorBodies
         return buffer.WrittenSpan.ToArray();
     }
 
+    /// <summary>Writes an error that has no C6 code (a refusal by the HTTP layer) in the same body shape.</summary>
+    /// <param name="response">The response.</param>
+    /// <param name="status">The HTTP status.</param>
+    /// <param name="code">The <c>code</c> field, snake_case.</param>
+    /// <param name="message">The message.</param>
+    public static async Task WriteAsync(HttpResponse response, int status, string code, string message)
+    {
+        var buffer = new ArrayBufferWriter<byte>();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WriteStartObject("error");
+            writer.WriteString("message", message);
+            writer.WriteString("type", ErrorType);
+            writer.WriteNull("param");
+            writer.WriteString("code", code);
+            writer.WriteEndObject();
+            writer.WriteEndObject();
+        }
+
+        response.StatusCode = status;
+        response.ContentType = "application/json";
+        await response.Body.WriteAsync(buffer.WrittenMemory).ConfigureAwait(false);
+    }
+
     /// <summary>Writes an error as the whole response, with its HTTP status.</summary>
     public static async Task WriteAsync(HttpResponse response, RoostError error)
     {

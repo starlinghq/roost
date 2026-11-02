@@ -149,6 +149,8 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `continuous_batching` | `unsupported` | — | M0 runs one sequence per step; concurrent requests take turns. R-029 wiring, M1. |
 | `async_scheduling` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`src/Starlings.Roost.Engine/STATUS.md` | `RoostWorkerOptions.AsyncScheduling` with an in-process executor or custom worker that patches inputs (R-032): two steps published, text and usage equal to synchronous mode. `unsupported` for a client without the option; the packaged CUDA worker refuses it (stream F). |
 | `worker_recovery` | `unsupported` | — | A worker fault fails the requests it carried. R-070. |
+| `sleep_wake` | `untested` | `tests/Starlings.Generation.Roost.Tests/SleepWakeTests.cs`<br>`tests/Starlings.Roost.WorkerHost.Tests/ControlMessageTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostWeightResidencyTests.cs` | `SleepAsync` (level 1: KV cache and recurrent state; level 2: also the weights) and `WakeUpAsync` (pools reallocated, weights restored through the R-024 verified stream with the digest checked; a file substituted while asleep fails with `AssetMismatch` and the worker stays asleep), wake time in `LastWakeDuration` (R-100, C8 control messages of contract version 6). Tested with roost-tiny-hybrid on `CpuOps` over both transports. `unsupported` for the packaged CUDA worker, which refuses with `ProfileUnsupported` (stream F's GPU half). CPU only. |
+| `weight_update` | `untested` | `tests/Starlings.Generation.Roost.Tests/SleepWakeTests.cs`<br>`tests/Starlings.Roost.WorkerHost.Tests/ControlMessageTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostWeightResidencyTests.cs` | `UpdateWeightsAsync` from a locked file (path, size, SHA-256): streamed and verified, swapped in only after the digest matched, old weights kept on a mismatch; re-sent to a worker started after a fault (R-100). Same CPU-only scope; the packaged CUDA worker refuses it. |
 | `co_tenant_admission` | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | Refuses new requests with `InsufficientDeviceMemory` while free device memory is below `MinFreeDeviceBytes` (R-044). CPU only: the co-tenant GPU test is open and no NVML source is the default yet. |
 
 ## OpenAI-compatible server (`roost serve`, R-037)
@@ -160,6 +162,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `GET /v1/models` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | As above. |
 | Native AOT `roost` binary (linux-x64) | `untested` | `src/Starlings.Roost.Server/STATUS.md` | One local publish with zero trim or AOT warnings; a build check, not serving evidence. S1 measured AOT with CUDA interop on SM 86 (`docs/m0/roost-s1-aot-cuda.md`). |
 | Loopback-only listening by default | `untested` | `tests/Starlings.Roost.Server.Tests/` | Non-loopback needs `--allow-non-loopback`; there is no authentication. |
+| `POST /sleep`, `POST /wake_up`, `GET /is_sleeping`, `POST /update_weights` | `untested` | `tests/Starlings.Roost.Server.Tests/SleepModeRouteTests.cs` | vLLM's sleep-mode routes (R-100), mapped only with `--enable-sleep-mode` (`RoostServerOptions.EnableSleepMode`, off by default) and answering loopback clients only (403 otherwise). Level 2 releases the weights rather than offloading them as vLLM's level 1 does. CPU tests over a roost-tiny-hybrid worker on `CpuOps`; `roost serve` starts the packaged CUDA worker, which refuses them (`profile_unsupported`). |
 | Responses API, Anthropic Messages, tokenize and detokenize, health and readiness | `unsupported` | — | R-074. |
 | Prompt-embeddings input | `unsupported` | — | R-074. |
 | Embeddings, rerank, score, classify, pooling | `unsupported` | — | R-052, R-087. |
@@ -190,6 +193,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Worker process over shared-memory rings (default) | `experimental` | `tests/Starlings.Roost.WorkerHost.Tests.Cuda/results/README.md`<br>`tests/Starlings.Generation.Roost.Tests.Cuda/results/r036-chat-sm86-roost-worker.log` | One worker per GPU (R-069); handshake checks ABI, manifest and weight digests; heartbeat. Measured on SM 86. |
 | In-process transport | `experimental` | `tests/Starlings.Roost.WorkerHost.Tests.Cuda/results/README.md`<br>`tests/Starlings.Roost.WorkerHost.Tests/` | For tests only (decision 21, decision 30). |
 | Worker fault classification (recoverable, sticky, hang) | `untested` | `tests/Starlings.Roost.WorkerHost.Tests/results/stress-runs.txt` | CPU fault-injection stress runs; recovery itself is `unsupported` (`worker_recovery`). |
+| Control messages: sleep, wake, replace weights | `untested` | `tests/Starlings.Roost.WorkerHost.Tests/ControlMessageTests.cs` | Layout 3 (R-100): `RoostControlMessage` and `RoostControlResult` over the rings, the runtime's sleeping state (steps refused while asleep), `IWeightLifecycle` on the executor; an executor without it answers `Unsupported`. Both transports, CPU fakes only. |
 | KV block transport between processes and hosts | `unsupported` | — | `native/roost-kvx`, R-095. |
 
 ## Sampling
@@ -249,7 +253,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | --- | --- | --- | --- |
 | Multi-LoRA (with graphs and prefix-cache awareness) | `unsupported` | — | R-050. |
 | LoRA on MoE experts and multimodal backbones | `unsupported` | — | R-050, R-099. |
-| Sleep and wake, in-place weight update | `unsupported` | — | R-100. |
+| Sleep and wake, in-place weight update | `untested` | `tests/Starlings.Generation.Roost.Tests/SleepWakeTests.cs`<br>`tests/Starlings.Roost.Server.Tests/SleepModeRouteTests.cs` | R-100, CPU half: see `sleep_wake` and `weight_update`. The CUDA eager worker does not implement it and refuses with a typed error; no GPU evidence. |
 | Per-GPU weight cache and engine snapshots | `unsupported` | — | R-046, R-100. |
 | Metrics and traces | `unsupported` | — | R-038. |
 | Container image, Kubernetes, router integration | `unsupported` | — | R-046, R-101. |

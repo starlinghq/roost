@@ -22,6 +22,7 @@ internal static class TestRig
     public const string ModelId = "roost-tiny-hybrid-test";
     public const string WorkerFlag = "--roost-chat-test-worker";
     public const string ScriptPrefix = "--script=";
+    public const string TinyWeightsPrefix = "--tiny-weights=";
 
     private static readonly Lazy<Tokenizer> s_tokenizer = new(() =>
         Tokenizer.FromFile(Path.Combine(AppContext.BaseDirectory, "Fixtures", "tiny-bytelevel-bpe.tokenizer.json")));
@@ -112,6 +113,49 @@ internal static class TestRig
         },
     });
 
+    /// <summary>
+    /// A client whose worker runs roost-tiny-hybrid on <see cref="Starlings.Roost.Ops.CpuOps"/> with the weights at
+    /// <paramref name="weightsPath"/> (<see cref="TinyCpuExecutor"/>), over the in-process transport or this executable re-run as
+    /// the worker process. The profile's weights digest is the file's locked one.
+    /// </summary>
+    public static Task<RoostChatClient> TinyAsync(TransportKind transport, string weightsPath, Starlings.Roost.Worker.Weights.LockedFile locked, List<TinyCpuExecutor>? executors = null)
+    {
+        var worker = new RoostWorkerOptions
+        {
+            StepDeadline = TimeSpan.FromSeconds(30),
+            TransportOptions = new WorkerTransportOptions { StartupTimeout = TimeSpan.FromSeconds(60) },
+        };
+        worker = transport == TransportKind.InProcess
+            ? worker with
+            {
+                Transport = TransportKind.InProcess,
+                InProcessExecutor = () =>
+                {
+                    var e = new TinyCpuExecutor(weightsPath, locked, Limits());
+                    if (executors is not null)
+                    {
+                        lock (executors)
+                        {
+                            executors.Add(e);
+                        }
+                    }
+
+                    return e;
+                },
+            }
+            : worker with
+            {
+                Command = WorkerCommand.ForCurrentProcess(WorkerFlag, TinyWeightsPrefix + string.Join('|', Path.GetFullPath(weightsPath), locked.Size.ToString(System.Globalization.CultureInfo.InvariantCulture), locked.Sha256)),
+            };
+        return RoostChatClient.StartAsync(
+            new RoostChatClientOptions
+            {
+                Model = Profile() with { WeightsDigest = [.. Convert.FromHexString(locked.Sha256)] },
+                Worker = worker,
+            },
+            TestContext.Current.CancellationToken);
+    }
+
     /// <summary>Turns this executable into a scripted worker process when the host starts it with <see cref="WorkerFlag"/>.</summary>
     [ModuleInitializer]
     internal static void EnterWorker()
@@ -124,6 +168,13 @@ internal static class TestRig
 
         Environment.Exit(WorkerEntry.Run(args, a =>
         {
+            if (a.FirstOrDefault(x => x.StartsWith(TinyWeightsPrefix, StringComparison.Ordinal)) is { } tiny)
+            {
+                var p = tiny[TinyWeightsPrefix.Length..].Split('|');
+                var locked = new Starlings.Roost.Worker.Weights.LockedFile(Path.GetFileName(p[0]), long.Parse(p[1], System.Globalization.CultureInfo.InvariantCulture), p[2]);
+                return new TinyCpuExecutor(p[0], locked, Limits());
+            }
+
             var script = Script.Decode(a.First(x => x.StartsWith(ScriptPrefix, StringComparison.Ordinal))[ScriptPrefix.Length..]);
             return new ScriptedExecutor(script, Limits(), StopId);
         }));

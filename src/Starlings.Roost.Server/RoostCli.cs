@@ -40,13 +40,15 @@ internal static class RoostCli
     public const string Usage = """
         usage: roost serve --model qwen3.5-0.8b --weights <model.safetensors> --weights-sha256 <hex> --tokenizer <tokenizer.json>
                            [--kernels <dir>] [--worker <roost-worker>] [--manifest <manifest.toml>] [--allow-untested-sm]
-                           [--host <ip>] [--port <n>] [--allow-non-loopback]
+                           [--host <ip>] [--port <n>] [--allow-non-loopback] [--enable-sleep-mode]
 
         Serves the OpenAI routes /v1/chat/completions, /v1/completions and /v1/models on 127.0.0.1:8000 by default.
         A non-loopback --host needs --allow-non-loopback: the server has no authentication.
+        --enable-sleep-mode adds POST /sleep, POST /wake_up, GET /is_sleeping and POST /update_weights, for loopback
+        clients only (the packaged CUDA worker refuses them today).
         """;
 
-    private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "--allow-untested-sm", "--allow-non-loopback" };
+    private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "--allow-untested-sm", "--allow-non-loopback", "--enable-sleep-mode" };
 
     private static readonly HashSet<string> Valued = new(StringComparer.Ordinal)
     {
@@ -166,6 +168,7 @@ internal static class RoostCli
                 Host = Optional("--host") ?? RoostServerOptions.DefaultHost,
                 Port = port,
                 AllowNonLoopback = flags.Contains("--allow-non-loopback"),
+                EnableSleepMode = flags.Contains("--enable-sleep-mode"),
             });
     }
 

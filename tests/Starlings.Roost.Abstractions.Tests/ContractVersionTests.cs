@@ -7,9 +7,9 @@ namespace Starlings.Roost.Tests;
 public sealed class ContractVersionTests
 {
     [Fact]
-    public void ContractsAreAtVersionFiveStageV0()
+    public void ContractsAreAtVersionSixStageV0()
     {
-        Assert.Equal(5, ContractVersion.Current);
+        Assert.Equal(6, ContractVersion.Current);
         Assert.Equal("v0", ContractVersion.Stage);
     }
 
@@ -30,6 +30,8 @@ public sealed class ContractVersionTests
         Assert.Equal<long>(SharedLayout.MagicPlan, NativeLayout.Defines["ROOST_SHM_MAGIC_PLAN"]);
         Assert.Equal<long>(SharedLayout.MagicResult, NativeLayout.Defines["ROOST_SHM_MAGIC_RESULT"]);
         Assert.Equal<long>(SharedLayout.MagicRing, NativeLayout.Defines["ROOST_SHM_MAGIC_RING"]);
+        Assert.Equal<long>(SharedLayout.MagicControl, NativeLayout.Defines["ROOST_SHM_MAGIC_CONTROL"]);
+        Assert.Equal<long>(SharedLayout.MagicControlResult, NativeLayout.Defines["ROOST_SHM_MAGIC_CONTROL_RESULT"]);
     }
 
     [Theory]

@@ -69,10 +69,21 @@ public sealed record WorkerRuntimeOptions
 /// slot is released (the executor has finished reading it), and the result slot is published with the worker's clock in
 /// <c>PublishedNs</c>. A recoverable fault is published and the loop continues. A sticky fault, or an exception from the
 /// executor, is published, the heartbeat state becomes <see cref="WorkerState.Faulted"/>, and the runtime ends.</para>
-/// <para>The step loop does not allocate.</para>
+/// <para><b>Control messages</b> (layout 3, R-100). A <see cref="RingSlotKind.Sleep"/>, <see cref="RingSlotKind.Wake"/> or
+/// <see cref="RingSlotKind.ReplaceWeights"/> slot names a plan buffer holding a <see cref="ControlMessage"/>; the runtime passes it
+/// to the executor's <see cref="IWeightLifecycle"/> (or answers <see cref="ControlStatus.Unsupported"/> when the executor has
+/// none) and publishes a <see cref="ControlResult"/> on the result ring with the same kind and step id, carrying the time from
+/// taking the slot to writing the answer. The runtime keeps the sleeping state: a sleep only while awake, a wake only while
+/// asleep, otherwise <see cref="ControlStatus.RefusedState"/>; while asleep the heartbeat says <see cref="WorkerState.Sleeping"/>
+/// and every step plan is refused as a recoverable fault with <see cref="ErrorAsleep"/>, without reaching the executor. A control
+/// message that throws is answered <see cref="ControlStatus.Failed"/> and leaves the state as it was.</para>
+/// <para>The step loop does not allocate; control messages, which are rare, do.</para>
 /// </remarks>
 public sealed unsafe class WorkerRuntime : IDisposable
 {
+    /// <summary>The error code of a step plan refused because the worker is asleep (R-100); a recoverable fault.</summary>
+    public const int ErrorAsleep = -16;
+
     private const uint MagicPlan = 0x4C505352u;
     private const uint MagicResult = 0x53525352u;
     private const uint LayoutVersion = SharedLayout.Version;
@@ -91,6 +102,7 @@ public sealed unsafe class WorkerRuntime : IDisposable
     private bool _haveSlot;
     private RingSlot _slot;
     private bool _started;
+    private bool _asleep;
 
     /// <summary>Creates a runtime over a mapped segment. Nothing runs until <see cref="Start"/>.</summary>
     /// <param name="segment">The segment, opened by the worker process or shared with the host (in-process).</param>
@@ -107,6 +119,9 @@ public sealed unsafe class WorkerRuntime : IDisposable
         _hostPid = _access.HandshakeRecord->HostPid;
         _heartbeat = new Thread(HeartbeatLoop) { Name = "roost-worker-heartbeat", IsBackground = true };
     }
+
+    /// <summary>Whether the worker is asleep (R-100). Read on the step thread, or after the runtime ended.</summary>
+    public bool IsAsleep => _asleep;
 
     /// <summary>Why the runtime ended, or <see cref="WorkerExit.Running"/>.</summary>
     public WorkerExit Exit => (WorkerExit)Volatile.Read(ref _exit);
@@ -305,6 +320,9 @@ public sealed unsafe class WorkerRuntime : IDisposable
                     _ring.ReleasePlan(); // steps run to completion one at a time, so nothing is in flight when a drain is seen
                     return true;
                 case RingSlotKind.Step:
+                case RingSlotKind.Sleep:
+                case RingSlotKind.Wake:
+                case RingSlotKind.ReplaceWeights:
                     _haveSlot = true;
                     break;
                 default:
@@ -319,7 +337,15 @@ public sealed unsafe class WorkerRuntime : IDisposable
         }
 
         _haveSlot = false;
-        RunStep(_slot);
+        if (_slot.Kind.IsControl())
+        {
+            RunControl(_slot);
+        }
+        else
+        {
+            RunStep(_slot);
+        }
+
         return true;
     }
 
@@ -334,6 +360,10 @@ public sealed unsafe class WorkerRuntime : IDisposable
         if (!PlanIsValid(plan, slot.StepId))
         {
             outcome = StepOutcome.Recoverable(ErrorInvalidPlan);
+        }
+        else if (_asleep)
+        {
+            outcome = StepOutcome.Recoverable(ErrorAsleep); // the state the plan needs was released; nothing reaches the executor
         }
         else
         {
@@ -373,7 +403,85 @@ public sealed unsafe class WorkerRuntime : IDisposable
         }
         else
         {
-            _access.WriteWorkerState(WorkerState.Ready);
+            _access.WriteWorkerState(_asleep ? WorkerState.Sleeping : WorkerState.Ready);
+        }
+    }
+
+    private void RunControl(in RingSlot slot)
+    {
+        var started = MonotonicClock.NowNs();
+        var resultIndex = _ring.NextResultBufferIndex;
+        var result = _ring.ResultBuffer(resultIndex);
+        var lifecycle = _executor as IWeightLifecycle;
+        ControlOutcome outcome;
+        try
+        {
+            var request = ControlMessages.Read(_ring.PlanBuffer((int)slot.BufferIndex), slot);
+            outcome = lifecycle is null
+                ? ControlOutcome.Fail(ControlStatus.Unsupported, "This worker's executor does not implement sleep, wake or weight replacement.")
+                : Control(lifecycle, request);
+        }
+        catch (InvalidDataException e)
+        {
+            outcome = ControlOutcome.Fail(ControlStatus.Malformed, e.Message, ErrorInvalidPlan);
+        }
+        catch (Exception e)
+        {
+            outcome = ControlOutcome.Fail(ControlStatus.Failed, e.GetType().Name + ": " + e.Message, ErrorExecutor);
+        }
+
+        _ring.ReleasePlan();
+        var state = _asleep ? WorkerState.Sleeping : WorkerState.Ready;
+        ImmutableArray<byte> digest = default;
+        try
+        {
+            digest = lifecycle?.ResidentWeightsDigest ?? default;
+        }
+        catch (Exception)
+        {
+            // A digest that cannot be read is reported as none.
+        }
+
+        _ = ControlMessages.WriteResult(result, slot.Kind, slot.StepId, outcome, MonotonicClock.NowNs() - started, state, digest);
+        var published = new RingSlot
+        {
+            StepId = slot.StepId,
+            Kind = slot.Kind,
+            BufferIndex = (uint)resultIndex,
+            PublishedNs = MonotonicClock.NowNs(),
+        };
+        if (!_ring.TryPublishResult(published))
+        {
+            throw new InvalidDataException("The result ring refused a slot after CanPublishResult.");
+        }
+
+        _access.WriteWorkerState(state);
+    }
+
+    private ControlOutcome Control(IWeightLifecycle lifecycle, ControlRequest request)
+    {
+        switch (request.Kind)
+        {
+            case RingSlotKind.Sleep:
+                if (_asleep)
+                {
+                    return ControlOutcome.Fail(ControlStatus.RefusedState, "The worker is already asleep.");
+                }
+
+                var slept = lifecycle.Sleep(request.Level);
+                _asleep = slept.Status == ControlStatus.Ok;
+                return slept;
+            case RingSlotKind.Wake:
+                if (!_asleep)
+                {
+                    return ControlOutcome.Fail(ControlStatus.RefusedState, "The worker is not asleep.");
+                }
+
+                var woken = lifecycle.Wake(request.WeightsDigest.AsSpan());
+                _asleep = woken.Status != ControlStatus.Ok;
+                return woken;
+            default:
+                return lifecycle.ReplaceWeights(request.Source!);
         }
     }
 

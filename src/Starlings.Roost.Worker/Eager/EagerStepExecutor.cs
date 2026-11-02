@@ -19,6 +19,12 @@ namespace Starlings.Roost.Worker.Eager;
 /// error is probed (a memset and a sync after <c>cudaGetLastError</c>) and is sticky only when the probe fails too
 /// (S8 condition 2).
 /// </summary>
+/// <remarks>
+/// It does not implement <see cref="IWeightLifecycle"/> (R-100), so the runtime answers sleep, wake and replace-weights messages
+/// with <see cref="ControlStatus.Unsupported"/> and nothing on the device changes. Releasing and reallocating the state pools and
+/// the weight arena means making <see cref="EagerWorker"/>'s pools and spans replaceable and re-checking them against the session
+/// on a GPU; that is stream F's GPU half of R-100, not done without hardware.
+/// </remarks>
 public sealed class EagerStepExecutor : IStepExecutor
 {
     private readonly IEagerModel _model;

@@ -3,6 +3,7 @@
     <OutputType>Exe</OutputType>
     <IsTestProject>true</IsTestProject>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
@@ -19,6 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="../Starlings.Generation.Roost.Tests/Support/ScriptedExecutor.cs" Link="Support/ScriptedExecutor.cs" />
+    <!-- roost-tiny-hybrid on CpuOps from a locked weights file, for the sleep-mode routes (R-100). -->
+    <Compile Include="../Starlings.Generation.Roost.Tests/Support/TinyCpuExecutor.cs" Link="Support/TinyCpuExecutor.cs" />
     <!-- The 4 KB hand-built byte-level BPE tokenizer of the generation layer's tests (no Qwen asset in Git). -->
     <None Include="../Starlings.Roost.Generation.Tests/Fixtures/tiny-bytelevel-bpe.tokenizer.json" Link="Fixtures/tiny-bytelevel-bpe.tokenizer.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

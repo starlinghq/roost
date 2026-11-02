@@ -25,12 +25,15 @@
 extern "C" {
 #endif
 
-#define ROOST_SHM_LAYOUT_VERSION 2 /* 2: RoostStepPlanHeader.input_step_id, ROOST_SEQ_FLAG_SAMPLED_INPUT (R-032) */
+/* 2: RoostStepPlanHeader.input_step_id, ROOST_SEQ_FLAG_SAMPLED_INPUT (R-032); 3: control messages (R-100) */
+#define ROOST_SHM_LAYOUT_VERSION 3
 
 #define ROOST_SHM_MAGIC_SEGMENT 0x47455352u /* "RSEG" */
 #define ROOST_SHM_MAGIC_PLAN 0x4C505352u    /* "RSPL" */
 #define ROOST_SHM_MAGIC_RESULT 0x53525352u  /* "RSRS" */
 #define ROOST_SHM_MAGIC_RING 0x474E5252u    /* "RRNG" */
+#define ROOST_SHM_MAGIC_CONTROL 0x4C435352u        /* "RSCL", layout 3 */
+#define ROOST_SHM_MAGIC_CONTROL_RESULT 0x52435352u /* "RSCR", layout 3 */
 
 /* Alignment of every table, ring cursor and buffer in the segment: one cache line. */
 #define ROOST_SHM_ALIGNMENT 64
@@ -328,6 +331,12 @@ typedef struct RoostRingHeader {
 #define ROOST_RING_SLOT_STEP 1
 #define ROOST_RING_SLOT_SHUTDOWN 2
 #define ROOST_RING_SLOT_DRAIN 3
+/* Layout version 3 (R-100): control messages. Like a step, each names the plan buffer of its slot number (a
+ * RoostControlMessage) and is answered on the result ring by a slot of the same kind and step_id naming a result buffer
+ * (a RoostControlResult). The host sends one only with no step in flight. */
+#define ROOST_RING_SLOT_SLEEP 4           /* release the KV and recurrent state pools, and the weights at level 2 */
+#define ROOST_RING_SLOT_WAKE 5            /* restore what the sleep released, checking the weights digest */
+#define ROOST_RING_SLOT_REPLACE_WEIGHTS 6 /* load weights from a locked file, verified as read, and swap them in */
 
 /* One ring slot: names a plan or result buffer by index. */
 typedef struct RoostRingSlot {
@@ -384,6 +393,7 @@ typedef struct RoostHandshake {
 #define ROOST_WORKER_STEPPING 2
 #define ROOST_WORKER_FAULTED 3
 #define ROOST_WORKER_EXITING 4
+#define ROOST_WORKER_SLEEPING 5 /* layout 3: asleep; step plans are refused until a wake */
 
 /* Written by the worker's heartbeat thread; the host reads it to tell a hang from a stall. */
 typedef struct RoostHeartbeat {
@@ -393,6 +403,64 @@ typedef struct RoostHeartbeat {
   uint32_t state;        /* ROOST_WORKER_* */
   uint32_t reserved0;
 } RoostHeartbeat;
+
+/* ==== C8: control messages (layout version 3, R-100) ========================================================== */
+
+#define ROOST_SLEEP_LEVEL_KV 1      /* release the KV and recurrent state pools; the weights stay resident */
+#define ROOST_SLEEP_LEVEL_WEIGHTS 2 /* release the state pools and the weights; a wake reloads them from their locked file */
+
+#define ROOST_CONTROL_OK 0
+#define ROOST_CONTROL_REFUSED_STATE 1  /* not valid now: a sleep while asleep, a wake while awake */
+#define ROOST_CONTROL_WEIGHTS_DIGEST 2 /* the weights did not match the digest (wake) or their lock (replace) */
+#define ROOST_CONTROL_UNSUPPORTED 3    /* the worker cannot do this; nothing was changed */
+#define ROOST_CONTROL_FAILED 4         /* anything else; error_code and error_text say why */
+#define ROOST_CONTROL_MALFORMED 5      /* the message did not parse */
+
+/* In the plan buffer named by a control slot. The weights digest is SHA-256 in four little-endian words: for a wake, the
+ * digest the resident weights must have afterwards (the host's record of the last verified weights); for a replace, the
+ * digest of the new file as its lock records it, with weights_size its locked size and weights_path a UTF-8 path (no
+ * terminator) in this buffer. The worker streams a replacement through the R-024 verified loader, so a substituted file
+ * fails before any forward reads it, and keeps the old weights when it does. */
+typedef struct RoostControlMessage {
+  uint32_t magic;          /* ROOST_SHM_MAGIC_CONTROL */
+  uint32_t layout_version;
+  uint32_t header_size;
+  uint32_t kind;           /* ROOST_RING_SLOT_SLEEP, _WAKE or _REPLACE_WEIGHTS, as the slot */
+  uint64_t control_id;     /* the slot's step_id */
+  uint64_t total_bytes;    /* bytes of this buffer in use, header included */
+  uint32_t sleep_level;    /* ROOST_SLEEP_LEVEL_*, sleep only */
+  uint32_t flags;          /* none defined; zero */
+  uint64_t weights_digest0;
+  uint64_t weights_digest1;
+  uint64_t weights_digest2;
+  uint64_t weights_digest3;
+  uint64_t weights_size;      /* replace only */
+  RoostTableRef weights_path; /* replace only: UTF-8 bytes, stride 1 */
+  uint64_t reserved0;
+  uint64_t reserved1;
+} RoostControlMessage;
+
+/* In the result buffer named by the answering slot. */
+typedef struct RoostControlResult {
+  uint32_t magic;          /* ROOST_SHM_MAGIC_CONTROL_RESULT */
+  uint32_t layout_version;
+  uint32_t header_size;
+  uint32_t kind;           /* as the message */
+  uint64_t control_id;
+  uint64_t total_bytes;
+  uint32_t status;         /* ROOST_CONTROL_* */
+  int32_t error_code;      /* CUDA, C1 or worker status behind a failure, 0 otherwise */
+  uint64_t duration_ns;    /* worker: message taken to answer written (a wake's restore time) */
+  uint64_t bytes;          /* sleep: bytes released; wake and replace: bytes allocated */
+  uint32_t worker_state;   /* ROOST_WORKER_* after the message */
+  uint32_t reserved0;
+  uint64_t weights_digest0; /* the resident weights' verified digest afterwards; zero while they are released */
+  uint64_t weights_digest1;
+  uint64_t weights_digest2;
+  uint64_t weights_digest3;
+  RoostTableRef error_text; /* UTF-8 bytes, may be empty */
+  uint64_t reserved1;
+} RoostControlResult;
 
 #ifdef __cplusplus
 }

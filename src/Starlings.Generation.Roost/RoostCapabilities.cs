@@ -107,11 +107,24 @@ public sealed class RoostCapabilities
     /// </summary>
     public const string AsyncScheduling = "async_scheduling";
 
+    /// <summary>
+    /// <see cref="RoostChatClient.SleepAsync"/> and <see cref="RoostChatClient.WakeUpAsync"/> (R-100): the worker releases its KV
+    /// cache, and optionally its weights, and restores them with a digest check; the wake time is recorded. CPU path only (an
+    /// in-process executor or custom worker that implements it); the packaged CUDA worker refuses it.
+    /// </summary>
+    public const string SleepWake = "sleep_wake";
+
+    /// <summary>
+    /// <see cref="RoostChatClient.UpdateWeightsAsync"/> (R-100): weights replaced in place from a locked file, verified as read,
+    /// for reinforcement-learning loops. CPU path only; the packaged CUDA worker refuses it.
+    /// </summary>
+    public const string WeightUpdate = "weight_update";
+
     private static readonly string[] SamplerRows = [Sampling, Penalties, Logprobs];
 
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
-    internal RoostCapabilities(RoostSampler sampler = RoostSampler.GreedyOnly, bool asyncScheduling = false)
+    internal RoostCapabilities(RoostSampler sampler = RoostSampler.GreedyOnly, bool asyncScheduling = false, bool weightLifecycle = false)
     {
         var untested = RoostCapabilityStatus.Untested;
         var unsupported = RoostCapabilityStatus.Unsupported;
@@ -139,7 +152,16 @@ public sealed class RoostCapabilities
             [ContinuousBatching] = unsupported,
             [WorkerRecovery] = unsupported,
             [AsyncScheduling] = untested,
+            [SleepWake] = untested,
+            [WeightUpdate] = untested,
         };
+
+        // Sleep, wake and weight update are the CPU path's (an executor with IWeightLifecycle); the packaged CUDA worker refuses them.
+        if (!weightLifecycle)
+        {
+            table[SleepWake] = unsupported;
+            table[WeightUpdate] = unsupported;
+        }
 
         // Async scheduling is the CPU path's (an executor that patches inputs); a client that does not ask for it has none.
         if (!asyncScheduling)

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Globalization;
 using System.Threading.Channels;
 using Starlings.Roost.Engine.Admission;
@@ -39,6 +40,15 @@ namespace Starlings.Generation.Roost.Driver;
 /// <see cref="RoostErrorCode.Internal"/>, discards the planner state and the worker (replacing the transport when it cannot
 /// be killed), and the loop goes on. An exception escaping a dedicated thread would end the consumer's process, which is
 /// what the worker process exists to prevent (decision 21).</para>
+/// <para><b>Sleep, wake and weight update (R-100).</b> <see cref="ControlAsync"/> queues a C8 control message; the driver thread
+/// sends it once no step is in flight and waits for the answer (up to <see cref="RoostWorkerOptions.ControlTimeout"/>). Each is
+/// refused with <see cref="RoostErrorCode.InvalidOption"/> while requests are live, a sleep while asleep and a wake while awake.
+/// While asleep, new requests are refused with <see cref="RoostErrorCode.InsufficientDeviceMemory"/> (the worker released its
+/// memory). A sleep also replaces the planner, so no block it remembers outlives the state the worker released. The driver
+/// keeps the digest of the weights the worker serves (the profile's at start, a replacement's after an update) and sends it with
+/// every wake, so a worker that would come back with other weights is refused. A replacement is sent again to every worker the
+/// driver starts after it, so a respawned worker serves the replaced weights too; a worker that is lost while asleep is replaced
+/// by one that is awake.</para>
 /// </remarks>
 internal sealed class WorkerDriver : IGenerationBackend
 {
@@ -46,6 +56,9 @@ internal sealed class WorkerDriver : IGenerationBackend
 
     // Per row of a step result: the sequence record, one token and (1 + 20) logprob rows of 8 bytes, with room to spare.
     private const long ResultBytesPerRow = 64 + ((1 + 20) * 8);
+
+    // Control message ids have the top bit set, so a control slot's step_id never equals a planned step's.
+    private const ulong ControlIdBit = 1UL << 63;
 
     private readonly RoostModelProfile _profile;
     private readonly IDeviceMemorySource? _memory;
@@ -57,12 +70,19 @@ internal sealed class WorkerDriver : IGenerationBackend
     private readonly SemaphoreSlim _wake = new(0);
     private readonly Dictionary<ulong, Live> _live = [];
     private readonly Queue<PlannedStep> _published = new();
+    private readonly Queue<Control> _controls = new();
+    private readonly TimeSpan _controlTimeout;
     private readonly bool _async;
     private readonly Thread _thread;
     private readonly TaskCompletionSource _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private IDriverTransport _transport;
     private StepPlanner _planner;
     private volatile bool _stopping;
+    private volatile bool _asleep;
+    private ImmutableArray<byte> _weightsDigest;
+    private WeightSource? _replacement;
+    private ulong _controlIds;
+    private long _lastWakeTicks = -1;
     private int _disposed;
 
     private WorkerDriver(RoostModelProfile profile, RoostWorkerOptions worker, Func<IDriverTransport> createTransport)
@@ -72,6 +92,8 @@ internal sealed class WorkerDriver : IGenerationBackend
         _minFreeDeviceBytes = worker.MinFreeDeviceBytes;
         _createTransport = createTransport;
         _async = worker.AsyncScheduling;
+        _controlTimeout = worker.ControlTimeout;
+        _weightsDigest = profile.WeightsDigest;
         _transport = createTransport();
         _planner = CreatePlanner(profile, _async);
         long planBytes = PlanBuffer.SizeFor(profile.MaxSequencesPerStep, profile.MaxTokensPerStep, profile.StateGroups.Length, profile.AttentionBlocks, profile.StopTokenIds.Length);
@@ -95,6 +117,19 @@ internal sealed class WorkerDriver : IGenerationBackend
     /// <summary>The current transport (tests read its state and kind). Replaced when a worker cannot be killed.</summary>
     public IDriverTransport Transport => _transport;
 
+    /// <inheritdoc />
+    public bool IsSleeping => _asleep;
+
+    /// <inheritdoc />
+    public TimeSpan? LastWakeDuration
+    {
+        get
+        {
+            long ticks = Interlocked.Read(ref _lastWakeTicks);
+            return ticks < 0 ? null : TimeSpan.FromTicks(ticks);
+        }
+    }
+
     /// <summary>Creates the transport, starts the worker and the driver thread.</summary>
     /// <param name="profile">The model profile, validated.</param>
     /// <param name="worker">How the worker is started.</param>
@@ -108,6 +143,11 @@ internal sealed class WorkerDriver : IGenerationBackend
         if (worker.Sampler == RoostSampler.Cpu && worker.Transport == TransportKind.Process && worker.Command is null)
         {
             throw new ArgumentException("The packaged roost-worker is the CUDA worker, which has no CPU sampler; RoostSampler.Cpu needs an in-process executor or a custom Command that runs one.", nameof(worker));
+        }
+
+        if (worker.ControlTimeout <= TimeSpan.Zero)
+        {
+            throw new ArgumentException("ControlTimeout must be positive.", nameof(worker));
         }
 
         if (worker.AsyncScheduling && worker.Transport == TransportKind.Process && worker.Command is null)
@@ -157,6 +197,29 @@ internal sealed class WorkerDriver : IGenerationBackend
         }
 
         return new RequestChannel(request.Id, live.Channel.Reader, id => TryEnqueue(new Command(null, null, id.Value)));
+    }
+
+    /// <inheritdoc />
+    public Task<RoostWorkerControlResult> ControlAsync(RoostWorkerOperation operation, RoostSleepLevel level, WeightSource? source, CancellationToken cancellationToken)
+    {
+        if (operation == RoostWorkerOperation.UpdateWeights)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            source.Validate();
+        }
+
+        if (operation == RoostWorkerOperation.Sleep && level is not (RoostSleepLevel.KvCache or RoostSleepLevel.KvCacheAndWeights))
+        {
+            throw new ArgumentOutOfRangeException(nameof(level), level, "Unknown sleep level.");
+        }
+
+        var control = new Control(operation, level, source, cancellationToken);
+        if (!TryEnqueue(new Command(null, null, 0, control)))
+        {
+            control.Fail(new RoostError(RoostErrorCode.Internal, "The chat client is disposed."));
+        }
+
+        return control.Task;
     }
 
     /// <inheritdoc />
@@ -263,6 +326,21 @@ internal sealed class WorkerDriver : IGenerationBackend
                 {
                     DrainCommands();
 
+                    // Control messages go only to a worker with no step in flight: finish the published steps first.
+                    if (_controls.Count > 0)
+                    {
+                        if (_published.Count > 0)
+                        {
+                            AwaitOldest();
+                        }
+                        else
+                        {
+                            RunControl(_controls.Dequeue());
+                        }
+
+                        continue;
+                    }
+
                     // Plan while a plan buffer is free: always with nothing in flight (a full ring is then a broken worker,
                     // which Publish reports), and with async scheduling once more while one step runs.
                     var depth = _async ? 2 : 1;
@@ -300,7 +378,13 @@ internal sealed class WorkerDriver : IGenerationBackend
                 while (_commands.TryDequeue(out var c))
                 {
                     c.Live?.Fail(disposed);
+                    c.Control?.Fail(disposed);
                 }
+            }
+
+            while (_controls.TryDequeue(out var control))
+            {
+                control.Fail(disposed);
             }
 
             FailAll(disposed);
@@ -321,6 +405,12 @@ internal sealed class WorkerDriver : IGenerationBackend
                 }
             }
 
+            if (command.Control is not null)
+            {
+                _controls.Enqueue(command.Control);
+                continue;
+            }
+
             if (command.Request is null)
             {
                 if (_live.Remove(command.CancelId, out var cancelled))
@@ -335,6 +425,12 @@ internal sealed class WorkerDriver : IGenerationBackend
             var live = command.Live!;
             if (live.Channel.Reader.Completion.IsCompleted)
             {
+                continue;
+            }
+
+            if (_asleep)
+            {
+                live.Fail(new RoostError(RoostErrorCode.InsufficientDeviceMemory, "The worker is asleep and has released its memory; wake it (WakeUpAsync, POST /wake_up) and retry."));
                 continue;
             }
 
@@ -422,7 +518,7 @@ internal sealed class WorkerDriver : IGenerationBackend
             }
 
             StartWorkerAsync(CancellationToken.None).GetAwaiter().GetResult();
-            return true;
+            return ReapplyReplacement(out error);
         }
         catch (RoostChatException e)
         {
@@ -433,6 +529,181 @@ internal sealed class WorkerDriver : IGenerationBackend
         {
             error = new RoostError(RoostErrorCode.WorkerRestarted, "The worker could not be started: " + Describe(e));
             return false;
+        }
+    }
+
+    // A new worker loads the weights its command line or executor names; after an update it must serve the replacement.
+    private bool ReapplyReplacement(out RoostError? error)
+    {
+        error = null;
+        if (_replacement is null)
+        {
+            return true;
+        }
+
+        ControlReply reply;
+        try
+        {
+            reply = Exchange(RingSlotKind.ReplaceWeights, SleepLevel.None, _replacement);
+        }
+        catch (Exception e)
+        {
+            error = new RoostError(RoostErrorCode.WorkerRestarted, "The restarted worker did not take the updated weights: " + Describe(e));
+            LoseWorker(error);
+            return false;
+        }
+
+        if (reply.Status != ControlStatus.Ok)
+        {
+            error = ControlError(RoostWorkerOperation.UpdateWeights, reply);
+            LoseWorker(error);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void RunControl(Control control)
+    {
+        if (control.Task.IsCompleted)
+        {
+            return; // cancelled before it was sent
+        }
+
+        var operation = control.Operation;
+        string? refusal = _live.Count > 0
+            ? $"{operation} needs a worker with no requests running; {_live.Count} are."
+            : operation switch
+            {
+                RoostWorkerOperation.Sleep when _asleep => "The worker is already asleep.",
+                RoostWorkerOperation.WakeUp when !_asleep => "The worker is not asleep.",
+                _ => null,
+            };
+        if (refusal is not null)
+        {
+            control.Fail(new RoostError(RoostErrorCode.InvalidOption, refusal));
+            return;
+        }
+
+        if (!_asleep && !EnsureWorker(out var unavailable))
+        {
+            control.Fail(unavailable!);
+            return;
+        }
+
+        var started = Stopwatch.GetTimestamp();
+        ControlReply reply;
+        try
+        {
+            reply = operation switch
+            {
+                RoostWorkerOperation.Sleep => Exchange(RingSlotKind.Sleep, control.Level == RoostSleepLevel.KvCacheAndWeights ? SleepLevel.Weights : SleepLevel.Kv, null),
+                RoostWorkerOperation.WakeUp => Exchange(RingSlotKind.Wake, SleepLevel.None, null),
+                _ => Exchange(RingSlotKind.ReplaceWeights, SleepLevel.None, control.Source),
+            };
+        }
+        catch (Exception e)
+        {
+            var lost = new RoostError(RoostErrorCode.WorkerRestarted, $"The worker did not answer {operation} ({Describe(e)}); it was killed and the next request starts a new one.");
+            LoseWorker(lost);
+            control.Fail(lost);
+            return;
+        }
+
+        var duration = Stopwatch.GetElapsedTime(started);
+        if (reply.Status != ControlStatus.Ok)
+        {
+            control.Fail(ControlError(operation, reply));
+            return;
+        }
+
+        switch (operation)
+        {
+            case RoostWorkerOperation.Sleep:
+                _asleep = true;
+                _planner = CreatePlanner(_profile, _async); // no block the planner remembers may outlive the released state
+                break;
+            case RoostWorkerOperation.WakeUp:
+                _asleep = false;
+                Interlocked.Exchange(ref _lastWakeTicks, duration.Ticks);
+                break;
+            default:
+                _replacement = control.Source;
+                _weightsDigest = control.Source!.Sha256;
+                break;
+        }
+
+        control.Complete(new RoostWorkerControlResult(operation, duration, reply.WorkerDuration, reply.Bytes, _asleep, reply.WeightsDigest));
+    }
+
+    private static RoostError ControlError(RoostWorkerOperation operation, ControlReply reply)
+    {
+        var code = reply.Status switch
+        {
+            ControlStatus.RefusedState => RoostErrorCode.InvalidOption,
+            ControlStatus.WeightsDigest => RoostErrorCode.AssetMismatch,
+            ControlStatus.Unsupported => RoostErrorCode.ProfileUnsupported,
+            _ => RoostErrorCode.Internal,
+        };
+        var detail = string.IsNullOrEmpty(reply.ErrorText) ? reply.Status.ToString() : reply.ErrorText;
+        return new RoostError(code, $"The worker refused {operation} ({reply.Status}): {detail}");
+    }
+
+    /// <summary>Sends one control message to a worker with nothing in flight and waits for its answer. Throws when the worker is lost or does not answer in time.</summary>
+    private ControlReply Exchange(RingSlotKind kind, SleepLevel level, WeightSource? source)
+    {
+        if (!_transport.CanPublish())
+        {
+            throw new InvalidOperationException("No plan buffer is free with no step in flight.");
+        }
+
+        int index = _transport.NextPlanBufferIndex;
+        var buffer = _transport.PlanBuffer(index);
+        ulong id = ControlIdBit | ++_controlIds;
+        _ = kind switch
+        {
+            RingSlotKind.Sleep => ControlMessages.WriteSleep(buffer, id, level),
+            RingSlotKind.Wake => ControlMessages.WriteWake(buffer, id, _weightsDigest.AsSpan()),
+            _ => ControlMessages.WriteReplaceWeights(buffer, id, source!),
+        };
+        if (!_transport.TryPublish(new RingSlot { StepId = id, Kind = kind, BufferIndex = (uint)index }))
+        {
+            throw new InvalidOperationException("The plan ring is full with no step in flight.");
+        }
+
+        var give = Stopwatch.GetTimestamp() + (long)(_controlTimeout.TotalSeconds * Stopwatch.Frequency);
+        var spin = default(SpinWait);
+        while (true)
+        {
+            if (_transport.TryTakeResult(out var slot))
+            {
+                try
+                {
+                    if (slot.Kind != kind || slot.StepId != id)
+                    {
+                        throw new InvalidDataException($"Expected the answer to control message {id} ({kind}); the worker published {slot.Kind} {slot.StepId}.");
+                    }
+
+                    return ControlMessages.ReadResult(_transport.ResultBuffer((int)slot.BufferIndex), slot);
+                }
+                finally
+                {
+                    _transport.ReleaseResult((int)slot.BufferIndex);
+                }
+            }
+
+            var fault = _transport.Poll();
+            if (fault != FaultClass.None)
+            {
+                throw new InvalidOperationException($"The worker was lost ({fault}).");
+            }
+
+            if (Stopwatch.GetTimestamp() > give)
+            {
+                throw new TimeoutException($"No answer within {_controlTimeout}.");
+            }
+
+            spin.SpinOnce();
         }
     }
 
@@ -610,6 +881,7 @@ internal sealed class WorkerDriver : IGenerationBackend
     {
         FailAll(error);
         _published.Clear(); // the worker is killed: none of them returns
+        _asleep = false; // the next worker starts awake
         try
         {
             _planner = CreatePlanner(_profile, _async); // every sequence it held has just been failed
@@ -666,7 +938,46 @@ internal sealed class WorkerDriver : IGenerationBackend
         _live.Clear();
     }
 
-    private readonly record struct Command(Request? Request, Live? Live, ulong CancelId);
+    private readonly record struct Command(Request? Request, Live? Live, ulong CancelId, Control? Control = null);
+
+    /// <summary>A queued control operation and the task its caller awaits.</summary>
+    private sealed class Control
+    {
+        private readonly TaskCompletionSource<RoostWorkerControlResult> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly CancellationTokenRegistration _registration;
+
+        public Control(RoostWorkerOperation operation, RoostSleepLevel level, WeightSource? source, CancellationToken cancellationToken)
+        {
+            Operation = operation;
+            Level = level;
+            Source = source;
+            if (cancellationToken.CanBeCanceled)
+            {
+                // Cancels the wait; an operation already sent to the worker still completes there.
+                _registration = cancellationToken.Register(() => _completion.TrySetCanceled(cancellationToken));
+            }
+        }
+
+        public RoostWorkerOperation Operation { get; }
+
+        public RoostSleepLevel Level { get; }
+
+        public WeightSource? Source { get; }
+
+        public Task<RoostWorkerControlResult> Task => _completion.Task;
+
+        public void Complete(RoostWorkerControlResult result)
+        {
+            _registration.Dispose();
+            _ = _completion.TrySetResult(result);
+        }
+
+        public void Fail(RoostError error)
+        {
+            _registration.Dispose();
+            _ = _completion.TrySetException(new RoostChatException(error));
+        }
+    }
 
     private sealed class Live(RequestId id, int promptTokens)
     {

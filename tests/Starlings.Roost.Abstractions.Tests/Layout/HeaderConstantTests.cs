@@ -35,6 +35,8 @@ public sealed class HeaderConstantTests
         ("ROOST_HANDSHAKE_", typeof(HandshakeState)),
         ("ROOST_REJECT_", typeof(HandshakeReject)),
         ("ROOST_WORKER_", typeof(WorkerState)),
+        ("ROOST_SLEEP_LEVEL_", typeof(SleepLevel)),
+        ("ROOST_CONTROL_", typeof(ControlStatus)),
     ];
 
     // Defines that are not members of an enum family.
@@ -42,6 +44,7 @@ public sealed class HeaderConstantTests
     [
         "ROOST_ABI_MAJOR", "ROOST_ABI_MINOR", "ROOST_DTYPE_COUNT", "ROOST_SHM_LAYOUT_VERSION", "ROOST_SHM_ALIGNMENT",
         "ROOST_SHM_MAGIC_SEGMENT", "ROOST_SHM_MAGIC_PLAN", "ROOST_SHM_MAGIC_RESULT", "ROOST_SHM_MAGIC_RING",
+        "ROOST_SHM_MAGIC_CONTROL", "ROOST_SHM_MAGIC_CONTROL_RESULT",
     ];
 
     public static TheoryData<string> Prefixes() => [.. s_families.Select(f => f.Prefix)];

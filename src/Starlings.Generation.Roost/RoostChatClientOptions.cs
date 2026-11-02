@@ -76,6 +76,13 @@ public sealed record RoostWorkerOptions
     /// <summary>Heartbeat period of the worker.</summary>
     public TimeSpan HeartbeatPeriod { get; init; } = TimeSpan.FromMilliseconds(1);
 
+    /// <summary>
+    /// How long the driver waits for the worker to answer a sleep, wake or weight update (R-100) before it kills the worker. A
+    /// wake from <see cref="RoostSleepLevel.KvCacheAndWeights"/> and an update stream a whole weights file, so the default is
+    /// generous: 10 minutes.
+    /// </summary>
+    public TimeSpan ControlTimeout { get; init; } = TimeSpan.FromMinutes(10);
+
     /// <summary>Host-side transport settings (startup and shutdown timeouts, segment directory); defaults when null.</summary>
     public WorkerTransportOptions? TransportOptions { get; init; }
 
