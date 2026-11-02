@@ -1,5 +1,6 @@
 using Starlings.Roost.Engine.Admission;
 using Starlings.Roost.Generation;
+using Starlings.Roost.Native;
 using Starlings.Roost.Transport;
 using Starlings.Roost.WorkerHost;
 
@@ -80,4 +81,18 @@ public sealed record RoostChatClientOptions
 
     /// <summary>Output tokens when <c>ChatOptions.MaxOutputTokens</c> is not set (always capped by the context left).</summary>
     public int DefaultMaxOutputTokens { get; init; } = 512;
+
+    /// <summary>
+    /// The grammar engine for <c>ChatOptions.ResponseFormat</c> (R-051): a <see cref="GrammarTokenizer"/> over the model's
+    /// <c>tokenizer.json</c> and stop ids, from the <c>roost-grammar</c> library (<see cref="RoostGrammarLibrary"/>). A JSON or
+    /// JSON-schema response format is compiled with it, so an invalid or unsupported schema is refused as an
+    /// <c>InvalidOption</c> naming <c>response_format</c>. Null (the default) refuses every JSON response format. The client does
+    /// not dispose it.
+    /// </summary>
+    /// <remarks>
+    /// A format that compiles is still refused: the worker's sampler takes no token masks until contract C2 carries them to it,
+    /// so the output could not be constrained. The masks and the CPU sampler path that applies them are built and tested in
+    /// <c>Starlings.Roost.Native</c> (<see cref="GrammarSlots"/>, <see cref="GrammarSampler"/>).
+    /// </remarks>
+    public GrammarTokenizer? Grammar { get; init; }
 }

@@ -51,6 +51,8 @@ internal sealed class WorkerDriver : IGenerationBackend
     private readonly TaskCompletionSource _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private IDriverTransport _transport;
     private StepPlanner _planner;
+    private BlockManager _blocks;
+    private double _kvCacheUsage;
     private volatile bool _stopping;
     private int _disposed;
 
@@ -61,7 +63,7 @@ internal sealed class WorkerDriver : IGenerationBackend
         _minFreeDeviceBytes = worker.MinFreeDeviceBytes;
         _createTransport = createTransport;
         _transport = createTransport();
-        _planner = CreatePlanner(profile);
+        _planner = CreatePlanner(profile, out _blocks);
         long planBytes = PlanBuffer.SizeFor(profile.MaxSequencesPerStep, profile.MaxTokensPerStep, profile.StateGroups.Length, profile.AttentionBlocks, profile.StopTokenIds.Length);
         _launch = new WorkerLaunch
         {
@@ -138,6 +140,9 @@ internal sealed class WorkerDriver : IGenerationBackend
     }
 
     /// <inheritdoc />
+    public double? KvCacheUsage => Volatile.Read(ref _kvCacheUsage);
+
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
@@ -162,13 +167,14 @@ internal sealed class WorkerDriver : IGenerationBackend
         }
     }
 
-    private static StepPlanner CreatePlanner(RoostModelProfile profile)
+    private static StepPlanner CreatePlanner(RoostModelProfile profile, out BlockManager blocks)
     {
         var groups = profile.StateGroups;
         var capacities = groups
             .Select(g => new GroupCapacity(g.Index, g.Kind == StateGroupKind.Recurrent ? profile.RecurrentSlots : profile.AttentionBlocks, 0))
             .ToImmutableArray();
-        return new StepPlanner(new BlockManager(groups, capacities), new PlannerOptions
+        blocks = new BlockManager(groups, capacities);
+        return new StepPlanner(blocks, new PlannerOptions
         {
             MaxTokensPerStep = profile.MaxTokensPerStep,
             MaxSequencesPerStep = profile.MaxSequencesPerStep,
@@ -240,6 +246,7 @@ internal sealed class WorkerDriver : IGenerationBackend
                 {
                     DrainCommands();
                     var step = _live.Count > 0 ? NextPlan() : null;
+                    PublishKvCacheUsage();
                     if (step is null)
                     {
                         _ = _wake.Wait(_live.Count > 0 ? 10 : Timeout.Infinite);
@@ -565,7 +572,8 @@ internal sealed class WorkerDriver : IGenerationBackend
         FailAll(error);
         try
         {
-            _planner = CreatePlanner(_profile); // every sequence it held has just been failed
+            _planner = CreatePlanner(_profile, out var blocks); // every sequence it held has just been failed
+            _blocks = blocks;
         }
         catch (Exception)
         {
@@ -607,6 +615,27 @@ internal sealed class WorkerDriver : IGenerationBackend
         {
             // Best effort: a process worker watches its parent and ends itself; the segment file is the transport's.
         }
+    }
+
+    // R-038: the share of attention (non-recurrent) blocks held, read on the driver thread after each plan and published for the
+    // metrics gauge. Recurrent slots are one per sequence and are not KV cache.
+    private void PublishKvCacheUsage()
+    {
+        long used = 0;
+        long capacity = 0;
+        foreach (var group in _blocks.Groups)
+        {
+            if (group.Kind == StateGroupKind.Recurrent)
+            {
+                continue;
+            }
+
+            var pool = _blocks.GetPool(group.Index);
+            used += pool.Capacity - pool.FreeCount;
+            capacity += pool.Capacity;
+        }
+
+        Volatile.Write(ref _kvCacheUsage, capacity == 0 ? 0 : (double)used / capacity);
     }
 
     private void FailAll(RoostError error)

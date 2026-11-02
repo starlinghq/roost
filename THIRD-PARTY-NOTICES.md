@@ -1,6 +1,6 @@
 # Third-party notices
 
-Roost's own code is MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`). The kernel libraries that Roost builds contain
+Roost's own code is MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`). The kernel libraries and the native/ Rust libraries that Roost builds contain
 code from the upstream projects below, fetched at build time by full commit SHA from the repositories named here (no
 upstream source is committed; `PROVENANCE.md` has the revisions, paths taken and local changes, and
 `kernels/manifest.toml` the pins and the licence per path). Binaries are release assets that carry these notices. Licence
@@ -95,6 +95,154 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## llguidance (native/roost-grammar)
+
+- Repository: https://github.com/guidance-ai/llguidance at `6cef6ed9c973c2a155a85f2bb1996320af28b289` (crate 1.9.1)
+- Taken: the crates `llguidance`, `toktrie` and `toktrie_hf_tokenizers` at that revision, as Cargo git dependencies of
+  `native/roost-grammar` (pinned by `rev` in `Cargo.toml` and `Cargo.lock`), unmodified. No source is committed; the built
+  `roost_grammar` library is a release asset (decision 22).
+- Licence: MIT.
+
+```text
+MIT License
+
+Copyright (c) Microsoft Corporation.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE
+```
+
+### Crates from crates.io in the roost-grammar build
+
+Every crates.io crate in the dependency graph, build-time proc-macro crates included, pinned by version and checksum in `native/roost-grammar/Cargo.lock` (the build uses `--locked`); listed from `cargo metadata`.
+Where a crate offers a choice, Roost takes the licence in the last column. Apache-2.0 is the text under "Apache License 2.0"
+below. Each crate's own copyright notice and licence file is in its source at the locked version; gathering them into the
+release asset is part of the release workflow for native libraries, which is not built yet.
+
+| Crate | Version | Licence (as declared) | Licence taken |
+| --- | --- | --- | --- |
+| `ahash` | 0.8.12 | MIT OR Apache-2.0 | MIT |
+| `aho-corasick` | 1.1.5 | Unlicense OR MIT | MIT |
+| `anyhow` | 1.0.104 | MIT OR Apache-2.0 | MIT |
+| `base64` | 0.13.1 | MIT/Apache-2.0 | MIT |
+| `bit-set` | 0.8.0 | Apache-2.0 OR MIT | MIT |
+| `bit-vec` | 0.8.0 | Apache-2.0 OR MIT | MIT |
+| `bitflags` | 2.13.2 | MIT OR Apache-2.0 | MIT |
+| `borrow-or-share` | 0.2.4 | MIT-0 | MIT-0 |
+| `bumpalo` | 3.20.3 | MIT OR Apache-2.0 | MIT |
+| `bytemuck` | 1.25.2 | Zlib OR Apache-2.0 OR MIT | MIT |
+| `bytemuck_derive` | 1.12.1 | Zlib OR Apache-2.0 OR MIT | MIT |
+| `castaway` | 0.2.4 | MIT | MIT |
+| `cfg-if` | 1.0.5 | MIT OR Apache-2.0 | MIT |
+| `compact_str` | 0.9.1 | MIT | MIT |
+| `crossbeam-deque` | 0.8.8 | MIT OR Apache-2.0 | MIT |
+| `crossbeam-epoch` | 0.9.21 | MIT OR Apache-2.0 | MIT |
+| `crossbeam-utils` | 0.8.23 | MIT OR Apache-2.0 | MIT |
+| `darling` | 0.20.11 | MIT | MIT |
+| `darling_core` | 0.20.11 | MIT | MIT |
+| `darling_macro` | 0.20.11 | MIT | MIT |
+| `dary_heap` | 0.3.9 | MIT OR Apache-2.0 | MIT |
+| `derive_builder` | 0.20.2 | MIT OR Apache-2.0 | MIT |
+| `derive_builder_core` | 0.20.2 | MIT OR Apache-2.0 | MIT |
+| `derive_builder_macro` | 0.20.2 | MIT OR Apache-2.0 | MIT |
+| `derivre` | 0.3.13 | MIT | MIT |
+| `either` | 1.19.0 | MIT OR Apache-2.0 | MIT |
+| `equivalent` | 1.0.3 | Apache-2.0 OR MIT | MIT |
+| `esaxx-rs` | 0.1.10 | Apache-2.0 | Apache-2.0 |
+| `fancy-regex` | 0.14.0 | MIT | MIT |
+| `fluent-uri` | 0.3.2 | MIT | MIT |
+| `fnv` | 1.0.7 | Apache-2.0 / MIT | MIT |
+| `foldhash` | 0.2.0 | Zlib | Zlib |
+| `getrandom` | 0.3.4 | MIT OR Apache-2.0 | MIT |
+| `hashbrown` | 0.17.1 | MIT OR Apache-2.0 | MIT |
+| `heck` | 0.5.0 | MIT OR Apache-2.0 | MIT |
+| `ident_case` | 1.0.1 | MIT/Apache-2.0 | MIT |
+| `indexmap` | 2.14.2 | Apache-2.0 OR MIT | MIT |
+| `itertools` | 0.14.0 | MIT OR Apache-2.0 | MIT |
+| `itoa` | 1.0.18 | MIT OR Apache-2.0 | MIT |
+| `js-sys` | 0.3.106 | MIT OR Apache-2.0 | MIT |
+| `libc` | 0.2.191 | MIT OR Apache-2.0 | MIT |
+| `lock_api` | 0.4.14 | MIT OR Apache-2.0 | MIT |
+| `log` | 0.4.34 | MIT OR Apache-2.0 | MIT |
+| `macro_rules_attribute` | 0.2.3 | Apache-2.0 OR MIT OR Zlib | MIT |
+| `macro_rules_attribute-proc_macro` | 0.2.3 | Apache-2.0 OR MIT OR Zlib | MIT |
+| `memchr` | 2.8.3 | Unlicense OR MIT | MIT |
+| `minimal-lexical` | 0.2.1 | MIT/Apache-2.0 | MIT |
+| `monostate` | 0.1.18 | MIT OR Apache-2.0 | MIT |
+| `monostate-impl` | 0.1.18 | MIT OR Apache-2.0 | MIT |
+| `nom` | 7.1.3 | MIT | MIT |
+| `once_cell` | 1.21.4 | MIT OR Apache-2.0 | MIT |
+| `parking_lot` | 0.12.5 | MIT OR Apache-2.0 | MIT |
+| `parking_lot_core` | 0.9.12 | MIT OR Apache-2.0 | MIT |
+| `paste` | 1.0.15 | MIT OR Apache-2.0 | MIT |
+| `pastey` | 0.2.3 | MIT OR Apache-2.0 | MIT |
+| `percent-encoding` | 2.3.2 | MIT OR Apache-2.0 | MIT |
+| `ppv-lite86` | 0.2.21 | MIT OR Apache-2.0 | MIT |
+| `proc-macro2` | 1.0.107 | MIT OR Apache-2.0 | MIT |
+| `quote` | 1.0.47 | MIT OR Apache-2.0 | MIT |
+| `r-efi` | 5.3.0 | MIT OR Apache-2.0 OR LGPL-2.1-or-later | MIT |
+| `rand` | 0.9.5 | MIT OR Apache-2.0 | MIT |
+| `rand_chacha` | 0.9.0 | MIT OR Apache-2.0 | MIT |
+| `rand_core` | 0.9.5 | MIT OR Apache-2.0 | MIT |
+| `rayon` | 1.12.0 | MIT OR Apache-2.0 | MIT |
+| `rayon-cond` | 0.4.0 | Apache-2.0/MIT | MIT |
+| `rayon-core` | 1.13.0 | MIT OR Apache-2.0 | MIT |
+| `redox_syscall` | 0.5.18 | MIT | MIT |
+| `ref-cast` | 1.0.27 | MIT OR Apache-2.0 | MIT |
+| `ref-cast-impl` | 1.0.27 | MIT OR Apache-2.0 | MIT |
+| `referencing` | 0.29.1 | MIT | MIT |
+| `regex` | 1.13.1 | MIT OR Apache-2.0 | MIT |
+| `regex-automata` | 0.4.18 | MIT OR Apache-2.0 | MIT |
+| `regex-syntax` | 0.8.11 | MIT OR Apache-2.0 | MIT |
+| `rustversion` | 1.0.23 | MIT OR Apache-2.0 | MIT |
+| `ryu` | 1.0.23 | Apache-2.0 OR BSL-1.0 | Apache-2.0 |
+| `scopeguard` | 1.2.0 | MIT OR Apache-2.0 | MIT |
+| `serde` | 1.0.229 | MIT OR Apache-2.0 | MIT |
+| `serde_core` | 1.0.229 | MIT OR Apache-2.0 | MIT |
+| `serde_derive` | 1.0.229 | MIT OR Apache-2.0 | MIT |
+| `serde_json` | 1.0.154 | MIT OR Apache-2.0 | MIT |
+| `smallvec` | 1.16.3 | MIT OR Apache-2.0 | MIT |
+| `spm_precompiled` | 0.1.4 | Apache-2.0 | Apache-2.0 |
+| `static_assertions` | 1.1.0 | MIT OR Apache-2.0 | MIT |
+| `strsim` | 0.11.1 | MIT | MIT |
+| `strum` | 0.28.0 | MIT | MIT |
+| `strum_macros` | 0.28.0 | MIT | MIT |
+| `syn` | 2.0.119 | MIT OR Apache-2.0 | MIT |
+| `syn` | 3.0.9 | MIT OR Apache-2.0 | MIT |
+| `thiserror` | 2.0.21 | MIT OR Apache-2.0 | MIT |
+| `thiserror-impl` | 2.0.21 | MIT OR Apache-2.0 | MIT |
+| `tokenizers` | 0.21.4 | Apache-2.0 | Apache-2.0 |
+| `unicode-ident` | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 | MIT AND Unicode-3.0 |
+| `unicode-normalization-alignments` | 0.1.12 | MIT/Apache-2.0 | MIT |
+| `unicode-segmentation` | 1.13.3 | MIT OR Apache-2.0 | MIT |
+| `unicode_categories` | 0.1.1 | MIT OR Apache-2.0 | MIT |
+| `version_check` | 0.9.5 | MIT/Apache-2.0 | MIT |
+| `wasip2` | 1.0.4+wasi-0.2.12 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | MIT |
+| `wasm-bindgen` | 0.2.129 | MIT OR Apache-2.0 | MIT |
+| `wasm-bindgen-macro` | 0.2.129 | MIT OR Apache-2.0 | MIT |
+| `wasm-bindgen-macro-support` | 0.2.129 | MIT OR Apache-2.0 | MIT |
+| `wasm-bindgen-shared` | 0.2.129 | MIT OR Apache-2.0 | MIT |
+| `windows-link` | 0.2.1 | MIT OR Apache-2.0 | MIT |
+| `wit-bindgen` | 0.57.1 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | MIT |
+| `zerocopy` | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT | MIT |
+| `zerocopy-derive` | 0.8.63 | BSD-2-Clause OR Apache-2.0 OR MIT | MIT |
+| `zmij` | 1.0.23 | MIT | MIT |
 
 ## KDA Team (MIT)
 

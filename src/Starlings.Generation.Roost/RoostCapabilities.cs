@@ -63,16 +63,28 @@ public sealed class RoostCapabilities
     /// <summary>Frequency and presence penalties.</summary>
     public const string Penalties = "penalties";
 
-    /// <summary>Tool definitions and tool calls.</summary>
+    /// <summary>
+    /// Tool definitions rendered by the chat template and tool calls parsed incrementally from the completion into
+    /// <c>FunctionCallContent</c> (R-053): the Qwen3.5 format through Starling's <c>Qwen35ToolCallParser</c>, and Hermes
+    /// (<c>&lt;tool_call&gt;</c> JSON) for templates that render tools in it. <c>ToolMode</c> auto and none; a required call is refused
+    /// (nothing constrains decoding). CPU-tested on a local corpus of template renderings; no model has run with tools on Roost.
+    /// </summary>
     public const string Tools = "tools";
 
-    /// <summary>JSON and JSON-schema response formats (structured output).</summary>
+    /// <summary>
+    /// JSON and JSON-schema response formats (structured output, R-051). Unsupported: a format is compiled with
+    /// <see cref="RoostChatClientOptions.Grammar"/> when one is set (an invalid schema is refused with the grammar engine's
+    /// reason) and then refused, because the worker's sampler takes no token masks until contract C2 carries them.
+    /// </summary>
     public const string ResponseFormat = "response_format";
 
     /// <summary>Log probabilities.</summary>
     public const string Logprobs = "logprobs";
 
-    /// <summary>Reasoning (think block) output.</summary>
+    /// <summary>
+    /// Thinking mode (<see cref="RoostChatClient.EnableThinkingProperty"/>) with the think block parsed incrementally into
+    /// <c>TextReasoningContent</c> (R-053). CPU-tested on template renderings only; no model has run with thinking on Roost.
+    /// </summary>
     public const string Reasoning = "reasoning";
 
     /// <summary>Image, audio and other non-text input.</summary>
@@ -94,6 +106,13 @@ public sealed class RoostCapabilities
     /// </summary>
     public const string CoTenantAdmission = "co_tenant_admission";
 
+    /// <summary>
+    /// Metrics on <see cref="RoostChatClient.Telemetry"/> (request counts by finish reason, token counters, time to first token,
+    /// inter-token and end-to-end latency, running and waiting requests, KV cache usage) and one activity per request, with no
+    /// prompt or output text (R-038). CPU-tested only.
+    /// </summary>
+    public const string Telemetry = "telemetry";
+
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
     internal RoostCapabilities()
@@ -113,12 +132,13 @@ public sealed class RoostCapabilities
             [Instructions] = untested,
             [StopSequences] = untested,
             [CoTenantAdmission] = untested,
+            [Telemetry] = untested,
+            [Tools] = untested,
+            [Reasoning] = untested,
             [Sampling] = unsupported,
             [Penalties] = unsupported,
-            [Tools] = unsupported,
             [ResponseFormat] = unsupported,
             [Logprobs] = unsupported,
-            [Reasoning] = unsupported,
             [MultimodalInput] = unsupported,
             [ConversationState] = unsupported,
             [ContinuousBatching] = unsupported,

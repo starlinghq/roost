@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.TestHost;
 using Starlings.Generation.Roost;
 using Starlings.Generation.Roost.Tests.Support;
@@ -46,7 +47,8 @@ internal sealed class ServerRig : IAsyncDisposable
 
     public static int[] Encode(string text) => [.. Tokenizer.Encode(text, false).Ids];
 
-    public static async Task<ServerRig> StartAsync(Script script)
+    /// <summary>Starts the server; <paramref name="attentionBlocks"/> enlarges the context (a tools prompt needs about 2,000 byte tokens).</summary>
+    public static async Task<ServerRig> StartAsync(Script script, RoostServerOptions? options = null, Action<IWebHostBuilder>? configureWebHost = null, int attentionBlocks = AttentionBlocks)
     {
         ScriptedExecutor? executor = null;
         var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
@@ -58,7 +60,7 @@ internal sealed class ServerRig : IAsyncDisposable
                 ChatTemplate = Qwen35RoostChatTemplate.Instance,
                 StopTokenIds = [StopId],
                 StateGroups = RoostTinyHybrid.CreateStateGroups(),
-                AttentionBlocks = AttentionBlocks,
+                AttentionBlocks = attentionBlocks,
                 RecurrentSlots = 1,
                 MaxTokensPerStep = MaxTokensPerStep,
                 MaxSequencesPerStep = 1,
@@ -68,14 +70,18 @@ internal sealed class ServerRig : IAsyncDisposable
             Worker = new RoostWorkerOptions
             {
                 Transport = TransportKind.InProcess,
-                InProcessExecutor = () => executor = new ScriptedExecutor(script, Limits(), StopId),
+                InProcessExecutor = () => executor = new ScriptedExecutor(script, Limits(attentionBlocks), StopId),
                 StepDeadline = TimeSpan.FromSeconds(10),
             },
         }, TestContext.Current.CancellationToken);
 
         try
         {
-            var app = RoostServer.Create(client, configureWebHost: web => web.UseTestServer());
+            var app = RoostServer.Create(client, options, web =>
+            {
+                web.UseTestServer();
+                configureWebHost?.Invoke(web);
+            });
             await app.StartAsync(TestContext.Current.CancellationToken);
             return new ServerRig(client, app, executor!);
         }
@@ -87,14 +93,14 @@ internal sealed class ServerRig : IAsyncDisposable
     }
 
     /// <summary>The eager worker's limits for the profile above.</summary>
-    public static PlanLimits Limits() => new(
+    public static PlanLimits Limits(int attentionBlocks = AttentionBlocks) => new(
         MaxTokens: MaxTokensPerStep,
         MaxSequences: 1,
-        MaxKvBlocks: AttentionBlocks,
+        MaxKvBlocks: attentionBlocks,
         MaxSelected: 1,
         Vocab: Tokenizer.GetVocabularySize(true),
         BlockSize: 16,
-        AttentionBlocks: AttentionBlocks,
+        AttentionBlocks: attentionBlocks,
         RecurrentSlots: 1,
         AttentionGroup: 0,
         GroupCount: 2);

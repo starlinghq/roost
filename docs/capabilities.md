@@ -140,17 +140,18 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `stop_sequences` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`tests/Starlings.Roost.Generation.Tests/` | Matched on detokenized text in the host (Starling's `StopSequenceMatcher`). CPU only. |
 | `sampling` | `unsupported` | — | Temperature, top-p, top-k. A seed is accepted under greedy decoding, where it changes nothing. R-042. |
 | `penalties` | `unsupported` | — | Frequency and presence. R-042. |
-| `tools` | `unsupported` | — | R-053. |
-| `response_format` | `unsupported` | — | JSON and JSON-schema structured output. S10 (`docs/m0/roost-s10-llguidance-abi.md`) is a spike, not a feature. R-051, R-042. |
+| `tools` | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/`<br>`src/Starlings.Roost.Server/STATUS.md` | R-053: `ChatOptions.Tools` (`AIFunction` declarations) rendered by the chat template; calls parsed incrementally into `FunctionCallContent`, finish reason `ToolCalls`. Qwen3.5 format through Starling's `Qwen35ToolCallParser`; Hermes (`<tool_call>` JSON) for a profile that declares it. `ToolMode` auto and none; a required or named call and `AllowMultipleToolCalls` false are refused (nothing constrains decoding). The Qwen3 template still refuses tools. CPU only, on a local corpus of template renderings (P-029 is not in this repository); no model has run with tools on Roost. |
+| `response_format` | `unsupported` | — | JSON and JSON-schema structured output. Refused with `InvalidOption` naming `response_format`: without `RoostChatClientOptions.Grammar`, or, with it, after the format is compiled (an invalid or unsupported schema is refused with the grammar engine's reason), because the worker takes no token masks until contract C2 carries them. The engine and the CPU sampler path are the `untested` row under [Structured output](#structured-output-tools-and-reasoning). R-051, R-042. |
 | `logprobs` | `unsupported` | — | R-042. |
-| `reasoning` | `unsupported` | — | Think-block output and reasoning parsers. R-053. |
+| `reasoning` | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/`<br>`src/Starlings.Roost.Server/STATUS.md` | R-053: `ChatOptions.AdditionalProperties["enable_thinking"]` opens the template's think block, and the completion is split incrementally into `TextReasoningContent` and the answer. Qwen3.5 only (the Qwen3 template still refuses thinking). CPU only, on a local corpus; no model has run with thinking on Roost. |
 | `multimodal_input` | `unsupported` | — | R-099, R-107. |
 | `conversation_state` | `unsupported` | — | `ConversationId`. |
 | `continuous_batching` | `unsupported` | — | M0 runs one sequence per step; concurrent requests take turns. R-029 wiring, M1. |
 | `worker_recovery` | `unsupported` | — | A worker fault fails the requests it carried. R-070. |
 | `co_tenant_admission` | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | Refuses new requests with `InsufficientDeviceMemory` while free device memory is below `MinFreeDeviceBytes` (R-044). CPU only: the co-tenant GPU test is open and no NVML source is the default yet. |
+| `telemetry` | `untested` | `tests/Starlings.Roost.Server.Tests/`<br>`src/Starlings.Roost.Server/STATUS.md` | `RoostChatClient.Telemetry` (R-038): a `Meter` per client (request counts by finish reason, token counters and histograms, time to first token, inter-token and end-to-end latency, running and waiting requests, KV block usage) and one `roost.request` activity per request tagged with its id, token counts and finish reason, never its text. CPU only; no GPU run has been scraped. |
 
-## OpenAI-compatible server (`roost serve`, R-037)
+## OpenAI-compatible server (`roost serve`, R-037, R-074)
 
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
@@ -159,12 +160,23 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `GET /v1/models` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | As above. |
 | Native AOT `roost` binary (linux-x64) | `untested` | `src/Starlings.Roost.Server/STATUS.md` | One local publish with zero trim or AOT warnings; a build check, not serving evidence. S1 measured AOT with CUDA interop on SM 86 (`docs/m0/roost-s1-aot-cuda.md`). |
 | Loopback-only listening by default | `untested` | `tests/Starlings.Roost.Server.Tests/` | Non-loopback needs `--allow-non-loopback`; there is no authentication. |
-| Responses API, Anthropic Messages, tokenize and detokenize, health and readiness | `unsupported` | — | R-074. |
-| Prompt-embeddings input | `unsupported` | — | R-074. |
-| Embeddings, rerank, score, classify, pooling | `unsupported` | — | R-052, R-087. |
+| `POST /v1/responses`, `GET /v1/responses/{id}`, `POST /v1/responses/{id}/cancel` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Whole, SSE and background, over an in-memory bounded store with expiry; text input only. CPU tests over a scripted in-process worker (R-074). |
+| `POST /v1/messages`, `POST /v1/messages/count_tokens` (Anthropic Messages API) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Whole and SSE with Anthropic's events and error body; text blocks only; `stop_reason` `stop_sequence` is not reported (R-074). |
+| `POST /tokenize`, `POST /detokenize` (vLLM bodies) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Prompt and chat-message forms over the model's tokenizer and template (R-074). |
+| `GET /health`, `/ping`, `GET /version`, `GET /ready` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Liveness (vLLM's names) and readiness (worker started, host not stopping); no worker liveness probe (R-074). |
+| Prompt-embeddings input | `unsupported` | — | `prompt_embeds` is refused by name: `RoostChatClient` exposes no embedding input for contract C2's `Embeddings` part (R-074). |
+| `POST /v1/embeddings` (Starling's E5 and EmbeddingGemma 2 packages) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/PoolingRoutesTests.cs`<br>`tests/Starlings.Roost.ApiCompat.Tests/EmbeddingsCompatTests.cs` | R-052: OpenAI's request and response (`float` and `base64`, `dimensions` equal to the served length) over `Starlings.Models.E5` and `Starlings.Models.EmbeddingGemma2` 0.3.0 on ONNX Runtime's CPU provider in the server process, loaded from verified local snapshots with `roost serve --pooling-e5` and `--pooling-embeddinggemma2`. CPU tests use fakes behind `IRoostEmbeddingModel`; no model has run through the route here. 400 `profile_unsupported` when no embedding model is configured. |
+| `POST /v1/extract` (Starling's GLiNER2 package) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/PoolingRoutesTests.cs` | R-052: Roost's own shape (labels and threshold in, labelled spans with scalar offsets out) over `Starlings.Models.Gliner2` 0.3.0 on ONNX Runtime's CPU provider, `roost serve --pooling-gliner2`. CPU tests use fakes behind `IRoostExtractionModel`; no model has run through the route here. |
+| `POST /v1/rerank` | `unsupported` | — | No Starling package provides a reranking model (nuget.org, 2026-11-02): the route answers 400 `profile_unsupported` naming `rerank`. |
+| `POST /v1/classify` | `unsupported` | — | No Starling package provides a classification model (nuget.org, 2026-11-02): the route answers 400 `profile_unsupported` naming `classify`. |
+| Score, pooling, Cohere- and Jina-style routes | `unsupported` | — | vLLM's `/v1/score`, `/pooling` and rerank aliases are not built (R-052, R-087). |
+| Pooling models on the GPU within the device budget | `unsupported` | — | The pooling routes run ONNX Runtime on the CPU only; the CUDA provider is not offered, and native pooling models in the worker are R-087. |
 | Runtime LoRA load and unload | `unsupported` | — | R-050, R-074. |
-| vLLM CLI flags, environment and Prometheus names | `unsupported` | — | R-038, R-075. |
-| OpenAI client library compatibility suite | `unsupported` | — | R-040. |
+| `GET /metrics` (Prometheus text format) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | R-038: every family under a `roost_` name and under vLLM's `vllm:` names (`request_success_total`, `prompt_tokens_total`, `generation_tokens_total`, `time_to_first_token_seconds`, `inter_token_latency_seconds`, `time_per_output_token_seconds`, `e2e_request_latency_seconds`, `request_prompt_tokens`, `request_generation_tokens`, `num_requests_running`, `num_requests_waiting`, `kv_cache_usage_perc`, `gpu_cache_usage_perc`) with the `model_name` label. No exporter package. Prefix-cache, preemption and queue-time metrics are not exported (the M0 driver has no prefix cache). |
+| One activity per request | `untested` | `tests/Starlings.Roost.Server.Tests/` | `roost.request` on the `Starlings.Roost` `ActivitySource`: request id, model, input and output tokens, finish reason, and the C6 code name on failure. No exporter is wired; a host adds its own `ActivityListener` or OpenTelemetry SDK. |
+| No prompt or output text in logs | `untested` | `tests/Starlings.Roost.Server.Tests/` | A test captures every log category at `Trace` over every route, refusals included, and finds neither the prompt nor the reply. |
+| vLLM CLI flags and environment | `unsupported` | — | R-075. |
+| OpenAI client library compatibility suite | `untested` | `tests/Starlings.Roost.ApiCompat.Tests/`<br>`tests/Starlings.Roost.ApiCompat.Tests/STATUS.md` | R-040: the official OpenAI .NET client (2.14.0, in CI) drives chat completions, tool calls, reasoning, the Responses API, models and error bodies on Kestrel over a scripted worker, and asserts every unsupported option it can set is a 400 naming it; the official openai Python package (3.35.1, `tests/tools/api_compat/openai_compat.py`) is an opt-in run that also covers `/v1/completions`. No client has run against a GPU. |
 
 ## Scheduling and engine
 
@@ -204,9 +216,11 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
-| Structured output (JSON schema, regex, grammar) | `unsupported` | — | See `response_format`. R-051, R-042. |
-| Tool calling parsers | `unsupported` | — | See `tools`. R-053. |
-| Reasoning parsers | `unsupported` | — | See `reasoning`. R-053. |
+| Structured output (JSON schema, regex, grammar) | `unsupported` | — | Not served: see `response_format`. The server reads `response_format` and `text.format` (`text`, `json_object`, `json_schema`) and refuses every other type, regular expressions and grammars included. R-051, R-042. |
+| Grammar engine and masked CPU sampling (`native/roost-grammar`, `Starlings.Roost.Native`) | `untested` | `native/roost-grammar/tests/`<br>`tests/Starlings.Roost.Native.Tests/`<br>`src/Starlings.Roost.Native/STATUS.md` | R-051: llguidance (pinned by SHA) behind a C ABI; JSON schema, any JSON object, regex and Lark matchers; masks per C2 `grammar_slot` in `GrammarSlots`, computed on thread-pool threads; `GrammarSampler` applies them in `CpuOps.Sample` and commits each token. CPU tests: a masked token is never sampled under adversarial logits, and every greedy and sampled output of roost-tiny and roost-tiny-moe under three JSON schemas parses and satisfies its schema. Not reachable from `RoostChatClient` or the server yet; the library is not built in CI (the tests skip). No mask latency measured here; S10 measured 17 to 27 us p50 per token on Qwen3's vocabulary. |
+| Tool calling parsers | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/` | See `tools`. Qwen3.5 (Starling's parser) and Hermes; both streaming, every split of a corpus completion giving the whole parse. Other families: `unsupported`. R-053. |
+| Reasoning parsers | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/` | See `reasoning`. Qwen think blocks (`</think>` after an opened block). Other families: `unsupported`. R-053. |
+| OpenAI `tools`, `tool_choice`, `tool_calls` and vLLM `reasoning_content` | `untested` | `tests/Starlings.Roost.Server.Tests/`<br>`src/Starlings.Roost.Server/STATUS.md` | `POST /v1/chat/completions` only, whole and SSE (one `tool_calls` delta per call); vLLM's `chat_template_kwargs.enable_thinking`. The Responses, Messages and tokenize routes still refuse tools. R-053. |
 
 ## Quantisation and data types
 
@@ -249,8 +263,11 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | LoRA on MoE experts and multimodal backbones | `unsupported` | — | R-050, R-099. |
 | Sleep and wake, in-place weight update | `unsupported` | — | R-100. |
 | Per-GPU weight cache and engine snapshots | `unsupported` | — | R-046, R-100. |
-| Metrics and traces | `unsupported` | — | R-038. |
-| Container image, Kubernetes, router integration | `unsupported` | — | R-046, R-101. |
+| Metrics and traces | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | See `GET /metrics` and one activity per request above (R-038). CPU only. |
+| Container image | `unsupported` | — | R-046: `deploy/Dockerfile` (AOT `roost` and `roost-worker`, kernel manifest and libraries on `nvidia/cuda:13.3.1-runtime-ubuntu24.04` pinned by digest) and `deploy/stage-image.sh` are written but no image has been built, measured against the 4 GB criterion or published (`deploy/STATUS.md`). |
+| `roost doctor` | `untested` | `tests/Starlings.Roost.Server.Tests/DoctorTests.cs`<br>`deploy/STATUS.md` | R-046: driver and its minimum, NVML, GPUs and their SMs against the manifest's statuses, kernel library digests against the manifest, weights lock, tokenizer stop tokens, free disk and host memory, each a typed pass, warn, fail or skip; exit 1 on a failure. CPU-tested with fake probes; never run on a GPU host. |
+| Cold-start stage timing | `untested` | `tests/Starlings.Roost.Server.Tests/ColdStartTests.cs`<br>`deploy/README.md` | R-046: `roost serve` logs each start stage (`runtime`, `arguments`, `profile`, `worker`, `listen`) and exports them as `roost_cold_start_stage_seconds` on `GET /metrics`. Per-stage budgets are proposals; no real start has been timed. |
+| Kubernetes, router integration | `unsupported` | — | R-101. |
 | Model definitions as the plugin equivalent | `unsupported` | — | R-055 (section 13.2). |
 | .NET launcher as the Ray equivalent | `unsupported` | — | R-092 (section 13.2). |
 | NuGet packages on nuget.org | `unsupported` | — | Nothing is released. The R-062 drill packed `Starlings.Roost.Worker.Runtime` locally (`tests/Starlings.Generation.Roost.Tests.Cuda/results/README.md`). |

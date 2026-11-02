@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- R-040 (stream I): the API compatibility suite. The official OpenAI .NET client drives the real server on Kestrel (loopback,
+       port 0) over the scripted worker of the server tests. Test only: the OpenAI package never reaches a src/ project. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- OPENAI001: the OpenAI package marks its Responses API surface experimental. SCME0001: System.ClientModel marks JsonPatch
+         (the client's way to add vLLM's chat_template_kwargs to a request) as for evaluation. -->
+    <NoWarn>$(NoWarn);OPENAI001;SCME0001</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="OpenAI" />
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Server/Starlings.Roost.Server.csproj" />
+    <!-- The scripted worker (shared source below) reads plans with the eager worker's plan reader and writes results with its
+         result writer (CPU code; nothing here touches CUDA). -->
+    <ProjectReference Include="../../src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Models.Tiny/Starlings.Roost.Models.Tiny.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../Starlings.Generation.Roost.Tests/Support/ScriptedExecutor.cs" Link="Support/ScriptedExecutor.cs" />
+    <!-- The 4 KB hand-built byte-level BPE tokenizer of the generation layer's tests (no Qwen asset in Git). -->
+    <None Include="../Starlings.Roost.Generation.Tests/Fixtures/tiny-bytelevel-bpe.tokenizer.json" Link="Fixtures/tiny-bytelevel-bpe.tokenizer.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

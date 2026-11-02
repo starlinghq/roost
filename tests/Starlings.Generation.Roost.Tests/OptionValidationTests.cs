@@ -21,6 +21,7 @@ public sealed class OptionValidationTests : IAsyncLifetime
         { "tools", "tools" },
         { "tool_mode", "tool_choice" },
         { "allow_multiple_tool_calls", "parallel_tool_calls" },
+        { "enable_thinking_not_bool", "enable_thinking" },
         { "json", "response_format" },
         { "json_schema", "response_format" },
         { "conversation_id", "conversation_id" },
@@ -80,9 +81,10 @@ public sealed class OptionValidationTests : IAsyncLifetime
     }
 
     [Theory]
-    [InlineData("tool_message")]
+    [InlineData("tool_message_mixed")]
     [InlineData("image")]
-    [InlineData("function_call")]
+    [InlineData("function_call_on_user")]
+    [InlineData("function_result_on_assistant")]
     [InlineData("empty")]
     [InlineData("author_name")]
     [InlineData("message_properties")]
@@ -92,9 +94,10 @@ public sealed class OptionValidationTests : IAsyncLifetime
     {
         ChatMessage[] messages = kind switch
         {
-            "tool_message" => [new ChatMessage(ChatRole.User, "Hi"), new ChatMessage(ChatRole.Tool, "42")],
+            "tool_message_mixed" => [new ChatMessage(ChatRole.User, "Hi"), new ChatMessage(ChatRole.Tool, [new TextContent("42"), new FunctionResultContent("c1", "42")])],
             "image" => [new ChatMessage(ChatRole.User, [new TextContent("what is this"), new DataContent(new byte[] { 1, 2, 3 }, "image/png")])],
-            "function_call" => [new ChatMessage(ChatRole.User, "Hi"), new ChatMessage(ChatRole.Assistant, [new FunctionCallContent("c1", "f")])],
+            "function_call_on_user" => [new ChatMessage(ChatRole.User, [new FunctionCallContent("c1", "f")])],
+            "function_result_on_assistant" => [new ChatMessage(ChatRole.User, "Hi"), new ChatMessage(ChatRole.Assistant, [new FunctionResultContent("c1", "42")])],
             "author_name" => [new ChatMessage(ChatRole.User, "Hi") { AuthorName = "alice" }],
             "message_properties" => [new ChatMessage(ChatRole.User, "Hi") { AdditionalProperties = new AdditionalPropertiesDictionary { ["x"] = 1 } }],
             "content_properties" => [new ChatMessage(ChatRole.User, [new TextContent("Hi") { AdditionalProperties = new AdditionalPropertiesDictionary { ["x"] = 1 } }])],
@@ -115,9 +118,10 @@ public sealed class OptionValidationTests : IAsyncLifetime
         "top_k" => new ChatOptions { TopK = 40 },
         "frequency_penalty" => new ChatOptions { FrequencyPenalty = 0.5f },
         "presence_penalty" => new ChatOptions { PresencePenalty = 0.5f },
-        "tools" => new ChatOptions { Tools = [AIFunctionFactory.Create(() => 42, "answer")] },
+        "tools" => new ChatOptions { Tools = [new HostedWebSearchTool()] },
         "tool_mode" => new ChatOptions { ToolMode = ChatToolMode.RequireAny },
-        "allow_multiple_tool_calls" => new ChatOptions { AllowMultipleToolCalls = true },
+        "allow_multiple_tool_calls" => new ChatOptions { AllowMultipleToolCalls = false },
+        "enable_thinking_not_bool" => new ChatOptions { AdditionalProperties = new AdditionalPropertiesDictionary { [RoostChatClient.EnableThinkingProperty] = "yes" } },
         "json" => new ChatOptions { ResponseFormat = ChatResponseFormat.Json },
         "json_schema" => new ChatOptions { ResponseFormat = ChatResponseFormat.ForJsonSchema(System.Text.Json.JsonDocument.Parse("{\"type\":\"object\"}").RootElement) },
         "conversation_id" => new ChatOptions { ConversationId = "c1" },

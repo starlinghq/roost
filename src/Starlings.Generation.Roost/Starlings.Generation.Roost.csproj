@@ -10,11 +10,16 @@
     <PackageReference Include="Microsoft.Extensions.AI.Abstractions" />
     <!-- Starlings.Tokenizers.Tokenizer is in this package's public API (RoostModelProfile): a direct, exact pin rather than a transitive one. -->
     <PackageReference Include="Starlings.Tokenizers" />
+    <!-- R-053: Starling's Qwen35ToolCallParser parses the Qwen3.5 tool-call format. Already in the closure through
+         Starlings.Roost.Generation; a direct pin because this project's code calls it. -->
+    <PackageReference Include="Starlings.Models.Qwen35" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <ProjectReference Include="../Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
     <ProjectReference Include="../Starlings.Roost.Generation/Starlings.Roost.Generation.csproj" />
+    <!-- R-051: the managed bindings of the roost-grammar library (llguidance); response formats are compiled with it in the host. -->
+    <ProjectReference Include="../Starlings.Roost.Native/Starlings.Roost.Native.csproj" />
     <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
     <!-- The packaged roost-worker (R-062), so `dotnet add package Starlings.Generation.Roost` brings the worker executable among
          the native runtime assets. The runtime package carries no lib/ assets, so a consumer's process gets no worker code. A

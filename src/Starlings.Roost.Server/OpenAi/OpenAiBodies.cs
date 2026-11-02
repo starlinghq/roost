@@ -8,8 +8,24 @@ namespace Starlings.Roost.Server.OpenAi;
 /// <summary>Token counts of a response.</summary>
 internal sealed record UsageBody(int PromptTokens, int CompletionTokens, int TotalTokens);
 
-/// <summary>An assistant message in a chat completion.</summary>
-internal sealed record ChatMessageBody(string Role, string Content);
+/// <summary>
+/// An assistant message in a chat completion. <c>content</c> is null when the message is only tool calls, as in OpenAI's API;
+/// <c>reasoning_content</c> (vLLM's field) and <c>tool_calls</c> are omitted when there are none.
+/// </summary>
+internal sealed record ChatMessageBody(
+    string Role,
+    string? Content,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ReasoningContent = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ToolCallBody[]? ToolCalls = null);
+
+/// <summary>The function of a tool call: its name and its arguments as a JSON object in a string.</summary>
+internal sealed record FunctionCallBody(string Name, string Arguments);
+
+/// <summary>A tool call of a chat completion message.</summary>
+internal sealed record ToolCallBody(string Id, string Type, FunctionCallBody Function);
+
+/// <summary>A tool call in a streamed delta: the whole call in one delta, at its index among the response's calls.</summary>
+internal sealed record ToolCallDeltaBody(int Index, string Id, string Type, FunctionCallBody Function);
 
 /// <summary>One choice of a chat completion.</summary>
 internal sealed record ChatChoiceBody(int Index, ChatMessageBody Message, string? Logprobs, string? FinishReason);
@@ -20,7 +36,9 @@ internal sealed record ChatCompletionBody(string Id, string Object, long Created
 /// <summary>The delta of a streamed chat chunk; absent fields are omitted.</summary>
 internal sealed record ChatDeltaBody(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Role,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Content);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Content,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? ReasoningContent = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] ToolCallDeltaBody[]? ToolCalls = null);
 
 /// <summary>One choice of a streamed chat chunk.</summary>
 internal sealed record ChatChunkChoiceBody(int Index, ChatDeltaBody Delta, string? Logprobs, string? FinishReason);

@@ -323,7 +323,9 @@ public sealed class ChatClientTests
         var caps = client.Capabilities;
         Assert.Equal(RoostCapabilityStatus.Untested, caps.StatusOf(RoostCapabilities.Streaming));
         Assert.Equal(RoostCapabilityStatus.Untested, caps.StatusOf(RoostCapabilities.GreedyDecoding));
-        foreach (var name in new[] { RoostCapabilities.Sampling, RoostCapabilities.Tools, RoostCapabilities.ResponseFormat, RoostCapabilities.Logprobs, RoostCapabilities.Penalties, RoostCapabilities.Reasoning, RoostCapabilities.MultimodalInput, RoostCapabilities.ContinuousBatching, RoostCapabilities.WorkerRecovery, "beam_search" })
+        Assert.Equal(RoostCapabilityStatus.Untested, caps.StatusOf(RoostCapabilities.Tools));
+        Assert.Equal(RoostCapabilityStatus.Untested, caps.StatusOf(RoostCapabilities.Reasoning));
+        foreach (var name in new[] { RoostCapabilities.Sampling, RoostCapabilities.ResponseFormat, RoostCapabilities.Logprobs, RoostCapabilities.Penalties, RoostCapabilities.MultimodalInput, RoostCapabilities.ContinuousBatching, RoostCapabilities.WorkerRecovery, "beam_search" })
         {
             Assert.Equal(RoostCapabilityStatus.Unsupported, caps.StatusOf(name));
         }
