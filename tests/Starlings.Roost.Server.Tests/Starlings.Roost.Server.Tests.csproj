@@ -21,5 +21,7 @@
     <Compile Include="../Starlings.Generation.Roost.Tests/Support/ScriptedExecutor.cs" Link="Support/ScriptedExecutor.cs" />
     <!-- The 4 KB hand-built byte-level BPE tokenizer of the generation layer's tests (no Qwen asset in Git). -->
     <None Include="../Starlings.Roost.Generation.Tests/Fixtures/tiny-bytelevel-bpe.tokenizer.json" Link="Fixtures/tiny-bytelevel-bpe.tokenizer.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The committed kernel manifest (C5), read by `roost doctor`'s own manifest reader. -->
+    <None Include="../../kernels/manifest.toml" Link="Fixtures/manifest.toml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

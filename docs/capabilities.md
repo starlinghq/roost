@@ -259,7 +259,10 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Sleep and wake, in-place weight update | `unsupported` | — | R-100. |
 | Per-GPU weight cache and engine snapshots | `unsupported` | — | R-046, R-100. |
 | Metrics and traces | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | See `GET /metrics` and one activity per request above (R-038). CPU only. |
-| Container image, Kubernetes, router integration | `unsupported` | — | R-046, R-101. |
+| Container image | `unsupported` | — | R-046: `deploy/Dockerfile` (AOT `roost` and `roost-worker`, kernel manifest and libraries on `nvidia/cuda:13.3.1-runtime-ubuntu24.04` pinned by digest) and `deploy/stage-image.sh` are written but no image has been built, measured against the 4 GB criterion or published (`deploy/STATUS.md`). |
+| `roost doctor` | `untested` | `tests/Starlings.Roost.Server.Tests/DoctorTests.cs`<br>`deploy/STATUS.md` | R-046: driver and its minimum, NVML, GPUs and their SMs against the manifest's statuses, kernel library digests against the manifest, weights lock, tokenizer stop tokens, free disk and host memory, each a typed pass, warn, fail or skip; exit 1 on a failure. CPU-tested with fake probes; never run on a GPU host. |
+| Cold-start stage timing | `untested` | `tests/Starlings.Roost.Server.Tests/ColdStartTests.cs`<br>`deploy/README.md` | R-046: `roost serve` logs each start stage (`runtime`, `arguments`, `profile`, `worker`, `listen`) and exports them as `roost_cold_start_stage_seconds` on `GET /metrics`. Per-stage budgets are proposals; no real start has been timed. |
+| Kubernetes, router integration | `unsupported` | — | R-101. |
 | Model definitions as the plugin equivalent | `unsupported` | — | R-055 (section 13.2). |
 | .NET launcher as the Ray equivalent | `unsupported` | — | R-092 (section 13.2). |
 | NuGet packages on nuget.org | `unsupported` | — | Nothing is released. The R-062 drill packed `Starlings.Roost.Worker.Runtime` locally (`tests/Starlings.Generation.Roost.Tests.Cuda/results/README.md`). |

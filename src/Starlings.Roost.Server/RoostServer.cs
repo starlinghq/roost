@@ -65,7 +65,7 @@ public static class RoostServer
         app.MapGet("/version", (RequestDelegate)utility.VersionAsync);
         app.MapGet("/ready", (RequestDelegate)utility.ReadyAsync);
 
-        var metrics = new PrometheusExporter(client.Telemetry, client.Model.ModelId);
+        var metrics = new PrometheusExporter(client.Telemetry, client.Model.ModelId, options.ColdStart);
         _ = app.Lifetime.ApplicationStopped.Register(metrics.Dispose);
         app.MapGet("/metrics", (RequestDelegate)metrics.ScrapeAsync);
         return app;

@@ -1,4 +1,4 @@
-# R-037, R-074, R-038 and R-053 status: partial (CPU-tested; no GPU evidence)
+# R-037, R-074, R-038, R-053 and R-046 (doctor, cold start) status: partial (CPU-tested; no GPU evidence)
 
 `Starlings.Roost.Server` is an ASP.NET Core minimal API host over `Starlings.Generation.Roost`'s `RoostChatClient`, and it builds
 the `roost` executable. The routes, the error body, the option checks and loopback-only listening are built and tested on the
@@ -124,6 +124,15 @@ endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
   worker in its own process (decision 21) with the capacities of the R-036 GPU run (32 attention blocks of 16 tokens, 64
   tokens and one sequence per step, so a 512-token context). Parsing and the refusal paths are tested; serving through it is
   not.
+
+## Operations in the `roost` binary (R-046, stream J)
+
+R-046's status as a whole is in `deploy/STATUS.md`; these two parts live in this project because they are `roost` commands.
+
+| Item | Status | Notes |
+| --- | --- | --- |
+| `roost doctor` | untested | `Doctor/`: `RoostDoctor.Run` over `IDoctorProbes` returns a `DoctorReport` of typed `DoctorCheck`s (`pass`, `warn`, `fail`, `skip`): driver and the manifest's `min_driver`, NVML on disk, GPUs from `nvidia-smi`, the manifest (read with Tomlyn directly, since a host package names no `Starlings.Roost.Kernels` code), each GPU's SM status, kernel library SHA-256 against the manifest, weights SHA-256 against `--weights-sha256`, the tokenizer's stop tokens, free disk and `MemAvailable`. `SystemDoctorProbes` loads no CUDA or NVML library into the process. Exit 0, 1 on a failed check, 2 on a usage error. `DoctorTests` covers each rule with fake probes. A Release AOT publish on 2026-11-02 gave a 13.8 MB `roost` with zero trim or AOT warnings (Tomlyn through its source-generated context) and ran `doctor` on a GPU-less host. |
+| Cold-start stage timing | untested | `ColdStart`: `roost serve` records `runtime` (process start to `Main`), `arguments`, `profile`, `worker` and `listen`, writes each to standard error as it ends plus a total, and `GET /metrics` exports `roost_cold_start_stage_seconds{stage}` and `roost_cold_start_seconds` when the host was started by `roost serve` (`RoostServerOptions.ColdStart`). `ColdStartTests` uses an injected clock. No real start has been timed. |
 
 ## Still open (R-037 is not done)
 

@@ -38,12 +38,18 @@ internal sealed class PrometheusExporter : IDisposable
     private readonly string _modelName;
     private readonly MeterListener _listener;
     private readonly Dictionary<string, State> _states = new(StringComparer.Ordinal);
+    private readonly ColdStart? _coldStart;
 
-    public PrometheusExporter(RoostTelemetry telemetry, string modelName)
+    /// <summary>Creates the exporter.</summary>
+    /// <param name="telemetry">The client's telemetry.</param>
+    /// <param name="modelName">The <c>model_name</c> label.</param>
+    /// <param name="coldStart">The cold-start stages to export (R-046), or null when the host was not started by <c>roost serve</c>.</param>
+    public PrometheusExporter(RoostTelemetry telemetry, string modelName, ColdStart? coldStart = null)
     {
         ArgumentNullException.ThrowIfNull(telemetry);
         _meter = telemetry.Meter;
         _modelName = modelName;
+        _coldStart = coldStart;
         foreach (var family in s_families)
         {
             var state = new State(family);
@@ -122,7 +128,30 @@ internal sealed class PrometheusExporter : IDisposable
             }
         }
 
+        WriteColdStart(text);
         return text.ToString();
+    }
+
+    // The cold-start stages (R-046) are fixed once the server listens: gauges in seconds, with no vLLM alias (vLLM exports none).
+    private void WriteColdStart(StringBuilder text)
+    {
+        if (_coldStart is null)
+        {
+            return;
+        }
+
+        var stages = _coldStart.Stages;
+        string model = "model_name=\"" + EscapeLabel(_modelName) + "\"";
+        text.Append("# HELP roost_cold_start_stage_seconds Duration of each roost serve start stage in seconds.\n");
+        text.Append("# TYPE roost_cold_start_stage_seconds gauge\n");
+        foreach (var stage in stages)
+        {
+            Sample(text, "roost_cold_start_stage_seconds", model + ",stage=\"" + EscapeLabel(stage.Name) + "\"", null, stage.Duration.TotalSeconds);
+        }
+
+        text.Append("# HELP roost_cold_start_seconds Sum of the roost serve start stages in seconds (process start to listening).\n");
+        text.Append("# TYPE roost_cold_start_seconds gauge\n");
+        Sample(text, "roost_cold_start_seconds", model, null, stages.Sum(s => s.Duration.TotalSeconds));
     }
 
     public void Dispose() => _listener.Dispose();

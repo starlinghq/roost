@@ -38,6 +38,9 @@ public sealed record RoostServerOptions
     /// <summary>The clock of the response store's expiry (tests replace it).</summary>
     internal TimeProvider TimeProvider { get; init; } = TimeProvider.System;
 
+    /// <summary>The cold-start stages <c>GET /metrics</c> exports (R-046), or null when the host was not started by <c>roost serve</c>.</summary>
+    internal ColdStart? ColdStart { get; init; }
+
     /// <summary>Resolves <see cref="Host"/> and checks it and <see cref="Port"/>.</summary>
     /// <returns>The address to listen on.</returns>
     /// <exception cref="ArgumentException">The host is not an IP address or <c>localhost</c>, the port is out of range, or the

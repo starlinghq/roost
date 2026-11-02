@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
-    <Description>Roost's HTTP server (R-037 and R-074, stream H): an ASP.NET Core minimal API host over Starlings.Generation.Roost's RoostChatClient with the OpenAI chat completions, completions, models and Responses routes, the Anthropic Messages routes and vLLM's tokenize, detokenize, health, ping and version routes, one OpenAI-shaped error body (Anthropic's on the Messages routes) and loopback-only listening by default. Builds the `roost` executable. Host process only (decision 30).</Description>
+    <Description>Roost's HTTP server (R-037 and R-074, stream H): an ASP.NET Core minimal API host over Starlings.Generation.Roost's RoostChatClient with the OpenAI chat completions, completions, models and Responses routes, the Anthropic Messages routes and vLLM's tokenize, detokenize, health, ping and version routes, one OpenAI-shaped error body (Anthropic's on the Messages routes) and loopback-only listening by default; `roost doctor` and cold-start stage timing (R-046, stream J). Builds the `roost` executable. Host process only (decision 30).</Description>
     <OutputType>Exe</OutputType>
     <AssemblyName>roost</AssemblyName>
     <RootNamespace>Starlings.Roost.Server</RootNamespace>
@@ -15,6 +15,8 @@
     <ProjectReference Include="../Starlings.Generation.Roost/Starlings.Generation.Roost.csproj" />
     <!-- The Qwen3.5-0.8B state groups for the `roost serve` profile (the pure managed model definition; no worker code). -->
     <ProjectReference Include="../Starlings.Roost.Models.Qwen35/Starlings.Roost.Models.Qwen35.csproj" />
+    <!-- `roost doctor` (R-046) reads the kernel manifest (C5) itself: a host package names no Starlings.Roost.Kernels code (decision 21). -->
+    <PackageReference Include="Tomlyn" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="Starlings.Roost.Server.Tests" />
