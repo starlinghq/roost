@@ -71,7 +71,11 @@ public sealed class RoostCapabilities
     /// </summary>
     public const string Tools = "tools";
 
-    /// <summary>JSON and JSON-schema response formats (structured output).</summary>
+    /// <summary>
+    /// JSON and JSON-schema response formats (structured output, R-051). Unsupported: a format is compiled with
+    /// <see cref="RoostChatClientOptions.Grammar"/> when one is set (an invalid schema is refused with the grammar engine's
+    /// reason) and then refused, because the worker's sampler takes no token masks until contract C2 carries them.
+    /// </summary>
     public const string ResponseFormat = "response_format";
 
     /// <summary>Log probabilities.</summary>

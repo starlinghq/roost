@@ -53,7 +53,7 @@ internal sealed class ResponsesRoutes
         }
 
         // Refused options throw here, before anything is written.
-        var updates = _client.GetStreamingResponseAsync(request.Messages, request.Options, ct);
+        var updates = Start(request, ct);
         var enumerator = updates.GetAsyncEnumerator(ct);
         await using (enumerator.ConfigureAwait(false))
         {
@@ -132,6 +132,19 @@ internal sealed class ResponsesRoutes
             : throw new RouteException(StatusCodes.Status404NotFound, "not_found", "No stored response has this id: it was created with store false, it expired, or the server restarted.", "response_id");
     }
 
+    /// <summary>Starts the request on the client; a refused response format is named <c>text.format</c>, this API's field.</summary>
+    private IAsyncEnumerable<ChatResponseUpdate> Start(ResponsesRequest request, CancellationToken ct)
+    {
+        try
+        {
+            return _client.GetStreamingResponseAsync(request.Messages, request.Options, ct);
+        }
+        catch (RoostChatException e) when (e.Error.Param == "response_format")
+        {
+            throw new RoostChatException(e.Error with { Param = "text.format" }, e);
+        }
+    }
+
     private async Task StartBackgroundAsync(HttpContext context, StoredResponse stored)
     {
         var request = stored.Request;
@@ -140,7 +153,7 @@ internal sealed class ResponsesRoutes
         try
         {
             // Refused options throw here, before anything is stored.
-            updates = _client.GetStreamingResponseAsync(request.Messages, request.Options, cancellation.Token);
+            updates = Start(request, cancellation.Token);
             stored.Cancellation = cancellation;
             _store.Add(stored);
         }

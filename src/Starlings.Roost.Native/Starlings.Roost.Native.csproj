@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Description>Loader and bindings for Roost's native/ Rust libraries (stream F, decision 22): roost-grammar's llguidance token masks for structured output (R-051), the grammar slot table behind contract C2's grammar_slot, and the CPU sampler path that applies the masks. Worker-side: never loads ONNX Runtime.</Description>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <IsAotCompatible>true</IsAotCompatible>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Starlings.Roost.Native.Tests" />
+  </ItemGroup>
+</Project>

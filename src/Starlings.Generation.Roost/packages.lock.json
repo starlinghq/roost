@@ -51,6 +51,19 @@
           "Starlings.Tokenizers": "[0.3.0, 0.3.0]"
         }
       },
+      "starlings.roost.native": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
       "Starlings.Roost.Worker.Runtime.linux-x64": {
         "type": "Project"
       },

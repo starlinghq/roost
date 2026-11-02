@@ -17,6 +17,8 @@
     <ProjectReference Include="../Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
     <ProjectReference Include="../Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
     <ProjectReference Include="../Starlings.Roost.Generation/Starlings.Roost.Generation.csproj" />
+    <!-- R-051: the managed bindings of the roost-grammar library (llguidance); response formats are compiled with it in the host. -->
+    <ProjectReference Include="../Starlings.Roost.Native/Starlings.Roost.Native.csproj" />
     <ProjectReference Include="../Starlings.Roost.WorkerHost/Starlings.Roost.WorkerHost.csproj" />
     <!-- The packaged roost-worker (R-062), so `dotnet add package Starlings.Generation.Roost` brings the worker executable among
          the native runtime assets. The runtime package carries no lib/ assets, so a consumer's process gets no worker code. A

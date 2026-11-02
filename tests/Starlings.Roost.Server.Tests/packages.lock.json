@@ -158,6 +158,7 @@
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Engine": "[0.0.0-dev, )",
           "Starlings.Roost.Generation": "[0.0.0-dev, )",
+          "Starlings.Roost.Native": "[0.0.0-dev, )",
           "Starlings.Roost.Worker.Runtime.linux-x64": "[0.0.0-dev, )",
           "Starlings.Roost.WorkerHost": "[0.0.0-dev, )",
           "Starlings.Tokenizers": "[0.3.0, 0.3.0]"
@@ -208,6 +209,13 @@
         "dependencies": {
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Graph": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.native": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
           "Starlings.Roost.Ops": "[0.0.0-dev, )"
         }
       },

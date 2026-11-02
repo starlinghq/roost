@@ -1,0 +1,26 @@
+[package]
+name = "roost-grammar"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+description = "Roost structured output: llguidance token masks behind a versioned C ABI (R-051, decision 22)"
+
+[lib]
+name = "roost_grammar"
+# cdylib is the release asset (libroost_grammar.so, roost_grammar.dll, libroost_grammar.dylib); rlib lets the
+# integration tests call the C ABI functions directly.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Pinned by full commit SHA (guidance-ai/llguidance, crate 1.9.1), the revision spike S10 measured
+# (docs/m0/roost-s10-llguidance-abi.md). A SHA bump updates PROVENANCE.md and THIRD-PARTY-NOTICES.md in the same change.
+llguidance = { git = "https://github.com/guidance-ai/llguidance", rev = "6cef6ed9c973c2a155a85f2bb1996320af28b289", default-features = false, features = ["lark", "rayon", "referencing", "ahash"] }
+toktrie_hf_tokenizers = { git = "https://github.com/guidance-ai/llguidance", rev = "6cef6ed9c973c2a155a85f2bb1996320af28b289" }
+anyhow = "1"
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+panic = "unwind"

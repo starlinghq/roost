@@ -32,6 +32,10 @@ namespace Starlings.Generation.Roost;
 /// Both are parsed incrementally in the formats of <see cref="RoostModelProfile.EffectiveToolCallFormat"/> and
 /// <see cref="RoostModelProfile.EffectiveReasoningFormat"/>; nothing constrains decoding, so the model may answer in text, call an
 /// undeclared tool or omit arguments. A malformed call is returned as text.</para>
+/// <para><b>Response formats (R-051).</b> <see cref="ChatOptions.ResponseFormat"/> JSON and JSON-schema formats are compiled with
+/// <see cref="RoostChatClientOptions.Grammar"/>, so a schema the grammar engine cannot enforce is refused with its reason, and
+/// are then refused: the worker does not apply token masks yet. Both refusals are <see cref="RoostErrorCode.InvalidOption"/>
+/// naming <c>response_format</c>.</para>
 /// <para><b>Cancellation.</b> Cancelling the token, or ending the enumeration early, drops the request from the worker's
 /// next step and frees its blocks.</para>
 /// <para><b>Telemetry.</b> Every request submitted to the worker records metrics on <see cref="Telemetry"/> and one activity
@@ -111,7 +115,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
 
         // Validate before anything is enumerated, so a refused option throws at the call.
-        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
+        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Grammar);
         return StreamChatAsync(prepared, cancellationToken);
     }
 
@@ -129,7 +133,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     public IAsyncEnumerable<ChatResponseUpdate> GetStreamingCompletionAsync(string prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-        var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens);
+        var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Grammar);
         return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, null, cancellationToken);
     }
 

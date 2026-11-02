@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Requests;
+using Starlings.Roost.Server.Routing;
 using static Starlings.Roost.Server.Routing.RequestFields;
 
 namespace Starlings.Roost.Server.OpenAi;
@@ -86,7 +87,7 @@ internal static class OpenAiRequestReader
                     ChatTemplateKwargs(v, options);
                     break;
                 case "response_format":
-                    ResponseFormat(v);
+                    options.ResponseFormat = ResponseFormats.Read(v, "response_format", flat: false);
                     break;
                 case "logprobs":
                     if (Bool(v, "logprobs"))
@@ -664,22 +665,6 @@ internal static class OpenAiRequestReader
         }
 
         return stops;
-    }
-
-    private static void ResponseFormat(JsonElement v)
-    {
-        if (v.ValueKind != JsonValueKind.Object)
-        {
-            throw Refuse("response_format", "response_format must be an object.");
-        }
-
-        foreach (var field in Fields(v, "response_format"))
-        {
-            if (field.Name != "type" || field.Value.ValueKind != JsonValueKind.String || field.Value.GetString() != "text")
-            {
-                throw Refuse("response_format", "JSON and JSON-schema response formats are unsupported: structured output is not built yet (R-051). Only {\"type\":\"text\"} is accepted.");
-            }
-        }
     }
 
     private static bool StreamOptions(JsonElement? v, bool stream)

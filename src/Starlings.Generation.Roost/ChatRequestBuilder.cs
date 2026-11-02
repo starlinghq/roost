@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Roost.Generation;
+using Starlings.Roost.Native;
 using Starlings.Roost.Requests;
 
 namespace Starlings.Generation.Roost;
@@ -39,10 +40,10 @@ internal static class ChatRequestBuilder
     private const string GreedyOnly = "M0 decodes greedily only (decision 15, R-025); sampling is unsupported until the fused sampler (R-042).";
     private const string NoTemplate = "unsupported for a raw completion: the prompt is not rendered by a chat template.";
 
-    public static PreparedChat Build(IEnumerable<ChatMessage> messages, ChatOptions? options, RoostModelProfile model, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens)
+    public static PreparedChat Build(IEnumerable<ChatMessage> messages, ChatOptions? options, RoostModelProfile model, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens, GrammarTokenizer? grammar = null)
     {
         ArgumentNullException.ThrowIfNull(messages);
-        var (stops, maxOutput) = CheckCommon(options, model.ModelId, defaultMaxOutputTokens);
+        var (stops, maxOutput) = CheckCommon(options, model.ModelId, defaultMaxOutputTokens, grammar);
         var tools = Tools(options, model.EffectiveToolCallFormat);
         var enableThinking = Thinking(options, model.EffectiveReasoningFormat);
 
@@ -82,10 +83,10 @@ internal static class ChatRequestBuilder
     /// Checks a raw-text completion: the same options as a chat, except <c>Instructions</c>, tools and thinking, which a prompt
     /// without a chat template has nowhere to put.
     /// </summary>
-    public static PreparedPrompt BuildRaw(string prompt, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens)
+    public static PreparedPrompt BuildRaw(string prompt, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens, GrammarTokenizer? grammar = null)
     {
         ArgumentNullException.ThrowIfNull(prompt);
-        var (stops, maxOutput) = CheckCommon(options, modelId, defaultMaxOutputTokens);
+        var (stops, maxOutput) = CheckCommon(options, modelId, defaultMaxOutputTokens, grammar);
         if (options is not null)
         {
             if (options.Instructions is { Length: > 0 })
@@ -123,7 +124,7 @@ internal static class ChatRequestBuilder
         return new PreparedPrompt(prompt, stops, CreateMatcher(stopFactory, stops), maxOutput);
     }
 
-    private static (IReadOnlyList<string> Stops, int MaxOutput) CheckCommon(ChatOptions? options, string modelId, int defaultMaxOutputTokens)
+    private static (IReadOnlyList<string> Stops, int MaxOutput) CheckCommon(ChatOptions? options, string modelId, int defaultMaxOutputTokens, GrammarTokenizer? grammar)
     {
         var maxOutput = defaultMaxOutputTokens;
         IReadOnlyList<string> stops = [];
@@ -132,7 +133,7 @@ internal static class ChatRequestBuilder
             return (stops, maxOutput);
         }
 
-        CheckOptions(options, modelId);
+        CheckOptions(options, modelId, grammar);
         if (options.MaxOutputTokens is { } max)
         {
             maxOutput = max > 0 ? max : throw RoostChatException.InvalidOption("max_tokens", string.Create(CultureInfo.InvariantCulture, $"MaxOutputTokens must be positive; got {max}."));
@@ -163,7 +164,7 @@ internal static class ChatRequestBuilder
         }
     }
 
-    private static void CheckOptions(ChatOptions o, string modelId)
+    private static void CheckOptions(ChatOptions o, string modelId, GrammarTokenizer? grammar)
     {
         if (o.Temperature is { } t && t != 0f)
         {
@@ -194,7 +195,7 @@ internal static class ChatRequestBuilder
 
         if (o.ResponseFormat is not null and not ChatResponseFormatText)
         {
-            throw Refuse("response_format", "JSON and JSON-schema response formats are unsupported in M0; structured output arrives in M1 (R-051).");
+            CheckResponseFormat(o.ResponseFormat, grammar);
         }
 
         if (o.ConversationId is not null)
@@ -222,6 +223,48 @@ internal static class ChatRequestBuilder
                 }
             }
         }
+    }
+
+    /// <summary>The grammar a JSON response format compiles to: its schema, or any JSON object when it has none.</summary>
+    internal static GrammarSpec GrammarOf(ChatResponseFormatJson format) =>
+        format.Schema is { } schema ? GrammarSpec.JsonSchema(schema.GetRawText()) : GrammarSpec.JsonObject;
+
+    /// <summary>
+    /// R-051: a JSON or JSON-schema response format is compiled with the grammar engine, so a schema it cannot enforce is the
+    /// caller's 400 (S10 finding 3), and then refused, because the worker's sampler does not take token masks yet (contract C2
+    /// has the grammar slot but no mask table). Any other format type is refused by name.
+    /// </summary>
+    private static void CheckResponseFormat(ChatResponseFormat format, GrammarTokenizer? grammar)
+    {
+        if (format is not ChatResponseFormatJson json)
+        {
+            throw Refuse("response_format", $"Response format {format.GetType().Name} is unsupported; Roost accepts text, JSON and JSON-schema formats.");
+        }
+
+        if (json.Schema is { ValueKind: not JsonValueKind.Object } schema)
+        {
+            throw Refuse("response_format", $"The JSON schema must be an object; got {schema.ValueKind}.");
+        }
+
+        if (grammar is null)
+        {
+            throw Refuse("response_format", "JSON and JSON-schema response formats need the grammar engine: this client has no RoostChatClientOptions.Grammar (the roost-grammar library over the model's tokenizer).");
+        }
+
+        try
+        {
+            grammar.Validate(GrammarOf(json));
+        }
+        catch (GrammarException e) when (e.IsInvalidGrammar)
+        {
+            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The response format's schema cannot be enforced: " + e.Message, "response_format"), e);
+        }
+        catch (GrammarException e)
+        {
+            throw new RoostChatException(new RoostError(RoostErrorCode.Internal, "The grammar engine failed: " + e.Message), e);
+        }
+
+        throw Refuse("response_format", "The response format compiles but cannot be applied yet: the worker's sampler takes no token masks until the step plan (contract C2) carries them, so the output would not be constrained (R-051).");
     }
 
     /// <summary>

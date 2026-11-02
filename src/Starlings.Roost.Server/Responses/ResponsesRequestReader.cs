@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost;
+using Starlings.Roost.Server.Routing;
 using static Starlings.Roost.Server.Routing.RequestFields;
 
 namespace Starlings.Roost.Server.Responses;
@@ -112,7 +113,7 @@ internal static class ResponsesRequestReader
 
                     break;
                 case "text":
-                    TextConfig(v);
+                    TextConfig(v, options);
                     break;
                 case "truncation":
                     if (StringValue(v, name) != "disabled")
@@ -306,7 +307,7 @@ internal static class ResponsesRequestReader
         }
     }
 
-    private static void TextConfig(JsonElement v)
+    private static void TextConfig(JsonElement v, ChatOptions options)
     {
         if (v.ValueKind != JsonValueKind.Object)
         {
@@ -320,12 +321,7 @@ internal static class ResponsesRequestReader
                 throw Refuse("text." + field.Name, $"Text option '{field.Name}' is unsupported.");
             }
 
-            var format = field.Value;
-            if (format.ValueKind != JsonValueKind.Object || !format.TryGetProperty("type", out var type) || type.ValueKind != JsonValueKind.String
-                || type.GetString() != "text" || format.EnumerateObject().Count() != 1)
-            {
-                throw Refuse("text.format", "JSON and JSON-schema text formats are unsupported: structured output is not built yet (R-051). Only {\"type\":\"text\"} is accepted.");
-            }
+            options.ResponseFormat = ResponseFormats.Read(field.Value, "text.format", flat: true);
         }
     }
 }

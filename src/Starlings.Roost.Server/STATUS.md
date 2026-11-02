@@ -94,10 +94,19 @@ endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
   passed to `RoostChatClient`, whose refusals (greedy decoding only in M0) name the same OpenAI parameter. Message fields are
   named by path, for example `messages[0].content[0].type`. An absent `temperature` means greedy decoding, not OpenAI's 1.0
   (nor Anthropic's 1.0 on `/v1/messages`). The Responses, Messages and tokenize readers follow the same rules: for example
-  `tools` (unless empty), `reasoning`, `previous_response_id`, `conversation`, JSON `text.format`, `truncation` `auto`,
+  `tools` (unless empty), `reasoning`, `previous_response_id`, `conversation`, `truncation` `auto`,
   non-empty `include`, `top_logprobs` and `stream_options` on `/v1/responses`; `tools` (unless empty), `tool_choice` other
   than `none`, `thinking` other than `disabled`, non-text blocks, a final assistant message (prefill) and unknown `metadata`
   keys on `/v1/messages`; `chat_template`, `tools` and `add_generation_prompt` false on `/tokenize`.
+- **Response formats (R-051).** `response_format` on `/v1/chat/completions` and `text.format` on `/v1/responses` are read
+  by `Routing/ResponseFormats`: `text`, `json_object` and `json_schema` (`name` of 1 to 64 letters, digits, `_` or `-`;
+  `schema` a JSON object, required; `description`; `strict` true or false, which changes nothing because the grammar always
+  constrains to the schema) become `ChatOptions.ResponseFormat`. Any other type (a regular expression, a grammar,
+  `structural_tag`) is refused naming `response_format.type` (`text.format.type`), and every malformed field by its path.
+  A well-formed JSON format is then refused by `RoostChatClient` naming `response_format` (`text.format` on the Responses
+  route): without `RoostChatClientOptions.Grammar` because nothing can compile it, and with it after compiling (an
+  unsupported keyword such as `uniqueItems` is a 400 quoting the grammar engine) because the worker takes no token masks yet.
+  `roost serve` configures no grammar engine.
 - **Prompt embeddings.** Refused: vLLM's `prompt_embeds` on `/v1/completions` is a 400 naming it. Contract C2 carries
   embeddings as a `MultimodalPart` of kind `Embeddings`, but `Starlings.Generation.Roost`'s `RoostChatClient` exposes no way to
   pass one, so the server cannot reach the C2 slot until that package gains an embedding input (open; R-074 was scoped to the
@@ -138,7 +147,13 @@ endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
   `reasoning_effort`. A tool without a description renders `"description": ""`, because `RoostToolDefinition.Description` (stream
   B1's type) is not nullable. Parsers for other families (Llama, Mistral, DeepSeek and so on) come per family with their
   templates.
-- **Structured output, sampling, log probabilities, `n` > 1, multimodal input**: refused with a 400 naming the option until
-  R-051 and R-042 land.
+- **Structured output** (R-051): the grammar engine (`native/roost-grammar`), its bindings and the CPU sampler path with
+  masks are built and CPU-tested (`src/Starlings.Roost.Native/STATUS.md`), and response formats are read and compiled, but
+  every JSON format is still refused: contract C2 has `grammar_slot` and no table that carries a mask (or a grammar) to the
+  worker, so enforcing it needs a stream A contract change, the planner (stream G) assigning slots, and the eager worker
+  sampling through `GrammarSampler`. `roost serve` would also need to load the library and build a `GrammarTokenizer` from
+  `--tokenizer`.
+- **Sampling, log probabilities, `n` > 1, multimodal input**: refused with a 400 naming the option until R-042 and the
+  multimodal items land.
 - **vLLM's CLI flags and environment variables**: R-075.
 - **Concurrency**: M0 runs one sequence per step, so concurrent requests take turns (`continuous_batching` `unsupported`).
