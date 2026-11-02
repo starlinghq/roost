@@ -30,4 +30,8 @@
     <!-- R-037: the in-memory server for Starlings.Roost.Server.Tests (test only), matched to the ASP.NET Core 10.0.12 shared framework the SDK pins. -->
     <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="10.0.12" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- R-040: the official OpenAI .NET client for Starlings.Roost.ApiCompat.Tests (test only), pinned exactly so the suite always drives the same client. -->
+    <PackageVersion Include="OpenAI" Version="[2.14.0]" />
+  </ItemGroup>
 </Project>

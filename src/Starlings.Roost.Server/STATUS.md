@@ -121,15 +121,17 @@ endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
 - **GPU end-to-end evidence.** No run of `roost serve` with Qwen3.5-0.8B on the 3090 or 4060 Ti through `tools/gpu-lease`;
   until one is committed with its log, every route stays `untested`. The S1 RSS and SSE figures (docs/m0/roost-s1-aot-cuda.md)
   are from the spike, not from this server.
-- **OpenAI client libraries** against the server: the compatibility suite is R-040.
+- **OpenAI client libraries** against the server: the R-040 suite (`tests/Starlings.Roost.ApiCompat.Tests/STATUS.md`) runs the
+  official .NET client in CI and the Python package opt-in, over the scripted worker only. It found `GET /v1/models/{id}`
+  unrouted (404).
 - **R-038 gaps.** No GPU run has been scraped; prefix-cache, preemption and queue-time families wait on the engine (R-030,
   R-032); no OpenTelemetry exporter is wired (a host adds one over the `Starlings.Roost` meter and activity source).
 - **R-074 gaps.** Prompt-embeddings input waits on an embedding input in `RoostChatClient`. `stop_reason`
   `stop_sequence` is never reported on `/v1/messages` (the client reports a stop string and a stop token alike, so both are
   `end_turn`), and a stream's `message_start` carries 0 input tokens (usage arrives with the last update; `message_delta` has
   both counts). Not built: `DELETE /v1/responses/{id}`, `GET /v1/responses/{id}/input_items`, streaming a stored response,
-  and vLLM's other utility routes (`/load`, `/is_sleeping`, `/server_info` and the like). Official OpenAI and Anthropic client
-  libraries against these routes are R-040.
+  and vLLM's other utility routes (`/load`, `/is_sleeping`, `/server_info` and the like). The R-040 suite covers the Responses
+  routes with the official OpenAI clients; no Anthropic client library has run against `/v1/messages`.
 - **R-053 gaps.** No model has run with tools or thinking on Roost (no GPU run; `tools` and `reasoning` stay `untested` until
   fixtures exist). Tools are on `/v1/chat/completions` only: `/v1/responses` (`function_call` items), `/v1/messages`
   (`tool_use` blocks) and `/tokenize` still refuse them, and thinking is not mapped to Anthropic's `thinking` or OpenAI's

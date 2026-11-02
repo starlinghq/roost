@@ -171,7 +171,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | One activity per request | `untested` | `tests/Starlings.Roost.Server.Tests/` | `roost.request` on the `Starlings.Roost` `ActivitySource`: request id, model, input and output tokens, finish reason, and the C6 code name on failure. No exporter is wired; a host adds its own `ActivityListener` or OpenTelemetry SDK. |
 | No prompt or output text in logs | `untested` | `tests/Starlings.Roost.Server.Tests/` | A test captures every log category at `Trace` over every route, refusals included, and finds neither the prompt nor the reply. |
 | vLLM CLI flags and environment | `unsupported` | — | R-075. |
-| OpenAI client library compatibility suite | `unsupported` | — | R-040. |
+| OpenAI client library compatibility suite | `untested` | `tests/Starlings.Roost.ApiCompat.Tests/`<br>`tests/Starlings.Roost.ApiCompat.Tests/STATUS.md` | R-040: the official OpenAI .NET client (2.14.0, in CI) drives chat completions, tool calls, reasoning, the Responses API, models and error bodies on Kestrel over a scripted worker, and asserts every unsupported option it can set is a 400 naming it; the official openai Python package (3.35.1, `tests/tools/api_compat/openai_compat.py`) is an opt-in run that also covers `/v1/completions`. No client has run against a GPU. |
 
 ## Scheduling and engine
 
