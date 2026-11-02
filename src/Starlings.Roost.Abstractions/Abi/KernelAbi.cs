@@ -7,7 +7,7 @@ public static class KernelAbi
     public const int Major = 1;
 
     /// <summary><c>ROOST_ABI_MINOR</c>. A loader accepts a library whose minor is at least this.</summary>
-    public const int Minor = 2;
+    public const int Minor = 3;
 
     /// <summary><c>ROOST_ABI_VERSION</c>, the value <c>roost_abi_version()</c> returns: major in the high 16 bits.</summary>
     public const uint Version = (Major << 16) | Minor;
@@ -335,6 +335,19 @@ public enum AttentionMode : uint
 
     /// <summary>Several query tokens per sequence.</summary>
     Prefill = 1,
+}
+
+/// <summary>Sampling math of the Sample op (<c>ROOST_SAMPLE_MATH_*</c>, ABI 1.3, contract version 4).</summary>
+public enum SampleMath : uint
+{
+    /// <summary>The CPU reference definition, in double precision.</summary>
+    Reference = 0,
+
+    /// <summary>
+    /// The float32 definition a device sampler reproduces bit for bit: correctly rounded binary32 operations in the order
+    /// <c>CpuOps.Sample</c> documents.
+    /// </summary>
+    Fp32 = 1,
 }
 
 /// <summary>GELU forms (<c>ROOST_GELU_*</c>).</summary>

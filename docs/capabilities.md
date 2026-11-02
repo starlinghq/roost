@@ -75,7 +75,7 @@ Status of each op on CUDA through the kernel library. Every registered variant p
 | `CacheWrite` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out` | `cache-write-roost`. |
 | `CacheCopy` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out` | `cache-copy-roost`. |
 | `Argmax` | `experimental` | `tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm86.log`<br>`tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm89.log` | No kernel: the eager worker copies the logits to the host and runs `CpuOps.Argmax`. Not in the conformance suite. The GPU sampler is R-042. |
-| `Sample` | `unsupported` | — | No kernel; the worker refuses sampling plans (code 1003 in the R-025 logs). R-042. |
+| `Sample` | `unsupported` | — | No kernel; the CUDA worker refuses sampling plans (code 1003 in the R-025 logs) and `CudaOps.Sample` refuses every call, naming the contract version 4 features it asked for. `CpuOps.Sample` is the CPU reference, with the float32 mode a GPU kernel must match bit for bit (contract version 4, C1 ABI 1.3). R-042 (GPU half). |
 | `GeluAndMul` | `unsupported` | — | CPU reference only; no kernel. |
 | `GatedDeltaRule` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out`<br>`kernels/results/r034-hybrid-conformance-sm86.log` | `gated-delta-rule-chunk-aot` and `gated-delta-rule-recurrent-aot`, Triton AOT cubins from flash-linear-attention. |
 | `CausalConv1d` | `experimental` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out` | `causal-conv1d-cuda`. |
@@ -138,19 +138,23 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `max_output_tokens` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`tests/Starlings.Generation.Roost.Tests.Cuda/results/r036-chat-sm86.log` | Ends with `ChatFinishReason.Length`. |
 | `instructions` | `untested` | `tests/Starlings.Generation.Roost.Tests/` | A leading system message. CPU only. |
 | `stop_sequences` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`tests/Starlings.Roost.Generation.Tests/` | Matched on detokenized text in the host (Starling's `StopSequenceMatcher`). CPU only. |
-| `sampling` | `unsupported` | — | Temperature, top-p, top-k. A seed is accepted under greedy decoding, where it changes nothing. R-042. |
-| `penalties` | `unsupported` | — | Frequency and presence. R-042. |
-| `tools` | `unsupported` | — | R-053. |
-| `response_format` | `unsupported` | — | JSON and JSON-schema structured output. S10 (`docs/m0/roost-s10-llguidance-abi.md`) is a spike, not a feature. R-051, R-042. |
-| `logprobs` | `unsupported` | — | R-042. |
-| `reasoning` | `unsupported` | — | Think-block output and reasoning parsers. R-053. |
+| `sampling` | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | Temperature, top-p, top-k, min-p and a per-request seed (Philox per sequence), with `RoostWorkerOptions.Sampler = Cpu`: a worker that runs the CPU sampler (`HostSampler` over `CpuOps.Sample`). On the CUDA worker (the default `GreedyOnly`) the client reports and refuses it as `unsupported` until the GPU sampler (R-042). A seed is accepted under greedy decoding, where it changes nothing. CPU only. |
+| `penalties` | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | Frequency, presence and repetition (vLLM's order and prompt/output split), CPU sampler only; `unsupported` on the CUDA worker. CPU only. |
+| `tools` | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/`<br>`src/Starlings.Roost.Server/STATUS.md` | R-053: `ChatOptions.Tools` (`AIFunction` declarations) rendered by the chat template; calls parsed incrementally into `FunctionCallContent`, finish reason `ToolCalls`. Qwen3.5 format through Starling's `Qwen35ToolCallParser`; Hermes (`<tool_call>` JSON) for a profile that declares it. `ToolMode` auto and none; a required or named call and `AllowMultipleToolCalls` false are refused (nothing constrains decoding). The Qwen3 template still refuses tools. CPU only, on a local corpus of template renderings (P-029 is not in this repository); no model has run with tools on Roost. |
+| `response_format` | `unsupported` | — | JSON and JSON-schema structured output. Refused with `InvalidOption` naming `response_format`: without `RoostChatClientOptions.Grammar`, or, with it, after the format is compiled (an invalid or unsupported schema is refused with the grammar engine's reason), because the worker takes no token masks until contract C2 carries them. The engine and the CPU sampler path are the `untested` row under [Structured output](#structured-output-tools-and-reasoning). R-051, R-042. |
+| `logprobs` | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | The chosen token and up to 20 alternatives per token, of the raw distribution, in each update's `AdditionalProperties["logprobs"]`; CPU sampler only, `unsupported` on the CUDA worker. The server still refuses `logprobs` and `top_logprobs` (its response bodies carry no logprobs yet). CPU only. |
+| `reasoning` | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/`<br>`src/Starlings.Roost.Server/STATUS.md` | R-053: `ChatOptions.AdditionalProperties["enable_thinking"]` opens the template's think block, and the completion is split incrementally into `TextReasoningContent` and the answer. Qwen3.5 only (the Qwen3 template still refuses thinking). CPU only, on a local corpus; no model has run with thinking on Roost. |
 | `multimodal_input` | `unsupported` | — | R-099, R-107. |
 | `conversation_state` | `unsupported` | — | `ConversationId`. |
 | `continuous_batching` | `unsupported` | — | M0 runs one sequence per step; concurrent requests take turns. R-029 wiring, M1. |
+| `async_scheduling` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`src/Starlings.Roost.Engine/STATUS.md` | `RoostWorkerOptions.AsyncScheduling` with an in-process executor or custom worker that patches inputs (R-032): two steps published, text and usage equal to synchronous mode. `unsupported` for a client without the option; the packaged CUDA worker refuses it (stream F). |
 | `worker_recovery` | `unsupported` | — | A worker fault fails the requests it carried. R-070. |
+| `sleep_wake` | `untested` | `tests/Starlings.Generation.Roost.Tests/SleepWakeTests.cs`<br>`tests/Starlings.Roost.WorkerHost.Tests/ControlMessageTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostWeightResidencyTests.cs` | `SleepAsync` (level 1: KV cache and recurrent state; level 2: also the weights) and `WakeUpAsync` (pools reallocated, weights restored through the R-024 verified stream with the digest checked; a file substituted while asleep fails with `AssetMismatch` and the worker stays asleep), wake time in `LastWakeDuration` (R-100, C8 control messages of contract version 6). Tested with roost-tiny-hybrid on `CpuOps` over both transports. `unsupported` for the packaged CUDA worker, which refuses with `ProfileUnsupported` (stream F's GPU half). CPU only. |
+| `weight_update` | `untested` | `tests/Starlings.Generation.Roost.Tests/SleepWakeTests.cs`<br>`tests/Starlings.Roost.WorkerHost.Tests/ControlMessageTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostWeightResidencyTests.cs` | `UpdateWeightsAsync` from a locked file (path, size, SHA-256): streamed and verified, swapped in only after the digest matched, old weights kept on a mismatch; re-sent to a worker started after a fault (R-100). Same CPU-only scope; the packaged CUDA worker refuses it. |
 | `co_tenant_admission` | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | Refuses new requests with `InsufficientDeviceMemory` while free device memory is below `MinFreeDeviceBytes` (R-044). CPU only: the co-tenant GPU test is open and no NVML source is the default yet. |
+| `telemetry` | `untested` | `tests/Starlings.Roost.Server.Tests/`<br>`src/Starlings.Roost.Server/STATUS.md` | `RoostChatClient.Telemetry` (R-038): a `Meter` per client (request counts by finish reason, token counters and histograms, time to first token, inter-token and end-to-end latency, running and waiting requests, KV block usage) and one `roost.request` activity per request tagged with its id, token counts and finish reason, never its text. CPU only; no GPU run has been scraped. |
 
-## OpenAI-compatible server (`roost serve`, R-037)
+## OpenAI-compatible server (`roost serve`, R-037, R-074)
 
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
@@ -159,12 +163,24 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `GET /v1/models` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | As above. |
 | Native AOT `roost` binary (linux-x64) | `untested` | `src/Starlings.Roost.Server/STATUS.md` | One local publish with zero trim or AOT warnings; a build check, not serving evidence. S1 measured AOT with CUDA interop on SM 86 (`docs/m0/roost-s1-aot-cuda.md`). |
 | Loopback-only listening by default | `untested` | `tests/Starlings.Roost.Server.Tests/` | Non-loopback needs `--allow-non-loopback`; there is no authentication. |
-| Responses API, Anthropic Messages, tokenize and detokenize, health and readiness | `unsupported` | — | R-074. |
-| Prompt-embeddings input | `unsupported` | — | R-074. |
-| Embeddings, rerank, score, classify, pooling | `unsupported` | — | R-052, R-087. |
+| `POST /v1/responses`, `GET /v1/responses/{id}`, `POST /v1/responses/{id}/cancel` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Whole, SSE and background, over an in-memory bounded store with expiry; text input only. CPU tests over a scripted in-process worker (R-074). |
+| `POST /v1/messages`, `POST /v1/messages/count_tokens` (Anthropic Messages API) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Whole and SSE with Anthropic's events and error body; text blocks only; `stop_reason` `stop_sequence` is not reported (R-074). |
+| `POST /tokenize`, `POST /detokenize` (vLLM bodies) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Prompt and chat-message forms over the model's tokenizer and template (R-074). |
+| `GET /health`, `/ping`, `GET /version`, `GET /ready` | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | Liveness (vLLM's names) and readiness (worker started, host not stopping); no worker liveness probe (R-074). |
+| Prompt-embeddings input | `unsupported` | — | `prompt_embeds` is refused by name: `RoostChatClient` exposes no embedding input for contract C2's `Embeddings` part (R-074). |
+| `POST /v1/embeddings` (Starling's E5 and EmbeddingGemma 2 packages) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/PoolingRoutesTests.cs`<br>`tests/Starlings.Roost.ApiCompat.Tests/EmbeddingsCompatTests.cs` | R-052: OpenAI's request and response (`float` and `base64`, `dimensions` equal to the served length) over `Starlings.Models.E5` and `Starlings.Models.EmbeddingGemma2` 0.3.0 on ONNX Runtime's CPU provider in the server process, loaded from verified local snapshots with `roost serve --pooling-e5` and `--pooling-embeddinggemma2`. CPU tests use fakes behind `IRoostEmbeddingModel`; no model has run through the route here. 400 `profile_unsupported` when no embedding model is configured. |
+| `POST /v1/extract` (Starling's GLiNER2 package) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/PoolingRoutesTests.cs` | R-052: Roost's own shape (labels and threshold in, labelled spans with scalar offsets out) over `Starlings.Models.Gliner2` 0.3.0 on ONNX Runtime's CPU provider, `roost serve --pooling-gliner2`. CPU tests use fakes behind `IRoostExtractionModel`; no model has run through the route here. |
+| `POST /v1/rerank` | `unsupported` | — | No Starling package provides a reranking model (nuget.org, 2026-11-02): the route answers 400 `profile_unsupported` naming `rerank`. |
+| `POST /v1/classify` | `unsupported` | — | No Starling package provides a classification model (nuget.org, 2026-11-02): the route answers 400 `profile_unsupported` naming `classify`. |
+| Score, pooling, Cohere- and Jina-style routes | `unsupported` | — | vLLM's `/v1/score`, `/pooling` and rerank aliases are not built (R-052, R-087). |
+| Pooling models on the GPU within the device budget | `unsupported` | — | The pooling routes run ONNX Runtime on the CPU only; the CUDA provider is not offered, and native pooling models in the worker are R-087. |
+| `POST /sleep`, `POST /wake_up`, `GET /is_sleeping`, `POST /update_weights` | `untested` | `tests/Starlings.Roost.Server.Tests/SleepModeRouteTests.cs` | vLLM's sleep-mode routes (R-100), mapped only with `--enable-sleep-mode` (`RoostServerOptions.EnableSleepMode`, off by default) and answering loopback clients only (403 otherwise). Level 2 releases the weights rather than offloading them as vLLM's level 1 does. CPU tests over a roost-tiny-hybrid worker on `CpuOps`; `roost serve` starts the packaged CUDA worker, which refuses them (`profile_unsupported`). |
 | Runtime LoRA load and unload | `unsupported` | — | R-050, R-074. |
-| vLLM CLI flags, environment and Prometheus names | `unsupported` | — | R-038, R-075. |
-| OpenAI client library compatibility suite | `unsupported` | — | R-040. |
+| `GET /metrics` (Prometheus text format) | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | R-038: every family under a `roost_` name and under vLLM's `vllm:` names (`request_success_total`, `prompt_tokens_total`, `generation_tokens_total`, `time_to_first_token_seconds`, `inter_token_latency_seconds`, `time_per_output_token_seconds`, `e2e_request_latency_seconds`, `request_prompt_tokens`, `request_generation_tokens`, `num_requests_running`, `num_requests_waiting`, `kv_cache_usage_perc`, `gpu_cache_usage_perc`) with the `model_name` label. No exporter package. Prefix-cache, preemption and queue-time metrics are not exported (the M0 driver has no prefix cache). |
+| One activity per request | `untested` | `tests/Starlings.Roost.Server.Tests/` | `roost.request` on the `Starlings.Roost` `ActivitySource`: request id, model, input and output tokens, finish reason, and the C6 code name on failure. No exporter is wired; a host adds its own `ActivityListener` or OpenTelemetry SDK. |
+| No prompt or output text in logs | `untested` | `tests/Starlings.Roost.Server.Tests/` | A test captures every log category at `Trace` over every route, refusals included, and finds neither the prompt nor the reply. |
+| vLLM CLI flags and environment | `unsupported` | — | R-075. |
+| OpenAI client library compatibility suite | `untested` | `tests/Starlings.Roost.ApiCompat.Tests/`<br>`tests/Starlings.Roost.ApiCompat.Tests/STATUS.md` | R-040: the official OpenAI .NET client (2.14.0, in CI) drives chat completions, tool calls, reasoning, the Responses API, models and error bodies on Kestrel over a scripted worker, and asserts every unsupported option it can set is a 400 naming it; the official openai Python package (3.35.1, `tests/tools/api_compat/openai_compat.py`) is an opt-in run that also covers `/v1/completions`. No client has run against a GPU. |
 
 ## Scheduling and engine
 
@@ -177,7 +193,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Admission control (worst-case reservation) | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | `Starlings.Roost.Engine/Admission`, CPU tests only. |
 | Prefix caching, attention | `unsupported` | — | `Starlings.Roost.Engine/Caching/PrefixCache` is built and CPU-tested (`tests/Starlings.Roost.Engine.Tests/Caching/`), but the M0 driver does not use it. R-030. |
 | Prefix caching, hybrid (recurrent state) | `unsupported` | — | R-094. |
-| Async scheduling | `unsupported` | — | R-032. |
+| Async scheduling | `untested` | `tests/Starlings.Roost.Engine.Tests/Scheduling/`<br>`tests/Starlings.Roost.Worker.Tests/`<br>`src/Starlings.Roost.Engine/STATUS.md` | Planner and CPU path (R-032, contract version 5): plan N+1 built during step N, decode inputs patched on the host by `SampledInputPatcher`, stop ids one step late and hidden; token streams equal to synchronous mode for roost-tiny and roost-tiny-hybrid on `CpuOps`, preemption storm included. The CUDA worker refuses sampled-input plans until stream F patches on the device; no GPU run, no racecheck. |
 | CUDA graphs, full and piecewise | `unsupported` | — | The worker is eager. The one R-017 capture on SM 86 replayed with a mismatch (`kernels/results/r017-graph-sm86.log`). R-032, R-033. |
 | Compiler fusion passes | `unsupported` | — | No CUDA fused variant. The AddRmsNorm and QkvQkNormRopeCacheWrite passes and their `CpuOps` definitions exist and are checked against the unfused graph on CPU (R-071). R-089. |
 | Batch-invariant mode | `unsupported` | — | R-106. FA2 prefill output depends on batch composition (R-019). |
@@ -189,6 +205,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Worker process over shared-memory rings (default) | `experimental` | `tests/Starlings.Roost.WorkerHost.Tests.Cuda/results/README.md`<br>`tests/Starlings.Generation.Roost.Tests.Cuda/results/r036-chat-sm86-roost-worker.log` | One worker per GPU (R-069); handshake checks ABI, manifest and weight digests; heartbeat. Measured on SM 86. |
 | In-process transport | `experimental` | `tests/Starlings.Roost.WorkerHost.Tests.Cuda/results/README.md`<br>`tests/Starlings.Roost.WorkerHost.Tests/` | For tests only (decision 21, decision 30). |
 | Worker fault classification (recoverable, sticky, hang) | `untested` | `tests/Starlings.Roost.WorkerHost.Tests/results/stress-runs.txt` | CPU fault-injection stress runs; recovery itself is `unsupported` (`worker_recovery`). |
+| Control messages: sleep, wake, replace weights | `untested` | `tests/Starlings.Roost.WorkerHost.Tests/ControlMessageTests.cs` | Layout 3 (R-100): `RoostControlMessage` and `RoostControlResult` over the rings, the runtime's sleeping state (steps refused while asleep), `IWeightLifecycle` on the executor; an executor without it answers `Unsupported`. Both transports, CPU fakes only. |
 | KV block transport between processes and hosts | `unsupported` | — | `native/roost-kvx`, R-095. |
 
 ## Sampling
@@ -196,7 +213,8 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
 | Greedy decoding | `untested` | `tests/Starlings.Generation.Roost.Tests.Cuda/results/r036-chat-sm86.log` | See `greedy_decoding`. |
-| All sampling parameters, logprobs, seeds | `unsupported` | — | R-042. |
+| Sampling parameters, penalties, logprobs, seeds on the CPU sampler | `untested` | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`<br>`tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs`<br>`tests/Starlings.Roost.Ops.Tests/SamplingV4Tests.cs` | `CpuOps.Sample` in double (reference) and float32 (the definition a GPU sampler must match bit for bit) with stop flags, top-k logprobs and grammar bitmasks; `HostSampler` keeps each sequence's token history for the penalties. See `sampling`. |
+| Sampling parameters, penalties, logprobs, seeds on the GPU | `unsupported` | — | The fused GPU sampler, R-042 (GPU half); the CUDA worker is greedy only. |
 | n > 1, best_of, beam search | `unsupported` | — | R-076. The server accepts `n` 1 and `best_of` 1 only. |
 | Speculative decoding (n-gram, suffix, draft model, MTP, EAGLE, newer proposers) | `unsupported` | — | R-083 to R-085. |
 
@@ -204,9 +222,11 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
-| Structured output (JSON schema, regex, grammar) | `unsupported` | — | See `response_format`. R-051, R-042. |
-| Tool calling parsers | `unsupported` | — | See `tools`. R-053. |
-| Reasoning parsers | `unsupported` | — | See `reasoning`. R-053. |
+| Structured output (JSON schema, regex, grammar) | `unsupported` | — | Not served: see `response_format`. The server reads `response_format` and `text.format` (`text`, `json_object`, `json_schema`) and refuses every other type, regular expressions and grammars included. R-051, R-042. |
+| Grammar engine and masked CPU sampling (`native/roost-grammar`, `Starlings.Roost.Native`) | `untested` | `native/roost-grammar/tests/`<br>`tests/Starlings.Roost.Native.Tests/`<br>`src/Starlings.Roost.Native/STATUS.md` | R-051: llguidance (pinned by SHA) behind a C ABI; JSON schema, any JSON object, regex and Lark matchers; masks per C2 `grammar_slot` in `GrammarSlots`, computed on thread-pool threads; `GrammarSampler` applies them in `CpuOps.Sample` and commits each token. CPU tests: a masked token is never sampled under adversarial logits, and every greedy and sampled output of roost-tiny and roost-tiny-moe under three JSON schemas parses and satisfies its schema. Not reachable from `RoostChatClient` or the server yet; the library is not built in CI (the tests skip). No mask latency measured here; S10 measured 17 to 27 us p50 per token on Qwen3's vocabulary. |
+| Tool calling parsers | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/` | See `tools`. Qwen3.5 (Starling's parser) and Hermes; both streaming, every split of a corpus completion giving the whole parse. Other families: `unsupported`. R-053. |
+| Reasoning parsers | `untested` | `tests/Starlings.Generation.Roost.Tests/Parsing/` | See `reasoning`. Qwen think blocks (`</think>` after an opened block). Other families: `unsupported`. R-053. |
+| OpenAI `tools`, `tool_choice`, `tool_calls` and vLLM `reasoning_content` | `untested` | `tests/Starlings.Roost.Server.Tests/`<br>`src/Starlings.Roost.Server/STATUS.md` | `POST /v1/chat/completions` only, whole and SSE (one `tool_calls` delta per call); vLLM's `chat_template_kwargs.enable_thinking`. The Responses, Messages and tokenize routes still refuse tools. R-053. |
 
 ## Quantisation and data types
 
@@ -247,11 +267,16 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | --- | --- | --- | --- |
 | Multi-LoRA (with graphs and prefix-cache awareness) | `unsupported` | — | R-050. |
 | LoRA on MoE experts and multimodal backbones | `unsupported` | — | R-050, R-099. |
-| Sleep and wake, in-place weight update | `unsupported` | — | R-100. |
+| Sleep and wake, in-place weight update | `untested` | `tests/Starlings.Generation.Roost.Tests/SleepWakeTests.cs`<br>`tests/Starlings.Roost.Server.Tests/SleepModeRouteTests.cs` | R-100, CPU half: see `sleep_wake` and `weight_update`. The CUDA eager worker does not implement it and refuses with a typed error; no GPU evidence. |
 | Per-GPU weight cache and engine snapshots | `unsupported` | — | R-046, R-100. |
-| Metrics and traces | `unsupported` | — | R-038. |
-| Container image, Kubernetes, router integration | `unsupported` | — | R-046, R-101. |
-| Model definitions as the plugin equivalent | `unsupported` | — | R-055 (section 13.2). |
+| Metrics and traces | `untested` | `src/Starlings.Roost.Server/STATUS.md`<br>`tests/Starlings.Roost.Server.Tests/` | See `GET /metrics` and one activity per request above (R-038). CPU only. |
+| Container image | `unsupported` | — | R-046: `deploy/Dockerfile` (AOT `roost` and `roost-worker`, kernel manifest and libraries on `nvidia/cuda:13.3.1-runtime-ubuntu24.04` pinned by digest) and `deploy/stage-image.sh` are written but no image has been built, measured against the 4 GB criterion or published (`deploy/STATUS.md`). |
+| `roost doctor` | `untested` | `tests/Starlings.Roost.Server.Tests/DoctorTests.cs`<br>`deploy/STATUS.md` | R-046: driver and its minimum, NVML, GPUs and their SMs against the manifest's statuses, kernel library digests against the manifest, weights lock, tokenizer stop tokens, free disk and host memory, each a typed pass, warn, fail or skip; exit 1 on a failure. CPU-tested with fake probes; never run on a GPU host. |
+| Cold-start stage timing | `untested` | `tests/Starlings.Roost.Server.Tests/ColdStartTests.cs`<br>`deploy/README.md` | R-046: `roost serve` logs each start stage (`runtime`, `arguments`, `profile`, `worker`, `listen`) and exports them as `roost_cold_start_stage_seconds` on `GET /metrics`. Per-stage budgets are proposals; no real start has been timed. |
+| Kubernetes, router integration | `unsupported` | — | R-101. |
+| Model definitions as the plugin equivalent | `unsupported` | — | R-055 (section 13.2): the onboarding tools below exist; no unseen model has been onboarded (M3 gate, R-057). |
+| roost-v1 inspect (config.json to C3 ops and C4 state groups) | `untested` | `tests/Starlings.Roost.Onboarding.Tests`<br>`evidence/pipeline/onboarding/STATUS.md` | R-055. A CPU tool tested on hand-written configs of Qwen3, Qwen3.5, Qwen3-MoE, Gemma 3 and DeepSeek-V3; `composes` speaks of C3 and `CpuOps` only, never of a GPU kernel. |
+| roost-v1 recipe schema and validator | `untested` | `tests/Starlings.Roost.Onboarding.Tests`<br>`evidence/recipes/qwen3.5-0.8b.json` | R-055. One recipe, for the existing Qwen3.5-0.8B profile; it carries that profile's status. |
 | .NET launcher as the Ray equivalent | `unsupported` | — | R-092 (section 13.2). |
 | NuGet packages on nuget.org | `unsupported` | — | Nothing is released. The R-062 drill packed `Starlings.Roost.Worker.Runtime` locally (`tests/Starlings.Generation.Roost.Tests.Cuda/results/README.md`). |
 

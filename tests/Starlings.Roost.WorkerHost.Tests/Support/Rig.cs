@@ -113,6 +113,67 @@ internal sealed class Rig : IAsyncDisposable
         }
     }
 
+    /// <summary>Publishes a control message (R-100) written by <paramref name="write"/> and waits for its answer, which is released.</summary>
+    public ControlReply Control(RingSlotKind kind, Func<Memory<byte>, ulong, int>? write = null, TimeSpan? timeout = null)
+    {
+        var until = Stopwatch.GetTimestamp() + (long)((timeout ?? TimeSpan.FromSeconds(10)).TotalSeconds * Stopwatch.Frequency);
+        while (!Transport.CanPublish())
+        {
+            if (Stopwatch.GetTimestamp() > until)
+            {
+                throw new TimeoutException("No plan buffer came free.");
+            }
+
+            Thread.SpinWait(100);
+        }
+
+        var index = Transport.NextPlanBufferIndex;
+        var id = NextStepId++;
+        var buffer = Transport.PlanBuffer(index);
+        if (write is null)
+        {
+            _ = kind switch
+            {
+                RingSlotKind.Sleep => ControlMessages.WriteSleep(buffer, id, SleepLevel.Kv),
+                RingSlotKind.Wake => ControlMessages.WriteWake(buffer, id, FakeExecutor.WeightsDigest.AsSpan()),
+                _ => throw new ArgumentException("A replace-weights message needs a writer.", nameof(write)),
+            };
+        }
+        else
+        {
+            var scratch = new byte[buffer.Length];
+            _ = write(scratch, id);
+            scratch.CopyTo(buffer);
+        }
+
+        Assert.True(Transport.TryPublish(new RingSlot { StepId = id, Kind = kind, BufferIndex = (uint)index }));
+        var wait = new SpinWait();
+        while (true)
+        {
+            if (Transport.TryTakeResult(out var slot))
+            {
+                try
+                {
+                    Assert.Equal(kind, slot.Kind);
+                    Assert.Equal(id, slot.StepId);
+                    return ControlMessages.ReadResult(Transport.ResultBuffer((int)slot.BufferIndex), slot);
+                }
+                finally
+                {
+                    Transport.ReleaseResult((int)slot.BufferIndex);
+                }
+            }
+
+            Assert.Equal(FaultClass.None, Transport.Poll());
+            if (Stopwatch.GetTimestamp() > until)
+            {
+                throw new TimeoutException("No control result.");
+            }
+
+            wait.SpinOnce(-1);
+        }
+    }
+
     /// <summary>Polls until a fault class other than none is concluded, or the timeout passes.</summary>
     public (FaultClass Fault, TimeSpan After) WaitForPollFault(TimeSpan timeout)
     {

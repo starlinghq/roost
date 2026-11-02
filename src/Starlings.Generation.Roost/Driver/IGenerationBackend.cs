@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using Starlings.Roost.Requests;
+using Starlings.Roost.WorkerHost;
 
 namespace Starlings.Generation.Roost.Driver;
 
@@ -14,6 +15,27 @@ internal interface IGenerationBackend : IAsyncDisposable
     /// <param name="request">The request.</param>
     /// <returns>Its event channel.</returns>
     IRequestChannel Submit(Request request);
+
+    /// <summary>
+    /// The share of the KV cache's attention blocks in use, 0 to 1, as of the last step the backend planned; null when it does not
+    /// know (R-038). Read from any thread.
+    /// </summary>
+    double? KvCacheUsage { get; }
+
+
+    /// <summary>Whether the worker is asleep (R-100).</summary>
+    bool IsSleeping { get; }
+
+    /// <summary>The duration of the last successful wake, or null before one.</summary>
+    TimeSpan? LastWakeDuration { get; }
+
+    /// <summary>Queues a sleep, wake or weight update (R-100). Refusals and failures fault the task with a <see cref="RoostChatException"/>.</summary>
+    /// <param name="operation">The operation.</param>
+    /// <param name="level">What a sleep releases.</param>
+    /// <param name="source">The new weights, for an update.</param>
+    /// <param name="cancellationToken">Cancels the wait; an operation already sent to the worker still completes there.</param>
+    /// <returns>What it did.</returns>
+    Task<RoostWorkerControlResult> ControlAsync(RoostWorkerOperation operation, RoostSleepLevel level, WeightSource? source, CancellationToken cancellationToken);
 }
 
 /// <summary>An <see cref="IRequestChannel"/> over a channel reader and a cancel callback.</summary>

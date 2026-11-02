@@ -1,9 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
-using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost;
+using Starlings.Roost.Generation;
 using Starlings.Roost.Requests;
+using Starlings.Roost.Server.Routing;
 
 namespace Starlings.Roost.Server.OpenAi;
 
@@ -21,13 +22,13 @@ internal sealed class OpenAiRoutes
 
     private readonly RoostChatClient _client;
     private readonly long _created;
-    private readonly ILogger _logger;
+    private readonly RouteRunner _runner;
 
     public OpenAiRoutes(RoostChatClient client, DateTimeOffset started, ILogger logger)
     {
         _client = client;
         _created = started.ToUnixTimeSeconds();
-        _logger = logger;
+        _runner = new RouteRunner(logger, ErrorBodies.Shape);
     }
 
     private string ModelId => _client.Model.ModelId;
@@ -59,7 +60,7 @@ internal sealed class OpenAiRoutes
             "chat.completion",
             Created(response.CreatedAt),
             response.ModelId ?? ModelId,
-            [new ChatChoiceBody(0, new ChatMessageBody("assistant", response.Text), null, Finish(response.FinishReason))],
+            [new ChatChoiceBody(0, Message(response), null, Finish(response.FinishReason))],
             Usage(response.Usage));
         await WriteJsonAsync(context, completion, OpenAiJsonContext.Default.ChatCompletionBody).ConfigureAwait(false);
     });
@@ -91,40 +92,9 @@ internal sealed class OpenAiRoutes
         await WriteJsonAsync(context, completion, OpenAiJsonContext.Default.TextCompletionBody).ConfigureAwait(false);
     });
 
-    private async Task RunAsync(HttpContext context, Func<CancellationToken, Task> handle)
-    {
-        var ct = context.RequestAborted;
-        try
-        {
-            await handle(ct).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
-        {
-            // The client disconnected; the generation was cancelled with it and there is no one to answer.
-        }
-        catch (RoostChatException e) when (!context.Response.HasStarted)
-        {
-            await ErrorBodies.WriteAsync(context.Response, e.Error).ConfigureAwait(false);
-        }
-        catch (Exception e) when (!context.Response.HasStarted && e is not OutOfMemoryException)
-        {
-            // Exception messages in Roost never carry prompt text (C6); the body still says only "Internal error."
-            ServerLog.Unhandled(_logger, e);
-            await ErrorBodies.WriteAsync(context.Response, new RoostError(RoostErrorCode.Internal, "Internal error.")).ConfigureAwait(false);
-        }
-    }
+    private Task RunAsync(HttpContext context, Func<CancellationToken, Task> handle) => _runner.RunAsync(context, handle);
 
-    private static async Task<JsonDocument> ReadBodyAsync(HttpContext context, CancellationToken ct)
-    {
-        try
-        {
-            return await JsonDocument.ParseAsync(context.Request.Body, default, ct).ConfigureAwait(false);
-        }
-        catch (JsonException)
-        {
-            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The request body is not valid JSON."));
-        }
-    }
+    private static Task<JsonDocument> ReadBodyAsync(HttpContext context, CancellationToken ct) => RouteRunner.ReadBodyAsync(context, ct);
 
     /// <summary>
     /// Streams updates as server-sent events. The first update is awaited before the headers are sent, so a request refused
@@ -143,11 +113,7 @@ internal sealed class OpenAiRoutes
             string model = first.ModelId ?? ModelId;
 
             var response = context.Response;
-            response.StatusCode = StatusCodes.Status200OK;
-            response.ContentType = "text/event-stream";
-            response.Headers.CacheControl = "no-cache";
-            response.Headers["X-Accel-Buffering"] = "no";
-            context.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
+            RouteRunner.BeginEventStream(context);
 
             ChatFinishReason? finish = null;
             UsageDetails? usage = null;
@@ -158,13 +124,18 @@ internal sealed class OpenAiRoutes
                     await WriteEventAsync(response, chunks.Chunk(id, created, model, null, null, null, role: true), chunks.TypeInfo, ct).ConfigureAwait(false);
                 }
 
+                var toolIndex = 0;
                 while (more)
                 {
                     var update = enumerator.Current;
-                    var text = update.Text;
-                    if (text.Length > 0)
+                    foreach (var content in update.Contents)
                     {
-                        await WriteEventAsync(response, chunks.Chunk(id, created, model, text, null, null, role: false), chunks.TypeInfo, ct).ConfigureAwait(false);
+                        if (chunks.Content(id, created, model, content, toolIndex) is { } chunk)
+                        {
+                            await WriteEventAsync(response, chunk, chunks.TypeInfo, ct).ConfigureAwait(false);
+                        }
+
+                        toolIndex += content is FunctionCallContent ? 1 : 0;
                     }
 
                     finish ??= update.FinishReason;
@@ -184,7 +155,7 @@ internal sealed class OpenAiRoutes
             }
             catch (Exception e) when (!ct.IsCancellationRequested && e is not OutOfMemoryException)
             {
-                ServerLog.Unhandled(_logger, e);
+                ServerLog.Unhandled(_runner.Logger, e);
                 await WriteErrorEventAsync(response, new RoostError(RoostErrorCode.Internal, "Internal error."), ct).ConfigureAwait(false);
             }
 
@@ -244,6 +215,37 @@ internal sealed class OpenAiRoutes
         return r == ChatFinishReason.ContentFilter ? "content_filter" : r.Value;
     }
 
+    /// <summary>The assistant message of a whole chat completion: its text, reasoning and tool calls (R-053).</summary>
+    private static ChatMessageBody Message(ChatResponse response)
+    {
+        var contents = response.Messages.SelectMany(m => m.Contents).ToList();
+        var reasoning = contents.OfType<TextReasoningContent>().Select(r => r.Text).ToList();
+        var calls = contents.OfType<FunctionCallContent>().Select(c => new ToolCallBody(c.CallId, "function", FunctionCall(c))).ToArray();
+        var text = response.Text;
+        return new ChatMessageBody(
+            "assistant",
+            text.Length == 0 && calls.Length > 0 ? null : text,
+            reasoning.Count > 0 ? string.Concat(reasoning) : null,
+            calls.Length > 0 ? calls : null);
+    }
+
+    /// <summary>
+    /// A call's function with its arguments as a JSON string: the JSON the parser produced (<see cref="RoostToolCall"/>, member
+    /// order kept), or the argument dictionary serialized.
+    /// </summary>
+    private static FunctionCallBody FunctionCall(FunctionCallContent call)
+    {
+        if (call.RawRepresentation is RoostToolCall parsed)
+        {
+            return new FunctionCallBody(parsed.Name, parsed.ArgumentsJson);
+        }
+
+        var json = call.Arguments is null
+            ? "{}"
+            : JsonSerializer.Serialize(call.Arguments, AIJsonUtilities.DefaultOptions.GetTypeInfo(typeof(IDictionary<string, object?>)));
+        return new FunctionCallBody(call.Name, json);
+    }
+
     private static UsageBody Usage(UsageDetails? usage)
     {
         int prompt = (int)(usage?.InputTokenCount ?? 0);
@@ -261,6 +263,9 @@ internal sealed class OpenAiRoutes
         JsonTypeInfo<TChunk> TypeInfo { get; }
 
         TChunk Chunk(string id, long created, string model, string? text, string? finish, UsageBody? usage, bool role);
+
+        /// <summary>The chunk for one content of an update, or null when the route has nothing to send for it.</summary>
+        TChunk? Content(string id, long created, string model, AIContent content, int toolIndex);
 
         TChunk UsageChunk(string id, long created, string model, UsageBody usage);
     }
@@ -281,6 +286,18 @@ internal sealed class OpenAiRoutes
 
         public ChatCompletionChunkBody UsageChunk(string id, long created, string model, UsageBody usage) =>
             new(id, "chat.completion.chunk", created, model, [], usage);
+
+        public ChatCompletionChunkBody? Content(string id, long created, string model, AIContent content, int toolIndex)
+        {
+            ChatDeltaBody? delta = content switch
+            {
+                TextContent { Text.Length: > 0 } t => new ChatDeltaBody(null, t.Text),
+                TextReasoningContent { Text.Length: > 0 } r => new ChatDeltaBody(null, null, r.Text),
+                FunctionCallContent c => new ChatDeltaBody(null, null, null, [new ToolCallDeltaBody(toolIndex, c.CallId, "function", FunctionCall(c))]),
+                _ => null,
+            };
+            return delta is null ? null : new(id, "chat.completion.chunk", created, model, [new ChatChunkChoiceBody(0, delta, null, null)], null);
+        }
     }
 
     /// <summary>Streamed <c>text_completion</c>s: text chunks, a finish chunk, and the usage chunk.</summary>
@@ -299,5 +316,8 @@ internal sealed class OpenAiRoutes
 
         public TextCompletionBody UsageChunk(string id, long created, string model, UsageBody usage) =>
             new(id, "text_completion", created, model, [], usage);
+
+        public TextCompletionBody? Content(string id, long created, string model, AIContent content, int toolIndex) =>
+            content is TextContent { Text.Length: > 0 } t ? Chunk(id, created, model, t.Text, null, null, role: false) : null;
     }
 }

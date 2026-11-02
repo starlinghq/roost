@@ -61,7 +61,7 @@ public sealed unsafe class WorkerRingEndpoint
             return false;
         }
 
-        if (slot.Kind == RingSlotKind.Step && slot.BufferIndex != (uint)(sequence % (ulong)_planBufferCount))
+        if (slot.Kind.NamesBuffer() && slot.BufferIndex != (uint)(sequence % (ulong)_planBufferCount))
         {
             throw new InvalidDataException("A plan slot names a buffer other than slot number modulo buffer count.");
         }
@@ -103,11 +103,11 @@ public sealed unsafe class WorkerRingEndpoint
     }
 
     /// <summary>Publishes a result slot.</summary>
-    /// <param name="slot">The slot; for a step, <c>BufferIndex</c> must be <see cref="NextResultBufferIndex"/>.</param>
+    /// <param name="slot">The slot; for a step or a control message, <c>BufferIndex</c> must be <see cref="NextResultBufferIndex"/>.</param>
     /// <returns>False when the ring is full.</returns>
     public bool TryPublishResult(in RingSlot slot)
     {
-        if (slot.Kind == RingSlotKind.Step && slot.BufferIndex != (uint)NextResultBufferIndex)
+        if (slot.Kind.NamesBuffer() && slot.BufferIndex != (uint)NextResultBufferIndex)
         {
             throw new InvalidDataException("A result slot names a buffer other than slot number modulo buffer count.");
         }

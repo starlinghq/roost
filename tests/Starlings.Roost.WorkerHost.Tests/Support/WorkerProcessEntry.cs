@@ -15,6 +15,7 @@ internal static class WorkerProcessEntry
     public const string OpenDelayPrefix = "--open-delay-ms=";
     public const string FailOpenFlag = "--fail-open";
     public const string SegmentDirPrefix = "--segment-dir=";
+    public const string LifecycleFlag = "--lifecycle";
 
     [ModuleInitializer]
     internal static void Enter()
@@ -31,9 +32,14 @@ internal static class WorkerProcessEntry
         }
     }
 
-    public static WorkerCommand Command(int openDelayMs = 0, bool failOpen = false)
+    public static WorkerCommand Command(int openDelayMs = 0, bool failOpen = false, bool lifecycle = false)
     {
         var extra = new List<string> { WorkerFlag };
+        if (lifecycle)
+        {
+            extra.Add(LifecycleFlag);
+        }
+
         if (openDelayMs > 0)
         {
             extra.Add(OpenDelayPrefix + openDelayMs);
@@ -47,8 +53,13 @@ internal static class WorkerProcessEntry
         return WorkerCommand.ForCurrentProcess([.. extra]);
     }
 
-    private static FakeExecutor MakeExecutor(string[] args)
+    private static IStepExecutor MakeExecutor(string[] args)
     {
+        if (Array.IndexOf(args, LifecycleFlag) >= 0)
+        {
+            return new LifecycleFakeExecutor();
+        }
+
         var delay = 0;
         foreach (var arg in args)
         {

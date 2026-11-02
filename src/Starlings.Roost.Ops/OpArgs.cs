@@ -495,6 +495,48 @@ public struct SampleArgs
 
     /// <summary>Row stride.</summary>
     public int Stride;
+
+    /// <summary>[Rows] float32; 1 disables. Read when <see cref="TokenCounts"/> is set. Contract version 4.</summary>
+    public DeviceSpan RepetitionPenalty;
+
+    /// <summary>[Rows] float32; 0 disables. Read when <see cref="TokenCounts"/> is set. Contract version 4.</summary>
+    public DeviceSpan PresencePenalty;
+
+    /// <summary>[Rows] float32; 0 disables. Read when <see cref="TokenCounts"/> is set. Contract version 4.</summary>
+    public DeviceSpan FrequencyPenalty;
+
+    /// <summary>
+    /// Optional [Rows, Vocab] int32: how often each token occurs in the row's generated output. Setting it turns the
+    /// penalties on. Contract version 4.
+    /// </summary>
+    public DeviceSpan TokenCounts;
+
+    /// <summary>
+    /// Optional [Rows, ceil(Vocab / 32)] uint32: the tokens of the row's prompt (bit v % 32 of word v / 32), which the
+    /// repetition penalty also covers. Read when <see cref="TokenCounts"/> is set. Contract version 4.
+    /// </summary>
+    public DeviceSpan PromptMask;
+
+    /// <summary>int32 stop ids, indexed by <see cref="StopRanges"/>. Read when <see cref="StopFlags"/> is set. Contract version 4.</summary>
+    public DeviceSpan StopIds;
+
+    /// <summary>[Rows, 2] int32: (start, count) of each row's stop ids in <see cref="StopIds"/>. Read when <see cref="StopFlags"/> is set. Contract version 4.</summary>
+    public DeviceSpan StopRanges;
+
+    /// <summary>Optional [Rows] int32 output: 1 when the chosen id is one of the row's stop ids, else 0. Contract version 4.</summary>
+    public DeviceSpan StopFlags;
+
+    /// <summary>Optional [Rows, TopLogprobs] int32 output: the most likely tokens of the raw distribution. Contract version 4.</summary>
+    public DeviceSpan TopLogprobIds;
+
+    /// <summary>Optional [Rows, TopLogprobs] float32 output: their logprobs. Contract version 4.</summary>
+    public DeviceSpan TopLogprobValues;
+
+    /// <summary>Alternatives per row in <see cref="TopLogprobIds"/> and <see cref="TopLogprobValues"/>; 0 for none. Contract version 4.</summary>
+    public int TopLogprobs;
+
+    /// <summary>The arithmetic: the double-precision reference or the float32 definition a device sampler reproduces. Contract version 4.</summary>
+    public SampleMath Math;
 }
 
 /// <summary>Arguments of <see cref="IRoostOps.AddRmsNorm"/>. Optional fused op.</summary>

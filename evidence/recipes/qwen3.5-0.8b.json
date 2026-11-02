@@ -1,0 +1,46 @@
+{
+  "plugin": "roost-v1",
+  "schema_version": 1,
+  "id": "qwen3.5-0.8b",
+  "status": "experimental",
+  "model": {
+    "hub_id": "Qwen/Qwen3.5-0.8B",
+    "revision": "2fc06364715b967f1860aea9cf38778875588b17",
+    "model_type": "qwen3_5_text"
+  },
+  "composition": {
+    "verdict": "composes",
+    "contract_version": 6,
+    "missing_ops": [],
+    "pending_ops": []
+  },
+  "definition": {
+    "project": "src/Starlings.Roost.Models.Qwen35",
+    "type": "Starlings.Roost.Models.Qwen35.Qwen35Model"
+  },
+  "admission": "evidence/registry/qwen3.5-0.8b.admission.toml",
+  "serving": {
+    "dtype": "BF16",
+    "kv_dtype": "BF16",
+    "block_size": 16,
+    "snapshot_slots": 8
+  },
+  "hardware": [
+    {
+      "sm": 86,
+      "status": "experimental",
+      "evidence": ["tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm86.log"]
+    },
+    {
+      "sm": 89,
+      "status": "untested",
+      "evidence": ["tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm89.log"]
+    }
+  ],
+  "evidence": [
+    "tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm86.log",
+    "docs/m0/roost-r022-cpu-parity.md",
+    "evidence/proposals/r014-gpu-tolerances.md"
+  ],
+  "notes": "The first recipe, written for the M0 profile that already existed (decision 15); it is not one of the three unseen models of the M3 gate (R-057). Text decoder only: vision and the MTP head are not modelled. The composition is what roost-onboard inspect reports for the text_config fields of config.json at the pinned revision (the hand-written copy in tests/Starlings.Roost.Onboarding.Tests/TestData/qwen3.5-0.8b.config.json). SM 89 stays untested because kernels/manifest.toml lists it so. Status follows docs/capabilities.md: experimental under proposed tolerances, not supported until evidence/protected/ holds its fixtures."
+}

@@ -2,6 +2,8 @@ using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Requests;
+using Starlings.Roost.Server.Routing;
+using static Starlings.Roost.Server.Routing.RequestFields;
 
 namespace Starlings.Roost.Server.OpenAi;
 
@@ -31,6 +33,13 @@ internal static class OpenAiRequestReader
     /// <summary>The completions route's <c>max_tokens</c> default, as in OpenAI's API and vLLM.</summary>
     public const int CompletionsDefaultMaxTokens = 16;
 
+    /// <summary>
+    /// Why vLLM's <c>prompt_embeds</c> is refused: contract C2 carries embeddings as a <c>MultimodalPart</c> of kind
+    /// <c>Embeddings</c>, but <see cref="RoostChatClient"/> exposes no way to pass one (R-074).
+    /// </summary>
+    public const string PromptEmbedsUnsupported =
+        "Prompt-embeddings input is unsupported: Starlings.Generation.Roost's RoostChatClient exposes no embedding input (contract C2's Embeddings part).";
+
     public static ChatCompletionRequest ReadChat(JsonElement body)
     {
         var options = new ChatOptions();
@@ -45,7 +54,7 @@ internal static class OpenAiRequestReader
             switch (field.Name)
             {
                 case "model":
-                    model = String(v, "model");
+                    model = StringValue(v, "model");
                     break;
                 case "messages":
                     messages = Messages(v);
@@ -66,18 +75,19 @@ internal static class OpenAiRequestReader
                     streamOptions = v;
                     break;
                 case "tools":
-                    throw Refuse("tools", "Tools are unsupported: tool calling is not built yet (R-053).");
+                    options.Tools = Tools(v);
+                    break;
                 case "tool_choice":
-                    if (v.ValueKind != JsonValueKind.String || v.GetString() != "none")
-                    {
-                        throw Refuse("tool_choice", "tool_choice is unsupported except \"none\": tools are unsupported.");
-                    }
-
+                    options.ToolMode = ToolChoice(v);
                     break;
                 case "parallel_tool_calls":
-                    throw Refuse("parallel_tool_calls", "parallel_tool_calls is unsupported: tools are unsupported.");
+                    options.AllowMultipleToolCalls = Bool(v, "parallel_tool_calls");
+                    break;
+                case "chat_template_kwargs": // vLLM's extension
+                    ChatTemplateKwargs(v, options);
+                    break;
                 case "response_format":
-                    ResponseFormat(v);
+                    options.ResponseFormat = ResponseFormats.Read(v, "response_format", flat: false);
                     break;
                 case "logprobs":
                     if (Bool(v, "logprobs"))
@@ -123,7 +133,7 @@ internal static class OpenAiRequestReader
             switch (field.Name)
             {
                 case "model":
-                    model = String(v, "model");
+                    model = StringValue(v, "model");
                     break;
                 case "prompt":
                     prompt = Prompt(v);
@@ -153,6 +163,8 @@ internal static class OpenAiRequestReader
                     }
 
                     break;
+                case "prompt_embeds": // vLLM's extension
+                    throw Refuse("prompt_embeds", PromptEmbedsUnsupported);
                 case "suffix":
                     if (v.ValueKind != JsonValueKind.String || v.GetString()!.Length != 0)
                     {
@@ -211,7 +223,7 @@ internal static class OpenAiRequestReader
                 return true;
             case "user":
                 // An end-user identifier for the caller's own records; it changes nothing about the output. Checked, not used.
-                String(v, name);
+                StringValue(v, name);
                 return true;
             case "logit_bias":
                 if (v.ValueKind != JsonValueKind.Object || v.EnumerateObject().Any())
@@ -232,17 +244,7 @@ internal static class OpenAiRequestReader
         }
     }
 
-    private static IEnumerable<JsonProperty> Fields(JsonElement body)
-    {
-        if (body.ValueKind != JsonValueKind.Object)
-        {
-            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The request body must be a JSON object."));
-        }
-
-        return Fields(body, null);
-    }
-
-    private static List<ChatMessage> Messages(JsonElement v)
+    internal static List<ChatMessage> Messages(JsonElement v)
     {
         if (v.ValueKind != JsonValueKind.Array)
         {
@@ -268,6 +270,9 @@ internal static class OpenAiRequestReader
         ChatRole? role = null;
         var contents = new List<AIContent>();
         string? name = null;
+        string? toolCallId = null;
+        List<AIContent>? calls = null;
+        string? reasoning = null;
         foreach (var field in Fields(v, at))
         {
             var f = field.Value;
@@ -275,12 +280,12 @@ internal static class OpenAiRequestReader
             switch (field.Name)
             {
                 case "role":
-                    role = String(f, param) switch
+                    role = StringValue(f, param) switch
                     {
                         "system" or "developer" => ChatRole.System,
                         "user" => ChatRole.User,
                         "assistant" => ChatRole.Assistant,
-                        "tool" => ChatRole.Tool, // refused by the client: tools are unsupported
+                        "tool" => ChatRole.Tool,
                         var other => throw Refuse(param, $"Role '{other}' is unsupported."),
                     };
                     break;
@@ -288,33 +293,293 @@ internal static class OpenAiRequestReader
                     Content(f, param, contents);
                     break;
                 case "name":
-                    name = String(f, param);
+                    name = StringValue(f, param);
+                    break;
+                case "tool_calls":
+                    calls = ToolCalls(f, param);
+                    break;
+                case "tool_call_id":
+                    toolCallId = StringValue(f, param);
+                    break;
+                case "reasoning_content": // vLLM's field, as its responses carry it
+                    reasoning = StringValue(f, param);
                     break;
                 default:
-                    // tool_calls, tool_call_id, function_call, audio, refusal and anything else: not supported.
+                    // function_call, audio, refusal and anything else: not supported.
                     throw Refuse(param, $"Message field '{field.Name}' is unsupported.");
             }
         }
 
-        return new ChatMessage(role ?? throw Refuse(at + ".role", "role is required."), contents) { AuthorName = name };
+        var r = role ?? throw Refuse(at + ".role", "role is required.");
+        if (calls is not null && r != ChatRole.Assistant)
+        {
+            throw Refuse(at + ".tool_calls", "tool_calls is only allowed on assistant messages.");
+        }
+
+        if (reasoning is not null && r != ChatRole.Assistant)
+        {
+            throw Refuse(at + ".reasoning_content", "reasoning_content is only allowed on assistant messages.");
+        }
+
+        if (r == ChatRole.Tool)
+        {
+            // One tool result: the message's text, for the call it names.
+            var callId = toolCallId ?? throw Refuse(at + ".tool_call_id", "A tool message needs tool_call_id.");
+            var result = string.Concat(contents.OfType<TextContent>().Select(t => t.Text));
+            return new ChatMessage(r, [new FunctionResultContent(callId, result)]) { AuthorName = name };
+        }
+
+        if (toolCallId is not null)
+        {
+            throw Refuse(at + ".tool_call_id", "tool_call_id is only allowed on tool messages.");
+        }
+
+        if (reasoning is not null)
+        {
+            contents.Insert(0, new TextReasoningContent(reasoning));
+        }
+
+        if (calls is not null)
+        {
+            contents.AddRange(calls);
+        }
+
+        return new ChatMessage(r, contents) { AuthorName = name };
     }
 
-    /// <summary>The set fields of an object (null means unset), refusing a field that appears twice.</summary>
-    private static IEnumerable<JsonProperty> Fields(JsonElement v, string? at)
+    /// <summary>
+    /// An assistant message's <c>tool_calls</c>: <c>{"id","type":"function","function":{"name","arguments"}}</c>, with the arguments
+    /// a JSON object in a string, as OpenAI's API sends them.
+    /// </summary>
+    private static List<AIContent> ToolCalls(JsonElement v, string param)
     {
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var field in v.EnumerateObject())
+        if (v.ValueKind != JsonValueKind.Array)
         {
-            string param = at is null ? field.Name : at + "." + field.Name;
-            if (!seen.Add(field.Name))
+            throw Refuse(param, "tool_calls must be an array.");
+        }
+
+        var calls = new List<AIContent>();
+        foreach (var item in v.EnumerateArray())
+        {
+            string at = Inv($"{param}[{calls.Count}]");
+            if (item.ValueKind != JsonValueKind.Object)
             {
-                throw Refuse(param, $"'{field.Name}' appears more than once.");
+                throw Refuse(at, "A tool call must be an object.");
             }
 
-            if (field.Value.ValueKind != JsonValueKind.Null)
+            string? id = null;
+            string? type = null;
+            JsonElement? function = null;
+            foreach (var field in Fields(item, at))
             {
-                yield return field;
+                switch (field.Name)
+                {
+                    case "id":
+                        id = StringValue(field.Value, at + ".id");
+                        break;
+                    case "type":
+                        type = StringValue(field.Value, at + ".type");
+                        break;
+                    case "function":
+                        function = field.Value;
+                        break;
+                    default:
+                        throw Refuse(at + "." + field.Name, $"Tool call field '{field.Name}' is unsupported.");
+                }
             }
+
+            if (type is not null and not "function")
+            {
+                throw Refuse(at + ".type", $"Tool call type '{type}' is unsupported; only \"function\" is accepted.");
+            }
+
+            var (name, arguments) = FunctionCall(function ?? throw Refuse(at + ".function", "A tool call needs function."), at + ".function");
+            calls.Add(new FunctionCallContent(id ?? throw Refuse(at + ".id", "A tool call needs id."), name, arguments));
+        }
+
+        return calls;
+    }
+
+    private static (string Name, Dictionary<string, object?> Arguments) FunctionCall(JsonElement v, string at)
+    {
+        if (v.ValueKind != JsonValueKind.Object)
+        {
+            throw Refuse(at, "function must be an object.");
+        }
+
+        string? name = null;
+        Dictionary<string, object?>? arguments = null;
+        foreach (var field in Fields(v, at))
+        {
+            switch (field.Name)
+            {
+                case "name":
+                    name = StringValue(field.Value, at + ".name");
+                    break;
+                case "arguments":
+                    arguments = ArgumentsObject(StringValue(field.Value, at + ".arguments"), at + ".arguments");
+                    break;
+                default:
+                    throw Refuse(at + "." + field.Name, $"Function call field '{field.Name}' is unsupported.");
+            }
+        }
+
+        return (name ?? throw Refuse(at + ".name", "A function call needs name."), arguments ?? []);
+    }
+
+    private static Dictionary<string, object?> ArgumentsObject(string json, string param)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                throw Refuse(param, "arguments must be a JSON object, as a string.");
+            }
+
+            var arguments = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var member in document.RootElement.EnumerateObject())
+            {
+                arguments[member.Name] = member.Value.Clone();
+            }
+
+            return arguments;
+        }
+        catch (JsonException)
+        {
+            throw Refuse(param, "arguments is not valid JSON.");
+        }
+    }
+
+    /// <summary>
+    /// <c>tools</c>: function definitions, <c>{"type":"function","function":{"name","description","parameters","strict"}}</c>.
+    /// <c>strict</c> true is refused: nothing constrains decoding to the schema (structured output, R-051).
+    /// </summary>
+    private static List<AITool> Tools(JsonElement v)
+    {
+        if (v.ValueKind != JsonValueKind.Array)
+        {
+            throw Refuse("tools", "tools must be an array.");
+        }
+
+        var tools = new List<AITool>();
+        foreach (var item in v.EnumerateArray())
+        {
+            string at = Inv($"tools[{tools.Count}]");
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                throw Refuse(at, "A tool must be an object.");
+            }
+
+            string? type = null;
+            JsonElement? function = null;
+            foreach (var field in Fields(item, at))
+            {
+                switch (field.Name)
+                {
+                    case "type":
+                        type = StringValue(field.Value, at + ".type");
+                        break;
+                    case "function":
+                        function = field.Value;
+                        break;
+                    default:
+                        throw Refuse(at + "." + field.Name, $"Tool field '{field.Name}' is unsupported.");
+                }
+            }
+
+            if (type != "function")
+            {
+                throw Refuse(at + ".type", $"Tool type '{type}' is unsupported; only \"function\" is accepted.");
+            }
+
+            tools.Add(Function(function ?? throw Refuse(at + ".function", "A function tool needs function."), at + ".function"));
+        }
+
+        return tools;
+    }
+
+    private static DeclaredFunction Function(JsonElement v, string at)
+    {
+        if (v.ValueKind != JsonValueKind.Object)
+        {
+            throw Refuse(at, "function must be an object.");
+        }
+
+        string? name = null;
+        string? description = null;
+        JsonElement parameters = default;
+        foreach (var field in Fields(v, at))
+        {
+            switch (field.Name)
+            {
+                case "name":
+                    name = StringValue(field.Value, at + ".name");
+                    break;
+                case "description":
+                    description = StringValue(field.Value, at + ".description");
+                    break;
+                case "parameters":
+                    parameters = field.Value.ValueKind == JsonValueKind.Object
+                        ? field.Value.Clone()
+                        : throw Refuse(at + ".parameters", "parameters must be a JSON schema object.");
+                    break;
+                case "strict":
+                    if (Bool(field.Value, at + ".strict"))
+                    {
+                        throw Refuse(at + ".strict", "strict function calling is unsupported: nothing constrains decoding to the schema (structured output, R-051).");
+                    }
+
+                    break;
+                default:
+                    throw Refuse(at + "." + field.Name, $"Function field '{field.Name}' is unsupported.");
+            }
+        }
+
+        return new DeclaredFunction(name is { Length: > 0 } ? name : throw Refuse(at + ".name", "A function needs a non-empty name."), description, parameters);
+    }
+
+    /// <summary><c>tool_choice</c>: <c>none</c>, <c>auto</c>, <c>required</c> or a named function. The client refuses a required call.</summary>
+    private static ChatToolMode ToolChoice(JsonElement v)
+    {
+        if (v.ValueKind == JsonValueKind.String)
+        {
+            return v.GetString() switch
+            {
+                "none" => ChatToolMode.None,
+                "auto" => ChatToolMode.Auto,
+                "required" => ChatToolMode.RequireAny,
+                var other => throw Refuse("tool_choice", $"tool_choice '{other}' is unsupported."),
+            };
+        }
+
+        if (v.ValueKind == JsonValueKind.Object
+            && v.TryGetProperty("type", out var type) && type.ValueKind == JsonValueKind.String && type.GetString() == "function"
+            && v.TryGetProperty("function", out var function) && function.ValueKind == JsonValueKind.Object
+            && function.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String)
+        {
+            return ChatToolMode.RequireSpecific(name.GetString()!);
+        }
+
+        throw Refuse("tool_choice", "tool_choice must be \"none\", \"auto\", \"required\" or {\"type\":\"function\",\"function\":{\"name\":...}}.");
+    }
+
+    /// <summary>vLLM's <c>chat_template_kwargs</c>: only <c>enable_thinking</c>, a Boolean, which enables the template's thinking mode.</summary>
+    private static void ChatTemplateKwargs(JsonElement v, ChatOptions options)
+    {
+        if (v.ValueKind != JsonValueKind.Object)
+        {
+            throw Refuse("chat_template_kwargs", "chat_template_kwargs must be an object.");
+        }
+
+        foreach (var field in Fields(v, "chat_template_kwargs"))
+        {
+            if (field.Name != RoostChatClient.EnableThinkingProperty)
+            {
+                throw Refuse("chat_template_kwargs." + field.Name, $"Chat template argument '{field.Name}' is unsupported; only enable_thinking is accepted.");
+            }
+
+            (options.AdditionalProperties ??= [])[RoostChatClient.EnableThinkingProperty] = Bool(field.Value, "chat_template_kwargs.enable_thinking");
         }
     }
 
@@ -347,10 +612,10 @@ internal static class OpenAiRequestReader
                 switch (field.Name)
                 {
                     case "type":
-                        type = String(field.Value, at + ".type");
+                        type = StringValue(field.Value, at + ".type");
                         break;
                     case "text":
-                        text = String(field.Value, at + ".text");
+                        text = StringValue(field.Value, at + ".text");
                         break;
                     default:
                         throw Refuse(at + "." + field.Name, $"Content part field '{field.Name}' is unsupported; only text parts are accepted.");
@@ -402,22 +667,6 @@ internal static class OpenAiRequestReader
         return stops;
     }
 
-    private static void ResponseFormat(JsonElement v)
-    {
-        if (v.ValueKind != JsonValueKind.Object)
-        {
-            throw Refuse("response_format", "response_format must be an object.");
-        }
-
-        foreach (var field in Fields(v, "response_format"))
-        {
-            if (field.Name != "type" || field.Value.ValueKind != JsonValueKind.String || field.Value.GetString() != "text")
-            {
-                throw Refuse("response_format", "JSON and JSON-schema response formats are unsupported: structured output is not built yet (R-051). Only {\"type\":\"text\"} is accepted.");
-            }
-        }
-    }
-
     private static bool StreamOptions(JsonElement? v, bool stream)
     {
         if (v is not { } options)
@@ -445,34 +694,4 @@ internal static class OpenAiRequestReader
 
         return includeUsage;
     }
-
-    private static string String(JsonElement v, string param) =>
-        v.ValueKind == JsonValueKind.String ? v.GetString()! : throw Refuse(param, $"{param} must be a string.");
-
-    private static bool Bool(JsonElement v, string param) => v.ValueKind switch
-    {
-        JsonValueKind.True => true,
-        JsonValueKind.False => false,
-        _ => throw Refuse(param, $"{param} must be a boolean."),
-    };
-
-    private static float Number(JsonElement v, string param) =>
-        v.ValueKind == JsonValueKind.Number ? (float)v.GetDouble() : throw Refuse(param, $"{param} must be a number.");
-
-    private static int Int(JsonElement v, string param) =>
-        v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var i) ? i : throw Refuse(param, $"{param} must be an integer.");
-
-    private static int PositiveInt(JsonElement v, string param)
-    {
-        var i = Int(v, param);
-        return i > 0 ? i : throw Refuse(param, Inv($"{param} must be positive; got {i}."));
-    }
-
-    private static string Inv(FormattableString text) => FormattableString.Invariant(text);
-
-    private static RoostChatException Unknown(string name) =>
-        Refuse(name, $"Unknown or unsupported option '{name}'.");
-
-    private static RoostChatException Refuse(string param, string message) =>
-        new(new RoostError(RoostErrorCode.InvalidOption, message, param));
 }

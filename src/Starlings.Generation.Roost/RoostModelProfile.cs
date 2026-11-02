@@ -23,6 +23,34 @@ public sealed record RoostModelProfile
     /// <summary>The model's chat template (for Qwen3.5-0.8B, <see cref="Qwen35RoostChatTemplate.Instance"/>).</summary>
     public required IRoostChatTemplate ChatTemplate { get; init; }
 
+    /// <summary>
+    /// How the model writes tool calls (R-053), or null for the chat template's: <see cref="RoostToolCallFormat.Qwen35"/> for
+    /// <see cref="Qwen35RoostChatTemplate"/>, <see cref="RoostToolCallFormat.Hermes"/> for <see cref="Qwen3RoostChatTemplate"/>
+    /// (whose published template still refuses tools), <see cref="RoostToolCallFormat.None"/> for any other template.
+    /// </summary>
+    public RoostToolCallFormat? ToolCallFormat { get; init; }
+
+    /// <summary>
+    /// How the model writes reasoning (R-053), or null for the chat template's: <see cref="RoostReasoningFormat.ThinkTags"/> for
+    /// the Qwen3 and Qwen3.5 templates (the Qwen3 one still refuses thinking), <see cref="RoostReasoningFormat.None"/> otherwise.
+    /// </summary>
+    public RoostReasoningFormat? ReasoningFormat { get; init; }
+
+    /// <summary>The tool-call format in effect: <see cref="ToolCallFormat"/>, or the chat template's.</summary>
+    public RoostToolCallFormat EffectiveToolCallFormat => ToolCallFormat ?? ChatTemplate switch
+    {
+        Qwen35RoostChatTemplate => RoostToolCallFormat.Qwen35,
+        Qwen3RoostChatTemplate => RoostToolCallFormat.Hermes,
+        _ => RoostToolCallFormat.None,
+    };
+
+    /// <summary>The reasoning format in effect: <see cref="ReasoningFormat"/>, or the chat template's.</summary>
+    public RoostReasoningFormat EffectiveReasoningFormat => ReasoningFormat ?? ChatTemplate switch
+    {
+        Qwen35RoostChatTemplate or Qwen3RoostChatTemplate => RoostReasoningFormat.ThinkTags,
+        _ => RoostReasoningFormat.None,
+    };
+
     /// <summary>The model's generation stop ids (for Qwen chat models, <c>&lt;|im_end|&gt;</c> and the end-of-text id).</summary>
     public required ImmutableArray<int> StopTokenIds { get; init; }
 

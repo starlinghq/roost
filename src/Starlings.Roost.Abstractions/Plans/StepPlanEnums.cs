@@ -4,7 +4,18 @@ namespace Starlings.Roost.Plans;
 public static class SharedLayout
 {
     /// <summary><c>ROOST_SHM_LAYOUT_VERSION</c>, carried by every header in the segment.</summary>
-    public const uint Version = 1;
+    /// <remarks>
+    /// Version 2 (contract version 5, R-032) appends <c>input_step_id</c> to the plan header and adds <see cref="SequenceOptions.SampledInput"/>.
+    /// Version 3 (contract version 6, R-100) adds the sleep, wake and replace-weights control messages
+    /// (<see cref="Transport.ControlMessage"/>, <see cref="Transport.ControlResult"/>) and <see cref="Transport.WorkerState.Sleeping"/>.
+    /// </remarks>
+    public const uint Version = 3;
+
+    /// <summary>
+    /// The token id a plan holds where a <see cref="SequenceOptions.SampledInput"/> row's input is patched by the worker. Not a
+    /// <c>#define</c>: the header states it in the flag's comment.
+    /// </summary>
+    public const int PendingTokenId = -1;
 
     /// <summary><c>ROOST_SHM_ALIGNMENT</c>: alignment of every table, cursor and buffer.</summary>
     public const int Alignment = 64;
@@ -20,6 +31,12 @@ public static class SharedLayout
 
     /// <summary><c>ROOST_SHM_MAGIC_RING</c>, "RRNG".</summary>
     public const uint MagicRing = 0x474E5252;
+
+    /// <summary><c>ROOST_SHM_MAGIC_CONTROL</c>, "RSCL" (layout 3).</summary>
+    public const uint MagicControl = 0x4C435352;
+
+    /// <summary><c>ROOST_SHM_MAGIC_CONTROL_RESULT</c>, "RSCR" (layout 3).</summary>
+    public const uint MagicControlResult = 0x52435352;
 }
 
 /// <summary>Step plan flags (<c>ROOST_PLAN_FLAG_*</c>).</summary>
@@ -67,6 +84,13 @@ public enum SequenceOptions : uint
 
     /// <summary>Reserved: the sequence ends in a head row, not the sampler.</summary>
     HeadRow = 0x8,
+
+    /// <summary>
+    /// The chunk's last token is the id the worker sampled for this sequence in step <see cref="StepPlanHeader.InputStepId"/>,
+    /// still in flight when the plan was built; the plan holds <see cref="SharedLayout.PendingTokenId"/> there and the worker
+    /// writes the sampled id before the forward. Decode rows only (one token, no <see cref="Prefill"/>). Layout version 2, R-032.
+    /// </summary>
+    SampledInput = 0x10,
 }
 
 /// <summary>Sampling flags (<c>ROOST_SAMPLE_FLAG_*</c>).</summary>

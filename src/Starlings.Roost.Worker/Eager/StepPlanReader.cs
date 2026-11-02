@@ -19,7 +19,7 @@ public enum PlanRejection
     /// <summary>A token id, block id, position or slot is outside what the worker holds.</summary>
     OutOfRange,
 
-    /// <summary>The plan asks for something the eager worker does not do (sampling other than greedy, cache ops, speculation, heads).</summary>
+    /// <summary>The plan asks for something the worker does not do (sampling other than greedy without <see cref="PlanLimits.Sampling"/>, cache ops, speculation, heads).</summary>
     Unsupported,
 }
 
@@ -50,6 +50,16 @@ public sealed class PlanRejectedException : Exception
 /// <param name="RecurrentSlots">Recurrent pool capacity: slots are in [0, RecurrentSlots).</param>
 /// <param name="AttentionGroup">Index of the attention state group in the plan's group_blocks table.</param>
 /// <param name="GroupCount">State groups per row in the plan.</param>
+/// <param name="Sampling">
+/// The worker samples with <see cref="HostSampler"/> (<c>CpuOps.Sample</c>): temperature, top-k, top-p, min-p, seeds,
+/// penalties and logprobs up to <see cref="StepPlanReader.MaxLogprobs"/> are accepted. False (the CUDA eager worker until
+/// the GPU sampler of R-042 exists) accepts greedy rows without penalties or logprobs only.
+/// </param>
+/// <param name="SampledInputs">
+/// The worker patches the input of <see cref="SequenceOptions.SampledInput"/> rows (async scheduling, R-032) from the ids it
+/// sampled in the step it ran last (<see cref="SampledInputPatcher"/>). False (the CUDA eager worker until stream F patches on
+/// the device) refuses such plans with <see cref="PlanRejection.Unsupported"/>.
+/// </param>
 public readonly record struct PlanLimits(
     int MaxTokens,
     int MaxSequences,
@@ -60,7 +70,9 @@ public readonly record struct PlanLimits(
     int AttentionBlocks,
     int RecurrentSlots,
     int AttentionGroup,
-    int GroupCount);
+    int GroupCount,
+    bool Sampling = false,
+    bool SampledInputs = false);
 
 /// <summary>One sequence of a validated plan.</summary>
 /// <param name="Handle">The engine's id for the sequence, echoed in the result.</param>
@@ -73,6 +85,8 @@ public readonly record struct PlanLimits(
 /// <param name="StopStart">Index into the stop table.</param>
 /// <param name="StopCount">Stop ids.</param>
 /// <param name="MaxNewTokensLeft">Tokens the request may still emit; 0 for no limit.</param>
+/// <param name="Sampling">The row's sampling parameters when <paramref name="Sample"/> is set; default otherwise.</param>
+/// <param name="SampledInput">The row's last token is the id this worker sampled for the sequence in <see cref="ParsedPlan.InputStepId"/> (R-032); until <see cref="SampledInputPatcher.Patch"/> runs it holds <see cref="SharedLayout.PendingTokenId"/>.</param>
 public readonly record struct ParsedSequence(
     ulong Handle,
     int TokenStart,
@@ -83,7 +97,9 @@ public readonly record struct ParsedSequence(
     int[] Blocks,
     int StopStart,
     int StopCount,
-    uint MaxNewTokensLeft)
+    uint MaxNewTokensLeft,
+    PlanSampling Sampling = default,
+    bool SampledInput = false)
 {
     /// <summary>Keys in the cache after this chunk.</summary>
     public int KvLength => PositionOffset + TokenCount;
@@ -92,9 +108,10 @@ public readonly record struct ParsedSequence(
 /// <summary>A step plan (C2) checked against <see cref="PlanLimits"/> and copied out of the shared buffer.</summary>
 public sealed class ParsedPlan
 {
-    internal ParsedPlan(ulong stepId, int[] tokenIds, int[] positions, ParsedSequence[] sequences, int[] stopIds)
+    internal ParsedPlan(ulong stepId, int[] tokenIds, int[] positions, ParsedSequence[] sequences, int[] stopIds, ulong inputStepId = 0)
     {
         StepId = stepId;
+        InputStepId = inputStepId;
         TokenIds = tokenIds;
         Positions = positions;
         Sequences = sequences;
@@ -104,7 +121,10 @@ public sealed class ParsedPlan
     /// <summary>The step id.</summary>
     public ulong StepId { get; }
 
-    /// <summary>Flat token ids.</summary>
+    /// <summary>The step whose sampled ids the <see cref="ParsedSequence.SampledInput"/> rows take as input; 0 when none does.</summary>
+    public ulong InputStepId { get; }
+
+    /// <summary>Flat token ids. A <see cref="ParsedSequence.SampledInput"/> row's last entry is patched in place.</summary>
     public int[] TokenIds { get; }
 
     /// <summary>Flat positions.</summary>
@@ -129,12 +149,17 @@ public sealed class ParsedPlan
 /// or token id would otherwise be an out-of-range device access, which is a sticky fault.
 /// </summary>
 /// <remarks>
-/// The eager worker runs what a single-GPU M0 step needs: greedy sampling, one chunk per sequence, contiguous tokens in
+/// The eager worker runs what a single-GPU M0 step needs: greedy sampling (or, with <see cref="PlanLimits.Sampling"/>, the
+/// full sampling table of the CPU sampler, each value checked for range), one chunk per sequence, contiguous tokens in
 /// sequence order, positions consecutive from <c>position_offset</c>, no cache ops, no speculation, no head rows, no
-/// LoRA, grammar or embedding inputs. Anything else is refused with <see cref="PlanRejection.Unsupported"/>.
+/// LoRA, grammar or embedding inputs, and sampled-input rows (R-032) only with <see cref="PlanLimits.SampledInputs"/>.
+/// Anything else is refused with <see cref="PlanRejection.Unsupported"/>.
 /// </remarks>
 public static class StepPlanReader
 {
+    /// <summary>The most alternatives per token a sampling row may ask for (OpenAI's <c>top_logprobs</c> limit).</summary>
+    public const int MaxLogprobs = 20;
+
     /// <summary>Parses and checks a plan.</summary>
     /// <param name="plan">The plan buffer (header first).</param>
     /// <param name="limits">What the worker holds.</param>
@@ -182,9 +207,40 @@ public static class StepPlanReader
         var sampling = Table<PlanSampling>(plan, h.Sampling, h.Sampling.Count, "sampling");
         var stops = Table<int>(plan, h.StopTokenIds, h.StopTokenIds.Count, "stop_token_ids");
 
-        foreach (int t in tokens)
+        // Async scheduling (R-032): a sampled-input row's last token is a placeholder the worker patches, so it is checked
+        // against the placeholder here and the patched id against the vocabulary by SampledInputPatcher.
+        var pending = new bool[tokens.Length];
+        bool anySampledInput = false;
+        for (int i = 0; i < seqs.Length; i++)
         {
-            if ((uint)t >= (uint)limits.Vocab)
+            var s = seqs[i];
+            if ((s.Flags & SequenceOptions.SampledInput) == 0)
+            {
+                continue;
+            }
+
+            if (!limits.SampledInputs)
+            {
+                throw Reject(PlanRejection.Unsupported, $"sequence {i}: a sampled-input row (async scheduling, R-032) needs a worker that patches its input from the previous step's sampled ids; this worker does not (device-side patching on the CUDA worker is stream F's part of R-032)");
+            }
+
+            if (s.TokenCount != 1 || (s.Flags & SequenceOptions.Prefill) != 0 || (long)s.TokenStart + 1 > tokens.Length || tokens[(int)s.TokenStart] != SharedLayout.PendingTokenId)
+            {
+                throw Reject(PlanRejection.Malformed, $"sequence {i}: a sampled-input row must be a one-token decode row holding the placeholder id {SharedLayout.PendingTokenId}");
+            }
+
+            pending[(int)s.TokenStart] = true;
+            anySampledInput = true;
+        }
+
+        if (anySampledInput != (h.InputStepId != 0) || (anySampledInput && h.InputStepId >= h.StepId))
+        {
+            throw Reject(PlanRejection.Malformed, $"input_step_id {h.InputStepId} must name an earlier step exactly when a row has the sampled-input flag");
+        }
+
+        for (int t = 0; t < tokens.Length; t++)
+        {
+            if (!pending[t] && (uint)tokens[t] >= (uint)limits.Vocab)
             {
                 throw Reject(PlanRejection.OutOfRange, $"a token id is outside [0, {limits.Vocab})");
             }
@@ -222,6 +278,7 @@ public static class StepPlanReader
             }
 
             bool sample = (s.Flags & SequenceOptions.Sample) != 0;
+            PlanSampling sp = default;
             if (sample)
             {
                 selected++;
@@ -230,11 +287,16 @@ public static class StepPlanReader
                     throw Reject(PlanRejection.Malformed, $"sequence {i}: sampling index outside the sampling table");
                 }
 
-                var sp = sampling[(int)s.SamplingIndex];
+                sp = sampling[(int)s.SamplingIndex];
                 bool greedy = (sp.Flags & SamplingOptions.Greedy) != 0 || sp.Temperature == 0f;
-                if (!greedy || sp.Logprobs != 0 || sp.RepetitionPenalty is not (0f or 1f) || sp.PresencePenalty != 0f || sp.FrequencyPenalty != 0f)
+                if (!limits.Sampling && (!greedy || sp.Logprobs != 0 || sp.RepetitionPenalty is not (0f or 1f) || sp.PresencePenalty != 0f || sp.FrequencyPenalty != 0f))
                 {
-                    throw Reject(PlanRejection.Unsupported, $"sequence {i}: only greedy sampling without penalties or logprobs is run by the eager worker");
+                    throw Reject(PlanRejection.Unsupported, $"sequence {i}: only greedy sampling without penalties or logprobs is run by this worker (no CPU sampler; the GPU sampler is R-042)");
+                }
+
+                if (limits.Sampling && !InRange(sp))
+                {
+                    throw Reject(PlanRejection.OutOfRange, $"sequence {i}: a sampling parameter is out of range");
                 }
             }
 
@@ -272,7 +334,7 @@ public static class StepPlanReader
             }
 
             totalBlocks += pages;
-            parsed[i] = new ParsedSequence(s.SequenceHandle, (int)s.TokenStart, (int)s.TokenCount, (int)s.PositionOffset, slot, sample, blocks, (int)s.StopStart, (int)s.StopCount, s.MaxNewTokensLeft);
+            parsed[i] = new ParsedSequence(s.SequenceHandle, (int)s.TokenStart, (int)s.TokenCount, (int)s.PositionOffset, slot, sample, blocks, (int)s.StopStart, (int)s.StopCount, s.MaxNewTokensLeft, sp, (s.Flags & SequenceOptions.SampledInput) != 0);
         }
 
         if (expectedStart != h.TokenCount)
@@ -290,8 +352,19 @@ public static class StepPlanReader
             throw Reject(PlanRejection.TooLarge, $"{selected} sampling sequences (the worker holds {limits.MaxSelected})");
         }
 
-        return new ParsedPlan(h.StepId, tokens.ToArray(), positions.ToArray(), parsed, stops.ToArray());
+        return new ParsedPlan(h.StepId, tokens.ToArray(), positions.ToArray(), parsed, stops.ToArray(), h.InputStepId);
     }
+
+    // The ranges the CPU sampler defines results for (CpuOps.Sample): finite values, temperature at least 0, top-p in (0, 1],
+    // min-p in [0, 1], top-k at least 0, a repetition penalty at least 0 (0 is an unset 1) and at most MaxLogprobs alternatives.
+    private static bool InRange(in PlanSampling sp) =>
+        float.IsFinite(sp.Temperature) && sp.Temperature >= 0f
+        && float.IsFinite(sp.TopP) && sp.TopP > 0f && sp.TopP <= 1f
+        && sp.TopK >= 0
+        && float.IsFinite(sp.MinP) && sp.MinP >= 0f && sp.MinP <= 1f
+        && float.IsFinite(sp.RepetitionPenalty) && sp.RepetitionPenalty >= 0f
+        && float.IsFinite(sp.PresencePenalty) && float.IsFinite(sp.FrequencyPenalty)
+        && sp.Logprobs <= MaxLogprobs;
 
     private static ReadOnlySpan<T> Table<T>(ReadOnlySpan<byte> buffer, in TableRef table, uint expected, string name)
         where T : unmanaged

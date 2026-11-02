@@ -21,6 +21,7 @@ public sealed class ListenAndCliTests
         Assert.Equal(IPAddress.Loopback, options.ResolveAddress());
         Assert.Equal(8000, options.Port);
         Assert.False(options.AllowNonLoopback);
+        Assert.False(options.EnableSleepMode);
     }
 
     [Theory]
@@ -97,6 +98,16 @@ public sealed class ListenAndCliTests
         Assert.Equal(RoostServerOptions.DefaultHost, c.Listen.Host);
         Assert.Equal(9000, c.Listen.Port);
         Assert.False(c.Listen.AllowNonLoopback);
+        Assert.False(c.Listen.EnableSleepMode);
+    }
+
+    [Fact]
+    public void ServeTakesEnableSleepMode()
+    {
+        var c = RoostCli.Parse(["serve", "--model", "qwen3.5-0.8b", "--weights", "w.safetensors", "--weights-sha256", Sha, "--tokenizer", "t.json", "--enable-sleep-mode"]);
+
+        Assert.True(c.Listen.EnableSleepMode);
+        Assert.Contains("--enable-sleep-mode", RoostCli.Usage, StringComparison.Ordinal);
     }
 
     [Theory]

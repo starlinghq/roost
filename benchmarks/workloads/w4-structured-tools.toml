@@ -1,0 +1,66 @@
+# W4 structured JSON and tool calls (build plan section 14.3). Shape values are proposals pending decision 25.
+# Half the requests carry a strict JSON schema response_format, half carry one tool with tool_choice "required".
+# Roost's chat route accepts only response_format text and tool_choice "none" today (src/Starlings.Roost.Server/STATUS.md);
+# structured output and tool calling arrive with their own backlog items.
+schema = "roost-bench-workload/0"
+id = "w4-structured-tools"
+title = "Structured JSON and tool calls"
+status = "untested"
+api = "chat"
+requests = 500
+
+[load]
+mode = "rate"
+levels = [1, 2, 4, 8, 16, 32]
+
+[prompt]
+source = "synthetic"
+tokens = { dist = "lognormal", median = 384, sigma = 0.7, min = 32, max = 4096 }
+
+[output]
+tokens = { dist = "lognormal", median = 128, sigma = 0.5, min = 32, max = 512 }
+
+[body]
+temperature = 0.0
+
+[structured]
+json_fraction = 0.5
+tools_fraction = 0.5
+tool_choice = "required"
+
+[structured.response_format]
+type = "json_schema"
+
+[structured.response_format.json_schema]
+name = "record"
+strict = true
+
+[structured.response_format.json_schema.schema]
+type = "object"
+additionalProperties = false
+required = ["title", "tags", "score", "summary"]
+
+[structured.response_format.json_schema.schema.properties.title]
+type = "string"
+
+[structured.response_format.json_schema.schema.properties.tags]
+type = "array"
+items = { type = "string" }
+
+[structured.response_format.json_schema.schema.properties.score]
+type = "number"
+
+[structured.response_format.json_schema.schema.properties.summary]
+type = "string"
+
+[[structured.tools]]
+type = "function"
+
+[structured.tools.function]
+name = "search_documents"
+description = "Search a document store and return matching passages."
+
+[structured.tools.function.parameters]
+type = "object"
+required = ["query", "limit"]
+properties = { query = { type = "string" }, limit = { type = "integer" } }

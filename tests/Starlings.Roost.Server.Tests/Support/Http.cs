@@ -32,6 +32,50 @@ internal static class Http
         return events;
     }
 
+    /// <summary>The named events of a server-sent event stream (<c>event:</c> then <c>data:</c>), in order, with parsed data.</summary>
+    public static List<(string Name, JsonElement Data)> NamedEvents(string stream)
+    {
+        var events = new List<(string, JsonElement)>();
+        foreach (var block in stream.Split("\n\n", StringSplitOptions.RemoveEmptyEntries))
+        {
+            var lines = block.Split('\n');
+            Assert.Equal(2, lines.Length);
+            Assert.StartsWith("event: ", lines[0], StringComparison.Ordinal);
+            Assert.StartsWith("data: ", lines[1], StringComparison.Ordinal);
+            using var doc = JsonDocument.Parse(lines[1]["data: ".Length..]);
+            events.Add((lines[0]["event: ".Length..], doc.RootElement.Clone()));
+        }
+
+        return events;
+    }
+
+    /// <summary>A GET whose body is JSON.</summary>
+    public static async Task<(HttpResponseMessage Response, JsonElement Body)> GetAsync(HttpClient http, string path)
+    {
+        var response = await http.GetAsync(path, Ct);
+        var text = await response.Content.ReadAsStringAsync(Ct);
+        using var doc = JsonDocument.Parse(text);
+        return (response, doc.RootElement.Clone());
+    }
+
+    /// <summary>Checks Anthropic's error body: <c>{"type":"error","error":{"type","message"}}</c>, the message starting with the refused field.</summary>
+    public static JsonElement AssertAnthropicError(JsonElement body, string type, string? param)
+    {
+        Assert.Equal(["type", "error"], body.EnumerateObject().Select(p => p.Name));
+        Assert.Equal("error", body.GetProperty("type").GetString());
+        var error = body.GetProperty("error");
+        Assert.Equal(["type", "message"], error.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(type, error.GetProperty("type").GetString());
+        var message = error.GetProperty("message").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(message));
+        if (param is not null)
+        {
+            Assert.StartsWith(param + ": ", message, StringComparison.Ordinal);
+        }
+
+        return error;
+    }
+
     /// <summary>Checks the one error body: exactly <c>message</c>, <c>type</c>, <c>param</c> and <c>code</c> under <c>error</c>.</summary>
     public static JsonElement AssertErrorBody(JsonElement body, string code, string? param)
     {

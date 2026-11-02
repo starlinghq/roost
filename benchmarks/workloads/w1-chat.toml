@@ -1,0 +1,22 @@
+# W1 chat, ShareGPT-style (build plan section 14.3). Shape values are proposals pending decision 25.
+schema = "roost-bench-workload/0"
+id = "w1-chat"
+title = "Chat, ShareGPT-style"
+status = "untested"
+api = "chat"
+requests = 500  # sessions per load level
+
+[load]
+mode = "rate"  # open loop, Poisson session arrivals per second
+levels = [1, 2, 4, 8, 16, 32]
+
+[prompt]
+# synthetic by default; "sharegpt" reads first human turns from the file given with --dataset (not committed).
+source = "synthetic"
+tokens = { dist = "lognormal", median = 256, sigma = 0.9, min = 8, max = 4096 }
+
+[output]
+tokens = { dist = "lognormal", median = 192, sigma = 0.8, min = 8, max = 1024 }
+
+[body]
+temperature = 0.0

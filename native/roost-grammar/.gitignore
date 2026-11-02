@@ -1,0 +1,6 @@
+# Built libraries are release assets, never committed (decision 22, tools/check-roost-boundaries.py).
+target/
+*.so
+*.a
+*.dll
+*.dylib

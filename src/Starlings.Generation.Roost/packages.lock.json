@@ -8,6 +8,17 @@
         "resolved": "9.8.0",
         "contentHash": "0++t+lPqX5amr7Kgh+ZFm1C5hhzMmFc5Dhoc6siNZ4sPXxy0pLTFRk+4vHn0hZf7Xe8Y9OoqL2cL4oTdjt8STQ=="
       },
+      "Starlings.Models.Qwen35": {
+        "type": "Direct",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "TrdhyICuESdW5rjc3sun7lujkBouxHrZ9HhE6rpeY4hsUrxYI5iYxBer87HcnD1t5p8WYUm9JBDcWOq/0wNuEA==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Generation.OnnxGenAI": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
       "Starlings.Tokenizers": {
         "type": "Direct",
         "requested": "[0.3.0, 0.3.0]",
@@ -40,6 +51,19 @@
           "Starlings.Tokenizers": "[0.3.0, 0.3.0]"
         }
       },
+      "starlings.roost.native": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
+      "starlings.roost.ops": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
+        }
+      },
       "Starlings.Roost.Worker.Runtime.linux-x64": {
         "type": "Project"
       },
@@ -63,17 +87,6 @@
         "contentHash": "0juaWJVAMGFLCHLGmX/k/Wv1x4v93izxK8I7L3dcWqoD/1rVyBrHcm9roT6xTzILJ/GwkSi/ipCpFlk7Xpb9ew==",
         "dependencies": {
           "Microsoft.ML.OnnxRuntimeGenAI.Managed": "[0.17.1]",
-          "Starlings.Tokenizers": "[0.3.0]"
-        }
-      },
-      "Starlings.Models.Qwen35": {
-        "type": "CentralTransitive",
-        "requested": "[0.3.0, 0.3.0]",
-        "resolved": "0.3.0",
-        "contentHash": "TrdhyICuESdW5rjc3sun7lujkBouxHrZ9HhE6rpeY4hsUrxYI5iYxBer87HcnD1t5p8WYUm9JBDcWOq/0wNuEA==",
-        "dependencies": {
-          "Starlings.Acquisition": "[0.3.0]",
-          "Starlings.Generation.OnnxGenAI": "[0.3.0]",
           "Starlings.Tokenizers": "[0.3.0]"
         }
       },

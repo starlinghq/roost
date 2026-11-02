@@ -1,0 +1,27 @@
+# W6 mixed embed-and-generate (build plan section 14.3). Shape values are proposals pending decision 25.
+# Each session is one /v1/embeddings request (with probability embed_fraction) or one chat request. Pass the
+# embedding model's served name with --embed-model when it differs from --model. Embedding requests count in latency
+# and goodput (latency at most the TTFT SLO) but not in TTFT or ITL.
+schema = "roost-bench-workload/0"
+id = "w6-mixed-embed-generate"
+title = "Mixed embed-and-generate"
+status = "untested"
+api = "mixed"
+requests = 500
+
+[load]
+mode = "rate"
+levels = [2, 4, 8, 16, 32, 64]
+
+[mix]
+embed_fraction = 0.5
+
+[prompt]
+source = "synthetic"
+tokens = { dist = "lognormal", median = 256, sigma = 0.7, min = 16, max = 2048 }
+
+[output]
+tokens = { dist = "lognormal", median = 128, sigma = 0.6, min = 16, max = 512 }
+
+[body]
+temperature = 0.0

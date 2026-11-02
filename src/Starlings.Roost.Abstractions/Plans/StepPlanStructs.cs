@@ -123,6 +123,12 @@ public struct StepPlanHeader
 
     /// <summary>Reserved; zero.</summary>
     public ulong Reserved2;
+
+    /// <summary>
+    /// The step whose sampled ids the <see cref="SequenceOptions.SampledInput"/> rows take as input: the plan built just before
+    /// this one, which the worker must have run last; 0 when no row has the flag (layout version 2, R-032).
+    /// </summary>
+    public ulong InputStepId;
 }
 
 /// <summary>Reserved: ends in head_rows, not the sampler</summary>

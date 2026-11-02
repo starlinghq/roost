@@ -22,8 +22,10 @@ public enum RoostCapabilityStatus
 /// The capability table of a <see cref="RoostChatClient"/>. M0 (R-036): greedy decoding over the eager worker, streaming,
 /// cancellation, usage, stop token ids and stop strings are built and CPU-tested, with no GPU evidence yet
 /// (<see cref="RoostCapabilityStatus.Untested"/>; what passes the Preview 1 drill, R-062, moves to
-/// <see cref="RoostCapabilityStatus.Experimental"/>). Everything not built is <see cref="RoostCapabilityStatus.Unsupported"/>
-/// and is refused with a typed error naming the option.
+/// <see cref="RoostCapabilityStatus.Experimental"/>). Sampling, penalties and logprobs (R-042, CPU half) are
+/// <see cref="RoostCapabilityStatus.Untested"/> for a client whose worker runs the CPU sampler (<see cref="RoostSampler.Cpu"/>)
+/// and <see cref="RoostCapabilityStatus.Unsupported"/> on the CUDA worker until the GPU sampler exists. Everything not built is
+/// <see cref="RoostCapabilityStatus.Unsupported"/> and is refused with a typed error naming the option.
 /// </summary>
 public sealed class RoostCapabilities
 {
@@ -57,22 +59,38 @@ public sealed class RoostCapabilities
     /// <summary><c>ChatOptions.StopSequences</c>, matched on detokenized text in the host process.</summary>
     public const string StopSequences = "stop_sequences";
 
-    /// <summary>Temperature, top-p and top-k sampling. (A seed is accepted under greedy decoding, where it changes nothing.)</summary>
+    /// <summary>
+    /// Temperature, top-p, top-k and min-p sampling with a per-request seed (Philox per sequence: the same seed gives the same
+    /// output whatever else is batched), on the CPU sampler only. (A seed is accepted under greedy decoding, where it changes
+    /// nothing.)
+    /// </summary>
     public const string Sampling = "sampling";
 
-    /// <summary>Frequency and presence penalties.</summary>
+    /// <summary>Frequency, presence and repetition penalties, on the CPU sampler only.</summary>
     public const string Penalties = "penalties";
 
-    /// <summary>Tool definitions and tool calls.</summary>
+    /// <summary>
+    /// Tool definitions rendered by the chat template and tool calls parsed incrementally from the completion into
+    /// <c>FunctionCallContent</c> (R-053): the Qwen3.5 format through Starling's <c>Qwen35ToolCallParser</c>, and Hermes
+    /// (<c>&lt;tool_call&gt;</c> JSON) for templates that render tools in it. <c>ToolMode</c> auto and none; a required call is refused
+    /// (nothing constrains decoding). CPU-tested on a local corpus of template renderings; no model has run with tools on Roost.
+    /// </summary>
     public const string Tools = "tools";
 
-    /// <summary>JSON and JSON-schema response formats (structured output).</summary>
+    /// <summary>
+    /// JSON and JSON-schema response formats (structured output, R-051). Unsupported: a format is compiled with
+    /// <see cref="RoostChatClientOptions.Grammar"/> when one is set (an invalid schema is refused with the grammar engine's
+    /// reason) and then refused, because the worker's sampler takes no token masks until contract C2 carries them.
+    /// </summary>
     public const string ResponseFormat = "response_format";
 
-    /// <summary>Log probabilities.</summary>
+    /// <summary>Log probabilities of the chosen token and up to 20 alternatives per token, on the CPU sampler only.</summary>
     public const string Logprobs = "logprobs";
 
-    /// <summary>Reasoning (think block) output.</summary>
+    /// <summary>
+    /// Thinking mode (<see cref="RoostChatClient.EnableThinkingProperty"/>) with the think block parsed incrementally into
+    /// <c>TextReasoningContent</c> (R-053). CPU-tested on template renderings only; no model has run with thinking on Roost.
+    /// </summary>
     public const string Reasoning = "reasoning";
 
     /// <summary>Image, audio and other non-text input.</summary>
@@ -94,13 +112,42 @@ public sealed class RoostCapabilities
     /// </summary>
     public const string CoTenantAdmission = "co_tenant_admission";
 
+    /// <summary>
+    /// Metrics on <see cref="RoostChatClient.Telemetry"/> (request counts by finish reason, token counters, time to first token,
+    /// inter-token and end-to-end latency, running and waiting requests, KV cache usage) and one activity per request, with no
+    /// prompt or output text (R-038). CPU-tested only.
+    /// </summary>
+    public const string Telemetry = "telemetry";
+
+    /// <summary>
+    /// Async scheduling (R-032): step N+1 is planned and published while step N runs, with decode inputs patched by the worker
+    /// and stop ids checked one step late without emitting the extra token. Only with <see cref="RoostWorkerOptions.AsyncScheduling"/>
+    /// and a worker that patches inputs (the CPU path); the CUDA worker refuses such plans until stream F patches on the device.
+    /// </summary>
+    public const string AsyncScheduling = "async_scheduling";
+
+    /// <summary>
+    /// <see cref="RoostChatClient.SleepAsync"/> and <see cref="RoostChatClient.WakeUpAsync"/> (R-100): the worker releases its KV
+    /// cache, and optionally its weights, and restores them with a digest check; the wake time is recorded. CPU path only (an
+    /// in-process executor or custom worker that implements it); the packaged CUDA worker refuses it.
+    /// </summary>
+    public const string SleepWake = "sleep_wake";
+
+    /// <summary>
+    /// <see cref="RoostChatClient.UpdateWeightsAsync"/> (R-100): weights replaced in place from a locked file, verified as read,
+    /// for reinforcement-learning loops. CPU path only; the packaged CUDA worker refuses it.
+    /// </summary>
+    public const string WeightUpdate = "weight_update";
+
+    private static readonly string[] SamplerRows = [Sampling, Penalties, Logprobs];
+
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
-    internal RoostCapabilities()
+    internal RoostCapabilities(RoostSampler sampler = RoostSampler.GreedyOnly, bool asyncScheduling = false, bool weightLifecycle = false)
     {
         var untested = RoostCapabilityStatus.Untested;
         var unsupported = RoostCapabilityStatus.Unsupported;
-        _statuses = new Dictionary<string, RoostCapabilityStatus>
+        var table = new Dictionary<string, RoostCapabilityStatus>
         {
             [Chat] = untested,
             [RawCompletion] = untested,
@@ -113,17 +160,45 @@ public sealed class RoostCapabilities
             [Instructions] = untested,
             [StopSequences] = untested,
             [CoTenantAdmission] = untested,
-            [Sampling] = unsupported,
-            [Penalties] = unsupported,
-            [Tools] = unsupported,
+            [Telemetry] = untested,
+            [Tools] = untested,
+            [Reasoning] = untested,
+            [Sampling] = untested,
+            [Penalties] = untested,
             [ResponseFormat] = unsupported,
-            [Logprobs] = unsupported,
-            [Reasoning] = unsupported,
+            [Logprobs] = untested,
             [MultimodalInput] = unsupported,
             [ConversationState] = unsupported,
             [ContinuousBatching] = unsupported,
             [WorkerRecovery] = unsupported,
-        }.ToFrozenDictionary(StringComparer.Ordinal);
+            [AsyncScheduling] = untested,
+            [SleepWake] = untested,
+            [WeightUpdate] = untested,
+        };
+
+        // Sleep, wake and weight update are the CPU path's (an executor with IWeightLifecycle); the packaged CUDA worker refuses them.
+        if (!weightLifecycle)
+        {
+            table[SleepWake] = unsupported;
+            table[WeightUpdate] = unsupported;
+        }
+
+        // Async scheduling is the CPU path's (an executor that patches inputs); a client that does not ask for it has none.
+        if (!asyncScheduling)
+        {
+            table[AsyncScheduling] = unsupported;
+        }
+
+        // The rows above are the CPU sampler's (docs/capabilities.md lists them so); the CUDA worker has no sampler yet.
+        if (sampler != RoostSampler.Cpu)
+        {
+            foreach (var name in SamplerRows)
+            {
+                table[name] = unsupported;
+            }
+        }
+
+        _statuses = table.ToFrozenDictionary(StringComparer.Ordinal);
     }
 
     /// <summary>Every listed capability and its status.</summary>
