@@ -257,7 +257,9 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Per-GPU weight cache and engine snapshots | `unsupported` | — | R-046, R-100. |
 | Metrics and traces | `unsupported` | — | R-038. |
 | Container image, Kubernetes, router integration | `unsupported` | — | R-046, R-101. |
-| Model definitions as the plugin equivalent | `unsupported` | — | R-055 (section 13.2). |
+| Model definitions as the plugin equivalent | `unsupported` | — | R-055 (section 13.2): the onboarding tools below exist; no unseen model has been onboarded (M3 gate, R-057). |
+| roost-v1 inspect (config.json to C3 ops and C4 state groups) | `untested` | `tests/Starlings.Roost.Onboarding.Tests`<br>`evidence/pipeline/onboarding/STATUS.md` | R-055. A CPU tool tested on hand-written configs of Qwen3, Qwen3.5, Qwen3-MoE, Gemma 3 and DeepSeek-V3; `composes` speaks of C3 and `CpuOps` only, never of a GPU kernel. |
+| roost-v1 recipe schema and validator | `untested` | `tests/Starlings.Roost.Onboarding.Tests`<br>`evidence/recipes/qwen3.5-0.8b.json` | R-055. One recipe, for the existing Qwen3.5-0.8B profile; it carries that profile's status. |
 | .NET launcher as the Ray equivalent | `unsupported` | — | R-092 (section 13.2). |
 | NuGet packages on nuget.org | `unsupported` | — | Nothing is released. The R-062 drill packed `Starlings.Roost.Worker.Runtime` locally (`tests/Starlings.Generation.Roost.Tests.Cuda/results/README.md`). |
 

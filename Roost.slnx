@@ -17,6 +17,10 @@
     <Project Path="src/Starlings.Roost.Worker.Qwen35/Starlings.Roost.Worker.Qwen35.csproj" />
     <Project Path="src/Starlings.Roost.Worker.Runtime/Starlings.Roost.Worker.Runtime.csproj" />
   </Folder>
+  <Folder Name="/evidence/">
+    <!-- Stream I tools (build plan section 4): the roost-v1 onboarding plugin (R-055). A tool, never shipped in the runtime. -->
+    <Project Path="evidence/pipeline/onboarding/Starlings.Roost.Onboarding/Starlings.Roost.Onboarding.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Starlings.Generation.Roost.Tests/Starlings.Generation.Roost.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Abstractions.Tests/Starlings.Roost.Abstractions.Tests.csproj" />
@@ -28,6 +32,7 @@
     <Project Path="tests/Starlings.Roost.ModelCompiler.Tests/Starlings.Roost.ModelCompiler.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Models.Tiny.Tests/Starlings.Roost.Models.Tiny.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Models.Qwen35.Tests/Starlings.Roost.Models.Qwen35.Tests.csproj" />
+    <Project Path="tests/Starlings.Roost.Onboarding.Tests/Starlings.Roost.Onboarding.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Ops.Tests/Starlings.Roost.Ops.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Server.Tests/Starlings.Roost.Server.Tests.csproj" />
     <Project Path="tests/Starlings.Roost.Worker.Tests/Starlings.Roost.Worker.Tests.csproj" />
