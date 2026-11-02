@@ -1,0 +1,22 @@
+# W7 single-user interactive at batch 1 (build plan section 14.3; llama.cpp is a competitor here). Shape values are
+# proposals pending decision 25. The metric that matters is ITL (p50, p99) at concurrency 1.
+schema = "roost-bench-workload/0"
+id = "w7-single-user"
+title = "Single-user interactive, batch 1"
+status = "untested"
+api = "chat"
+requests = 50
+
+[load]
+mode = "concurrency"
+levels = [1]
+
+[prompt]
+source = "synthetic"
+tokens = { dist = "lognormal", median = 512, sigma = 0.6, min = 32, max = 4096 }
+
+[output]
+tokens = { dist = "fixed", value = 512 }
+
+[body]
+temperature = 0.0

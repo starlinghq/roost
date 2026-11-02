@@ -1,0 +1,7 @@
+# Goodput SLO for the section 14.3 scorecard. PROPOSED values from the build plan (section 14.3: p99 ITL at most
+# 50 ms and p99 TTFT at most 1 s); the maintainer sets the binding SLOs before R-047 measures anything (decision 25).
+# Until then no gate reads this file and no result computed with it may be published as a claim.
+status = "proposed"
+decision = 25
+ttft_p99_ms = 1000
+itl_p99_ms = 50

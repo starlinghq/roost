@@ -1,0 +1,22 @@
+# W2 long-context RAG, 32k-token prompts (build plan section 14.3). Shape values are proposals pending decision 25.
+# The model's context length must exceed prompt + output; synthetic token counts are approximate (about one per word).
+schema = "roost-bench-workload/0"
+id = "w2-long-context-rag"
+title = "Long-context RAG, 32k-token prompts"
+status = "untested"
+api = "chat"
+requests = 64
+
+[load]
+mode = "rate"
+levels = [0.05, 0.1, 0.2, 0.5, 1]
+
+[prompt]
+source = "synthetic"
+tokens = { dist = "uniform", min = 30000, max = 32000 }
+
+[output]
+tokens = { dist = "lognormal", median = 256, sigma = 0.5, min = 32, max = 768 }
+
+[body]
+temperature = 0.0
