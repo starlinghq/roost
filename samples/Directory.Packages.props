@@ -1,0 +1,3 @@
+<Project>
+  <!-- Stops the upward search for the repository's central package versions: samples pin their packages themselves. -->
+</Project>

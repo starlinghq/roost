@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <Using Include="Xunit" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Starlings.Roost.Abstractions/Starlings.Roost.Abstractions.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Engine/Starlings.Roost.Engine.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Ops/Starlings.Roost.Ops.csproj" />
+    <ProjectReference Include="../../src/Starlings.Roost.Models.Tiny/Starlings.Roost.Models.Tiny.csproj" />
+    <ProjectReference Include="../../src/Starlings.Generation.Roost/Starlings.Generation.Roost.csproj" />
+    <!-- The eager worker's plan reader and result writer (CPU code; nothing here touches CUDA), so the streaming gate's in-process worker reads the C2 plans the GPU worker reads. -->
+    <ProjectReference Include="../../src/Starlings.Roost.Worker/Starlings.Roost.Worker.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- The 4 KB hand-built byte-level BPE tokenizer of the generation layer's tests (no Qwen asset in Git). -->
+    <None Include="../Starlings.Roost.Generation.Tests/Fixtures/tiny-bytelevel-bpe.tokenizer.json" Link="Fixtures/tiny-bytelevel-bpe.tokenizer.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The stage-results contract (format v3) the emitted rows are validated against. -->
+    <None Include="../../evidence/schemas/stage-results.schema.json" Link="Fixtures/stage-results.schema.json" CopyToOutputDirectory="PreserveNewest" />
+    <!-- The sample run the evaluator's pytest reads; a test checks it still has the shape this harness emits. -->
+    <None Include="../../evidence/pipeline/tests/data/engine-gates/**/*.json" LinkBase="Fixtures/engine-gates" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
