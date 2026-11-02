@@ -2,6 +2,7 @@ using Starlings.Generation.Roost;
 using Starlings.Roost.Server.Anthropic;
 using Starlings.Roost.Server.Metrics;
 using Starlings.Roost.Server.OpenAi;
+using Starlings.Roost.Server.Pooling;
 using Starlings.Roost.Server.Responses;
 using Starlings.Roost.Server.Utility;
 
@@ -13,7 +14,9 @@ namespace Starlings.Roost.Server;
 /// (<c>POST /v1/responses</c>, <c>GET /v1/responses/{id}</c>, <c>POST /v1/responses/{id}/cancel</c>), the Anthropic Messages API
 /// (<c>POST /v1/messages</c>, <c>POST /v1/messages/count_tokens</c>), and vLLM's utility routes (<c>POST /tokenize</c>,
 /// <c>POST /detokenize</c>, <c>GET /health</c>, <c>/ping</c>, <c>GET /version</c>) with Roost's <c>GET /ready</c>, and
-/// <c>GET /metrics</c> in Prometheus text format with vLLM's metric names as aliases (R-038). It listens on
+/// <c>GET /metrics</c> in Prometheus text format with vLLM's metric names as aliases (R-038), and the pooling routes
+/// <c>POST /v1/embeddings</c> and <c>POST /v1/extract</c> over <see cref="RoostServerOptions.Pooling"/>, with <c>POST /v1/rerank</c>
+/// and <c>POST /v1/classify</c> answering <c>profile_unsupported</c> (R-052). It listens on
 /// loopback unless non-loopback listening is allowed explicitly (<see cref="RoostServerOptions.AllowNonLoopback"/>). Every
 /// failure, including an unknown route, answers with one error body, <c>{"error":{"message","type","param","code"}}</c>, except
 /// on the Anthropic routes, which answer with Anthropic's; an unsupported or unknown request option is a 400 that names it.
@@ -25,13 +28,15 @@ public static class RoostServer
     /// <param name="options">Where to listen; null means loopback on the default port.</param>
     /// <param name="configureWebHost">Further web host settings (tests replace the server with an in-memory one).</param>
     /// <returns>The application.</returns>
-    /// <exception cref="ArgumentException">The listen address is invalid, or not loopback without <see cref="RoostServerOptions.AllowNonLoopback"/>.</exception>
+    /// <exception cref="ArgumentException">The listen address is invalid, or not loopback without <see cref="RoostServerOptions.AllowNonLoopback"/>,
+    /// or two pooling models of one kind share an id.</exception>
     /// <exception cref="ArgumentOutOfRangeException">The response store's capacity is below 1 or its expiry is not positive.</exception>
     public static WebApplication Create(RoostChatClient client, RoostServerOptions? options = null, Action<IWebHostBuilder>? configureWebHost = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         options ??= new RoostServerOptions();
         var address = options.ResolveAddress();
+        PoolingRoutes.Validate(options.Pooling);
         var store = new ResponseStore(options.ResponseStoreCapacity, options.ResponseStoreTtl, options.TimeProvider);
 
         // The slim builder (no reflection-heavy defaults) is the one S1 published with Native AOT. No command-line or URL
@@ -64,6 +69,12 @@ public static class RoostServer
         app.MapMethods("/ping", [HttpMethods.Get, HttpMethods.Post], (RequestDelegate)UtilityRoutes.HealthAsync);
         app.MapGet("/version", (RequestDelegate)utility.VersionAsync);
         app.MapGet("/ready", (RequestDelegate)utility.ReadyAsync);
+
+        var pooling = new PoolingRoutes(options.Pooling, app.Logger);
+        app.MapPost("/v1/embeddings", (RequestDelegate)pooling.EmbeddingsAsync);
+        app.MapPost("/v1/extract", (RequestDelegate)pooling.ExtractAsync);
+        app.MapPost("/v1/rerank", (RequestDelegate)pooling.RerankAsync);
+        app.MapPost("/v1/classify", (RequestDelegate)pooling.ClassifyAsync);
 
         var metrics = new PrometheusExporter(client.Telemetry, client.Model.ModelId, options.ColdStart);
         _ = app.Lifetime.ApplicationStopped.Register(metrics.Dispose);

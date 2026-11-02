@@ -8,17 +8,67 @@
         "resolved": "10.0.12",
         "contentHash": "AawF393Q+VkdrnrnI1gu612zh5iqpa1AGSvnKCQ3IkMgSKJXIQbO1sXYRgEzOU4f0cPZ6MaCCF29xZSGWlmbuQ=="
       },
+      "Microsoft.ML.OnnxRuntime": {
+        "type": "Direct",
+        "requested": "[1.30.0, 1.30.0]",
+        "resolved": "1.30.0",
+        "contentHash": "RaF3KjPXB/IbNvvrcQtrxS/NZjB9dEHnZQTsdJCLP5Fnn1Jj3LomeqR1mMAoRFKinJ0pIe85PLhLlfGBYqzgWA==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "1.30.0"
+        }
+      },
       "Microsoft.NET.ILLink.Tasks": {
         "type": "Direct",
         "requested": "[10.0.12, )",
         "resolved": "10.0.12",
         "contentHash": "xi+BDjFpW+Sb+MHFHaH6Y/gV9I8BluFwRXc1QyCdoZbIK26eNiBeFuMTe/FMwc33G1wdHCyDg7CVTmb8OdQrMQ=="
       },
+      "Starlings.Models.E5": {
+        "type": "Direct",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "qqRnutts7cOAXvAHtzYHxRdsnAws9xmRW308PHT4wmlNwD9yqBByTMdVxfxFI0FTA1gIAxCN9JmouTxuquyZ2g==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Runtime.Onnx": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Starlings.Models.EmbeddingGemma2": {
+        "type": "Direct",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "8eLARFhqtWOo7FtJNLE7CQLCmyd6Ev1/QfIgm+obDPhDa1KLtRw9ywz5KlOzDGCqmx90syOfJEVePO35aAdTQg==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Runtime.Onnx": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Starlings.Models.Gliner2": {
+        "type": "Direct",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "/jW8QCSqnvx5rcPTbHc8nVVGFWc4954cJb0gbmsC7Ig5fEu7twOaHjK1NCAVDGqMZjtq13KhvIcdMu1afaoxsw==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Runtime.Onnx": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
       "Tomlyn": {
         "type": "Direct",
         "requested": "[2.10.1, 2.10.1]",
         "resolved": "2.10.1",
         "contentHash": "ykjOY3IpYmC4SpPcAZRTl/w2jTmhPMDydHq8xcV7tTBAQ22nKBsOkPqauIrZlMjHm03cmKfV23UOPscKp+J4Og=="
+      },
+      "Microsoft.ML.OnnxRuntime.Managed": {
+        "type": "Transitive",
+        "resolved": "1.30.0",
+        "contentHash": "KHW+vp+i4Mdf6RhIsMvurTVepafXHjg8/VQ0o6sa2wEK0KzV/4iEoRTUvsymcRP+XPAM/r6kZCaTADdV6Xn4RA==",
+        "dependencies": {
+          "System.Numerics.Tensors": "9.0.0"
+        }
       },
       "Microsoft.ML.OnnxRuntimeGenAI.Managed": {
         "type": "Transitive",
@@ -27,6 +77,19 @@
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "9.8.0"
         }
+      },
+      "Starlings.Runtime.Onnx": {
+        "type": "Transitive",
+        "resolved": "0.3.0",
+        "contentHash": "nGCS4oqF5efVc2QEKkUP3C3Xh4WPveRMjRUyRNHfnBDuNbZCLgZcZ/KCInOC1Qa7ARlh+b6ZdXJSXHWrxwOYTQ==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "[1.30.0]"
+        }
+      },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "hyJB4UlpAi19Xr9AXzu2NuagKC4lPfHObNMEAA0HmqFz2rX7wKgzeYzO/jM/eBHDhnUGFFEjk5cOoJaxqg5J4A=="
       },
       "starlings.generation.roost": {
         "type": "Project",
@@ -155,6 +218,15 @@
           "runtime.linux-x64.Microsoft.DotNet.ILCompiler": "10.0.12"
         }
       },
+      "Microsoft.ML.OnnxRuntime": {
+        "type": "Direct",
+        "requested": "[1.30.0, 1.30.0]",
+        "resolved": "1.30.0",
+        "contentHash": "RaF3KjPXB/IbNvvrcQtrxS/NZjB9dEHnZQTsdJCLP5Fnn1Jj3LomeqR1mMAoRFKinJ0pIe85PLhLlfGBYqzgWA==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "1.30.0"
+        }
+      },
       "runtime.linux-x64.Microsoft.DotNet.ILCompiler": {
         "type": "Transitive",
         "resolved": "10.0.12",
@@ -169,6 +241,15 @@
         "contentHash": "AawF393Q+VkdrnrnI1gu612zh5iqpa1AGSvnKCQ3IkMgSKJXIQbO1sXYRgEzOU4f0cPZ6MaCCF29xZSGWlmbuQ==",
         "dependencies": {
           "runtime.win-x64.Microsoft.DotNet.ILCompiler": "10.0.12"
+        }
+      },
+      "Microsoft.ML.OnnxRuntime": {
+        "type": "Direct",
+        "requested": "[1.30.0, 1.30.0]",
+        "resolved": "1.30.0",
+        "contentHash": "RaF3KjPXB/IbNvvrcQtrxS/NZjB9dEHnZQTsdJCLP5Fnn1Jj3LomeqR1mMAoRFKinJ0pIe85PLhLlfGBYqzgWA==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "1.30.0"
         }
       },
       "runtime.win-x64.Microsoft.DotNet.ILCompiler": {

@@ -1,4 +1,4 @@
-# R-037, R-074, R-038, R-053 and R-046 (doctor, cold start) status: partial (CPU-tested; no GPU evidence)
+# R-037, R-074, R-038, R-053, R-046 (doctor, cold start) and R-052 (pooling routes) status: partial (CPU-tested; no GPU evidence)
 
 `Starlings.Roost.Server` is an ASP.NET Core minimal API host over `Starlings.Generation.Roost`'s `RoostChatClient`, and it builds
 the `roost` executable. The routes, the error body, the option checks and loopback-only listening are built and tested on the
@@ -29,6 +29,51 @@ to check the loopback default. No request has reached a GPU through the server, 
 | `GET /health`, `GET`/`POST /ping` | untested | Liveness, vLLM's names: 200 with an empty body while the process serves HTTP. `RoostChatClient` exposes no worker liveness, so a dead worker shows as failed requests, not a failed health check. |
 | `GET /ready` | untested | Readiness: the server is built over a client whose worker has started (spawn, handshake, weight load), so it answers 200 `{"status":"ready","model"}` once listening, and 503 `stopping` once the host begins to stop. |
 | `GET /version` | untested | vLLM's name: `{"version"}`, the `roost` assembly's informational version. |
+
+## Pooling routes (R-052, groundwork)
+
+Starling's pooling packages on nuget.org, checked 2026-11-02 (`https://api.nuget.org/v3-flatcontainer/<id>/index.json` and the
+nuget.org search API for Starling's packages):
+
+| Package | Version | Licence | Use here |
+| --- | --- | --- | --- |
+| `Starlings.Models.E5` (multilingual-e5-small, revision `614241f6`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings` |
+| `Starlings.Models.EmbeddingGemma2` (EmbeddingGemma 2, revision `914f7f89`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings`, text only |
+| `Starlings.Models.Gliner2` (gliner2-base-v1, revision `f9634218`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/extract` |
+| A reranking model | none published | — | `POST /v1/rerank` answers `profile_unsupported` |
+| A classification model | none published (`Starlings.Models.Gliner2` lists classification as unsupported) | — | `POST /v1/classify` answers `profile_unsupported` |
+
+The three packages bring `Starlings.Runtime.Onnx` 0.3.0 and `Microsoft.ML.OnnxRuntime.Managed` 1.30.0; `Server` adds
+`Microsoft.ML.OnnxRuntime` 1.30.0 (the CPU natives, MIT, exact pin) so a configured model can run. ONNX Runtime is in `Server`'s
+closure only: `tools/check-roost-boundaries.py` passes, and no worker-side package references these packages (decision 30).
+The model weights are Starling's upstream models' own licences (stated in each package's README); none is in Git.
+
+| Route | Status | Notes |
+| --- | --- | --- |
+| `POST /v1/embeddings` | untested | OpenAI's request and response: `model` (required when more than one embedding model is served), `input` (a string or 1 to 2,048 strings), `encoding_format` `float` or `base64` (little-endian float32, as OpenAI), `dimensions` (only the served model's length), `user` (accepted, unused). Answers `{"id","object":"list","created","model","data":[{"index","object":"embedding","embedding"}],"usage":{"prompt_tokens","total_tokens"}}` (vLLM's `id` and `created` included). Token-id input and vLLM's extensions (`truncate_prompt_tokens`, `normalize`, `add_special_tokens` and others) are refused by name. Texts are embedded exactly as given: e5's `query: `/`passage: ` prefix and EmbeddingGemma 2's task prompts are the caller's. |
+| `POST /v1/extract` | untested | Roost's own shape (neither OpenAI nor vLLM has an extraction route): `{"model","input","labels","threshold"}` in; `{"id","object":"list","created","model","data":[{"index","object":"extraction","entities":[{"label","text","start","end","confidence"}]}],"usage"}` out. `start` and `end` are Unicode scalar offsets (Python string indices, as GLiNER2 reports them). Labels must be distinct and non-empty; `threshold` in [0, 1], the model's 0.5 when unset. A text over 512 tokens with the label schema is `prompt_too_long` naming `input[i]`. |
+| `POST /v1/rerank` | unsupported | Always 400 `profile_unsupported` naming the capability `rerank`: no Starling package provides a reranking model. |
+| `POST /v1/classify` | unsupported | Always 400 `profile_unsupported` naming the capability `classify`: no Starling package provides a classification model. |
+| A route whose model is not configured | — | 400 `profile_unsupported` naming the capability (`embeddings`, `extract`). |
+| `roost serve --pooling-e5 <dir>`, `--pooling-embeddinggemma2 <dir>` (`--pooling-embeddinggemma2-dimensions` 768, 512, 256 or 128), `--pooling-gliner2 <dir>` | untested | Each opens a local snapshot directory verified file by file against the package's asset lock (SHA-256) and creates a session on ONNX Runtime's CPU execution provider; nothing is downloaded (acquisition stays an explicit Starling call). A missing or corrupt file stops `roost serve` with exit 1 before the worker starts. The time is the cold-start stage `pooling`. GLiNER2's deployment requirement is `MALLOC_MMAP_THRESHOLD_=65536` in the process environment (Starling's G4 soak); `roost serve` does not set it. |
+
+Library surface: `IRoostEmbeddingModel` and `IRoostExtractionModel` (what the routes call), `E5EmbeddingModel`,
+`EmbeddingGemma2EmbeddingModel` and `Gliner2ExtractionModel` (the Starling-backed implementations), and
+`RoostServerOptions.Pooling` (`RoostPoolingModels`). Tests (`PoolingRoutesTests`, and `EmbeddingsCompatTests` with the official
+OpenAI .NET client) use fakes behind the interfaces, so CI reads no model file; the Starling-backed models are tested only for
+refusing a directory without their locked files, and for downloading nothing.
+
+Not done (the rest of R-052's acceptance): no model has run through these routes in this repository, so no route is
+`experimental`; the CUDA execution provider is not offered (ONNX Runtime's CUDA build would bring its own CUDA runtime and
+allocator into the host process, outside the device budget), so the routes do not share the device budget yet (R-087 brings the
+models into the worker); the pooling models are not listed by `GET /v1/models`; no metrics are recorded for pooling requests;
+vLLM's `/v1/score`, `/pooling`, `/rerank`, `/v2/rerank` and Cohere- and Jina-style routes are not built. The R-046 image
+(`deploy/stage-image.sh`, stream J) stages only the `roost` executable, not the `libonnxruntime.so` and
+`libonnxruntime_providers_shared.so` a publish places beside it, so the `--pooling-*` flags fail in the image until it does.
+
+Build check (2026-11-02, this change): a Native AOT publish of `Starlings.Roost.Server` for linux-x64 finished with zero trim
+or AOT warnings, and the published `roost serve --pooling-e5 <empty directory>` stopped with exit 1, naming the two missing
+locked files, before starting a worker. Not serving evidence.
 
 ## Metrics, traces and logs (R-038)
 

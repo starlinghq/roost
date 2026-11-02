@@ -15,6 +15,7 @@ using Starlings.Generation.Roost.Tests.Support;
 using Starlings.Roost.Generation;
 using Starlings.Roost.Models.Tiny;
 using Starlings.Roost.Server;
+using Starlings.Roost.Server.Pooling;
 using Starlings.Roost.Transport;
 using Starlings.Roost.Worker.Eager;
 using Starlings.Tokenizers;
@@ -75,8 +76,11 @@ internal sealed class ApiCompatRig : IAsyncDisposable
 
     public static int[] Encode(string text) => [.. Tokenizer.Encode(text, false).Ids];
 
-    /// <summary>Starts the server; <paramref name="attentionBlocks"/> enlarges the context (a tools prompt needs about 2,000 byte tokens).</summary>
-    public static async Task<ApiCompatRig> StartAsync(Script script, int attentionBlocks = AttentionBlocks)
+    /// <summary>
+    /// Starts the server; <paramref name="attentionBlocks"/> enlarges the context (a tools prompt needs about 2,000 byte tokens) and
+    /// <paramref name="pooling"/> sets the pooling models (R-052), none by default.
+    /// </summary>
+    public static async Task<ApiCompatRig> StartAsync(Script script, int attentionBlocks = AttentionBlocks, RoostPoolingModels? pooling = null)
     {
         ScriptedExecutor? executor = null;
         var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
@@ -106,7 +110,7 @@ internal sealed class ApiCompatRig : IAsyncDisposable
         try
         {
             // Kestrel's request log at Information would flood the test output; warnings and errors still show.
-            var app = RoostServer.Create(client, new RoostServerOptions { Port = 0 }, web =>
+            var app = RoostServer.Create(client, new RoostServerOptions { Port = 0, Pooling = pooling ?? RoostPoolingModels.None }, web =>
                 web.ConfigureServices(services => services.AddLogging(l => l.SetMinimumLevel(LogLevel.Warning))));
             await app.StartAsync(TestContext.Current.CancellationToken);
             var address = Assert.Single(app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses);

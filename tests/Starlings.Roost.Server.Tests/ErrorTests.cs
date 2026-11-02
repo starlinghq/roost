@@ -123,7 +123,7 @@ public sealed class ErrorTests : IAsyncLifetime
     [Fact]
     public async Task AnUnknownRouteIsA404WithTheErrorBody()
     {
-        var response = await Rig.Http.GetAsync("/v1/embeddings", Ct);
+        var response = await Rig.Http.GetAsync("/v1/no-such-route", Ct);
         using var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync(Ct));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);

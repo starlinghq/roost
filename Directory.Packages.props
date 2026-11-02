@@ -34,4 +34,14 @@
     <!-- R-040: the official OpenAI .NET client for Starlings.Roost.ApiCompat.Tests (test only), pinned exactly so the suite always drives the same client. -->
     <PackageVersion Include="OpenAI" Version="[2.14.0]" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- R-052: Starling's ONNX pooling packages behind the server's /v1/embeddings and /v1/extract routes (MIT OR Apache-2.0,
+         exact pins, plan 2.2). They bring Microsoft.ML.OnnxRuntime.Managed 1.30.0 through Starlings.Runtime.Onnx: Server only
+         (decision 30). No Starling package for reranking or classification exists on nuget.org (checked 2026-11-02). -->
+    <PackageVersion Include="Starlings.Models.E5" Version="[0.3.0]" />
+    <PackageVersion Include="Starlings.Models.EmbeddingGemma2" Version="[0.3.0]" />
+    <PackageVersion Include="Starlings.Models.Gliner2" Version="[0.3.0]" />
+    <!-- R-052: ONNX Runtime's CPU natives for those packages (MIT), pinned exactly to the managed binding Starlings.Runtime.Onnx 0.3.0 requires. Server only (decision 30). -->
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="[1.30.0]" />
+  </ItemGroup>
 </Project>

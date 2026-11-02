@@ -30,6 +30,14 @@
         "resolved": "6.0.0",
         "contentHash": "UcSjPsst+DfAdJGVDsu346FX0ci0ah+lw3WRtn18NUwEqRt70HaOQ7lI72vy3+1LxtqI3T5GWwV39rQSrCzAeg=="
       },
+      "Microsoft.ML.OnnxRuntime.Managed": {
+        "type": "Transitive",
+        "resolved": "1.30.0",
+        "contentHash": "KHW+vp+i4Mdf6RhIsMvurTVepafXHjg8/VQ0o6sa2wEK0KzV/4iEoRTUvsymcRP+XPAM/r6kZCaTADdV6Xn4RA==",
+        "dependencies": {
+          "System.Numerics.Tensors": "9.0.0"
+        }
+      },
       "Microsoft.ML.OnnxRuntimeGenAI.Managed": {
         "type": "Transitive",
         "resolved": "0.17.1",
@@ -73,6 +81,14 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
+      "Starlings.Runtime.Onnx": {
+        "type": "Transitive",
+        "resolved": "0.3.0",
+        "contentHash": "nGCS4oqF5efVc2QEKkUP3C3Xh4WPveRMjRUyRNHfnBDuNbZCLgZcZ/KCInOC1Qa7ARlh+b6ZdXJSXHWrxwOYTQ==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "[1.30.0]"
+        }
+      },
       "System.ClientModel": {
         "type": "Transitive",
         "resolved": "1.15.0",
@@ -85,6 +101,11 @@
         "type": "Transitive",
         "resolved": "10.0.9",
         "contentHash": "YweovHiLUoEdbr2Xv8eRqCSkTu1vMms4a6xBHaQiMSFVy32PL+hXv6Vhol2NWOmLHjaVgTyhJ3R52U6JxS6w3Q=="
+      },
+      "System.Numerics.Tensors": {
+        "type": "Transitive",
+        "resolved": "9.0.0",
+        "contentHash": "hyJB4UlpAi19Xr9AXzu2NuagKC4lPfHObNMEAA0HmqFz2rX7wKgzeYzO/jM/eBHDhnUGFFEjk5cOoJaxqg5J4A=="
       },
       "System.Security.AccessControl": {
         "type": "Transitive",
@@ -162,7 +183,11 @@
       "roost": {
         "type": "Project",
         "dependencies": {
+          "Microsoft.ML.OnnxRuntime": "[1.30.0, 1.30.0]",
           "Starlings.Generation.Roost": "[0.0.0-dev, )",
+          "Starlings.Models.E5": "[0.3.0, 0.3.0]",
+          "Starlings.Models.EmbeddingGemma2": "[0.3.0, 0.3.0]",
+          "Starlings.Models.Gliner2": "[0.3.0, 0.3.0]",
           "Starlings.Roost.Models.Qwen35": "[0.0.0-dev, )",
           "Tomlyn": "[2.10.1, 2.10.1]"
         }
@@ -269,6 +294,15 @@
         "resolved": "9.8.0",
         "contentHash": "0++t+lPqX5amr7Kgh+ZFm1C5hhzMmFc5Dhoc6siNZ4sPXxy0pLTFRk+4vHn0hZf7Xe8Y9OoqL2cL4oTdjt8STQ=="
       },
+      "Microsoft.ML.OnnxRuntime": {
+        "type": "CentralTransitive",
+        "requested": "[1.30.0, 1.30.0]",
+        "resolved": "1.30.0",
+        "contentHash": "RaF3KjPXB/IbNvvrcQtrxS/NZjB9dEHnZQTsdJCLP5Fnn1Jj3LomeqR1mMAoRFKinJ0pIe85PLhLlfGBYqzgWA==",
+        "dependencies": {
+          "Microsoft.ML.OnnxRuntime.Managed": "1.30.0"
+        }
+      },
       "Starlings.Acquisition": {
         "type": "CentralTransitive",
         "requested": "[0.3.0, 0.3.0]",
@@ -282,6 +316,39 @@
         "contentHash": "0juaWJVAMGFLCHLGmX/k/Wv1x4v93izxK8I7L3dcWqoD/1rVyBrHcm9roT6xTzILJ/GwkSi/ipCpFlk7Xpb9ew==",
         "dependencies": {
           "Microsoft.ML.OnnxRuntimeGenAI.Managed": "[0.17.1]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Starlings.Models.E5": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "qqRnutts7cOAXvAHtzYHxRdsnAws9xmRW308PHT4wmlNwD9yqBByTMdVxfxFI0FTA1gIAxCN9JmouTxuquyZ2g==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Runtime.Onnx": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Starlings.Models.EmbeddingGemma2": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "8eLARFhqtWOo7FtJNLE7CQLCmyd6Ev1/QfIgm+obDPhDa1KLtRw9ywz5KlOzDGCqmx90syOfJEVePO35aAdTQg==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Runtime.Onnx": "[0.3.0]",
+          "Starlings.Tokenizers": "[0.3.0]"
+        }
+      },
+      "Starlings.Models.Gliner2": {
+        "type": "CentralTransitive",
+        "requested": "[0.3.0, 0.3.0]",
+        "resolved": "0.3.0",
+        "contentHash": "/jW8QCSqnvx5rcPTbHc8nVVGFWc4954cJb0gbmsC7Ig5fEu7twOaHjK1NCAVDGqMZjtq13KhvIcdMu1afaoxsw==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.3.0]",
+          "Starlings.Runtime.Onnx": "[0.3.0]",
           "Starlings.Tokenizers": "[0.3.0]"
         }
       },

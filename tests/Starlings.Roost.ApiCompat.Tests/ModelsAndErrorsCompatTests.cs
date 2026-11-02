@@ -37,9 +37,16 @@ public sealed class ModelsAndErrorsCompatTests : IAsyncLifetime
     [Fact]
     public async Task RoutesRoostDoesNotServeAre404WithTheErrorBody()
     {
-        // GET /v1/models/{id} is not built (the list is), nor are embeddings (R-052).
+        // GET /v1/models/{id} is not built (the list is).
         await AssertRefusedAsync(() => Rig.Models.GetModelAsync(ApiCompatRig.ModelId, Ct), 404, "not_found", null);
-        await AssertRefusedAsync(() => Rig.OpenAi.GetEmbeddingClient(ApiCompatRig.ModelId).GenerateEmbeddingAsync("Hi", cancellationToken: Ct), 404, "not_found", null);
+    }
+
+    [Fact]
+    public async Task EmbeddingsWithoutAnEmbeddingModelAreProfileUnsupported()
+    {
+        // The route exists (R-052); this server is started with no pooling model.
+        var e = await AssertRefusedAsync(() => Rig.OpenAi.GetEmbeddingClient(ApiCompatRig.ModelId).GenerateEmbeddingAsync("Hi", cancellationToken: Ct), 400, "profile_unsupported", null);
+        Assert.Contains("'embeddings'", e.GetProperty("message").GetString(), StringComparison.Ordinal);
     }
 
     [Fact]

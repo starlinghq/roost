@@ -4,6 +4,7 @@ using Starlings.Generation.Roost;
 using Starlings.Roost.Generation;
 using Starlings.Roost.Models.Qwen35;
 using Starlings.Roost.Server.Doctor;
+using Starlings.Roost.Server.Pooling;
 using Starlings.Tokenizers;
 
 namespace Starlings.Roost.Server;
@@ -18,6 +19,7 @@ namespace Starlings.Roost.Server;
 /// <param name="Manifest">The kernel manifest, or null for the one shipped beside the worker.</param>
 /// <param name="AllowUntestedSm">Whether a GPU whose SM the manifest marks untested may serve.</param>
 /// <param name="Listen">Where to listen.</param>
+/// <param name="Pooling">The pooling model directories (R-052), or null for none.</param>
 internal sealed record ServeCommand(
     string Model,
     string Weights,
@@ -27,7 +29,22 @@ internal sealed record ServeCommand(
     string? Worker,
     string? Manifest,
     bool AllowUntestedSm,
-    RoostServerOptions Listen);
+    RoostServerOptions Listen,
+    PoolingPaths? Pooling = null);
+
+/// <summary>
+/// The local snapshot directories of the pooling models <c>roost serve</c> loads (R-052), each verified against its Starling
+/// package's asset lock; nothing is downloaded. Null means that model is not served.
+/// </summary>
+/// <param name="E5">multilingual-e5-small (<c>--pooling-e5</c>).</param>
+/// <param name="EmbeddingGemma2">EmbeddingGemma 2 (<c>--pooling-embeddinggemma2</c>).</param>
+/// <param name="EmbeddingGemma2Dimensions">EmbeddingGemma 2's vector length (<c>--pooling-embeddinggemma2-dimensions</c>).</param>
+/// <param name="Gliner2">GLiNER2 (<c>--pooling-gliner2</c>).</param>
+internal sealed record PoolingPaths(string? E5, string? EmbeddingGemma2, int EmbeddingGemma2Dimensions, string? Gliner2)
+{
+    /// <summary>Whether any pooling model is configured.</summary>
+    public bool Any => E5 is not null || EmbeddingGemma2 is not null || Gliner2 is not null;
+}
 
 /// <summary>
 /// The <c>roost</c> command line: <c>roost serve</c> (R-037) and <c>roost doctor</c> (R-046); vLLM's flags and environment
@@ -42,6 +59,8 @@ internal static class RoostCli
         usage: roost serve --model qwen3.5-0.8b --weights <model.safetensors> --weights-sha256 <hex> --tokenizer <tokenizer.json>
                            [--kernels <dir>] [--worker <roost-worker>] [--manifest <manifest.toml>] [--allow-untested-sm]
                            [--host <ip>] [--port <n>] [--allow-non-loopback]
+                           [--pooling-e5 <dir>] [--pooling-embeddinggemma2 <dir> [--pooling-embeddinggemma2-dimensions 768|512|256|128]]
+                           [--pooling-gliner2 <dir>]
 
                roost doctor [--model qwen3.5-0.8b] [--weights <model.safetensors> --weights-sha256 <hex>] [--tokenizer <tokenizer.json>]
                             [--kernels <dir>] [--worker <roost-worker>] [--manifest <manifest.toml>] [--allow-untested-sm] [--no-gpu]
@@ -49,7 +68,8 @@ internal static class RoostCli
 
         serve: serves the OpenAI routes /v1/chat/completions, /v1/completions and /v1/models on 127.0.0.1:8000 by default.
         A non-loopback --host needs --allow-non-loopback: the server has no authentication. Each start stage's duration is
-        logged and exported on /metrics.
+        logged and exported on /metrics. The --pooling-* flags load Starling's ONNX models on the CPU from local snapshot
+        directories verified against their asset locks (never downloaded) for /v1/embeddings and /v1/extract.
         doctor: checks the driver, NVML, the GPUs' SMs, the kernel manifest and library digests, the weights lock, the
         tokenizer, free disk and host memory, one line per check; exits 1 when a check fails.
         """;
@@ -59,6 +79,7 @@ internal static class RoostCli
     private static readonly HashSet<string> Valued = new(StringComparer.Ordinal)
     {
         "--model", "--weights", "--weights-sha256", "--tokenizer", "--kernels", "--worker", "--manifest", "--host", "--port",
+        "--pooling-e5", "--pooling-embeddinggemma2", "--pooling-embeddinggemma2-dimensions", "--pooling-gliner2",
     };
 
     private static readonly HashSet<string> DoctorFlags = new(StringComparer.Ordinal) { "--allow-untested-sm", "--no-gpu" };
@@ -138,6 +159,37 @@ internal static class RoostCli
 
         coldStart.Record(ColdStart.Arguments, clock.GetElapsedTime(parsing));
 
+        RoostPoolingModels pooling;
+        IReadOnlyList<IDisposable> poolingOwned;
+        try
+        {
+            (pooling, poolingOwned) = command.Pooling is null
+                ? (RoostPoolingModels.None, [])
+                : coldStart.Measure(ColdStart.Pooling, () => OpenPooling(command.Pooling));
+        }
+        catch (Exception e) when (e is not OutOfMemoryException)
+        {
+            // Missing or corrupt snapshot files (Starlings.Acquisition), a missing ONNX Runtime native library or a bad graph
+            // (Starlings.Runtime.Onnx): the message names the file or the cause, never request text.
+            await error.WriteLineAsync("roost: a pooling model did not load: " + e.Message).ConfigureAwait(false);
+            return 1;
+        }
+
+        try
+        {
+            return await ServeWorkerAsync(command, error, coldStart, clock, pooling).ConfigureAwait(false);
+        }
+        finally
+        {
+            foreach (var d in poolingOwned)
+            {
+                d.Dispose();
+            }
+        }
+    }
+
+    private static async Task<int> ServeWorkerAsync(ServeCommand command, TextWriter error, ColdStart coldStart, TimeProvider clock, RoostPoolingModels pooling)
+    {
         RoostChatClient client;
         try
         {
@@ -153,7 +205,7 @@ internal static class RoostCli
         await using (client.ConfigureAwait(false))
         {
             long listening = clock.GetTimestamp();
-            var app = RoostServer.Create(client, command.Listen with { ColdStart = coldStart });
+            var app = RoostServer.Create(client, command.Listen with { ColdStart = coldStart, Pooling = pooling });
             await using (app.ConfigureAwait(false))
             {
                 await app.StartAsync().ConfigureAwait(false);
@@ -198,6 +250,22 @@ internal static class RoostCli
             throw new ArgumentException("--weights-sha256 must be 64 hex digits.");
         }
 
+        var gemmaDimensions = 768;
+        if (Optional("--pooling-embeddinggemma2-dimensions") is { } dims)
+        {
+            if (Optional("--pooling-embeddinggemma2") is null)
+            {
+                throw new ArgumentException("--pooling-embeddinggemma2-dimensions needs --pooling-embeddinggemma2.");
+            }
+
+            if (!int.TryParse(dims, NumberStyles.None, CultureInfo.InvariantCulture, out gemmaDimensions)
+                || !EmbeddingGemma2EmbeddingModel.SupportedDimensions.Contains(gemmaDimensions))
+            {
+                throw new ArgumentException($"--pooling-embeddinggemma2-dimensions '{dims}' is not one of 768, 512, 256 or 128.");
+            }
+        }
+
+        var pooling = new PoolingPaths(Optional("--pooling-e5"), Optional("--pooling-embeddinggemma2"), gemmaDimensions, Optional("--pooling-gliner2"));
         return new ServeCommand(
             model,
             Required("--weights"),
@@ -212,7 +280,59 @@ internal static class RoostCli
                 Host = Optional("--host") ?? RoostServerOptions.DefaultHost,
                 Port = port,
                 AllowNonLoopback = flags.Contains("--allow-non-loopback"),
-            });
+            },
+            pooling.Any ? pooling : null);
+    }
+
+    /// <summary>
+    /// Opens the configured pooling models on ONNX Runtime's CPU execution provider, each verified against its package's asset lock.
+    /// On a failure the models already opened are disposed.
+    /// </summary>
+    /// <returns>The models for the server, and the objects to dispose after it stops.</returns>
+    public static (RoostPoolingModels Models, IReadOnlyList<IDisposable> Owned) OpenPooling(PoolingPaths? paths)
+    {
+        if (paths is null)
+        {
+            return (RoostPoolingModels.None, []);
+        }
+
+        var owned = new List<IDisposable>();
+        var embeddings = new List<IRoostEmbeddingModel>();
+        var extraction = new List<IRoostExtractionModel>();
+        try
+        {
+            if (paths.E5 is { } e5)
+            {
+                var m = E5EmbeddingModel.Open(e5);
+                owned.Add(m);
+                embeddings.Add(m);
+            }
+
+            if (paths.EmbeddingGemma2 is { } gemma)
+            {
+                var m = EmbeddingGemma2EmbeddingModel.Open(gemma, paths.EmbeddingGemma2Dimensions);
+                owned.Add(m);
+                embeddings.Add(m);
+            }
+
+            if (paths.Gliner2 is { } gliner)
+            {
+                var m = Gliner2ExtractionModel.Open(gliner);
+                owned.Add(m);
+                extraction.Add(m);
+            }
+        }
+        catch
+        {
+            foreach (var d in owned)
+            {
+                d.Dispose();
+            }
+
+            throw;
+        }
+
+        return (new RoostPoolingModels { Embeddings = embeddings, Extraction = extraction }, owned);
     }
 
     /// <summary>Parses <c>doctor</c> and its flags; refuses anything else by name.</summary>

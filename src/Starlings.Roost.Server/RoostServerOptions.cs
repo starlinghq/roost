@@ -1,4 +1,5 @@
 using System.Net;
+using Starlings.Roost.Server.Pooling;
 
 namespace Starlings.Roost.Server;
 
@@ -34,6 +35,12 @@ public sealed record RoostServerOptions
 
     /// <summary>How long a stored response is kept after it was created; a running one is kept until it finishes. One hour by default.</summary>
     public TimeSpan ResponseStoreTtl { get; init; } = TimeSpan.FromHours(1);
+
+    /// <summary>
+    /// The pooling models behind <c>/v1/embeddings</c> and <c>/v1/extract</c> (R-052); none by default. The caller owns them and
+    /// disposes them after the server stops.
+    /// </summary>
+    public RoostPoolingModels Pooling { get; init; } = RoostPoolingModels.None;
 
     /// <summary>The clock of the response store's expiry (tests replace it).</summary>
     internal TimeProvider TimeProvider { get; init; } = TimeProvider.System;

@@ -22,6 +22,12 @@ internal sealed class ColdStart
     /// <summary>Parsing and checking the command line.</summary>
     public const string Arguments = "arguments";
 
+    /// <summary>
+    /// Opening the pooling models (R-052): verifying each snapshot against its asset lock and creating its ONNX Runtime session.
+    /// Recorded only when a <c>--pooling-*</c> flag is given.
+    /// </summary>
+    public const string Pooling = "pooling";
+
     /// <summary>Loading the tokenizer and the chat template and hashing the kernel manifest (<c>RoostCli.Options</c>).</summary>
     public const string Profile = "profile";
 
