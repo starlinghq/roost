@@ -7,9 +7,9 @@ namespace Starlings.Roost.Tests;
 public sealed class ContractVersionTests
 {
     [Fact]
-    public void ContractsAreAtVersionFourStageV0()
+    public void ContractsAreAtVersionFiveStageV0()
     {
-        Assert.Equal(4, ContractVersion.Current);
+        Assert.Equal(5, ContractVersion.Current);
         Assert.Equal("v0", ContractVersion.Stage);
     }
 

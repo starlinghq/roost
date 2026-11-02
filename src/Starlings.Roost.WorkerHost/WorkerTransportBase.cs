@@ -410,7 +410,7 @@ public abstract class WorkerTransportBase : IWorkerTransport
         {
             ContractVersion = (uint)ContractVersion.Current,
             AbiVersion = _options.AbiVersion,
-            LayoutVersion = 1,
+            LayoutVersion = SharedLayout.Version,
             DeviceOrdinal = launch.DeviceOrdinal,
             MeshRank = (uint)launch.Mesh.Rank,
             MeshSize = (uint)launch.Mesh.Size,

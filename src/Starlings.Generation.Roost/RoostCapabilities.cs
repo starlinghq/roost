@@ -100,11 +100,18 @@ public sealed class RoostCapabilities
     /// </summary>
     public const string CoTenantAdmission = "co_tenant_admission";
 
+    /// <summary>
+    /// Async scheduling (R-032): step N+1 is planned and published while step N runs, with decode inputs patched by the worker
+    /// and stop ids checked one step late without emitting the extra token. Only with <see cref="RoostWorkerOptions.AsyncScheduling"/>
+    /// and a worker that patches inputs (the CPU path); the CUDA worker refuses such plans until stream F patches on the device.
+    /// </summary>
+    public const string AsyncScheduling = "async_scheduling";
+
     private static readonly string[] SamplerRows = [Sampling, Penalties, Logprobs];
 
     private readonly FrozenDictionary<string, RoostCapabilityStatus> _statuses;
 
-    internal RoostCapabilities(RoostSampler sampler = RoostSampler.GreedyOnly)
+    internal RoostCapabilities(RoostSampler sampler = RoostSampler.GreedyOnly, bool asyncScheduling = false)
     {
         var untested = RoostCapabilityStatus.Untested;
         var unsupported = RoostCapabilityStatus.Unsupported;
@@ -131,7 +138,14 @@ public sealed class RoostCapabilities
             [ConversationState] = unsupported,
             [ContinuousBatching] = unsupported,
             [WorkerRecovery] = unsupported,
+            [AsyncScheduling] = untested,
         };
+
+        // Async scheduling is the CPU path's (an executor that patches inputs); a client that does not ask for it has none.
+        if (!asyncScheduling)
+        {
+            table[AsyncScheduling] = unsupported;
+        }
 
         // The rows above are the CPU sampler's (docs/capabilities.md lists them so); the CUDA worker has no sampler yet.
         if (sampler != RoostSampler.Cpu)

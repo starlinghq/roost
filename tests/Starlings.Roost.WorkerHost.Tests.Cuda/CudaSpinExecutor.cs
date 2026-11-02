@@ -49,7 +49,7 @@ internal static unsafe partial class CudaSpinExecutor
         var header = new StepPlanHeader
         {
             Magic = 0x4C505352u,
-            LayoutVersion = 1,
+            LayoutVersion = SharedLayout.Version,
             HeaderSize = (uint)sizeof(StepPlanHeader),
             StepId = stepId,
             TotalBytes = (ulong)(SpinOffset + 8),
@@ -137,7 +137,7 @@ internal static unsafe partial class CudaSpinExecutor
             var header = new StepResultHeader
             {
                 Magic = 0x53525352u,
-                LayoutVersion = 1,
+                LayoutVersion = SharedLayout.Version,
                 HeaderSize = (uint)sizeof(StepResultHeader),
                 StepId = Unsafe.ReadUnaligned<StepPlanHeader>(ref Unsafe.AsRef(in plan[0])).StepId,
                 TotalBytes = (ulong)(sizeof(StepResultHeader) + BodyBytes),

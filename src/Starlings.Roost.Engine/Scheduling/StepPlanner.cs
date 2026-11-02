@@ -64,9 +64,18 @@ public enum ForkResult
 /// never returned to its pool: it is parked, and released when the last such plan completes (<see cref="ApplyResult"/>,
 /// <see cref="OnWorkerRestarted"/>). Ops waiting for the next plan (forks) count as named. A block shared by a fork is
 /// made exclusive before a row writes into it (copy-on-write op in the plan).</para>
-/// <para><b>Overlap.</b> A sequence whose plan sampled a token waits for that token; a sequence in mid-prefill is
-/// planned again at once. Plans may therefore be built while earlier ones run (R-032 adds the device-side patching that
-/// removes the wait for decode rows).</para>
+/// <para><b>Overlap.</b> A sequence in mid-prefill is planned again at once, so plans may be built while earlier ones run.
+/// Without <see cref="PlannerOptions.AsyncScheduling"/>, a sequence whose plan sampled a token waits for that token.</para>
+/// <para><b>Async scheduling (R-032).</b> With <see cref="PlannerOptions.AsyncScheduling"/>, plan N+1 is built while step N
+/// runs: a sequence whose token is being sampled by plan N, the plan built last, gets a decode row in plan N+1 whose input
+/// is that token, marked <see cref="SequenceOptions.SampledInput"/> and holding <see cref="SharedLayout.PendingTokenId"/>;
+/// the plan's <see cref="PlannedStep.InputStepId"/> is N and the worker patches the id in. The row's position, Philox offset
+/// and tokens-left count all include the tokens in flight, so it is the row a synchronous planner would build once N
+/// returned. Length limits are checked at plan time and never overrun. Stop ids are checked when a result is applied, one
+/// step late: a sequence that sampled a stop id in step N already has a row in plan N+1; it finishes when N's result is
+/// applied, and N+1's row for it is ignored (its blocks stay parked until N+1 completes), so the caller never sees the extra
+/// token. A sequence that is not in plan N (it waited for blocks, it was preempted, it is prefilling) falls back to the
+/// synchronous rule. Greedy output is therefore identical to synchronous scheduling with a batch-invariant worker.</para>
 /// <para><b>Determinism.</b> No clock, no randomness, no hash-order iteration: the plans are a function of the
 /// sequence of calls (<see cref="PlannerInput"/>) and the block manager's initial state. <see cref="PlannedStep.Digest"/>
 /// fingerprints a plan so a recorded run can be replayed and compared.</para>
@@ -355,18 +364,37 @@ public sealed class StepPlanner
             }
         }
 
+        var sampledRows = new HashSet<ulong>(plan.Sampled);
+        foreach (var handle in plan.Sampled)
+        {
+            if (_byHandle.TryGetValue(handle, out var s))
+            {
+                s.Pending--;
+            }
+        }
+
         foreach (var r in outcome.Sequences)
         {
             if (!_byHandle.TryGetValue(r.Handle, out var s))
             {
-                continue; // cancelled, finished or dropped while the plan ran
+                continue; // cancelled, finished or dropped while the plan ran (with async scheduling: finished one step earlier)
             }
 
-            // A preempted sequence keeps its token: it was sampled from valid state and recompute needs it.
             var reason = r.Finish;
             if (!r.Tokens.IsDefaultOrEmpty)
             {
+                if (!sampledRows.Contains(r.Handle))
+                {
+                    throw new InvalidOperationException($"Step {outcome.StepId} returned a token for sequence {r.Handle}, whose row did not sample.");
+                }
+
                 s.Tokens.Add(r.Tokens[0]);
+            }
+            else if (sampledRows.Contains(r.Handle) && reason == FinishReason.None)
+            {
+                // The row sampled but the worker returned no token: the sequence cannot continue (its next input, and with async
+                // scheduling a row already planned on it, has no token), so it ends as failed rather than waiting forever.
+                reason = FinishReason.Error;
             }
 
             if (reason == FinishReason.None && s.Request.Sampling.MaxTokens is { } max && s.Tokens.Count - s.PromptLength >= max)
@@ -403,6 +431,8 @@ public sealed class StepPlanner
         foreach (var s in _seqs)
         {
             s.InFlight = 0;
+            s.Pending = 0; // the tokens in flight are lost with the worker; the sequence recomputes from the ones it has
+            s.LastSampleStep = 0;
             if (s.Resident)
             {
                 Preempt(s);
@@ -549,7 +579,7 @@ public sealed class StepPlanner
         stalledHead = null;
         var order = new List<SchedSeq>(_seqs);
         order.Sort(Compare);
-        var rows = new List<(SchedSeq Seq, int Start, int Count)>();
+        var rows = new List<(SchedSeq Seq, int Start, int Count, bool Chained)>();
         var ops = new List<PlanCacheOp>();
         var pins = new List<long>();
         var budget = _options.MaxTokensPerStep;
@@ -562,9 +592,19 @@ public sealed class StepPlanner
             for (var i = 0; i < order.Count && rows.Count < _options.MaxSequencesPerStep && budget > 0; i++)
             {
                 var s = order[i];
-                if (s.Computed >= s.Tokens.Count || (!s.Resident && s.InFlight > 0))
+                var chained = false;
+                if (s.Computed >= s.Tokens.Count)
                 {
-                    continue; // waits for its sampled token, or for the plan that still names its old state
+                    if (!CanChain(s))
+                    {
+                        continue; // waits for its sampled token
+                    }
+
+                    chained = true; // async scheduling: decode the token plan N is sampling (R-032)
+                }
+                else if (!s.Resident && s.InFlight > 0)
+                {
+                    continue; // waits for the plan that still names its old state
                 }
 
                 if (_cache is not null && !s.Resident && s.Computed == 0 && !s.HoldsPrefix)
@@ -578,7 +618,7 @@ public sealed class StepPlanner
                     continue; // its restore ops ride in the plan being built; the row follows in the next one
                 }
 
-                var n = Math.Min(Math.Min(s.Tokens.Count - s.Computed, budget), _options.MaxChunkTokens);
+                var n = chained ? 1 : Math.Min(Math.Min(s.Tokens.Count - s.Computed, budget), _options.MaxChunkTokens);
                 n = CapAtSnapshotBoundary(s, n);
                 if (!TryReserve(s, n, order, i, ops, pins))
                 {
@@ -598,7 +638,7 @@ public sealed class StepPlanner
                     SnapshotAtRowStart(s, ops, pins);
                 }
 
-                rows.Add((s, s.Computed, n));
+                rows.Add((s, s.Computed, n, chained));
                 budget -= n;
                 s.Computed += n;
             }
@@ -613,11 +653,12 @@ public sealed class StepPlanner
         {
             // Nodes for the blocks this plan completes are added only now, so no row of this plan reuses a block that the
             // same forward is still writing; every later plan runs after this one.
-            foreach (var (s, _, _) in rows)
+            // A chained row's input is not known yet: its block is added by a later plan's sync, once the token has returned.
+            foreach (var (s, _, _, _) in rows)
             {
                 if (!s.CacheStuck)
                 {
-                    s.CacheStuck = !_cache.Sync(CollectionsMarshal.AsSpan(s.Tokens), s.Computed, s.Request.Lora.Value, s.Tables, s.Nodes);
+                    s.CacheStuck = !_cache.Sync(CollectionsMarshal.AsSpan(s.Tokens), Math.Min(s.Computed, s.Tokens.Count), s.Request.Lora.Value, s.Tables, s.Nodes);
                 }
             }
         }
@@ -787,7 +828,20 @@ public sealed class StepPlanner
         return true;
     }
 
-    private PlannedStep Finish(List<(SchedSeq Seq, int Start, int Count)> rows, List<PlanCacheOp> newOps, List<long> pins)
+    /// <summary>
+    /// Async scheduling: whether a resident sequence whose last token is still being sampled can decode that token in the plan
+    /// being built. Only when the token comes from the plan built last (the worker patches from the step it ran just before)
+    /// and the request may still emit another token after it.
+    /// </summary>
+    private bool CanChain(SchedSeq s) =>
+        _options.AsyncScheduling
+        && s.Resident
+        && s.Pending > 0
+        && s.LastSampleStep == _lastStep
+        && s.Computed == s.Tokens.Count + s.Pending - 1
+        && (s.Request.Sampling.MaxTokens is not { } max || s.Tokens.Count + s.Pending - s.PromptLength < max);
+
+    private PlannedStep Finish(List<(SchedSeq Seq, int Start, int Count, bool Chained)> rows, List<PlanCacheOp> newOps, List<long> pins)
     {
         var stepId = ++_lastStep;
         var allOps = new List<PlanCacheOp>(_pendingOps.Count + newOps.Count);
@@ -806,18 +860,28 @@ public sealed class StepPlanner
         var stops = new List<int>();
         var flags = PlanOptions.None;
         var handles = new List<ulong>(rows.Count);
+        var sampledHandles = new List<ulong>(rows.Count);
+        var inputStep = 0UL;
 
-        foreach (var (s, start, count) in rows)
+        foreach (var (s, start, count, chained) in rows)
         {
-            var sampled = start + count == s.Tokens.Count;
+            // Tokens known plus tokens in flight: a chained row is the row a synchronous planner builds once they return.
+            var length = s.Tokens.Count + s.Pending;
+            var sampled = start + count == length;
             var decode = count == 1 && start >= s.PromptLength;
-            var seqFlags = (decode ? SequenceOptions.None : SequenceOptions.Prefill) | (sampled ? SequenceOptions.Sample : SequenceOptions.None);
+            var seqFlags = (decode ? SequenceOptions.None : SequenceOptions.Prefill) | (sampled ? SequenceOptions.Sample : SequenceOptions.None)
+                | (chained ? SequenceOptions.SampledInput : SequenceOptions.None);
             if (!decode)
             {
                 flags |= PlanOptions.Prefill;
             }
 
-            var generated = s.Tokens.Count - s.PromptLength;
+            if (chained)
+            {
+                inputStep = s.LastSampleStep;
+            }
+
+            var generated = length - s.PromptLength;
             var stopStart = stops.Count;
             stops.AddRange(s.Request.StopTokenIds.IsDefault ? [] : s.Request.StopTokenIds);
             stops.AddRange(_options.ModelStopTokenIds);
@@ -866,19 +930,25 @@ public sealed class StepPlanner
             });
             for (var i = 0; i < count; i++)
             {
-                tokenIds.Add(s.Tokens[start + i]);
+                tokenIds.Add(chained && i == count - 1 ? SharedLayout.PendingTokenId : s.Tokens[start + i]);
                 positions.Add(start + i);
             }
 
             sampling.Add(MakeSampling(s.Request.Sampling, generated));
             s.InFlight++;
             handles.Add(s.Handle);
+            if (sampled)
+            {
+                s.Pending++;
+                s.LastSampleStep = stepId;
+                sampledHandles.Add(s.Handle);
+            }
         }
 
         var step = new PlannedStep(stepId, _groupCount, flags, _options.MathMode, [.. sequences], [.. tokenIds], [.. positions],
-            [.. groupBlocks], [.. blockIds], [.. sampling], [.. allOps], [.. stops], string.Empty);
+            [.. groupBlocks], [.. blockIds], [.. sampling], [.. allOps], [.. stops], string.Empty, inputStep);
         step = PlanDigest.Seal(step);
-        _inFlight.Add(stepId, new PlanRecord(pins, handles));
+        _inFlight.Add(stepId, new PlanRecord(pins, handles, sampledHandles));
         return step;
     }
 
@@ -1169,11 +1239,14 @@ public sealed class StepPlanner
         _parked.RemoveRange(kept, _parked.Count - kept);
     }
 
-    private sealed class PlanRecord(List<long> pins, List<ulong> handles)
+    private sealed class PlanRecord(List<long> pins, List<ulong> handles, List<ulong> sampled)
     {
         public List<long> Pins { get; } = pins;
 
         public List<ulong> Handles { get; } = handles;
+
+        /// <summary>The rows that sample: each owes its sequence one token.</summary>
+        public List<ulong> Sampled { get; } = sampled;
     }
 
     private sealed class SchedSeq(Request request, long arrival, int groups)
@@ -1210,6 +1283,12 @@ public sealed class StepPlanner
         public ulong RestoreStep { get; set; }
 
         public int InFlight { get; set; }
+
+        /// <summary>Tokens sampled by uncompleted plans: 0 or 1 synchronously, up to the plans in flight with async scheduling.</summary>
+        public int Pending { get; set; }
+
+        /// <summary>The step id of the last plan that samples this sequence, or 0.</summary>
+        public ulong LastSampleStep { get; set; }
 
         public int Preemptions { get; set; }
 

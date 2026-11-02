@@ -362,7 +362,7 @@ struct RoostTableRef size=16 align=8
   offset 0 8 u64
   count 8 4 u32
   stride 12 4 u32
-struct RoostStepPlanHeader size=336 align=8
+struct RoostStepPlanHeader size=344 align=8
   magic 0 4 u32
   layout_version 4 4 u32
   header_size 8 4 u32
@@ -395,6 +395,7 @@ struct RoostStepPlanHeader size=336 align=8
   encoder_outputs 304 16 RoostTableRef
   reserved1 320 8 u64
   reserved2 328 8 u64
+  input_step_id 336 8 u64
 struct RoostPlanSequence size=80 align=8
   sequence_handle 0 8 u64
   token_start 8 4 u32

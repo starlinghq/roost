@@ -53,6 +53,7 @@ internal static class PlanBuffer
             HeaderSize = (uint)Unsafe.SizeOf<StepPlanHeader>(),
             Flags = step.Flags,
             StepId = step.StepId,
+            InputStepId = step.InputStepId,
             MathMode = step.MathMode,
             SequenceCount = (uint)step.Sequences.Length,
             TokenCount = (uint)step.TokenIds.Length,

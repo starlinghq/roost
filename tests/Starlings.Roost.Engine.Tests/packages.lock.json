@@ -138,6 +138,17 @@
           "Starlings.Roost.Abstractions": "[0.0.0-dev, )"
         }
       },
+      "starlings.roost.graph": {
+        "type": "Project"
+      },
+      "starlings.roost.models.tiny": {
+        "type": "Project",
+        "dependencies": {
+          "Starlings.Roost.Abstractions": "[0.0.0-dev, )",
+          "Starlings.Roost.Graph": "[0.0.0-dev, )",
+          "Starlings.Roost.Ops": "[0.0.0-dev, )"
+        }
+      },
       "starlings.roost.ops": {
         "type": "Project",
         "dependencies": {

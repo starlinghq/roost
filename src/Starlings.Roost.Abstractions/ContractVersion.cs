@@ -10,14 +10,16 @@ namespace Starlings.Roost;
 /// Qwen3.5 gating ops GatedDeltaRuleGates, GatedRmsNorm and SigmoidMul (C3) with their params, and the params of CausalConv1d,
 /// RecurrentStateCopy and RecurrentStateSnapshot (C1 ABI 1.2). Version 4 (2026-11-01, R-042) extends SampleArgs (C3) and
 /// <c>RoostSampleParams</c> (C1 ABI 1.3) with repetition, presence and frequency penalties over per-row token counts, a stop
-/// flag, top-k logprobs and the sampling math mode. Until the M0 gate (R-026) a contract may
+/// flag, top-k logprobs and the sampling math mode. Version 5 (2026-11-01, R-032) adds async scheduling to C2: the plan
+/// header's <c>input_step_id</c> and the sequence flag <c>ROOST_SEQ_FLAG_SAMPLED_INPUT</c>, a decode row whose input is the
+/// previous step's sampled id (shared-memory layout version 2). Until the M0 gate (R-026) a contract may
 /// still change through a stream A pull request; each such change raises <see cref="Current"/> and updates every
 /// consumer in the same change. The M0 gate promotes the contracts to the <c>v1</c> stage.
 /// </remarks>
 public static class ContractVersion
 {
     /// <summary>The current contract version, carried in the C8 handshake and segment header.</summary>
-    public const int Current = 4;
+    public const int Current = 5;
 
     /// <summary>The plan's name for the current stage: <c>v0</c> until the M0 gate, then <c>v1</c>.</summary>
     public const string Stage = "v0";

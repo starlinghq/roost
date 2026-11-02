@@ -75,7 +75,7 @@ public sealed unsafe class WorkerRuntime : IDisposable
 {
     private const uint MagicPlan = 0x4C505352u;
     private const uint MagicResult = 0x53525352u;
-    private const uint LayoutVersion = 1;
+    private const uint LayoutVersion = SharedLayout.Version;
     private const int ErrorInvalidPlan = -22;
     private const int ErrorExecutor = -1;
 

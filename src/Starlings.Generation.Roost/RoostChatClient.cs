@@ -63,7 +63,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         _options = options;
         _backend = backend;
         _metadata = new ChatClientMetadata("roost", null, options.Model.ModelId);
-        Capabilities = new RoostCapabilities(options.Worker.Sampler);
+        Capabilities = new RoostCapabilities(options.Worker.Sampler, options.Worker.AsyncScheduling);
     }
 
     /// <summary>What this client supports; anything not listed is unsupported.</summary>

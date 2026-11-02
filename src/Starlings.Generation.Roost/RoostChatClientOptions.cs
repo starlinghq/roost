@@ -57,6 +57,16 @@ public sealed record RoostWorkerOptions
     /// </summary>
     public RoostSampler Sampler { get; init; } = RoostSampler.GreedyOnly;
 
+    /// <summary>
+    /// Async scheduling (R-032): the driver builds and publishes step N+1 while step N runs, and a decode row whose input is the
+    /// token step N is sampling carries <c>ROOST_SEQ_FLAG_SAMPLED_INPUT</c> for the worker to patch. Stop ids are checked one
+    /// step late and the extra token is never emitted. False, the default, keeps one step in flight. Only for a worker that
+    /// patches inputs (an in-process executor or a custom <see cref="Command"/> whose worker reports
+    /// <c>PlanLimits.SampledInputs</c>): the packaged CUDA worker refuses such plans until its device-side patching exists
+    /// (stream F), and the request fails with <c>DeviceFault</c>.
+    /// </summary>
+    public bool AsyncScheduling { get; init; }
+
     /// <summary>CUDA device ordinal the worker opens.</summary>
     public int DeviceOrdinal { get; init; }
 

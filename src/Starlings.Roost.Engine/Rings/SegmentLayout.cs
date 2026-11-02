@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using Starlings.Roost.Plans;
 using Starlings.Roost.Transport;
 
 namespace Starlings.Roost.Engine.Rings;
@@ -13,7 +14,7 @@ internal sealed unsafe class SegmentLayout
 {
     private const int Line = RingSegment.Alignment;
     private const long Page = 4096;
-    private const uint LayoutVersion = 1; // ROOST_SHM_LAYOUT_VERSION
+    private const uint LayoutVersion = SharedLayout.Version; // ROOST_SHM_LAYOUT_VERSION
     private const uint MagicSegment = 0x47455352u;
     private const uint MagicRing = 0x474E5252u;
 

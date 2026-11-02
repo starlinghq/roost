@@ -40,8 +40,14 @@ internal sealed record Script
     /// </summary>
     public bool Sample { get; init; }
 
+    /// <summary>
+    /// Async scheduling (R-032): report <see cref="PlanLimits.SampledInputs"/> and patch sampled-input rows with the worker's own
+    /// <see cref="SampledInputPatcher"/>, as a CPU worker does.
+    /// </summary>
+    public bool PatchInputs { get; init; }
+
     public string Encode() => string.Create(CultureInfo.InvariantCulture,
-        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs};{HangAtStep};{ThrowAtStep};{(Sample ? 1 : 0)}");
+        $"{string.Join('.', Tokens)};{(NeverStop ? 1 : 0)};{FaultAtStep};{(uint)Fault};{DelayMs};{HangAtStep};{ThrowAtStep};{(Sample ? 1 : 0)};{(PatchInputs ? 1 : 0)}");
 
     public static Script Decode(string text)
     {
@@ -56,6 +62,7 @@ internal sealed record Script
             HangAtStep = int.Parse(p[5], CultureInfo.InvariantCulture),
             ThrowAtStep = int.Parse(p[6], CultureInfo.InvariantCulture),
             Sample = p.Length > 7 && p[7] == "1",
+            PatchInputs = p.Length > 8 && p[8] == "1",
         };
     }
 }
@@ -82,15 +89,25 @@ internal sealed class ScriptedExecutor : IStepExecutor
     private readonly int _stopId;
     private readonly Dictionary<ulong, int> _promptLength = [];
     private readonly HostSampler? _sampler;
+    private readonly SampledInputPatcher? _patcher;
     private int _steps;
+    private int _patched;
+    private Dictionary<ulong, int> _emitted = [];
 
     public ScriptedExecutor(Script script, PlanLimits limits, int stopId)
     {
         _script = script;
-        _limits = script.Sample ? limits with { Sampling = true } : limits;
+        _limits = limits with { Sampling = limits.Sampling || script.Sample, SampledInputs = limits.SampledInputs || script.PatchInputs };
         _stopId = stopId;
         _sampler = script.Sample ? new HostSampler(limits.Vocab, limits.MaxSequences) : null;
+        _patcher = _limits.SampledInputs ? new SampledInputPatcher(limits.Vocab) : null;
     }
+
+    /// <summary>Sampled-input rows patched (in-process only).</summary>
+    public int Patched => Volatile.Read(ref _patched);
+
+    /// <summary>Patched rows whose id was not the token this executor emitted for the sequence in the step before (must stay empty).</summary>
+    public ConcurrentQueue<string> PatchMismatches { get; } = new();
 
     /// <summary>The sampling records of every sampling row seen, in order (in-process only).</summary>
     public ConcurrentQueue<PlanSampling> Sampling { get; } = new();
@@ -122,6 +139,7 @@ internal sealed class ScriptedExecutor : IStepExecutor
         try
         {
             parsed = StepPlanReader.Parse(plan, _limits);
+            _patcher?.Patch(parsed);
         }
         catch (PlanRejectedException e)
         {
@@ -155,6 +173,7 @@ internal sealed class ScriptedExecutor : IStepExecutor
 
         if (_steps == _script.FaultAtStep)
         {
+            _patcher?.Forget(); // the step sampled nothing
             return _script.Fault == FaultClass.Sticky ? StepOutcome.Sticky(700) : StepOutcome.Recoverable(11);
         }
 
@@ -174,13 +193,25 @@ internal sealed class ScriptedExecutor : IStepExecutor
             }
 
             var n = s.KvLength - promptLength;
-            tokens.Add(n < _script.Tokens.Length ? _script.Tokens[n] : _script.NeverStop ? _script.Tokens[^1] : _stopId);
+            tokens.Add(TokenAt(n));
             Sampling.Enqueue(s.Sampling);
+            if (s.SampledInput)
+            {
+                // The patched input is the token this executor emitted for the sequence in the step before.
+                Interlocked.Increment(ref _patched);
+                var input = parsed.TokenIds[s.TokenStart + s.TokenCount - 1];
+                if (!_emitted.TryGetValue(s.Handle, out var expected) || input != expected)
+                {
+                    PatchMismatches.Enqueue(string.Create(CultureInfo.InvariantCulture, $"step {parsed.StepId} sequence {s.Handle}: input {input}, expected {expected}"));
+                }
+            }
         }
 
         if (_sampler is null)
         {
             int bytes = StepResultWriter.Write(result, parsed, [.. tokens], default);
+            _patcher?.Record(parsed, [.. tokens]);
+            Remember(parsed, [.. tokens]);
             return StepOutcome.Ok(bytes);
         }
 
@@ -198,8 +229,22 @@ internal sealed class ScriptedExecutor : IStepExecutor
         }
 
         var sampled = _sampler.Sample(parsed, logits);
+        _patcher?.Record(parsed, sampled.Tokens);
+        Remember(parsed, sampled.Tokens);
         return StepOutcome.Ok(StepResultWriter.Write(result, parsed, sampled.Tokens, sampled.Logprobs, default));
     }
+
+    private void Remember(ParsedPlan parsed, int[] tokens)
+    {
+        _emitted = [];
+        int row = 0;
+        foreach (var s in parsed.Sequences.Where(static s => s.Sample))
+        {
+            _emitted[s.Handle] = tokens[row++];
+        }
+    }
+
+    private int TokenAt(int n) => n < _script.Tokens.Length ? _script.Tokens[n] : _script.NeverStop ? _script.Tokens[^1] : _stopId;
 
     public void Dispose()
     {

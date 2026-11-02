@@ -16,8 +16,8 @@ namespace Starlings.Generation.Roost.Driver;
 /// <summary>
 /// The M0 backend: one host thread that owns the engine's <see cref="StepPlanner"/> and the worker transport (C8), plans a
 /// step, writes it to a plan buffer, waits for its result and turns the result into C6 events. One step is in flight at a
-/// time, as the eager worker runs synchronously (R-025); async scheduling (R-032) and the engine's own loop replace this
-/// class from M1.
+/// time, as the eager worker runs synchronously (R-025), unless <see cref="RoostWorkerOptions.AsyncScheduling"/> is set; the
+/// engine's own loop replaces this class from M1.
 /// </summary>
 /// <remarks>
 /// <para><b>Threading.</b> <see cref="Submit"/> and the cancel callback may be called from any thread: they only enqueue a
@@ -28,6 +28,12 @@ namespace Starlings.Generation.Roost.Driver;
 /// every live request (<see cref="RoostErrorCode.DeviceFault"/> for sticky, <see cref="RoostErrorCode.WorkerRestarted"/>
 /// otherwise), kills the worker, and the next request starts a new one. Resuming requests on the new worker with
 /// <c>Recovered</c> set is R-070.</para>
+/// <para><b>Async scheduling (R-032).</b> With <see cref="RoostWorkerOptions.AsyncScheduling"/> the planner chains decode rows
+/// onto the step in flight and the driver keeps two steps published (the plan ring is double buffered): it plans and publishes
+/// step N+1, then waits for step N, applies it, and plans again. Results are applied in step order. A sequence that sampled a
+/// stop id in step N finishes when N is applied; its row in N+1 is ignored and its token never reaches the channel, so the
+/// one-step stop lag is not visible. A recoverable fault in step N fails N's requests; step N+1, already published, names N as
+/// its input step and is refused by the worker, so its requests fail too.</para>
 /// <para><b>Containment.</b> The driver thread never ends while the client is alive: an unexpected exception anywhere in a
 /// step (planner, plan writer, transport, a malformed result, a kill that fails) fails the requests it affects with
 /// <see cref="RoostErrorCode.Internal"/>, discards the planner state and the worker (replacing the transport when it cannot
@@ -50,6 +56,8 @@ internal sealed class WorkerDriver : IGenerationBackend
     private readonly Queue<Command> _commands = new();
     private readonly SemaphoreSlim _wake = new(0);
     private readonly Dictionary<ulong, Live> _live = [];
+    private readonly Queue<PlannedStep> _published = new();
+    private readonly bool _async;
     private readonly Thread _thread;
     private readonly TaskCompletionSource _exited = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private IDriverTransport _transport;
@@ -63,8 +71,9 @@ internal sealed class WorkerDriver : IGenerationBackend
         _memory = worker.DeviceMemory;
         _minFreeDeviceBytes = worker.MinFreeDeviceBytes;
         _createTransport = createTransport;
+        _async = worker.AsyncScheduling;
         _transport = createTransport();
-        _planner = CreatePlanner(profile);
+        _planner = CreatePlanner(profile, _async);
         long planBytes = PlanBuffer.SizeFor(profile.MaxSequencesPerStep, profile.MaxTokensPerStep, profile.StateGroups.Length, profile.AttentionBlocks, profile.StopTokenIds.Length);
         _launch = new WorkerLaunch
         {
@@ -99,6 +108,11 @@ internal sealed class WorkerDriver : IGenerationBackend
         if (worker.Sampler == RoostSampler.Cpu && worker.Transport == TransportKind.Process && worker.Command is null)
         {
             throw new ArgumentException("The packaged roost-worker is the CUDA worker, which has no CPU sampler; RoostSampler.Cpu needs an in-process executor or a custom Command that runs one.", nameof(worker));
+        }
+
+        if (worker.AsyncScheduling && worker.Transport == TransportKind.Process && worker.Command is null)
+        {
+            throw new ArgumentException("The packaged roost-worker is the CUDA worker, which does not patch sampled inputs yet (stream F, R-032); AsyncScheduling needs an in-process executor or a custom Command whose worker does.", nameof(worker));
         }
 
         var command = worker.Transport switch
@@ -170,7 +184,7 @@ internal sealed class WorkerDriver : IGenerationBackend
         }
     }
 
-    private static StepPlanner CreatePlanner(RoostModelProfile profile)
+    private static StepPlanner CreatePlanner(RoostModelProfile profile, bool asyncScheduling)
     {
         var groups = profile.StateGroups;
         var capacities = groups
@@ -181,6 +195,7 @@ internal sealed class WorkerDriver : IGenerationBackend
             MaxTokensPerStep = profile.MaxTokensPerStep,
             MaxSequencesPerStep = profile.MaxSequencesPerStep,
             ModelStopTokenIds = profile.StopTokenIds,
+            AsyncScheduling = asyncScheduling,
         });
     }
 
@@ -247,14 +262,27 @@ internal sealed class WorkerDriver : IGenerationBackend
                 try
                 {
                     DrainCommands();
-                    var step = _live.Count > 0 ? NextPlan() : null;
-                    if (step is null)
+
+                    // Plan while a plan buffer is free: always with nothing in flight (a full ring is then a broken worker,
+                    // which Publish reports), and with async scheduling once more while one step runs.
+                    var depth = _async ? 2 : 1;
+                    if (_live.Count > 0 && _published.Count < depth && (_published.Count == 0 || _transport.CanPublish()))
                     {
-                        _ = _wake.Wait(_live.Count > 0 ? 10 : Timeout.Infinite);
+                        var step = NextPlan();
+                        if (step is not null)
+                        {
+                            Publish(step);
+                            continue;
+                        }
+                    }
+
+                    if (_published.Count > 0)
+                    {
+                        AwaitOldest();
                         continue;
                     }
 
-                    RunStep(step);
+                    _ = _wake.Wait(_live.Count > 0 ? 10 : Timeout.Infinite);
                 }
                 catch (Exception e)
                 {
@@ -426,7 +454,7 @@ internal sealed class WorkerDriver : IGenerationBackend
         return step;
     }
 
-    private void RunStep(PlannedStep step)
+    private void Publish(PlannedStep step)
     {
         if (!_transport.CanPublish())
         {
@@ -452,6 +480,13 @@ internal sealed class WorkerDriver : IGenerationBackend
             return;
         }
 
+        _published.Enqueue(step);
+    }
+
+    /// <summary>Waits for the oldest published step's result and applies it (results come back in step order).</summary>
+    private void AwaitOldest()
+    {
+        var step = _published.Peek();
         StepOutcome? outcome = null;
         IReadOnlyDictionary<ulong, TokenLogprob[]>? logprobs = null;
         StepResultHeader header = default;
@@ -482,6 +517,7 @@ internal sealed class WorkerDriver : IGenerationBackend
                         _transport.ReleaseResult((int)slot.BufferIndex);
                     }
 
+                    _ = _published.Dequeue();
                     break;
                 }
 
@@ -573,9 +609,10 @@ internal sealed class WorkerDriver : IGenerationBackend
     private void LoseWorker(RoostError error)
     {
         FailAll(error);
+        _published.Clear(); // the worker is killed: none of them returns
         try
         {
-            _planner = CreatePlanner(_profile); // every sequence it held has just been failed
+            _planner = CreatePlanner(_profile, _async); // every sequence it held has just been failed
         }
         catch (Exception)
         {

@@ -147,6 +147,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | `multimodal_input` | `unsupported` | — | R-099, R-107. |
 | `conversation_state` | `unsupported` | — | `ConversationId`. |
 | `continuous_batching` | `unsupported` | — | M0 runs one sequence per step; concurrent requests take turns. R-029 wiring, M1. |
+| `async_scheduling` | `untested` | `tests/Starlings.Generation.Roost.Tests/`<br>`src/Starlings.Roost.Engine/STATUS.md` | `RoostWorkerOptions.AsyncScheduling` with an in-process executor or custom worker that patches inputs (R-032): two steps published, text and usage equal to synchronous mode. `unsupported` for a client without the option; the packaged CUDA worker refuses it (stream F). |
 | `worker_recovery` | `unsupported` | — | A worker fault fails the requests it carried. R-070. |
 | `co_tenant_admission` | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | Refuses new requests with `InsufficientDeviceMemory` while free device memory is below `MinFreeDeviceBytes` (R-044). CPU only: the co-tenant GPU test is open and no NVML source is the default yet. |
 
@@ -177,7 +178,7 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 | Admission control (worst-case reservation) | `untested` | `tests/Starlings.Roost.Engine.Tests/Admission/` | `Starlings.Roost.Engine/Admission`, CPU tests only. |
 | Prefix caching, attention | `unsupported` | — | `Starlings.Roost.Engine/Caching/PrefixCache` is built and CPU-tested (`tests/Starlings.Roost.Engine.Tests/Caching/`), but the M0 driver does not use it. R-030. |
 | Prefix caching, hybrid (recurrent state) | `unsupported` | — | R-094. |
-| Async scheduling | `unsupported` | — | R-032. |
+| Async scheduling | `untested` | `tests/Starlings.Roost.Engine.Tests/Scheduling/`<br>`tests/Starlings.Roost.Worker.Tests/`<br>`src/Starlings.Roost.Engine/STATUS.md` | Planner and CPU path (R-032, contract version 5): plan N+1 built during step N, decode inputs patched on the host by `SampledInputPatcher`, stop ids one step late and hidden; token streams equal to synchronous mode for roost-tiny and roost-tiny-hybrid on `CpuOps`, preemption storm included. The CUDA worker refuses sampled-input plans until stream F patches on the device; no GPU run, no racecheck. |
 | CUDA graphs, full and piecewise | `unsupported` | — | The worker is eager. The one R-017 capture on SM 86 replayed with a mismatch (`kernels/results/r017-graph-sm86.log`). R-032, R-033. |
 | Compiler fusion passes | `unsupported` | — | No CUDA fused variant. The AddRmsNorm and QkvQkNormRopeCacheWrite passes and their `CpuOps` definitions exist and are checked against the unfused graph on CPU (R-071). R-089. |
 | Batch-invariant mode | `unsupported` | — | R-106. FA2 prefill output depends on batch composition (R-019). |

@@ -33,6 +33,14 @@ public sealed record PlannerOptions
     /// </summary>
     public PrefixCacheOptions? PrefixCache { get; init; }
 
+    /// <summary>
+    /// Async scheduling (R-032). False, the default, plans exactly as before: a sequence waits for its sampled token. True lets
+    /// a decode row ride in the plan after the one sampling its input, marked <see cref="SequenceOptions.SampledInput"/> for the
+    /// worker to patch (see <see cref="StepPlanner"/>). Only for a worker that patches inputs; the caller keeps at most the
+    /// plans in flight its transport double-buffers and applies results in order.
+    /// </summary>
+    public bool AsyncScheduling { get; init; }
+
     internal void Validate()
     {
         PrefixCache?.Validate();

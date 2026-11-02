@@ -13,7 +13,7 @@ internal static unsafe class TestPlans
         var header = new StepPlanHeader
         {
             Magic = 0x4C505352u,
-            LayoutVersion = 1,
+            LayoutVersion = SharedLayout.Version,
             HeaderSize = (uint)sizeof(StepPlanHeader),
             StepId = stepId,
             TotalBytes = (ulong)TotalBytes,

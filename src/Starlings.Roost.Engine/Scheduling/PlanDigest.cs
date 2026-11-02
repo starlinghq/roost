@@ -78,8 +78,14 @@ internal static class PlanDigest
         }
 
         w.Ints(step.StopTokenIds);
+        if (step.InputStepId != 0)
+        {
+            // Hashed only when set, so a synchronous plan keeps the digest it had before R-032 (committed recordings).
+            w.U64(step.InputStepId);
+        }
+
         return new PlannedStep(step.StepId, step.GroupCount, step.Flags, step.MathMode, step.Sequences, step.TokenIds, step.Positions,
-            step.GroupBlocks, step.BlockIds, step.Sampling, step.CacheOps, step.StopTokenIds, Convert.ToHexStringLower(h.GetHashAndReset()));
+            step.GroupBlocks, step.BlockIds, step.Sampling, step.CacheOps, step.StopTokenIds, Convert.ToHexStringLower(h.GetHashAndReset()), step.InputStepId);
     }
 
     private readonly ref struct Writer(IncrementalHash hash)

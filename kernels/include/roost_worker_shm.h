@@ -25,7 +25,7 @@
 extern "C" {
 #endif
 
-#define ROOST_SHM_LAYOUT_VERSION 1
+#define ROOST_SHM_LAYOUT_VERSION 2 /* 2: RoostStepPlanHeader.input_step_id, ROOST_SEQ_FLAG_SAMPLED_INPUT (R-032) */
 
 #define ROOST_SHM_MAGIC_SEGMENT 0x47455352u /* "RSEG" */
 #define ROOST_SHM_MAGIC_PLAN 0x4C505352u    /* "RSPL" */
@@ -89,12 +89,22 @@ typedef struct RoostStepPlanHeader {
   RoostTableRef encoder_outputs;   /* RoostPlanEncoderOutput (M5 multimodal) */
   uint64_t reserved1;
   uint64_t reserved2;
+  /* Layout version 2 (R-032, async scheduling): the step whose sampled ids the ROOST_SEQ_FLAG_SAMPLED_INPUT rows of
+   * this plan take as input. It is the plan built just before this one, which the worker must have run last; a worker
+   * that did not run it (a fault, a plan that never reached it) refuses the plan rather than patch a stale id. 0 when
+   * no row has the flag. */
+  uint64_t input_step_id;
 } RoostStepPlanHeader;
 
 #define ROOST_SEQ_FLAG_PREFILL 0x1u    /* this chunk is prefill */
 #define ROOST_SEQ_FLAG_SAMPLE 0x2u     /* sample after this chunk (last chunk of a prompt, or decode) */
 #define ROOST_SEQ_FLAG_VERIFY 0x4u     /* the last draft_count tokens are drafts to verify */
 #define ROOST_SEQ_FLAG_HEAD_ROW 0x8u   /* reserved: ends in head_rows, not the sampler */
+/* Layout version 2 (R-032): the last token of this chunk is the id the worker sampled for this sequence_handle in step
+ * input_step_id, still in flight when the plan was built. The plan holds -1 at that index of token_ids; the worker
+ * writes the sampled id there before the forward (device-side on a GPU worker). Only on a decode row: one token, no
+ * ROOST_SEQ_FLAG_PREFILL. A worker that cannot patch inputs refuses a plan that uses it. */
+#define ROOST_SEQ_FLAG_SAMPLED_INPUT 0x10u
 
 typedef struct RoostPlanSequence {
   uint64_t sequence_handle;  /* engine's id for the sequence; echoed in the result */
