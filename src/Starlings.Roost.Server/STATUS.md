@@ -14,6 +14,7 @@ to check the loopback default. No request has reached a GPU through the server, 
 | `POST /v1/chat/completions` | untested | Whole response, or SSE (`chat.completion.chunk`: a role chunk, content deltas, a finish chunk, a usage chunk when `stream_options.include_usage` is true, then `data: [DONE]`). |
 | `POST /v1/completions` | untested | Raw prompt, tokenised as given with no chat template (new `RoostChatClient.GetStreamingCompletionAsync`, capability `raw_completion`, `untested`). `max_tokens` defaults to 16, as in OpenAI's API and vLLM. Whole or SSE, as above, without the role chunk. |
 | `GET /v1/models` | untested | The one served model, `owned_by` `roost`. |
+| `POST /sleep`, `POST /wake_up`, `GET /is_sleeping`, `POST /update_weights` | untested | R-100, vLLM's sleep-mode routes. Mapped only with `--enable-sleep-mode` (`RoostServerOptions.EnableSleepMode`, off by default); a request whose remote address is not loopback (or that has none) gets 403 `forbidden`. `/sleep?level=1` releases the KV cache, `level=2` also the weights (vLLM's level 1 offloads weights instead). `/wake_up` answers `duration_ms` (the wake time, also logged) and `worker_duration_ms`; `/update_weights` takes `{"path", "size", "sha256"}` and answers `asset_mismatch` (500) when the file does not match. Tested over a roost-tiny-hybrid worker on `CpuOps` (`SleepModeRouteTests`); the packaged CUDA worker `roost serve` starts refuses them with `profile_unsupported`. |
 
 ## Routes added by R-074
 
@@ -165,7 +166,7 @@ endpoint is a throughput claim (AGENTS.md); it has not been scraped on a GPU.
   `dotnet publish -c Release -r linux-x64` on 2026-11-01 (no GPU on the machine) produced an 11.2 MB `roost` with zero trim or
   AOT warnings, and the binary printed its usage and refused a missing tokenizer; that is a build check, not serving evidence.
 - **`roost serve`.** `--model qwen3.5-0.8b --weights --weights-sha256 --tokenizer [--kernels] [--worker] [--manifest]
-  [--allow-untested-sm] [--host] [--port] [--allow-non-loopback]`; unknown flags are refused by name. It starts the packaged
+  [--allow-untested-sm] [--host] [--port] [--allow-non-loopback] [--enable-sleep-mode]`; unknown flags are refused by name. It starts the packaged
   worker in its own process (decision 21) with the capacities of the R-036 GPU run (32 attention blocks of 16 tokens, 64
   tokens and one sequence per step, so a 512-token context). Parsing and the refusal paths are tested; serving through it is
   not.

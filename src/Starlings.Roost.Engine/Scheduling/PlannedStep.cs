@@ -17,7 +17,7 @@ public sealed class PlannedStep
     internal PlannedStep(ulong stepId, int groupCount, PlanOptions flags, MathMode mathMode, ImmutableArray<PlanSequence> sequences,
         ImmutableArray<int> tokenIds, ImmutableArray<int> positions, ImmutableArray<PlanGroupBlocks> groupBlocks,
         ImmutableArray<int> blockIds, ImmutableArray<PlanSampling> sampling, ImmutableArray<PlanCacheOp> cacheOps,
-        ImmutableArray<int> stopTokenIds, string digest)
+        ImmutableArray<int> stopTokenIds, string digest, ulong inputStepId = 0)
     {
         StepId = stepId;
         GroupCount = groupCount;
@@ -32,6 +32,7 @@ public sealed class PlannedStep
         CacheOps = cacheOps;
         StopTokenIds = stopTokenIds;
         Digest = digest;
+        InputStepId = inputStepId;
     }
 
     /// <summary>The step id, 1 for the first plan of a planner.</summary>
@@ -69,6 +70,12 @@ public sealed class PlannedStep
 
     /// <summary>Stop ids, per row.</summary>
     public ImmutableArray<int> StopTokenIds { get; }
+
+    /// <summary>
+    /// Async scheduling (R-032): the step whose sampled ids the rows marked <see cref="SequenceOptions.SampledInput"/> take as
+    /// input, always the plan built just before this one; 0 when no row is marked (C2 <c>input_step_id</c>).
+    /// </summary>
+    public ulong InputStepId { get; }
 
     /// <summary>SHA-256 over every field above, as hex. Equal inputs give equal digests, in any process.</summary>
     public string Digest { get; }

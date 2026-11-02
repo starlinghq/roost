@@ -27,11 +27,13 @@ internal sealed class ServerRig : IAsyncDisposable
     private static readonly Lazy<Tokenizer> s_tokenizer = new(() =>
         Tokenizer.FromFile(Path.Combine(AppContext.BaseDirectory, "Fixtures", "tiny-bytelevel-bpe.tokenizer.json")));
 
-    private ServerRig(RoostChatClient client, WebApplication app, ScriptedExecutor executor)
+    private readonly ScriptedExecutor? _executor;
+
+    private ServerRig(RoostChatClient client, WebApplication app, ScriptedExecutor? executor)
     {
         Client = client;
         App = app;
-        Executor = executor;
+        _executor = executor;
         Http = app.GetTestClient();
     }
 
@@ -41,7 +43,7 @@ internal sealed class ServerRig : IAsyncDisposable
 
     public WebApplication App { get; }
 
-    public ScriptedExecutor Executor { get; }
+    public ScriptedExecutor Executor => _executor ?? throw new InvalidOperationException("This rig runs the tiny CPU model, not a scripted worker.");
 
     public HttpClient Http { get; }
 
@@ -53,20 +55,7 @@ internal sealed class ServerRig : IAsyncDisposable
         ScriptedExecutor? executor = null;
         var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
         {
-            Model = new RoostModelProfile
-            {
-                ModelId = ModelId,
-                Tokenizer = Tokenizer,
-                ChatTemplate = Qwen35RoostChatTemplate.Instance,
-                StopTokenIds = [StopId],
-                StateGroups = RoostTinyHybrid.CreateStateGroups(),
-                AttentionBlocks = attentionBlocks,
-                RecurrentSlots = 1,
-                MaxTokensPerStep = MaxTokensPerStep,
-                MaxSequencesPerStep = 1,
-                ManifestDigest = ScriptedExecutor.ManifestDigest,
-                WeightsDigest = ScriptedExecutor.WeightsDigest,
-            },
+            Model = Profile(attentionBlocks),
             Worker = new RoostWorkerOptions
             {
                 Transport = TransportKind.InProcess,
@@ -74,7 +63,30 @@ internal sealed class ServerRig : IAsyncDisposable
                 StepDeadline = TimeSpan.FromSeconds(10),
             },
         }, TestContext.Current.CancellationToken);
+        return await ServeAsync(client, options, () => executor, configureWebHost);
+    }
 
+    /// <summary>
+    /// The server over a worker that runs roost-tiny-hybrid on <c>CpuOps</c> from a locked weights file (<see cref="TinyCpuExecutor"/>),
+    /// for the sleep-mode routes (R-100).
+    /// </summary>
+    public static async Task<ServerRig> StartTinyAsync(string weightsPath, Starlings.Roost.Worker.Weights.LockedFile locked, RoostServerOptions options)
+    {
+        var client = await RoostChatClient.StartAsync(new RoostChatClientOptions
+        {
+            Model = Profile() with { WeightsDigest = [.. Convert.FromHexString(locked.Sha256)] },
+            Worker = new RoostWorkerOptions
+            {
+                Transport = TransportKind.InProcess,
+                InProcessExecutor = () => new TinyCpuExecutor(weightsPath, locked, Limits()),
+                StepDeadline = TimeSpan.FromSeconds(30),
+            },
+        }, TestContext.Current.CancellationToken);
+        return await ServeAsync(client, options, () => null);
+    }
+
+    private static async Task<ServerRig> ServeAsync(RoostChatClient client, RoostServerOptions? options, Func<ScriptedExecutor?> executor, Action<IWebHostBuilder>? configureWebHost = null)
+    {
         try
         {
             var app = RoostServer.Create(client, options, web =>
@@ -83,7 +95,7 @@ internal sealed class ServerRig : IAsyncDisposable
                 configureWebHost?.Invoke(web);
             });
             await app.StartAsync(TestContext.Current.CancellationToken);
-            return new ServerRig(client, app, executor!);
+            return new ServerRig(client, app, executor());
         }
         catch
         {
@@ -91,6 +103,21 @@ internal sealed class ServerRig : IAsyncDisposable
             throw;
         }
     }
+
+    private static RoostModelProfile Profile(int attentionBlocks = AttentionBlocks) => new()
+    {
+        ModelId = ModelId,
+        Tokenizer = Tokenizer,
+        ChatTemplate = Qwen35RoostChatTemplate.Instance,
+        StopTokenIds = [StopId],
+        StateGroups = RoostTinyHybrid.CreateStateGroups(),
+        AttentionBlocks = attentionBlocks,
+        RecurrentSlots = 1,
+        MaxTokensPerStep = MaxTokensPerStep,
+        MaxSequencesPerStep = 1,
+        ManifestDigest = ScriptedExecutor.ManifestDigest,
+        WeightsDigest = ScriptedExecutor.WeightsDigest,
+    };
 
     /// <summary>The eager worker's limits for the profile above.</summary>
     public static PlanLimits Limits(int attentionBlocks = AttentionBlocks) => new(

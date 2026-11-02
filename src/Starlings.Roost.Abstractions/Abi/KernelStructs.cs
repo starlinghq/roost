@@ -833,6 +833,42 @@ public struct SampleParams
 
     /// <summary>Reserved; zero.</summary>
     public uint Reserved0;
+
+    /// <summary>[rows] f32, 1 disables; read when token_counts is set (ABI 1.3)</summary>
+    public DeviceSpan RepetitionPenalty;
+
+    /// <summary>[rows] f32, 0 disables; read when token_counts is set (ABI 1.3)</summary>
+    public DeviceSpan PresencePenalty;
+
+    /// <summary>[rows] f32, 0 disables; read when token_counts is set (ABI 1.3)</summary>
+    public DeviceSpan FrequencyPenalty;
+
+    /// <summary>Optional [rows, vocab] int32: occurrences of each token in the generated output (ABI 1.3)</summary>
+    public DeviceSpan TokenCounts;
+
+    /// <summary>Optional [rows, ceil(vocab / 32)] u32: tokens in the prompt, repetition only (ABI 1.3)</summary>
+    public DeviceSpan PromptMask;
+
+    /// <summary>int32 stop ids; read when stop_flags is set (ABI 1.3)</summary>
+    public DeviceSpan StopIds;
+
+    /// <summary>[rows, 2] int32 (start, count) into stop_ids; read when stop_flags is set (ABI 1.3)</summary>
+    public DeviceSpan StopRanges;
+
+    /// <summary>Optional [rows] int32 output: 1 when ids[r] is one of the row's stop ids (ABI 1.3)</summary>
+    public DeviceSpan StopFlags;
+
+    /// <summary>Optional [rows, top_logprobs] int32 output (ABI 1.3)</summary>
+    public DeviceSpan TopLogprobIds;
+
+    /// <summary>Optional [rows, top_logprobs] f32 output (ABI 1.3)</summary>
+    public DeviceSpan TopLogprobValues;
+
+    /// <summary>Alternatives per row; 0 for none (ABI 1.3)</summary>
+    public uint TopLogprobs;
+
+    /// <summary>ROOST_SAMPLE_MATH_* (ABI 1.3)</summary>
+    public uint Math;
 }
 
 /// <summary>Gated delta rule over packed sequences, with row-strided q, k and v views (ABI 1.1).</summary>

@@ -16,6 +16,9 @@ public sealed record TestSequence(ulong Handle, int[] Tokens, int PositionOffset
     /// <summary>Stop ids.</summary>
     public int[] Stops { get; init; } = [];
 
+    /// <summary>Async scheduling (R-032): the row's last token is patched from the previous step's sampled id.</summary>
+    public bool SampledInput { get; init; }
+
     /// <summary>Tokens the request may still emit.</summary>
     public uint MaxNewTokensLeft { get; init; }
 
@@ -35,7 +38,15 @@ public static class PlanWriter
     /// <param name="groupCount">State groups per row; the attention group is index 0.</param>
     /// <param name="sequences">The sequences, in plan order.</param>
     /// <returns>The plan bytes.</returns>
-    public static byte[] Write(ulong stepId, int groupCount, params TestSequence[] sequences)
+    public static byte[] Write(ulong stepId, int groupCount, params TestSequence[] sequences) => WriteWithInput(stepId, 0, groupCount, sequences);
+
+    /// <summary>Writes a plan whose sampled-input rows take their ids from <paramref name="inputStepId"/> (R-032).</summary>
+    /// <param name="stepId">The step id.</param>
+    /// <param name="inputStepId">The header's <c>input_step_id</c>.</param>
+    /// <param name="groupCount">State groups per row; the attention group is index 0.</param>
+    /// <param name="sequences">The sequences, in plan order.</param>
+    /// <returns>The plan bytes.</returns>
+    public static byte[] WriteWithInput(ulong stepId, ulong inputStepId, int groupCount, params TestSequence[] sequences)
     {
         var seqs = new List<PlanSequence>();
         var tokens = new List<int>();
@@ -59,7 +70,8 @@ public static class PlanWriter
                 GrammarSlot = -1,
                 EmbeddingSlot = -1,
                 SamplingIndex = (uint)sampling.Count,
-                Flags = (s.PositionOffset == 0 ? SequenceOptions.Prefill : SequenceOptions.None) | (s.Sample ? SequenceOptions.Sample : SequenceOptions.None),
+                Flags = (s.PositionOffset == 0 ? SequenceOptions.Prefill : SequenceOptions.None) | (s.Sample ? SequenceOptions.Sample : SequenceOptions.None)
+                    | (s.SampledInput ? SequenceOptions.SampledInput : SequenceOptions.None),
                 StopStart = (uint)stops.Count,
                 StopCount = (uint)s.Stops.Length,
                 MaxNewTokensLeft = s.MaxNewTokensLeft,
@@ -97,6 +109,7 @@ public static class PlanWriter
             LayoutVersion = SharedLayout.Version,
             HeaderSize = (uint)Unsafe.SizeOf<StepPlanHeader>(),
             StepId = stepId,
+            InputStepId = inputStepId,
             SequenceCount = (uint)seqs.Count,
             TokenCount = (uint)tokens.Count,
             GroupCount = (uint)groupCount,

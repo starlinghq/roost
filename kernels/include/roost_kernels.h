@@ -1,9 +1,10 @@
 /*
  * roost_kernels.h: the kernel library C ABI and registration table (contract C1, build plan section 5).
  *
- * ABI major 1, minor 2. Frozen as contract v0 by R-004 (1.0); 1.1 adds RoostGatedDeltaRuleParams with row strides for
+ * ABI major 1, minor 3. Frozen as contract v0 by R-004 (1.0); 1.1 adds RoostGatedDeltaRuleParams with row strides for
  * q, k and v (2026-10-19); 1.2 adds the Qwen3.5 gating ops (GatedDeltaRuleGates, GatedRmsNorm, SigmoidMul) and the params
- * of CausalConv1d, RecurrentStateCopy and RecurrentStateSnapshot (contract version 3). The ADR is the "Contracts" section
+ * of CausalConv1d, RecurrentStateCopy and RecurrentStateSnapshot (contract version 3); 1.3 appends penalties, stop flags,
+ * top-k logprobs and the math mode to RoostSampleParams (contract version 4, R-042). The ADR is the "Contracts" section
  * of README.md.
  *
  * Rules (the ADR gives the reasons):
@@ -52,7 +53,7 @@ extern "C" {
 /* ---- Versions ------------------------------------------------------------------------------------------------ */
 
 #define ROOST_ABI_MAJOR 1
-#define ROOST_ABI_MINOR 2
+#define ROOST_ABI_MINOR 3
 /* roost_abi_version() returns (major << 16) | minor. */
 #define ROOST_ABI_VERSION ((ROOST_ABI_MAJOR << 16) | ROOST_ABI_MINOR)
 
@@ -503,7 +504,18 @@ typedef struct RoostArgmaxParams {
   uint32_t reserved0;
 } RoostArgmaxParams;
 
-/* Temperature, top-k, top-p and min-p sampling with per-row parameters and seeds; optional token masks. */
+/* Sampling math (RoostSampleParams.math, ABI 1.3). REFERENCE is CpuOps' double-precision definition; FP32 is the float32
+ * definition a device sampler must reproduce bit for bit: every step is one correctly rounded IEEE binary32 add, multiply,
+ * divide or fused multiply-add in the order CpuOps.Sample documents (no contraction beyond the stated fmas, no fast-math
+ * exp or log). */
+#define ROOST_SAMPLE_MATH_REFERENCE 0
+#define ROOST_SAMPLE_MATH_FP32 1
+
+/* Temperature, top-k, top-p and min-p sampling with per-row parameters and seeds; optional token masks. From ABI 1.3,
+ * optional penalties over per-row token counts, a stop flag against per-row stop ids, top-k logprobs and the math mode
+ * (contract version 4, R-042). CpuOps.Sample (contract C3) is the exact definition. A 1.2 caller's struct_size ends at
+ * reserved0; a library reads the 1.3 fields only when struct_size covers them, and a library without a kernel for a 1.3
+ * feature that is set returns ROOST_STATUS_UNSUPPORTED. Every optional span has address NULL when unused. */
 typedef struct RoostSampleParams {
   uint32_t struct_size;
   uint32_t abi_minor;
@@ -521,6 +533,19 @@ typedef struct RoostSampleParams {
   uint32_t vocab;
   uint32_t stride;
   uint32_t reserved0;
+  /* ABI 1.3 */
+  RoostDeviceSpan repetition_penalty; /* [rows] f32, 1 disables; read when token_counts is set */
+  RoostDeviceSpan presence_penalty;   /* [rows] f32, 0 disables; read when token_counts is set */
+  RoostDeviceSpan frequency_penalty;  /* [rows] f32, 0 disables; read when token_counts is set */
+  RoostDeviceSpan token_counts;       /* optional [rows, vocab] int32: occurrences of each token in the generated output */
+  RoostDeviceSpan prompt_mask;        /* optional [rows, ceil(vocab / 32)] u32: tokens in the prompt (repetition only) */
+  RoostDeviceSpan stop_ids;           /* int32 stop ids; read when stop_flags is set */
+  RoostDeviceSpan stop_ranges;        /* [rows, 2] int32 (start, count) into stop_ids; read when stop_flags is set */
+  RoostDeviceSpan stop_flags;         /* optional [rows] int32 output: 1 when ids[r] is one of the row's stop ids */
+  RoostDeviceSpan top_logprob_ids;    /* optional [rows, top_logprobs] int32 output */
+  RoostDeviceSpan top_logprob_values; /* optional [rows, top_logprobs] f32 output */
+  uint32_t top_logprobs;              /* alternatives per row; 0 for none */
+  uint32_t math;                      /* ROOST_SAMPLE_MATH_* */
 } RoostSampleParams;
 
 /* ---- Hybrid (recurrent) params, ABI 1.1 and 1.2 -------------------------------------------------------------- */

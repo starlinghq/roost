@@ -15,35 +15,57 @@ namespace Starlings.Generation.Roost;
 /// <param name="StopSequences">The request's stop strings.</param>
 /// <param name="StopMatcher">The matcher for them, made by the client's factory.</param>
 /// <param name="MaxOutputTokens">Requested output tokens before the context cap.</param>
+/// <param name="Sampling">The sampling parameters (greedy unless the worker samples on the CPU); <c>MaxTokens</c> is set by the client.</param>
 internal sealed record PreparedChat(
     IReadOnlyList<RoostChatMessage> Messages,
     ImmutableArray<RoostToolDefinition> Tools,
     bool EnableThinking,
     IReadOnlyList<string> StopSequences,
     IStopMatcher StopMatcher,
-    int MaxOutputTokens);
+    int MaxOutputTokens,
+    SamplingParameters Sampling);
 
 /// <summary>A validated raw-text completion request: the prompt as given, the stop strings and the output limit.</summary>
 /// <param name="Prompt">The prompt text, tokenised without a chat template.</param>
 /// <param name="StopSequences">The request's stop strings.</param>
 /// <param name="StopMatcher">The matcher for them, made by the client's factory.</param>
 /// <param name="MaxOutputTokens">Requested output tokens before the context cap.</param>
-internal sealed record PreparedPrompt(string Prompt, IReadOnlyList<string> StopSequences, IStopMatcher StopMatcher, int MaxOutputTokens);
+/// <param name="Sampling">The sampling parameters (greedy unless the worker samples on the CPU); <c>MaxTokens</c> is set by the client.</param>
+internal sealed record PreparedPrompt(string Prompt, IReadOnlyList<string> StopSequences, IStopMatcher StopMatcher, int MaxOutputTokens, SamplingParameters Sampling);
 
 /// <summary>
 /// Checks a conversation and its <see cref="ChatOptions"/> against what Roost runs, before any work starts. Every option that is
 /// set and not supported is refused with <see cref="RoostErrorCode.InvalidOption"/> naming it (the OpenAI parameter name, as the
 /// server's 400 body does, R-037); nothing is ignored.
 /// </summary>
+/// <remarks>
+/// <para><b>Sampling (R-042).</b> With <see cref="RoostSampler.Cpu"/> the worker runs the CPU sampler, so <c>Temperature</c>,
+/// <c>TopP</c>, <c>TopK</c>, <c>Seed</c>, <c>FrequencyPenalty</c>, <c>PresencePenalty</c> and the additional properties
+/// <see cref="RoostChatClient.MinPKey"/>, <see cref="RoostChatClient.RepetitionPenaltyKey"/>,
+/// <see cref="RoostChatClient.LogprobsKey"/> and <see cref="RoostChatClient.TopLogprobsKey"/> are accepted and range-checked.
+/// An unset temperature is greedy (0), as on the GPU worker; under greedy decoding top-p, top-k and min-p cannot change the
+/// chosen token (the most likely token is always kept), so they are accepted, while penalties still apply. With
+/// <see cref="RoostSampler.GreedyOnly"/> (the CUDA worker until the GPU sampler exists) only values equivalent to greedy
+/// decoding without penalties or logprobs are accepted.</para>
+/// </remarks>
 internal static class ChatRequestBuilder
 {
-    private const string GreedyOnly = "M0 decodes greedily only (decision 15, R-025); sampling is unsupported until the fused sampler (R-042).";
+    private const string MinPKey = RoostChatClient.MinPKey;
+    private const string RepetitionPenaltyKey = RoostChatClient.RepetitionPenaltyKey;
+    private const string LogprobsKey = RoostChatClient.LogprobsKey;
+    private const string TopLogprobsKey = RoostChatClient.TopLogprobsKey;
+    private const int MaxTopLogprobs = 20;
+
+    private const string GreedyOnly = "The CUDA worker decodes greedily only (decision 15, R-025); sampling needs the GPU sampler (R-042) or a worker with the CPU sampler (RoostWorkerOptions.Sampler).";
+
     private const string NoTemplate = "unsupported for a raw completion: the prompt is not rendered by a chat template.";
 
-    public static PreparedChat Build(IEnumerable<ChatMessage> messages, ChatOptions? options, RoostModelProfile model, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens, GrammarTokenizer? grammar = null)
+    private static SamplingParameters Greedy { get; } = new() { Temperature = 0f };
+
+    public static PreparedChat Build(IEnumerable<ChatMessage> messages, ChatOptions? options, RoostModelProfile model, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens, RoostSampler sampler = RoostSampler.GreedyOnly, GrammarTokenizer? grammar = null)
     {
         ArgumentNullException.ThrowIfNull(messages);
-        var (stops, maxOutput) = CheckCommon(options, model.ModelId, defaultMaxOutputTokens, grammar);
+        var (stops, maxOutput, sampling) = CheckCommon(options, model.ModelId, defaultMaxOutputTokens, sampler, grammar);
         var tools = Tools(options, model.EffectiveToolCallFormat);
         var enableThinking = Thinking(options, model.EffectiveReasoningFormat);
 
@@ -76,17 +98,17 @@ internal static class ChatRequestBuilder
             throw RoostChatException.InvalidOption("messages", "The conversation is empty.");
         }
 
-        return new PreparedChat(conversation, tools, enableThinking, stops, CreateMatcher(stopFactory, stops), maxOutput);
+        return new PreparedChat(conversation, tools, enableThinking, stops, CreateMatcher(stopFactory, stops), maxOutput, sampling);
     }
 
     /// <summary>
     /// Checks a raw-text completion: the same options as a chat, except <c>Instructions</c>, tools and thinking, which a prompt
     /// without a chat template has nowhere to put.
     /// </summary>
-    public static PreparedPrompt BuildRaw(string prompt, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens, GrammarTokenizer? grammar = null)
+    public static PreparedPrompt BuildRaw(string prompt, ChatOptions? options, string modelId, IStopMatcherFactory stopFactory, int defaultMaxOutputTokens, RoostSampler sampler = RoostSampler.GreedyOnly, GrammarTokenizer? grammar = null)
     {
         ArgumentNullException.ThrowIfNull(prompt);
-        var (stops, maxOutput) = CheckCommon(options, modelId, defaultMaxOutputTokens, grammar);
+        var (stops, maxOutput, sampling) = CheckCommon(options, modelId, defaultMaxOutputTokens, sampler, grammar);
         if (options is not null)
         {
             if (options.Instructions is { Length: > 0 })
@@ -109,10 +131,9 @@ internal static class ChatRequestBuilder
                 throw Refuse("parallel_tool_calls", "AllowMultipleToolCalls is " + NoTemplate);
             }
 
-            if (options.AdditionalProperties is { Count: > 0 } extra)
+            if (options.AdditionalProperties?.ContainsKey(RoostChatClient.EnableThinkingProperty) == true)
             {
-                var key = extra.Keys.First();
-                throw RefuseInvariant(key, $"Additional property '{key}' is {NoTemplate}");
+                throw Refuse(RoostChatClient.EnableThinkingProperty, "Thinking is " + NoTemplate);
             }
         }
 
@@ -121,19 +142,20 @@ internal static class ChatRequestBuilder
             throw Refuse("prompt", "The prompt is empty.");
         }
 
-        return new PreparedPrompt(prompt, stops, CreateMatcher(stopFactory, stops), maxOutput);
+        return new PreparedPrompt(prompt, stops, CreateMatcher(stopFactory, stops), maxOutput, sampling);
     }
 
-    private static (IReadOnlyList<string> Stops, int MaxOutput) CheckCommon(ChatOptions? options, string modelId, int defaultMaxOutputTokens, GrammarTokenizer? grammar)
+    private static (IReadOnlyList<string> Stops, int MaxOutput, SamplingParameters Sampling) CheckCommon(ChatOptions? options, string modelId, int defaultMaxOutputTokens, RoostSampler sampler, GrammarTokenizer? grammar)
     {
         var maxOutput = defaultMaxOutputTokens;
         IReadOnlyList<string> stops = [];
         if (options is null)
         {
-            return (stops, maxOutput);
+            return (stops, maxOutput, Greedy);
         }
 
-        CheckOptions(options, modelId, grammar);
+        CheckOptions(options, modelId, sampler, grammar);
+        var sampling = sampler == RoostSampler.Cpu ? Sampling(options) : Greedy;
         if (options.MaxOutputTokens is { } max)
         {
             maxOutput = max > 0 ? max : throw RoostChatException.InvalidOption("max_tokens", string.Create(CultureInfo.InvariantCulture, $"MaxOutputTokens must be positive; got {max}."));
@@ -149,7 +171,129 @@ internal static class ChatRequestBuilder
             stops = [.. s];
         }
 
-        return (stops, maxOutput);
+        return (stops, maxOutput, sampling);
+    }
+
+    // The CPU sampler's parameters, each checked for the range CpuOps.Sample defines (and StepPlanReader enforces).
+    private static SamplingParameters Sampling(ChatOptions o)
+    {
+        float temperature = o.Temperature ?? 0f;
+        if (!float.IsFinite(temperature) || temperature < 0f)
+        {
+            throw RefuseInvariant("temperature", $"Temperature must be a finite number at least 0; got {temperature}.");
+        }
+
+        float topP = o.TopP ?? 1f;
+        if (!float.IsFinite(topP) || topP <= 0f || topP > 1f)
+        {
+            throw RefuseInvariant("top_p", $"TopP must be in (0, 1]; got {topP}.");
+        }
+
+        // -1 is vLLM's spelling of "disabled", 0 Roost's.
+        int topK = o.TopK ?? 0;
+        if (topK < -1)
+        {
+            throw RefuseInvariant("top_k", $"TopK must be at least 0 (or -1 for disabled); got {topK}.");
+        }
+
+        float frequency = Penalty(o.FrequencyPenalty, "frequency_penalty");
+        float presence = Penalty(o.PresencePenalty, "presence_penalty");
+        var extra = o.AdditionalProperties;
+        float minP = Float(extra, MinPKey) ?? 0f;
+        if (!float.IsFinite(minP) || minP < 0f || minP > 1f)
+        {
+            throw RefuseInvariant(MinPKey, $"min_p must be in [0, 1]; got {minP}.");
+        }
+
+        float repetition = Float(extra, RepetitionPenaltyKey) ?? 1f;
+        if (!float.IsFinite(repetition) || repetition <= 0f)
+        {
+            throw RefuseInvariant(RepetitionPenaltyKey, $"repetition_penalty must be a positive number; got {repetition}.");
+        }
+
+        bool logprobs = Bool(extra, LogprobsKey) ?? false;
+        int? top = Int(extra, TopLogprobsKey);
+        if (top is { } n && (n < 0 || n > MaxTopLogprobs))
+        {
+            throw RefuseInvariant(TopLogprobsKey, $"top_logprobs must be in [0, {MaxTopLogprobs}]; got {n}.");
+        }
+
+        if (top is > 0 && !logprobs)
+        {
+            throw Refuse(TopLogprobsKey, "top_logprobs needs logprobs set to true.");
+        }
+
+        return new SamplingParameters
+        {
+            Temperature = temperature,
+            TopP = topP,
+            TopK = Math.Max(0, topK),
+            MinP = minP,
+            RepetitionPenalty = repetition,
+            PresencePenalty = presence,
+            FrequencyPenalty = frequency,
+            Seed = o.Seed is { } seed ? unchecked((ulong)seed) : null,
+            Logprobs = logprobs,
+            TopLogprobs = top ?? 0,
+        };
+    }
+
+    // OpenAI's range for both penalties.
+    private static float Penalty(float? value, string param)
+    {
+        float v = value ?? 0f;
+        return float.IsFinite(v) && v >= -2f && v <= 2f ? v : throw RefuseInvariant(param, $"{param} must be in [-2, 2]; got {v}.");
+    }
+
+    private static float? Float(AdditionalPropertiesDictionary? extra, string key)
+    {
+        if (extra is null || !extra.TryGetValue(key, out var value) || value is null)
+        {
+            return null;
+        }
+
+        return value switch
+        {
+            float f => f,
+            double d => (float)d,
+            decimal m => (float)m,
+            int i => i,
+            long l => l,
+            JsonElement { ValueKind: JsonValueKind.Number } e => (float)e.GetDouble(),
+            _ => throw Refuse(key, key + " must be a number."),
+        };
+    }
+
+    private static int? Int(AdditionalPropertiesDictionary? extra, string key)
+    {
+        if (extra is null || !extra.TryGetValue(key, out var value) || value is null)
+        {
+            return null;
+        }
+
+        return value switch
+        {
+            int i => i,
+            long l when l is >= int.MinValue and <= int.MaxValue => (int)l,
+            JsonElement { ValueKind: JsonValueKind.Number } e when e.TryGetInt32(out var i) => i,
+            _ => throw Refuse(key, key + " must be an integer."),
+        };
+    }
+
+    private static bool? Bool(AdditionalPropertiesDictionary? extra, string key)
+    {
+        if (extra is null || !extra.TryGetValue(key, out var value) || value is null)
+        {
+            return null;
+        }
+
+        return value switch
+        {
+            bool b => b,
+            JsonElement { ValueKind: JsonValueKind.True } => true,
+            JsonElement { ValueKind: JsonValueKind.False } => false,
+            _ => throw Refuse(key, key + " must be a boolean."),
+        };
     }
 
     private static IStopMatcher CreateMatcher(IStopMatcherFactory stopFactory, IReadOnlyList<string> stops)
@@ -164,33 +308,11 @@ internal static class ChatRequestBuilder
         }
     }
 
-    private static void CheckOptions(ChatOptions o, string modelId, GrammarTokenizer? grammar)
+    private static void CheckOptions(ChatOptions o, string modelId, RoostSampler sampler, GrammarTokenizer? grammar)
     {
-        if (o.Temperature is { } t && t != 0f)
+        if (sampler != RoostSampler.Cpu)
         {
-            throw RefuseInvariant("temperature", $"Temperature {t} is unsupported: {GreedyOnly} Leave it unset or pass 0.");
-        }
-
-        if (o.TopP is { } p && p != 1f)
-        {
-            throw RefuseInvariant("top_p", $"TopP {p} is unsupported: {GreedyOnly}");
-        }
-
-        if (o.TopK is { } k && k != 1)
-        {
-            throw RefuseInvariant("top_k", $"TopK {k} is unsupported: {GreedyOnly}");
-        }
-
-        // Seed is accepted: greedy decoding is deterministic, so the seed's contract (the same output for the same input) holds
-        // without it. It changes nothing in M0; the sampler (R-042) honours it.
-        if (o.FrequencyPenalty is { } f && f != 0f)
-        {
-            throw Refuse("frequency_penalty", "FrequencyPenalty is unsupported in M0 (the eager worker applies no penalties).");
-        }
-
-        if (o.PresencePenalty is { } pp && pp != 0f)
-        {
-            throw Refuse("presence_penalty", "PresencePenalty is unsupported in M0 (the eager worker applies no penalties).");
+            CheckGreedyOnly(o);
         }
 
         if (o.ResponseFormat is not null and not ChatResponseFormatText)
@@ -217,11 +339,53 @@ internal static class ChatRequestBuilder
         {
             foreach (var key in extra.Keys)
             {
-                if (!string.Equals(key, RoostChatClient.EnableThinkingProperty, StringComparison.Ordinal))
+                if (string.Equals(key, RoostChatClient.EnableThinkingProperty, StringComparison.Ordinal))
                 {
-                    throw RefuseInvariant(key, $"Additional property '{key}' is unsupported; Roost accepts only '{RoostChatClient.EnableThinkingProperty}'.");
+                    continue;
+                }
+
+                bool known = key is MinPKey or RepetitionPenaltyKey or LogprobsKey or TopLogprobsKey;
+                if (!known)
+                {
+                    throw RefuseInvariant(key, $"Additional property '{key}' is unsupported; Roost accepts only {RoostChatClient.EnableThinkingProperty}, and {MinPKey}, {RepetitionPenaltyKey}, {LogprobsKey} and {TopLogprobsKey} with the CPU sampler.");
+                }
+
+                if (sampler != RoostSampler.Cpu)
+                {
+                    throw RefuseInvariant(key, $"{key} is unsupported: {GreedyOnly}");
                 }
             }
+        }
+    }
+
+    // The CUDA worker's rules: values equivalent to greedy decoding without penalties or logprobs.
+    private static void CheckGreedyOnly(ChatOptions o)
+    {
+        if (o.Temperature is { } t && t != 0f)
+        {
+            throw RefuseInvariant("temperature", $"Temperature {t} is unsupported: {GreedyOnly} Leave it unset or pass 0.");
+        }
+
+        if (o.TopP is { } p && p != 1f)
+        {
+            throw RefuseInvariant("top_p", $"TopP {p} is unsupported: {GreedyOnly}");
+        }
+
+        if (o.TopK is { } k && k != 1)
+        {
+            throw RefuseInvariant("top_k", $"TopK {k} is unsupported: {GreedyOnly}");
+        }
+
+        // Seed is accepted: greedy decoding is deterministic, so the seed's contract (the same output for the same input) holds
+        // without it.
+        if (o.FrequencyPenalty is { } f && f != 0f)
+        {
+            throw Refuse("frequency_penalty", "FrequencyPenalty is unsupported: the CUDA worker applies no penalties until the GPU sampler (R-042).");
+        }
+
+        if (o.PresencePenalty is { } pp && pp != 0f)
+        {
+            throw Refuse("presence_penalty", "PresencePenalty is unsupported: the CUDA worker applies no penalties until the GPU sampler (R-042).");
         }
     }
 

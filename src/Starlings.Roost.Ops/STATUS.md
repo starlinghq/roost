@@ -82,3 +82,41 @@ half that stream D landed for both, and what is still missing. Nothing here has 
   run sizes them (no tolerance file was changed).
 - **Kernels, fidelity profiles and admissions.** No CUDA kernel (Marlin W4A16, FP8 GEMM, FP8 KV attention), no fidelity profile
   against the dequantised reference and no admission exists. These are stream C's and the evidence pipeline's.
+
+# R-042 status: partial (CPU half only)
+
+R-042 (build plan section 10, streams F and D, M2): "Build the fused GPU sampler. All V1 sampling parameters, Philox per-sequence
+counters, top-k logprobs, stop flags, grammar bitmask applied on the device; masks and probabilities bit-exact against the CPU
+sampler in fp32; same seed gives the same draw in any batch." This change is the CPU half and the contract change it needs
+(contract version 4, C1 ABI 1.3). R-042 stays open.
+
+## Delivered
+
+- `CpuOps.Sample` (`CpuOps.Sampling.cs`): penalties (repetition over prompt and output, frequency, presence, in vLLM's order)
+  over `TokenCounts` and `PromptMask`; grammar bitmask; temperature, top-k, top-p, min-p; Philox4x32-10 draws keyed by the row's
+  seed and offset only; the chosen token's logprob and top-k logprobs of the raw logits; stop flags against per-row stop ids. Two
+  arithmetics: `SampleMath.Reference` (double) and `SampleMath.Fp32`, every step a correctly rounded binary32 operation in a stated
+  order, with exp and log from `Fp32Math` (series coefficients, no platform `expf`/`logf`) and a 32-lane row sum.
+- `HostSampler` (`src/Starlings.Roost.Worker/Eager/HostSampler.cs`, stream F): the worker-side CPU sampler over `CpuOps.Sample`,
+  with per-sequence token history across steps (prompt boundary kept across preemption), bounded history cache, logprob rows for the
+  C2 result.
+
+## Capability status
+
+| Capability | Status | Evidence |
+| --- | --- | --- |
+| `CpuOps.Sample` with penalties, stop flags, top-k logprobs, both math modes | untested (CPU reference; no GPU to compare with) | `SamplingTests`, `SamplingV4Tests`, `Fp32MathTests` (exp and log within 2 ulp of double over 200,000 points each; the float32 logprob equals the documented operation sequence bit for bit; per-row draws identical in any batch order) |
+| Sampling, penalties, logprobs through `RoostChatClient` with `RoostSampler.Cpu` | untested | `tests/Starlings.Generation.Roost.Tests/SamplingTests.cs`, `tests/Starlings.Roost.Worker.Tests/HostSamplerTests.cs` |
+| GPU sampler (`CudaOps.Sample`) | unsupported | no kernel; `CudaOps.Sample` refuses every call |
+| Bit-exactness of a device sampler against `SampleMath.Fp32` | untested | no kernel exists |
+
+## Still open (do not mark R-042 done)
+
+- The fused GPU sampler kernel (stream C/F), registered for `ROOST_OP_SAMPLE` at ABI 1.3, its conformance cases against
+  `SampleMath.Fp32` and hardware evidence; then the CUDA eager worker sets `PlanLimits.Sampling` and `RoostSampler` needs a GPU value.
+- Rebuilding the kernel library and `kernels/manifest.toml` at ABI 1.3 (stream C): until then the 1.3 loader refuses the released
+  1.2 assets.
+- Grammar masks in plans (R-051): the eager worker still refuses `grammar_slot`; `CpuOps.Sample` applies a mask when given one.
+- The server's `logprobs` and `top_logprobs` (stream H): `RoostChatClient` returns logprobs, but the OpenAI response bodies do not
+  carry them yet, so the server still refuses both.
+- `min_tokens` (C6 `SamplingParameters.MinTokens`) has no plan field and is not applied.

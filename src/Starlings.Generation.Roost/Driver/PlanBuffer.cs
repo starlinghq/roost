@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Starlings.Roost.Engine.Scheduling;
 using Starlings.Roost.Plans;
+using Starlings.Roost.Requests;
 
 namespace Starlings.Generation.Roost.Driver;
 
@@ -52,6 +53,7 @@ internal static class PlanBuffer
             HeaderSize = (uint)Unsafe.SizeOf<StepPlanHeader>(),
             Flags = step.Flags,
             StepId = step.StepId,
+            InputStepId = step.InputStepId,
             MathMode = step.MathMode,
             SequenceCount = (uint)step.Sequences.Length,
             TokenCount = (uint)step.TokenIds.Length,
@@ -108,6 +110,42 @@ internal static class PlanBuffer
         }
 
         return StepOutcome.FromTables(h.StepId, sequences, tokens);
+    }
+
+    /// <summary>
+    /// Reads the logprob rows of a successful result per sequence handle: each row's (1 + top-n) entries per emitted token,
+    /// the chosen token first (C2 <c>RoostResultSequence.logprob_start</c> and <c>logprob_count</c>).
+    /// </summary>
+    /// <param name="result">The result buffer.</param>
+    /// <param name="header">Its header, from <see cref="ReadHeader"/>.</param>
+    /// <returns>The rows by handle, or null when the result has none.</returns>
+    /// <exception cref="InvalidDataException">The logprob table or a row's range is malformed.</exception>
+    public static IReadOnlyDictionary<ulong, TokenLogprob[]>? ReadLogprobs(ReadOnlySpan<byte> result, in StepResultHeader header)
+    {
+        if (header.Logprobs.Count == 0)
+        {
+            return null;
+        }
+
+        var rows = Table<ResultLogprob>(result, header.Logprobs, header.Logprobs.Count);
+        var sequences = Table<ResultSequence>(result, header.Sequences, header.SequenceCount);
+        var byHandle = new Dictionary<ulong, TokenLogprob[]>();
+        foreach (var s in sequences)
+        {
+            if (s.LogprobCount == 0)
+            {
+                continue;
+            }
+
+            if ((ulong)s.LogprobStart + s.LogprobCount > (ulong)rows.Length || s.TokenCount == 0 || s.LogprobCount % s.TokenCount != 0)
+            {
+                throw new InvalidDataException("A result row names logprobs outside the logprob table or not a whole number per token.");
+            }
+
+            byHandle[s.SequenceHandle] = [.. rows.AsSpan((int)s.LogprobStart, (int)s.LogprobCount).ToArray().Select(static r => new TokenLogprob(r.Token, r.Logprob))];
+        }
+
+        return byHandle;
     }
 
     /// <summary>Reads and checks a result header.</summary>

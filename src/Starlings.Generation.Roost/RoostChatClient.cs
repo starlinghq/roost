@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Starlings.Generation.Roost.Driver;
@@ -8,6 +9,8 @@ using Starlings.Generation.Roost.Parsing;
 using Starlings.Roost.Generation;
 using Starlings.Roost.Plans;
 using Starlings.Roost.Requests;
+using Starlings.Roost.Transport;
+using Starlings.Roost.WorkerHost;
 
 namespace Starlings.Generation.Roost;
 
@@ -17,10 +20,18 @@ namespace Starlings.Generation.Roost;
 /// (decision 21); <see cref="Starlings.Roost.Transport.TransportKind.InProcess"/> is for tests and development.
 /// </summary>
 /// <remarks>
-/// <para><b>M0 scope.</b> Greedy decoding only. Every <see cref="ChatOptions"/> member that is set and not supported is
-/// refused with a <see cref="RoostChatException"/> whose <see cref="RoostError.Code"/> is
-/// <see cref="RoostErrorCode.InvalidOption"/> and whose <see cref="RoostError.Param"/> names the option; see
-/// <see cref="Capabilities"/>. Requests may be issued concurrently; M0 runs one sequence per step, so they take turns.</para>
+/// <para><b>Scope.</b> Greedy decoding on the CUDA worker; with <see cref="RoostSampler.Cpu"/> (a worker that runs the CPU
+/// sampler) also temperature, top-p, top-k, min-p, seeds, penalties and logprobs (R-042, CPU half). Every
+/// <see cref="ChatOptions"/> member that is set and not supported is refused with a <see cref="RoostChatException"/> whose
+/// <see cref="RoostError.Code"/> is <see cref="RoostErrorCode.InvalidOption"/> and whose <see cref="RoostError.Param"/> names the
+/// option; see <see cref="Capabilities"/>. Requests may be issued concurrently; M0 runs one sequence per step, so they take
+/// turns.</para>
+/// <para><b>Seeds.</b> A request without <c>Seed</c> gets a random one, so two unseeded requests do not draw the same tokens.
+/// With a seed, the draws depend only on the seed and the token position (Philox per sequence), never on other requests.</para>
+/// <para><b>Logprobs.</b> With <see cref="LogprobsKey"/> set, each update's <c>AdditionalProperties</c> carries, under
+/// <see cref="LogprobsKey"/>, an <c>IReadOnlyList&lt;</c><see cref="RoostTokenLogprob"/><c>&gt;</c> for the tokens decoded since
+/// the previous update (the final update carries any left), each with up to <see cref="TopLogprobsKey"/> alternatives.
+/// Logprobs are of the model's raw distribution, before penalties and temperature.</para>
 /// <para><b>Streaming.</b> Each update carries text that can no longer change: incomplete UTF-8 is held back by the
 /// detokenizer and a possible stop string by the stop matcher. The last update carries the finish reason
 /// (<see cref="ChatFinishReason.Stop"/> for a stop token or stop string, <see cref="ChatFinishReason.Length"/> for the
@@ -40,6 +51,14 @@ namespace Starlings.Generation.Roost;
 /// next step and frees its blocks.</para>
 /// <para><b>Telemetry.</b> Every request submitted to the worker records metrics on <see cref="Telemetry"/> and one activity
 /// (<see cref="RoostTelemetry.RequestActivityName"/>) tagged with its id, token counts and finish reason, never its text.</para>
+/// <para><b>Sleep, wake and weight update (R-100).</b> <see cref="SleepAsync"/> has the worker release its KV cache (and, at
+/// <see cref="RoostSleepLevel.KvCacheAndWeights"/>, its weights) while the client is idle, for example while a training step
+/// uses the GPU; <see cref="WakeUpAsync"/> restores them, checking the weights' digest, and records the wake time
+/// (<see cref="LastWakeDuration"/>); <see cref="UpdateWeightsAsync"/> replaces the weights in place from a locked file, verified as
+/// it is read, for reinforcement-learning loops. Each needs a worker with no request running, and requests made while the
+/// worker is asleep are refused with <see cref="RoostErrorCode.InsufficientDeviceMemory"/>. A worker whose executor cannot do
+/// them refuses with <see cref="RoostErrorCode.ProfileUnsupported"/>: the packaged CUDA <c>roost-worker</c> does today (see
+/// <see cref="Capabilities"/>).</para>
 /// </remarks>
 public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 {
@@ -47,9 +66,24 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     /// The <see cref="ChatOptions.AdditionalProperties"/> key that enables the model's thinking mode (a Boolean; the chat
     /// template's <c>enable_thinking</c>). The completion is then split into <see cref="TextReasoningContent"/> and the answer.
     /// Refused for a model with no reasoning format (<see cref="RoostModelProfile.EffectiveReasoningFormat"/>) and by the
-    /// Qwen3 template. Every other additional property is refused.
+    /// Qwen3 template. The other accepted additional properties are the CPU sampler's (<see cref="MinPKey"/> and the keys after it).
     /// </summary>
     public const string EnableThinkingProperty = "enable_thinking";
+
+    /// <summary>The <c>ChatOptions.AdditionalProperties</c> key for <c>min_p</c> (a number in [0, 1]); CPU sampler only.</summary>
+    public const string MinPKey = "min_p";
+
+    /// <summary>The <c>ChatOptions.AdditionalProperties</c> key for <c>repetition_penalty</c> (a positive number, 1 disables); CPU sampler only.</summary>
+    public const string RepetitionPenaltyKey = "repetition_penalty";
+
+    /// <summary>
+    /// The <c>ChatOptions.AdditionalProperties</c> key for <c>logprobs</c> (a boolean; CPU sampler only), and the
+    /// <c>ChatResponseUpdate.AdditionalProperties</c> key under which the logprobs come back.
+    /// </summary>
+    public const string LogprobsKey = "logprobs";
+
+    /// <summary>The <c>ChatOptions.AdditionalProperties</c> key for <c>top_logprobs</c> (an integer in [0, 20], needs <see cref="LogprobsKey"/>); CPU sampler only.</summary>
+    public const string TopLogprobsKey = "top_logprobs";
 
     private readonly RoostChatClientOptions _options;
     private readonly IGenerationBackend _backend;
@@ -62,7 +96,8 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         _options = options;
         _backend = backend;
         _metadata = new ChatClientMetadata("roost", null, options.Model.ModelId);
-        Capabilities = new RoostCapabilities();
+        var packagedCudaWorker = options.Worker.Transport == TransportKind.Process && options.Worker.Command is null;
+        Capabilities = new RoostCapabilities(options.Worker.Sampler, options.Worker.AsyncScheduling, weightLifecycle: !packagedCudaWorker);
         Telemetry = new RoostTelemetry(options.Model.ModelId, () => backend.KvCacheUsage);
     }
 
@@ -74,6 +109,64 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
 
     /// <summary>The model profile.</summary>
     public RoostModelProfile Model => _options.Model;
+
+    /// <summary>Whether the worker is asleep (<see cref="SleepAsync"/>).</summary>
+    public bool IsSleeping => _backend.IsSleeping;
+
+    /// <summary>
+    /// The time the last successful <see cref="WakeUpAsync"/> took, from the call reaching the driver to the worker's answer
+    /// (state pools reallocated and, after a level 2 sleep, the weights streamed and verified again); null before the first wake.
+    /// </summary>
+    public TimeSpan? LastWakeDuration => _backend.LastWakeDuration;
+
+    /// <summary>
+    /// Puts the worker to sleep (R-100): it releases its KV cache and recurrent state pools, and at
+    /// <see cref="RoostSleepLevel.KvCacheAndWeights"/> also its weights. Their contents are lost, so the client must be idle.
+    /// </summary>
+    /// <param name="level">What to release.</param>
+    /// <param name="cancellationToken">Cancels the wait; a sleep already sent to the worker still completes there.</param>
+    /// <returns>What the worker did, with the bytes it released.</returns>
+    /// <exception cref="RoostChatException">Requests are running or the worker is already asleep (<see cref="RoostErrorCode.InvalidOption"/>), the worker cannot sleep (<see cref="RoostErrorCode.ProfileUnsupported"/>), or it was lost (<see cref="RoostErrorCode.WorkerRestarted"/>).</exception>
+    public Task<RoostWorkerControlResult> SleepAsync(RoostSleepLevel level = RoostSleepLevel.KvCache, CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        return _backend.ControlAsync(RoostWorkerOperation.Sleep, level, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Wakes the worker (R-100): it reallocates what the sleep released and, after a level 2 sleep, streams the weights again
+    /// from their locked file, verifying them as read. The weights must have the digest of the weights the client last
+    /// verified (the profile's, or the last <see cref="UpdateWeightsAsync"/>'s); a file substituted while the worker slept fails
+    /// with <see cref="RoostErrorCode.AssetMismatch"/> and the worker stays asleep. The duration is recorded in
+    /// <see cref="LastWakeDuration"/>.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the wait; a wake already sent to the worker still completes there.</param>
+    /// <returns>What the worker did, with the bytes it allocated and the wake time.</returns>
+    /// <exception cref="RoostChatException">The worker is not asleep (<see cref="RoostErrorCode.InvalidOption"/>), the weights do not match (<see cref="RoostErrorCode.AssetMismatch"/>), or the worker was lost (<see cref="RoostErrorCode.WorkerRestarted"/>).</exception>
+    public Task<RoostWorkerControlResult> WakeUpAsync(CancellationToken cancellationToken = default)
+    {
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        return _backend.ControlAsync(RoostWorkerOperation.WakeUp, default, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// Replaces the worker's weights in place from a locked file (R-100): the worker streams it through the verified loader
+    /// (R-024) and swaps it in only once its SHA-256 matched <see cref="WeightSource.Sha256"/>, so a substituted or truncated file
+    /// fails with <see cref="RoostErrorCode.AssetMismatch"/> and the old weights stay. Allowed while asleep, where the new file
+    /// becomes the one the wake restores. The file must have the model's tensors, dtypes and shapes. A worker the client starts
+    /// after a fault loads the replacement too.
+    /// </summary>
+    /// <param name="source">The new weights: an absolute path as the worker sees it, the locked size and SHA-256.</param>
+    /// <param name="cancellationToken">Cancels the wait; an update already sent to the worker still completes there.</param>
+    /// <returns>What the worker did, with the digest it now serves.</returns>
+    /// <exception cref="ArgumentException"><paramref name="source"/> is invalid.</exception>
+    /// <exception cref="RoostChatException">Requests are running (<see cref="RoostErrorCode.InvalidOption"/>), the file does not match its lock (<see cref="RoostErrorCode.AssetMismatch"/>), the worker cannot replace weights (<see cref="RoostErrorCode.ProfileUnsupported"/>), or it was lost (<see cref="RoostErrorCode.WorkerRestarted"/>).</exception>
+    public Task<RoostWorkerControlResult> UpdateWeightsAsync(WeightSource source, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
+        return _backend.ControlAsync(RoostWorkerOperation.UpdateWeights, default, source, cancellationToken);
+    }
 
     internal IGenerationBackend Backend => _backend;
 
@@ -115,7 +208,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
 
         // Validate before anything is enumerated, so a refused option throws at the call.
-        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Grammar);
+        var prepared = ChatRequestBuilder.Build(messages, options, _options.Model, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Worker.Sampler, _options.Grammar);
         return StreamChatAsync(prepared, cancellationToken);
     }
 
@@ -133,8 +226,8 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     public IAsyncEnumerable<ChatResponseUpdate> GetStreamingCompletionAsync(string prompt, ChatOptions? options = null, CancellationToken cancellationToken = default)
     {
         ObjectDisposedException.ThrowIf(Volatile.Read(ref _disposed) != 0, this);
-        var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Grammar);
-        return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, null, cancellationToken);
+        var prepared = ChatRequestBuilder.BuildRaw(prompt, options, _options.Model.ModelId, _options.StopMatcherFactory, _options.DefaultMaxOutputTokens, _options.Worker.Sampler, _options.Grammar);
+        return StreamAsync(prepared.Prompt, "prompt", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, prepared.Sampling, null, cancellationToken);
     }
 
     /// <summary>Completes a raw text prompt; see <see cref="GetStreamingCompletionAsync"/>.</summary>
@@ -199,13 +292,13 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         var model = _options.Model;
         var prompt = Render(model.ChatTemplate, prepared);
         var parser = RoostOutputParser.Create(prepared.EnableThinking, model.EffectiveReasoningFormat, prepared.Tools, model.EffectiveToolCallFormat);
-        await foreach (var update in StreamAsync(prompt, "messages", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, parser, cancellationToken).ConfigureAwait(false))
+        await foreach (var update in StreamAsync(prompt, "messages", prepared.StopSequences, prepared.StopMatcher, prepared.MaxOutputTokens, prepared.Sampling, parser, cancellationToken).ConfigureAwait(false))
         {
             yield return update;
         }
     }
 
-    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, RoostOutputParser? parser, [EnumeratorCancellation] CancellationToken cancellationToken)
+    private async IAsyncEnumerable<ChatResponseUpdate> StreamAsync(string prompt, string promptParam, IReadOnlyList<string> stopSequences, IStopMatcher matcher, int maxOutputTokens, SamplingParameters sampling, RoostOutputParser? parser, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         long started = Stopwatch.GetTimestamp();
@@ -230,7 +323,11 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         {
             Id = id,
             PromptTokenIds = [.. ids],
-            Sampling = new SamplingParameters { Temperature = 0f, MaxTokens = Math.Min(maxOutputTokens, room) },
+            Sampling = sampling with
+            {
+                MaxTokens = Math.Min(maxOutputTokens, room),
+                Seed = sampling.Seed ?? BitConverter.ToUInt64(RandomNumberGenerator.GetBytes(sizeof(ulong))),
+            },
             StopSequences = [.. stopSequences],
         };
 
@@ -245,6 +342,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
         ChatFinishReason? finish = null;
         RoostError? failure = null;
         (int Prompt, int Completion) usage = (ids.Length, 0);
+        var pending = sampling.Logprobs ? new List<RoostTokenLogprob>() : null;
         try
         {
             while (!done && await channel.Events.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
@@ -257,10 +355,16 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
                         case TokenEventKind.Tokens:
                             var tokens = ev.TokenIds;
                             telemetry.Tokens(tokens.Length);
+                            int perToken = pending is null || tokens.Length == 0 ? 0 : ev.Logprobs.Length / tokens.Length;
                             for (var i = 0; i < tokens.Length; i++)
                             {
+                                if (perToken > 0)
+                                {
+                                    pending!.Add(ToLogprob(ev.Logprobs.Span.Slice(i * perToken, perToken), sampling.TopLogprobs));
+                                }
+
                                 var match = matcher.Push(detokenizer.Push(tokens.Span[i]));
-                                if (match.Emit.Length > 0 && Shape(match.Emit, parser, calls, responseId, created) is { } update)
+                                if (match.Emit.Length > 0 && Shape(match.Emit, parser, calls, responseId, created, pending) is { } update)
                                 {
                                     yield return update;
                                 }
@@ -277,7 +381,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
                         case TokenEventKind.Finished:
                             var tail = matcher.Push(detokenizer.Flush());
                             var text = tail.Matched is null ? tail.Emit + matcher.Flush() : tail.Emit;
-                            if (text.Length > 0 && Shape(text, parser, calls, responseId, created) is { } tailUpdate)
+                            if (text.Length > 0 && Shape(text, parser, calls, responseId, created, pending) is { } tailUpdate)
                             {
                                 yield return tailUpdate;
                             }
@@ -320,7 +424,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             telemetry.End(reason, usage.Prompt, usage.Completion, failure);
         }
 
-        if (parser is not null && Shape(null, parser, calls, responseId, created) is { } last)
+        if (parser is not null && Shape(null, parser, calls, responseId, created, pending) is { } last)
         {
             yield return last;
         }
@@ -342,15 +446,16 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             ModelId = model.ModelId,
             CreatedAt = created,
             FinishReason = finish,
+            AdditionalProperties = TakeLogprobs(pending),
         };
     }
 
     /// <summary>
     /// The update for a text delta: the text itself without a parser; otherwise the parts the parser has made final, as
     /// <see cref="TextContent"/>, <see cref="TextReasoningContent"/> and <see cref="FunctionCallContent"/> (null when there are
-    /// none yet). A null <paramref name="text"/> completes the parser.
+    /// none yet). A null <paramref name="text"/> completes the parser. The logprobs gathered since the last update go with it.
     /// </summary>
-    private ChatResponseUpdate? Shape(string? text, RoostOutputParser? parser, StrongBox<int> calls, string responseId, DateTimeOffset created)
+    private ChatResponseUpdate? Shape(string? text, RoostOutputParser? parser, StrongBox<int> calls, string responseId, DateTimeOffset created, List<RoostTokenLogprob>? pending)
     {
         List<AIContent> contents;
         if (parser is null)
@@ -383,6 +488,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             MessageId = responseId,
             ModelId = _options.Model.ModelId,
             CreatedAt = created,
+            AdditionalProperties = TakeLogprobs(pending),
         };
     }
 
@@ -407,6 +513,23 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
             RawRepresentation = call,
         };
     }
+
+    // The logprobs gathered since the last update, moved into the update's properties; null when there are none.
+    private static AdditionalPropertiesDictionary? TakeLogprobs(List<RoostTokenLogprob>? pending)
+    {
+        if (pending is not { Count: > 0 })
+        {
+            return null;
+        }
+
+        var taken = pending.ToArray();
+        pending.Clear();
+        return new AdditionalPropertiesDictionary { [LogprobsKey] = (IReadOnlyList<RoostTokenLogprob>)taken };
+    }
+
+    // One token's rows: the chosen token first, then the worker's alternatives, of which the request asked for `top`.
+    private static RoostTokenLogprob ToLogprob(ReadOnlySpan<TokenLogprob> rows, int top) =>
+        new(rows[0].TokenId, rows[0].Logprob, rows.Slice(1, Math.Min(top, rows.Length - 1)).ToArray());
 
     private static ChatFinishReason? MapFinish(FinishReason reason) => reason switch
     {

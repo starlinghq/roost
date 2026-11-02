@@ -20,6 +20,8 @@ namespace Starlings.Roost.Server;
 /// loopback unless non-loopback listening is allowed explicitly (<see cref="RoostServerOptions.AllowNonLoopback"/>). Every
 /// failure, including an unknown route, answers with one error body, <c>{"error":{"message","type","param","code"}}</c>, except
 /// on the Anthropic routes, which answer with Anthropic's; an unsupported or unknown request option is a 400 that names it.
+/// With <see cref="RoostServerOptions.EnableSleepMode"/> it also maps the sleep-mode routes (<see cref="AdminRoutes"/>, R-100),
+/// which answer loopback clients only.
 /// </summary>
 public static class RoostServer
 {
@@ -79,6 +81,12 @@ public static class RoostServer
         var metrics = new PrometheusExporter(client.Telemetry, client.Model.ModelId, options.ColdStart);
         _ = app.Lifetime.ApplicationStopped.Register(metrics.Dispose);
         app.MapGet("/metrics", (RequestDelegate)metrics.ScrapeAsync);
+
+        if (options.EnableSleepMode)
+        {
+            new AdminRoutes(client, app.Logger).Map(app);
+        }
+
         return app;
     }
 }

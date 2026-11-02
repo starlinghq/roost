@@ -20,7 +20,7 @@ namespace Starlings.Roost.Worker.Eager;
 /// <item><description>LmHead writes float32 logits (C1 and <c>CpuOps</c>), whatever dtype the caller's logits span names; the span's length is taken as Selected * VocabPadded elements.</description></item>
 /// <item><description>GatedDeltaRule runs the recurrent variant for every length (no plan, any token count); the chunked prefill variant is the follow-up that needs a per-step plan.</description></item>
 /// <item><description>Argmax has no kernel in the library: it synchronises the compute stream, copies the logits to the host and runs <see cref="CpuOps.Argmax"/>. The fused GPU sampler is R-042.</description></item>
-/// <item><description>Sample and GeluAndMul have no kernel yet and report <see cref="Supports"/> false.</description></item>
+/// <item><description>Sample and GeluAndMul have no kernel yet and report <see cref="Supports"/> false; Sample refuses every call, naming the contract version 4 features (penalties, stop flags, top logprobs, fp32 math) it asked for.</description></item>
 /// </list>
 /// </remarks>
 public readonly unsafe partial struct CudaOps : IRoostOps
@@ -317,8 +317,82 @@ public readonly unsafe partial struct CudaOps : IRoostOps
     }
 
     /// <inheritdoc/>
-    /// <remarks>No kernel is registered yet (the fused sampler is R-042); <see cref="Supports"/> reports false.</remarks>
-    public static void Sample(in SampleArgs a) => throw new NotSupportedException(nameof(Sample));
+    /// <remarks>
+    /// No kernel is registered yet (the fused GPU sampler is the device half of R-042); <see cref="Supports"/> reports false and
+    /// every call is refused, as a library without the kernel returns <c>ROOST_STATUS_UNSUPPORTED</c>. The message names the
+    /// contract version 4 features the call asked for (<see cref="RequestedSampleFeatures"/>); <see cref="ToParams"/> is the
+    /// C1 mapping a kernel will be called with.
+    /// </remarks>
+    public static void Sample(in SampleArgs a)
+    {
+        var features = RequestedSampleFeatures(in a);
+        throw new NotSupportedException(features.Count == 0
+            ? "Sample has no CUDA kernel yet (the GPU sampler of R-042)."
+            : "Sample has no CUDA kernel yet (the GPU sampler of R-042); unsupported: " + string.Join(", ", features) + ".");
+    }
+
+    /// <summary>The contract version 4 (C1 ABI 1.3) sampling features a call sets: penalties, stop flags, top logprobs, fp32 math.</summary>
+    /// <param name="a">The arguments.</param>
+    /// <returns>Their names, empty when the call uses only the ABI 1.2 fields.</returns>
+    internal static IReadOnlyList<string> RequestedSampleFeatures(in SampleArgs a)
+    {
+        var names = new List<string>();
+        if (a.TokenCounts.Address != 0)
+        {
+            names.Add("penalties");
+        }
+
+        if (a.StopFlags.Address != 0)
+        {
+            names.Add("stop flags");
+        }
+
+        if (a.TopLogprobs > 0)
+        {
+            names.Add("top logprobs");
+        }
+
+        if (a.Math != SampleMath.Reference)
+        {
+            names.Add("fp32 math");
+        }
+
+        return names;
+    }
+
+    /// <summary>The C1 <c>RoostSampleParams</c> (ABI 1.3) for the C3 arguments, field for field.</summary>
+    /// <param name="a">The arguments.</param>
+    /// <returns>The params, with <c>struct_size</c> and <c>abi_minor</c> set.</returns>
+    internal static SampleParams ToParams(in SampleArgs a) => new()
+    {
+        StructSize = (uint)sizeof(SampleParams),
+        AbiMinor = (uint)KernelAbi.Minor,
+        Logits = a.Logits,
+        Temperature = a.Temperature,
+        TopK = a.TopK,
+        TopP = a.TopP,
+        MinP = a.MinP,
+        Seeds = a.Seeds,
+        Offsets = a.Offsets,
+        Mask = a.Mask,
+        Ids = a.Ids,
+        Logprobs = a.Logprobs,
+        Rows = (uint)a.Rows,
+        Vocab = (uint)a.Vocab,
+        Stride = (uint)a.Stride,
+        RepetitionPenalty = a.RepetitionPenalty,
+        PresencePenalty = a.PresencePenalty,
+        FrequencyPenalty = a.FrequencyPenalty,
+        TokenCounts = a.TokenCounts,
+        PromptMask = a.PromptMask,
+        StopIds = a.StopIds,
+        StopRanges = a.StopRanges,
+        StopFlags = a.StopFlags,
+        TopLogprobIds = a.TopLogprobIds,
+        TopLogprobValues = a.TopLogprobValues,
+        TopLogprobs = (uint)a.TopLogprobs,
+        Math = (uint)a.Math,
+    };
 
     /// <summary>The smallest power of two that is at least <paramref name="n"/> (1 for n &lt; 1).</summary>
     /// <param name="n">A row count.</param>

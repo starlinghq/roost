@@ -146,7 +146,7 @@ internal sealed unsafe class FakeExecutor : IStepExecutor
         var resultHeader = new StepResultHeader
         {
             Magic = 0x53525352u,
-            LayoutVersion = 1,
+            LayoutVersion = SharedLayout.Version,
             HeaderSize = (uint)sizeof(StepResultHeader),
             Fault = FaultClass.None,
             StepId = header.StepId,

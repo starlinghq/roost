@@ -48,6 +48,14 @@ public sealed record RoostServerOptions
     /// <summary>The cold-start stages <c>GET /metrics</c> exports (R-046), or null when the host was not started by <c>roost serve</c>.</summary>
     internal ColdStart? ColdStart { get; init; }
 
+
+    /// <summary>
+    /// Maps the sleep-mode routes (R-100): <c>POST /sleep</c>, <c>POST /wake_up</c>, <c>GET /is_sleeping</c> and
+    /// <c>POST /update_weights</c>, as vLLM's <c>--enable-sleep-mode</c> does. Off by default; even when on, they answer only
+    /// requests from a loopback address.
+    /// </summary>
+    public bool EnableSleepMode { get; init; }
+
     /// <summary>Resolves <see cref="Host"/> and checks it and <see cref="Port"/>.</summary>
     /// <returns>The address to listen on.</returns>
     /// <exception cref="ArgumentException">The host is not an IP address or <c>localhost</c>, the port is out of range, or the

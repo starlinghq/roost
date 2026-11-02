@@ -1,5 +1,6 @@
 using System.Runtime.InteropServices;
 using Starlings.Roost.Abi;
+using Starlings.Roost.Plans;
 
 namespace Starlings.Roost.Transport;
 
@@ -213,4 +214,125 @@ public struct Heartbeat
 
     /// <summary>Reserved; zero.</summary>
     public uint Reserved0;
+}
+
+/// <summary>
+/// A control message (layout version 3, R-100), in the plan buffer named by a <see cref="RingSlotKind.Sleep"/>,
+/// <see cref="RingSlotKind.Wake"/> or <see cref="RingSlotKind.ReplaceWeights"/> slot. The weights digest is SHA-256 in four
+/// little-endian words: for a wake, the digest the resident weights must have afterwards; for a replace, the new file's locked
+/// digest, with <see cref="WeightsSize"/> its locked size and <see cref="WeightsPath"/> its UTF-8 path in this buffer.
+/// </summary>
+/// <remarks>Mirror of <c>RoostControlMessage</c> in <c>kernels/include/roost_worker_shm.h</c>.</remarks>
+[NativeStruct("RoostControlMessage")]
+[StructLayout(LayoutKind.Sequential)]
+public struct ControlMessage
+{
+    /// <summary>ROOST_SHM_MAGIC_CONTROL</summary>
+    public uint Magic;
+
+    /// <summary>C field <c>layout_version</c>, documented in the header.</summary>
+    public uint LayoutVersion;
+
+    /// <summary>C field <c>header_size</c>, documented in the header.</summary>
+    public uint HeaderSize;
+
+    /// <summary>The slot's kind: sleep, wake or replace weights.</summary>
+    public RingSlotKind Kind;
+
+    /// <summary>The slot's step_id.</summary>
+    public ulong ControlId;
+
+    /// <summary>Bytes of this buffer in use, header included.</summary>
+    public ulong TotalBytes;
+
+    /// <summary>ROOST_SLEEP_LEVEL_*, sleep only.</summary>
+    public SleepLevel SleepLevel;
+
+    /// <summary>None defined; zero.</summary>
+    public uint Flags;
+
+    /// <summary>C field <c>weights_digest0</c>, documented in the header.</summary>
+    public ulong WeightsDigest0;
+
+    /// <summary>C field <c>weights_digest1</c>, documented in the header.</summary>
+    public ulong WeightsDigest1;
+
+    /// <summary>C field <c>weights_digest2</c>, documented in the header.</summary>
+    public ulong WeightsDigest2;
+
+    /// <summary>C field <c>weights_digest3</c>, documented in the header.</summary>
+    public ulong WeightsDigest3;
+
+    /// <summary>Replace only: the locked size.</summary>
+    public ulong WeightsSize;
+
+    /// <summary>Replace only: UTF-8 bytes, stride 1.</summary>
+    public TableRef WeightsPath;
+
+    /// <summary>Reserved; zero.</summary>
+    public ulong Reserved0;
+
+    /// <summary>Reserved; zero.</summary>
+    public ulong Reserved1;
+}
+
+/// <summary>The answer to a <see cref="ControlMessage"/> (layout version 3, R-100), in the result buffer named by the answering slot.</summary>
+/// <remarks>Mirror of <c>RoostControlResult</c> in <c>kernels/include/roost_worker_shm.h</c>.</remarks>
+[NativeStruct("RoostControlResult")]
+[StructLayout(LayoutKind.Sequential)]
+public struct ControlResult
+{
+    /// <summary>ROOST_SHM_MAGIC_CONTROL_RESULT</summary>
+    public uint Magic;
+
+    /// <summary>C field <c>layout_version</c>, documented in the header.</summary>
+    public uint LayoutVersion;
+
+    /// <summary>C field <c>header_size</c>, documented in the header.</summary>
+    public uint HeaderSize;
+
+    /// <summary>As the message.</summary>
+    public RingSlotKind Kind;
+
+    /// <summary>As the message.</summary>
+    public ulong ControlId;
+
+    /// <summary>C field <c>total_bytes</c>, documented in the header.</summary>
+    public ulong TotalBytes;
+
+    /// <summary>ROOST_CONTROL_*</summary>
+    public ControlStatus Status;
+
+    /// <summary>CUDA, C1 or worker status behind a failure, 0 otherwise.</summary>
+    public int ErrorCode;
+
+    /// <summary>Worker: message taken to answer written (a wake's restore time).</summary>
+    public ulong DurationNs;
+
+    /// <summary>Sleep: bytes released; wake and replace: bytes allocated.</summary>
+    public ulong Bytes;
+
+    /// <summary>ROOST_WORKER_* after the message.</summary>
+    public WorkerState WorkerState;
+
+    /// <summary>Reserved; zero.</summary>
+    public uint Reserved0;
+
+    /// <summary>The resident weights' verified digest afterwards; zero while they are released.</summary>
+    public ulong WeightsDigest0;
+
+    /// <summary>C field <c>weights_digest1</c>, documented in the header.</summary>
+    public ulong WeightsDigest1;
+
+    /// <summary>C field <c>weights_digest2</c>, documented in the header.</summary>
+    public ulong WeightsDigest2;
+
+    /// <summary>C field <c>weights_digest3</c>, documented in the header.</summary>
+    public ulong WeightsDigest3;
+
+    /// <summary>UTF-8 bytes, may be empty.</summary>
+    public TableRef ErrorText;
+
+    /// <summary>Reserved; zero.</summary>
+    public ulong Reserved1;
 }

@@ -27,6 +27,28 @@ internal sealed class ErrorBodies : IErrorShape
     /// <summary>The body of a C6 error, as bytes.</summary>
     public static byte[] Body(RoostError error) => Body(error.CodeName, error.Message, error.Param);
 
+    /// <summary>Writes an error that has no C6 code (a refusal by the HTTP layer) as the whole response.</summary>
+    /// <param name="response">The response.</param>
+    /// <param name="status">The HTTP status.</param>
+    /// <param name="code">The <c>code</c> field, snake_case.</param>
+    /// <param name="message">The message.</param>
+    public static async Task WriteAsync(HttpResponse response, int status, string code, string message)
+    {
+        response.StatusCode = status;
+        response.ContentType = "application/json";
+        await response.Body.WriteAsync(Body(code, message, null)).ConfigureAwait(false);
+    }
+
+    /// <summary>Writes a C6 error as the whole response, with its HTTP status.</summary>
+    /// <param name="response">The response.</param>
+    /// <param name="error">The error.</param>
+    public static async Task WriteAsync(HttpResponse response, RoostError error)
+    {
+        response.StatusCode = error.HttpStatus;
+        response.ContentType = "application/json";
+        await response.Body.WriteAsync(Body(error)).ConfigureAwait(false);
+    }
+
     /// <summary>The body of an error with any code name, as bytes.</summary>
     public static byte[] Body(string code, string message, string? param) => RouteRunner.Json(writer =>
     {

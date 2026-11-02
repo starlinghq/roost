@@ -7,6 +7,8 @@ Roost's own evidence pipeline (build plan section 2.2). It never ships in the ru
 | `pipeline/` | The `roost-evidence` Python package: manifest validation (R-012), the generation evaluator and the fp32 CPU reference runner (R-010); per-layer capture and evaluation (R-011); later calibration | B2, B3 |
 | `schemas/` | `profile-manifest.schema.json` (B3) and `stage-results.schema.json` (B2) | B2, B3 |
 | `registry/` | Profile manifests, admissions and asset locks | B3 |
+| `pipeline/onboarding/` | The roost-v1 onboarding plugin: `roost-onboard inspect` (config.json to the C3 op vocabulary and C4 state groups) and `validate-recipe` with the strict recipe schema (R-055). A .NET tool next to the Python package, not part of it | I |
+| `recipes/` | roost-v1 recipes, one per onboarded model (R-055) | I |
 | `protected/` | Fixtures and tolerances. Maintainer-only: agents propose changes and never edit it. The maintainer creates this directory | maintainer |
 
 ## Validate a profile manifest

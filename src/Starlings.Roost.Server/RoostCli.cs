@@ -58,7 +58,7 @@ internal static class RoostCli
     public const string Usage = """
         usage: roost serve --model qwen3.5-0.8b --weights <model.safetensors> --weights-sha256 <hex> --tokenizer <tokenizer.json>
                            [--kernels <dir>] [--worker <roost-worker>] [--manifest <manifest.toml>] [--allow-untested-sm]
-                           [--host <ip>] [--port <n>] [--allow-non-loopback]
+                           [--host <ip>] [--port <n>] [--allow-non-loopback] [--enable-sleep-mode]
                            [--pooling-e5 <dir>] [--pooling-embeddinggemma2 <dir> [--pooling-embeddinggemma2-dimensions 768|512|256|128]]
                            [--pooling-gliner2 <dir>]
 
@@ -70,11 +70,13 @@ internal static class RoostCli
         A non-loopback --host needs --allow-non-loopback: the server has no authentication. Each start stage's duration is
         logged and exported on /metrics. The --pooling-* flags load Starling's ONNX models on the CPU from local snapshot
         directories verified against their asset locks (never downloaded) for /v1/embeddings and /v1/extract.
+        --enable-sleep-mode adds POST /sleep, POST /wake_up, GET /is_sleeping and POST /update_weights, for loopback
+        clients only (the packaged CUDA worker refuses them today).
         doctor: checks the driver, NVML, the GPUs' SMs, the kernel manifest and library digests, the weights lock, the
         tokenizer, free disk and host memory, one line per check; exits 1 when a check fails.
         """;
 
-    private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "--allow-untested-sm", "--allow-non-loopback" };
+    private static readonly HashSet<string> Flags = new(StringComparer.Ordinal) { "--allow-untested-sm", "--allow-non-loopback", "--enable-sleep-mode" };
 
     private static readonly HashSet<string> Valued = new(StringComparer.Ordinal)
     {
@@ -280,6 +282,7 @@ internal static class RoostCli
                 Host = Optional("--host") ?? RoostServerOptions.DefaultHost,
                 Port = port,
                 AllowNonLoopback = flags.Contains("--allow-non-loopback"),
+                EnableSleepMode = flags.Contains("--enable-sleep-mode"),
             },
             pooling.Any ? pooling : null);
     }

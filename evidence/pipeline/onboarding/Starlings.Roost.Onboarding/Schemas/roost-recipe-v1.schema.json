@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/starlinghq/roost/evidence/pipeline/onboarding/Starlings.Roost.Onboarding/Schemas/roost-recipe-v1.schema.json",
+  "title": "Roost recipe (roost-v1)",
+  "description": "One onboarded model: the pinned checkpoint, what roost-v1 inspect found, the model definition that implements it, the serving settings its evidence was produced under, and an explicit status (build plan R-055, stream I). Strict: every object rejects unknown properties. Rules JSON Schema cannot express (status needs evidence, evidence paths exist, the composition is consistent, the file is named after the id) are checked by `roost-onboard validate-recipe`. A change to this file raises schema_version and updates every recipe in evidence/recipes/ in the same change.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["plugin", "schema_version", "id", "status", "model", "composition", "definition", "serving", "evidence"],
+  "properties": {
+    "$schema": {
+      "description": "Optional editor hint; ignored by the validator.",
+      "type": "string"
+    },
+    "plugin": {
+      "const": "roost-v1"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "description": "Lowercase recipe id; the file is <id>.json.",
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9.-]*$"
+    },
+    "status": {
+      "description": "Capability status (docs/capabilities.md). Missing never means supported; an SM without hardware evidence is untested.",
+      "$ref": "#/$defs/status"
+    },
+    "model": {
+      "$ref": "#/$defs/model"
+    },
+    "composition": {
+      "$ref": "#/$defs/composition"
+    },
+    "definition": {
+      "$ref": "#/$defs/definition"
+    },
+    "admission": {
+      "description": "The model's admission record in the registry, when it has one.",
+      "type": "string",
+      "pattern": "^evidence/registry/[A-Za-z0-9._-]+$"
+    },
+    "serving": {
+      "$ref": "#/$defs/serving"
+    },
+    "hardware": {
+      "description": "Per-SM status with its evidence. An SM not listed is untested.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/hardware"
+      }
+    },
+    "evidence": {
+      "description": "Repository-relative paths of committed evidence: logs, reports, test projects. Required non-empty unless status is unsupported.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/path"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "status": {
+      "enum": ["supported", "experimental", "untested", "unsupported"]
+    },
+    "path": {
+      "description": "Repository-relative path with forward slashes; no leading slash and no '..' segment (the validator checks the latter).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*/?$"
+    },
+    "op_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]*(\\([A-Za-z0-9_.-]+\\))?$"
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hub_id", "revision", "model_type"],
+      "properties": {
+        "hub_id": {
+          "description": "Hugging Face repository id, owner/name.",
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "revision": {
+          "description": "Full 40-character commit SHA; never a branch or tag.",
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "model_type": {
+          "description": "model_type of the inspected (text) config.",
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "config_sha256": {
+          "description": "SHA-256 of the config.json inspect read (InspectReport.config_sha256).",
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "composition": {
+      "description": "What roost-v1 inspect reported for the config at the pinned revision.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verdict", "contract_version", "missing_ops", "pending_ops"],
+      "properties": {
+        "verdict": {
+          "enum": ["composes", "composes_pending_reference", "missing_ops"]
+        },
+        "contract_version": {
+          "description": "ContractVersion.Current the mapping was made against.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "missing_ops": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/op_name"
+          }
+        },
+        "pending_ops": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/op_name"
+          }
+        }
+      }
+    },
+    "definition": {
+      "description": "The model definition (stream E) that implements the recipe.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project", "type"],
+      "properties": {
+        "project": {
+          "type": "string",
+          "pattern": "^src/Starlings\\.Roost\\.Models\\.[A-Za-z0-9.]+$"
+        },
+        "type": {
+          "description": "Full name of the [RoostModel] class.",
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)+$"
+        }
+      }
+    },
+    "serving": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dtype", "kv_dtype", "block_size"],
+      "properties": {
+        "dtype": {
+          "enum": ["BF16", "F16", "F32"]
+        },
+        "kv_dtype": {
+          "enum": ["BF16", "F16", "F32", "F8E4M3", "F8E5M2"]
+        },
+        "block_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        },
+        "max_model_len": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "snapshot_slots": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "hardware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sm", "status", "evidence"],
+      "properties": {
+        "sm": {
+          "enum": [80, 86, 89, 90, 100, 120]
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "evidence": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        }
+      }
+    }
+  }
+}
