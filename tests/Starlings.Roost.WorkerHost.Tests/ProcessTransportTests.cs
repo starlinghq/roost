@@ -33,7 +33,7 @@ public sealed class ProcessTransportTests : TransportSuite
     public async Task WorkerThatExitsBeforeAnsweringFailsTheStartWithItsOutput()
     {
         await using var transport = new ProcessWorkerTransport(WorkerProcessEntry.Command(failOpen: true), TestSegments.Options());
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
 
         var ex = await Assert.ThrowsAsync<WorkerStartException>(async () =>
             await transport.StartAsync(Rig.DefaultLaunch(), cts.Token));

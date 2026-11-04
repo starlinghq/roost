@@ -18,7 +18,11 @@ internal static class StressHost
         string WorkerSummary,
         string WorkerErrors);
 
-    public static Outcome Run(ulong steps, ulong seed, TimeSpan timeout)
+    /// <param name="steps">Steps to run.</param>
+    /// <param name="seed">Seed of both sides' delays.</param>
+    /// <param name="stallTimeout">How long the run may go without progress; a slow machine that keeps moving never hits it.</param>
+    /// <returns>The counters and the worker's output.</returns>
+    public static Outcome Run(ulong steps, ulong seed, TimeSpan stallTimeout)
     {
         var path = Path.Combine(RingSegment.DefaultDirectory(), $"roost-ring-stress-{Environment.ProcessId}-{Guid.NewGuid():N}");
         using var segment = RingSegment.Create(path, StressProtocol.Options);
@@ -41,7 +45,8 @@ internal static class StressHost
         ulong resultEmpty = 0;
         var allocAtWarm = 0L;
         string? failure = null;
-        var deadline = Stopwatch.GetTimestamp() + (long)(timeout.TotalSeconds * Stopwatch.Frequency);
+        var stallTicks = (long)(stallTimeout.TotalSeconds * Stopwatch.Frequency);
+        var lastProgress = Stopwatch.GetTimestamp();
         var wait = new SpinWait();
 
         while (got < steps && failure is null)
@@ -89,6 +94,7 @@ internal static class StressHost
 
             if (progressed)
             {
+                lastProgress = Stopwatch.GetTimestamp();
                 wait.Reset();
                 rng.RandomDelay();
             }
@@ -96,9 +102,12 @@ internal static class StressHost
             {
                 resultEmpty++;
                 wait.SpinOnce(-1);
-                if (Stopwatch.GetTimestamp() > deadline || Volatile.Read(ref workerExited) != 0)
+                var exitedEarly = Volatile.Read(ref workerExited) != 0;
+                if (exitedEarly || Stopwatch.GetTimestamp() - lastProgress > stallTicks)
                 {
-                    failure = $"stalled or worker exited with {sent} sent and {got} received (exited={Volatile.Read(ref workerExited) != 0})";
+                    failure = exitedEarly
+                        ? $"worker exited with {sent} sent and {got} received"
+                        : $"no progress for {stallTimeout} with {sent} sent and {got} received";
                 }
             }
         }
