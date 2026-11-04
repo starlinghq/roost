@@ -1,9 +1,11 @@
+using System.Net;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Server.Anthropic;
 using Starlings.Roost.Server.Metrics;
 using Starlings.Roost.Server.OpenAi;
 using Starlings.Roost.Server.Pooling;
 using Starlings.Roost.Server.Responses;
+using Starlings.Roost.Server.Routing;
 using Starlings.Roost.Server.Utility;
 
 namespace Starlings.Roost.Server;
@@ -49,6 +51,7 @@ public static class RoostServer
 
         var app = builder.Build();
         app.UseStatusCodePages(ErrorBodies.StatusCodePageAsync);
+        app.Use(RequestOriginGuard.Middleware(IPAddress.IsLoopback(address)));
         var routes = new OpenAiRoutes(client, DateTimeOffset.UtcNow, app.Logger);
         app.MapPost("/v1/chat/completions", (RequestDelegate)routes.ChatCompletionsAsync);
         app.MapPost("/v1/completions", (RequestDelegate)routes.CompletionsAsync);

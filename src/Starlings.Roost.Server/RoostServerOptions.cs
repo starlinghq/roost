@@ -52,7 +52,7 @@ public sealed record RoostServerOptions
     /// <summary>
     /// Maps the sleep-mode routes (R-100): <c>POST /sleep</c>, <c>POST /wake_up</c>, <c>GET /is_sleeping</c> and
     /// <c>POST /update_weights</c>, as vLLM's <c>--enable-sleep-mode</c> does. Off by default; even when on, they answer only
-    /// requests from a loopback address.
+    /// requests from a loopback address, which a proxy or SSH forward on this machine turns every client into.
     /// </summary>
     public bool EnableSleepMode { get; init; }
 

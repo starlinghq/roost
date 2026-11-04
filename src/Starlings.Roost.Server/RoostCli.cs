@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Text.Json;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Generation;
 using Starlings.Roost.Models.Qwen35;
@@ -198,7 +199,7 @@ internal static class RoostCli
             var options = coldStart.Measure(ColdStart.Profile, () => Options(command));
             client = await coldStart.MeasureAsync(ColdStart.Worker, () => RoostChatClient.StartAsync(options)).ConfigureAwait(false);
         }
-        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException or RoostChatException)
+        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException or RoostChatException or JsonException or FormatException)
         {
             await error.WriteLineAsync("roost: the worker did not start: " + e.Message).ConfigureAwait(false);
             return 1;
@@ -210,7 +211,16 @@ internal static class RoostCli
             var app = RoostServer.Create(client, command.Listen with { ColdStart = coldStart, Pooling = pooling });
             await using (app.ConfigureAwait(false))
             {
-                await app.StartAsync().ConfigureAwait(false);
+                try
+                {
+                    await app.StartAsync().ConfigureAwait(false);
+                }
+                catch (IOException e)
+                {
+                    await error.WriteLineAsync("roost: could not listen: " + e.Message).ConfigureAwait(false);
+                    return 1;
+                }
+
                 coldStart.Record(ColdStart.Listen, clock.GetElapsedTime(listening));
                 coldStart.WriteTotal();
                 await app.WaitForShutdownAsync().ConfigureAwait(false);

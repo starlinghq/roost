@@ -7,6 +7,14 @@ result writer through an in-process scripted worker, behind ASP.NET Core's in-me
 to check the loopback default. No request has reached a GPU through the server, so every route is `untested`, never
 `supported` or `experimental`.
 
+## Who can reach it
+
+- The server has no authentication and listens on loopback unless `--allow-non-loopback` is set.
+- `RequestOriginGuard` refuses web pages on every route with a 403 `forbidden_origin`: `Host` must name this machine on a
+  loopback listener (which stops DNS rebinding), and `Origin`, when present, must be this machine or the request's host.
+  Clients that send no `Origin` (the official SDKs, curl) are unaffected. A browser UI on another origin needs a proxy.
+- The sleep-mode routes check the TCP peer, so a proxy or SSH forward on this machine makes every client local.
+
 ## Routes (PRD V1 set for R-037)
 
 | Route | Status | Notes |

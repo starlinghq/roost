@@ -26,10 +26,11 @@ internal sealed class StoredResponse
     private (long Input, long Output)? _usage;
     private RoostError? _error;
     private bool _truncated;
+    private ResponsesRequest _request;
 
     public StoredResponse(ResponsesRequest request, string model, DateTimeOffset created)
     {
-        Request = request;
+        _request = request;
         Model = model;
         CreatedAt = created;
         Id = "resp_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
@@ -42,7 +43,17 @@ internal sealed class StoredResponse
     /// <summary>The id of the one output message item.</summary>
     public string MessageId { get; }
 
-    public ResponsesRequest Request { get; }
+    /// <summary>The request; its messages are dropped when the response ends, because no route returns them.</summary>
+    public ResponsesRequest Request
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _request;
+            }
+        }
+    }
 
     public string Model { get; }
 
@@ -119,6 +130,7 @@ internal sealed class StoredResponse
             _truncated = finish == ChatFinishReason.Length;
             _status = _truncated ? Incomplete : Completed;
             _usage = (usage?.InputTokenCount ?? 0, usage?.OutputTokenCount ?? 0);
+            DropMessages();
         }
     }
 
@@ -130,6 +142,7 @@ internal sealed class StoredResponse
             {
                 _status = Failed;
                 _error = error;
+                DropMessages();
             }
         }
     }
@@ -141,9 +154,12 @@ internal sealed class StoredResponse
             if (!IsTerminalStatus(_status))
             {
                 _status = Cancelled;
+                DropMessages();
             }
         }
     }
+
+    private void DropMessages() => _request = _request with { Messages = [] };
 
     /// <summary>The response object, as it stands.</summary>
     public void Write(Utf8JsonWriter w)

@@ -1,10 +1,12 @@
 using System.Buffers;
 using System.Collections.Immutable;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Requests;
 using Starlings.Roost.Server.OpenAi;
+using Starlings.Roost.Server.Routing;
 using Starlings.Roost.WorkerHost;
 
 namespace Starlings.Roost.Server;
@@ -15,6 +17,10 @@ namespace Starlings.Roost.Server;
 /// (<c>--enable-sleep-mode</c>), and they answer only requests from a loopback address, whatever the listen address: they
 /// release and replace the model, and the server has no authentication. Failures use the one error body.
 /// </summary>
+/// <remarks>
+/// The check is the TCP peer's address, so it can't tell who is behind a proxy or an SSH forward on this machine: every
+/// client of such a forwarder is local. Don't put one in front of a server with these routes enabled.
+/// </remarks>
 /// <remarks>
 /// Level 1 releases the KV cache and keeps the weights; level 2 also releases the weights, which the wake streams again from
 /// their locked file. (vLLM's level 1 offloads weights to host memory, which Roost does not do.) <c>/update_weights</c> takes
@@ -70,7 +76,7 @@ internal sealed class AdminRoutes
     private Task UpdateWeightsAsync(HttpContext context) => RunAsync(context, async ct =>
     {
         WeightSource source;
-        using (var body = await ReadBodyAsync(context, ct).ConfigureAwait(false))
+        using (var body = await RouteRunner.ReadBodyAsync(context, ct).ConfigureAwait(false))
         {
             source = ReadSource(body.RootElement);
         }
@@ -132,6 +138,11 @@ internal sealed class AdminRoutes
             throw Invalid("path must be an absolute path to the safetensors file, as the worker sees it.", "path");
         }
 
+        if (Encoding.UTF8.GetByteCount(path) > ControlMessages.MaxPathBytes)
+        {
+            throw Invalid(FormattableString.Invariant($"path is limited to {ControlMessages.MaxPathBytes} UTF-8 bytes."), "path");
+        }
+
         if (size is null)
         {
             throw Invalid("size (the locked size in bytes) is required.", "size");
@@ -146,18 +157,6 @@ internal sealed class AdminRoutes
     }
 
     private static RoostChatException Invalid(string message, string? param) => new(new RoostError(RoostErrorCode.InvalidOption, message, param));
-
-    private static async Task<JsonDocument> ReadBodyAsync(HttpContext context, CancellationToken ct)
-    {
-        try
-        {
-            return await JsonDocument.ParseAsync(context.Request.Body, default, ct).ConfigureAwait(false);
-        }
-        catch (JsonException e)
-        {
-            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The request body is not valid JSON: " + e.Message, null), e);
-        }
-    }
 
     private static Task RefuseAsync(HttpContext context) => ErrorBodies.WriteAsync(
         context.Response,
