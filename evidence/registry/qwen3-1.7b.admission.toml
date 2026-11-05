@@ -85,9 +85,8 @@ evidenced = [
   "tokenizer and template digests equal to Starlings.Models.QwenChat 0.3.0 QwenChatProfile.Qwen3 (reflection)",
 ]
 not_evidenced = [
-  "SHA-256 of the two safetensors files: Hub LFS digests only, not downloaded or hashed here (R-024 verifies as read)",
   "any Starling pin of this revision (none exists)",
-  "reference fixtures (greedy outputs, step-0 logits, per-layer captures): R-015, as R-014",
+  "adopted reference fixtures: proposed in evidence/proposals/r015-fixtures.md, not adopted",
   "binding tolerances and the near-tie bound: set by the maintainer",
   "the Roost model definition for Qwen3-1.7B (R-021 follow-up in M1)",
   "any run on any GPU or SM",

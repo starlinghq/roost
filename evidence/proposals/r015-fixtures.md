@@ -106,7 +106,7 @@ HF_HUB_OFFLINE=1 OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run --project evidence/p
     --revision 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e --out $E/ref --capture-layers --state-forwards 0
 ```
 
-Steps 1 to 3 used small throwaway programs that are not in Git, because no Roost command does them for this model; the calls that matter are stated above. Input digests: `prompts.jsonl` `4f5a2a24bd1d15c6050f872b2252cec3d12e0abc4aeedc98220fa40fccd5e924`, `rendered.jsonl` `3d142296e8b816cac116479a3a24829e9ec412ef803ef2574c68d207c1f735e3`.
+Steps 1 to 3 used small programs that are not in Git, because no Roost command does them for this model. They are kept with the data in `R-015/scripts/`, and the calls that matter are stated above. Input digests: `prompts.jsonl` `4f5a2a24bd1d15c6050f872b2252cec3d12e0abc4aeedc98220fa40fccd5e924`, `rendered.jsonl` `3d142296e8b816cac116479a3a24829e9ec412ef803ef2574c68d207c1f735e3`.
 
 Every file was then checked: `load_reference` and `load_reference_vectors` accept the run, `parse_capture` accepts every capture, each capture's digest, prompt ids and decode ids match `reference.jsonl`, and no value is non-finite.
 
