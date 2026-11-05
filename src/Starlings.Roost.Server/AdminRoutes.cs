@@ -47,8 +47,12 @@ internal sealed class AdminRoutes
         app.MapPost("/update_weights", (RequestDelegate)UpdateWeightsAsync);
     }
 
-    /// <summary>Whether a request comes from this machine: a loopback remote address. A request with no remote address (no socket) is not.</summary>
-    internal static bool IsLoopback(HttpContext context) => context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address);
+    /// <summary>
+    /// Whether a request comes from this machine: a loopback remote address, and a <c>Host</c> that names this machine, so a
+    /// page rebound to loopback is refused on any listener. A request with no remote address is not local.
+    /// </summary>
+    internal static bool IsLoopback(HttpContext context) =>
+        context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address) && RequestOriginGuard.NamesThisMachine(context.Request.Host);
 
     private Task SleepAsync(HttpContext context) => RunAsync(context, async ct =>
     {
@@ -188,6 +192,15 @@ internal sealed class AdminRoutes
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             return; // the client disconnected; an operation already sent to the worker completes there
+        }
+        catch (IOException) when (ct.IsCancellationRequested)
+        {
+            return; // the client reset the connection while sending the body
+        }
+        catch (BadHttpRequestException e) when (!context.Response.HasStarted)
+        {
+            await ErrorBodies.WriteAsync(context.Response, e.StatusCode, "bad_request", "The request body could not be read.").ConfigureAwait(false);
+            return;
         }
         catch (RoostChatException e) when (!context.Response.HasStarted)
         {

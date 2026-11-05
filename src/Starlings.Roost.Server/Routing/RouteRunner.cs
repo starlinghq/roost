@@ -90,6 +90,10 @@ internal sealed class RouteRunner
         {
             // The client disconnected; the generation was cancelled with it and there is no one to answer.
         }
+        catch (IOException) when (ct.IsCancellationRequested)
+        {
+            // The client reset the connection while sending the body.
+        }
         catch (RoostChatException e) when (!context.Response.HasStarted)
         {
             await WriteErrorAsync(context.Response, e.Error.HttpStatus, e.Error.CodeName, e.Error.Message, e.Error.Param).ConfigureAwait(false);

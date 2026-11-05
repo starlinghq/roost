@@ -12,11 +12,11 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 
 ### Fixed
 
-- `Starlings.Roost.Server` refuses web pages: `Host` must name this machine on a loopback listener and `Origin` must be this machine or the request's host, so a page in a local browser can no longer drive the server or read its answers through DNS rebinding (#157).
-- `POST /v1/responses`: `metadata` and `user` have OpenAI's limits, and a stored response drops its prompt when it ends, so the store can no longer hold tens of gigabytes (#157).
-- An oversized or aborted body, and text with a lone surrogate, answer 4xx rather than a 500 and an error log (#157).
-- `POST /update_weights` and `WeightSource.Validate` refuse a path over 4096 UTF-8 bytes instead of losing a healthy worker (#157).
-- `roost serve` reports a corrupt `tokenizer.json` or a port in use as an error and exit code 1 (#157).
+- `Starlings.Roost.Server` refuses web pages by `Host` and `Origin`, with `--allowed-host` for other names. On a loopback listener a page in a local browser can no longer drive the server or read its answers through DNS rebinding; a non-loopback listener needs `--allowed-host` for the same protection (#157).
+- `POST /v1/responses`: `metadata` and `user` are limited, and a stored response drops its prompt when it ends, so finished responses can no longer fill the store with data no route returns (#157). The body-size limit still applies while a response is running.
+- An oversized body, and text that is not valid Unicode, answer 4xx rather than a 500 and an error log, and a connection reset while sending a body is treated as a disconnect (#157).
+- A weights path over 4096 UTF-8 bytes is refused, and every shorter one now fits the plan buffer, so `POST /update_weights` no longer loses a healthy worker over its path (#157).
+- `roost serve` reports a corrupt `tokenizer.json`, or a listen address it can't bind, as an error and exit code 1 (#157).
 
 ### Added
 

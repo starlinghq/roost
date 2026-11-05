@@ -24,6 +24,13 @@ public sealed record RoostServerOptions
     /// <summary>Allows a <see cref="Host"/> that is not a loopback address. Off by default.</summary>
     public bool AllowNonLoopback { get; init; }
 
+    /// <summary>
+    /// Names the server answers to besides this machine, for <c>Host</c> and <c>Origin</c> (<c>--allowed-host</c>): a same-host
+    /// reverse proxy's public name, for example. On a listener opened with <see cref="AllowNonLoopback"/>, leaving this empty
+    /// accepts any <c>Host</c>, so DNS rebinding can reach the server; set it there unless the network is trusted.
+    /// </summary>
+    public IReadOnlyList<string> AllowedHosts { get; init; } = [];
+
     /// <summary>The default <see cref="ResponseStoreCapacity"/>.</summary>
     public const int DefaultResponseStoreCapacity = 1024;
 

@@ -136,6 +136,22 @@ public sealed class SleepModeRouteTests : IDisposable
         Http.AssertErrorBody(body, "profile_unsupported", null);
     }
 
+    [Fact]
+    public async Task AWeightsPathLongerThanAStepPlanDoesNotCostTheWorker()
+    {
+        var path = Path.Combine(_dir.FullName, "model.safetensors");
+        var locked = TinyCheckpoint.Write(path, TinyConfig.Hybrid.Seed);
+        await using var rig = await ServerRig.StartTinyAsync(path, locked, SleepMode);
+
+        // Within the 4096-byte limit, longer than this profile's step plan: the control message must still fit the buffer.
+        var (status, body) = await SendAsync(rig, "POST", "/update_weights", Body("/" + new string('a', 4000), locked.Size, locked.Sha256), IPAddress.Loopback);
+        Assert.NotEqual(200, status);
+        Assert.DoesNotContain("worker_restarted", body.GetRawText(), StringComparison.Ordinal);
+
+        (status, _) = await SendAsync(rig, "POST", "/update_weights", Body(path, locked.Size, locked.Sha256), IPAddress.Loopback);
+        Assert.Equal(200, status);
+    }
+
     private static string Body(string path, long size, string sha) =>
         JsonSerializer.Serialize(new Dictionary<string, object> { ["path"] = path, ["size"] = size, ["sha256"] = sha });
 

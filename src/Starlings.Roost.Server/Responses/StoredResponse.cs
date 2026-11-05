@@ -43,7 +43,7 @@ internal sealed class StoredResponse
     /// <summary>The id of the one output message item.</summary>
     public string MessageId { get; }
 
-    /// <summary>The request; its messages are dropped when the response ends, because no route returns them.</summary>
+    /// <summary>The request, without its prompt once the response has ended (<see cref="DropPrompt"/>).</summary>
     public ResponsesRequest Request
     {
         get
@@ -130,7 +130,7 @@ internal sealed class StoredResponse
             _truncated = finish == ChatFinishReason.Length;
             _status = _truncated ? Incomplete : Completed;
             _usage = (usage?.InputTokenCount ?? 0, usage?.OutputTokenCount ?? 0);
-            DropMessages();
+            DropPrompt(keepInstructions: true);
         }
     }
 
@@ -142,7 +142,7 @@ internal sealed class StoredResponse
             {
                 _status = Failed;
                 _error = error;
-                DropMessages();
+                DropPrompt(keepInstructions: false);
             }
         }
     }
@@ -154,12 +154,27 @@ internal sealed class StoredResponse
             if (!IsTerminalStatus(_status))
             {
                 _status = Cancelled;
-                DropMessages();
+                DropPrompt(keepInstructions: false);
             }
         }
     }
 
-    private void DropMessages() => _request = _request with { Messages = [] };
+    /// <summary>
+    /// Drops what no route returns. A finished response keeps its instructions for the echo: they fit the model's context.
+    /// One that failed or was cancelled may never have been tokenised, so its instructions could be any size up to the body
+    /// limit, and they go too.
+    /// </summary>
+    private void DropPrompt(bool keepInstructions)
+    {
+        var options = _request.Options;
+        if (!keepInstructions && options.Instructions is not null)
+        {
+            options = options.Clone();
+            options.Instructions = null;
+        }
+
+        _request = _request with { Messages = [], Options = options };
+    }
 
     /// <summary>The response object, as it stands.</summary>
     public void Write(Utf8JsonWriter w)

@@ -33,8 +33,8 @@ internal sealed record ResponsesRequest(
 /// </summary>
 internal static class ResponsesRequestReader
 {
-    // OpenAI's documented limits. These fields are stored and echoed for the store's lifetime and are never tokenised, so
-    // no other limit applies to them.
+    // Stored and echoed for the store's lifetime and never tokenised, so no other limit applies to these fields. The
+    // metadata limits are the ones the OpenAI API documents; the limit on user is Roost's own.
     private const int MaxMetadataPairs = 16;
     private const int MaxMetadataKeyChars = 64;
     private const int MaxMetadataValueChars = 512;

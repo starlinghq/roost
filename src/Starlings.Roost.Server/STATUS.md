@@ -10,10 +10,15 @@ to check the loopback default. No request has reached a GPU through the server, 
 ## Who can reach it
 
 - The server has no authentication and listens on loopback unless `--allow-non-loopback` is set.
-- `RequestOriginGuard` refuses web pages on every route with a 403 `forbidden_origin`: `Host` must name this machine on a
-  loopback listener (which stops DNS rebinding), and `Origin`, when present, must be this machine or the request's host.
-  Clients that send no `Origin` (the official SDKs, curl) are unaffected. A browser UI on another origin needs a proxy.
-- The sleep-mode routes check the TCP peer, so a proxy or SSH forward on this machine makes every client local.
+- `RequestOriginGuard` refuses web pages on every route with a 403 `forbidden_origin`. `Host` must name this machine or a
+  name in `--allowed-host`, which stops DNS rebinding, and `Origin`, when present, must be one of those or the request's own
+  host. Clients that send no `Origin` (the official SDKs, curl) are unaffected. These errors use the OpenAI body on every
+  route, like the 404 and 405 answers.
+- **Not covered:** a listener opened with `--allow-non-loopback` and no `--allowed-host` accepts any `Host`, so DNS rebinding
+  can reach it. That includes a port published with `docker run -p` on a machine with a browser. Set `--allowed-host` there.
+- A reverse proxy on this machine needs `--allowed-host <its name>`, or must send a loopback `Host`.
+- The sleep-mode routes also need a loopback peer and a `Host` that names this machine. A proxy or SSH forward that sends a
+  loopback `Host` still makes every client local, so don't put one in front of them.
 
 ## Routes (PRD V1 set for R-037)
 

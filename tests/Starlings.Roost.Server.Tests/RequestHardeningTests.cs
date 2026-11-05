@@ -41,6 +41,8 @@ public sealed class RequestHardeningTests : IAsyncLifetime
     [InlineData("127.0.0.1:8000", "http://127.0.0.1:3000", true)]
     [InlineData("127.0.0.1:8000", "http://[::1]:3000", true)]
     [InlineData("127.0.0.1:8000", "", true)]
+    // No Host at all: an HTTP/1.0 probe, never a browser.
+    [InlineData("", null, true)]
     // DNS rebinding: the page's own name reaches a loopback listener.
     [InlineData("evil.example:8000", null, false)]
     [InlineData("evil.example:8000", "http://evil.example:8000", false)]
@@ -48,14 +50,29 @@ public sealed class RequestHardeningTests : IAsyncLifetime
     [InlineData("127.0.0.1:8000", "https://evil.example", false)]
     [InlineData("127.0.0.1:8000", "null", false)]
     public void ALoopbackListenerAcceptsThisMachineOnly(string host, string? origin, bool accepted) =>
-        Assert.Equal(accepted, RequestOriginGuard.Refusal(new HostString(host), origin, loopbackListener: true) is null);
+        Assert.Equal(accepted, RequestOriginGuard.Refusal(new HostString(host), origin, loopbackListener: true, []) is null);
 
     [Theory]
     [InlineData("roost.internal:8000", null, true)]
     [InlineData("roost.internal:8000", "http://roost.internal:3000", true)]
     [InlineData("roost.internal:8000", "https://evil.example", false)]
+    // The browser's own machine is not this server's.
+    [InlineData("roost.internal:8000", "http://localhost:3000", false)]
     public void AnOpenListenerAcceptsAnyHostAndStillRefusesOtherOrigins(string host, string? origin, bool accepted) =>
-        Assert.Equal(accepted, RequestOriginGuard.Refusal(new HostString(host), origin, loopbackListener: false) is null);
+        Assert.Equal(accepted, RequestOriginGuard.Refusal(new HostString(host), origin, loopbackListener: false, []) is null);
+
+    [Theory]
+    // A same-host reverse proxy that passes the client's Host.
+    [InlineData(true, "roost.example", null, true)]
+    [InlineData(true, "roost.example", "https://roost.example", true)]
+    // Allowed names close the rebinding gap on an open listener.
+    [InlineData(false, "roost.example", null, true)]
+    [InlineData(false, "ROOST.EXAMPLE:443", null, true)]
+    [InlineData(false, "evil.example:8000", null, false)]
+    [InlineData(false, "evil.example:8000", "http://evil.example:8000", false)]
+    [InlineData(false, "127.0.0.1:8000", null, true)]
+    public void AllowedHostsExtendTheNamesTheServerAnswersTo(bool loopback, string host, string? origin, bool accepted) =>
+        Assert.Equal(accepted, RequestOriginGuard.Refusal(new HostString(host), origin, loopback, ["roost.example"]) is null);
 
     [Fact]
     public async Task APageOnAnotherOriginIsRefusedBeforeAnyRouteRuns()
@@ -158,6 +175,27 @@ public sealed class RequestHardeningTests : IAsyncLifetime
             Assert.Equal("u", stored.Request.User);
             Assert.Single(stored.Request.Metadata);
         }
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AResponseThatNeverRanDropsItsInstructionsAndAFinishedOneKeepsThem(bool finished)
+    {
+        var options = new Microsoft.Extensions.AI.ChatOptions { Instructions = "be brief" };
+        var stored = new StoredResponse(new ResponsesRequest([], options, false, true, true, [], null), "m", DateTimeOffset.UnixEpoch);
+
+        if (finished)
+        {
+            stored.Finish(null, null);
+        }
+        else
+        {
+            stored.Fail(new Starlings.Roost.Requests.RoostError(Starlings.Roost.Requests.RoostErrorCode.PromptTooLong, "x"));
+        }
+
+        Assert.Equal(finished ? "be brief" : null, stored.Request.Options.Instructions);
+        Assert.Equal("be brief", options.Instructions); // a running generation's own options are untouched
     }
 
     [Fact]

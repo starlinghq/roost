@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.Net.Sockets;
 using System.Text.Json;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Generation;
@@ -59,7 +60,7 @@ internal static class RoostCli
     public const string Usage = """
         usage: roost serve --model qwen3.5-0.8b --weights <model.safetensors> --weights-sha256 <hex> --tokenizer <tokenizer.json>
                            [--kernels <dir>] [--worker <roost-worker>] [--manifest <manifest.toml>] [--allow-untested-sm]
-                           [--host <ip>] [--port <n>] [--allow-non-loopback] [--enable-sleep-mode]
+                           [--host <ip>] [--port <n>] [--allow-non-loopback] [--allowed-host <name>[,<name>...]] [--enable-sleep-mode]
                            [--pooling-e5 <dir>] [--pooling-embeddinggemma2 <dir> [--pooling-embeddinggemma2-dimensions 768|512|256|128]]
                            [--pooling-gliner2 <dir>]
 
@@ -68,7 +69,8 @@ internal static class RoostCli
                             [--min-free-disk-gib <n>] [--min-free-memory-gib <n>]
 
         serve: serves the OpenAI routes /v1/chat/completions, /v1/completions and /v1/models on 127.0.0.1:8000 by default.
-        A non-loopback --host needs --allow-non-loopback: the server has no authentication. Each start stage's duration is
+        A non-loopback --host needs --allow-non-loopback: the server has no authentication. --allowed-host names the hosts
+        it answers to besides this machine, for a reverse proxy; set it on a non-loopback listener. Each start stage's duration is
         logged and exported on /metrics. The --pooling-* flags load Starling's ONNX models on the CPU from local snapshot
         directories verified against their asset locks (never downloaded) for /v1/embeddings and /v1/extract.
         --enable-sleep-mode adds POST /sleep, POST /wake_up, GET /is_sleeping and POST /update_weights, for loopback
@@ -82,7 +84,7 @@ internal static class RoostCli
     private static readonly HashSet<string> Valued = new(StringComparer.Ordinal)
     {
         "--model", "--weights", "--weights-sha256", "--tokenizer", "--kernels", "--worker", "--manifest", "--host", "--port",
-        "--pooling-e5", "--pooling-embeddinggemma2", "--pooling-embeddinggemma2-dimensions", "--pooling-gliner2",
+        "--allowed-host", "--pooling-e5", "--pooling-embeddinggemma2", "--pooling-embeddinggemma2-dimensions", "--pooling-gliner2",
     };
 
     private static readonly HashSet<string> DoctorFlags = new(StringComparer.Ordinal) { "--allow-untested-sm", "--no-gpu" };
@@ -199,7 +201,7 @@ internal static class RoostCli
             var options = coldStart.Measure(ColdStart.Profile, () => Options(command));
             client = await coldStart.MeasureAsync(ColdStart.Worker, () => RoostChatClient.StartAsync(options)).ConfigureAwait(false);
         }
-        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException or RoostChatException or JsonException or FormatException)
+        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException or RoostChatException or JsonException or FormatException or TokenizerFormatException)
         {
             await error.WriteLineAsync("roost: the worker did not start: " + e.Message).ConfigureAwait(false);
             return 1;
@@ -215,7 +217,7 @@ internal static class RoostCli
                 {
                     await app.StartAsync().ConfigureAwait(false);
                 }
-                catch (IOException e)
+                catch (Exception e) when (e is IOException or SocketException)
                 {
                     await error.WriteLineAsync("roost: could not listen: " + e.Message).ConfigureAwait(false);
                     return 1;
@@ -292,6 +294,7 @@ internal static class RoostCli
                 Host = Optional("--host") ?? RoostServerOptions.DefaultHost,
                 Port = port,
                 AllowNonLoopback = flags.Contains("--allow-non-loopback"),
+                AllowedHosts = Optional("--allowed-host")?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [],
                 EnableSleepMode = flags.Contains("--enable-sleep-mode"),
             },
             pooling.Any ? pooling : null);
