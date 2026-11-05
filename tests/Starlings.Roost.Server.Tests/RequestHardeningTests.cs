@@ -216,7 +216,7 @@ public sealed class RequestHardeningTests : IAsyncLifetime
     [Fact]
     public void AnOverlongWeightsPathIsRefusedBeforeAnythingReachesAWorker()
     {
-        var path = "/" + new string('a', ControlMessages.MaxPathBytes);
+        var path = Path.Combine(Path.GetTempPath(), new string('a', ControlMessages.MaxPathBytes));
         var source = new WeightSource(path, 1, ImmutableArray.Create(new byte[32]));
 
         var e = Assert.Throws<ArgumentException>(source.Validate);

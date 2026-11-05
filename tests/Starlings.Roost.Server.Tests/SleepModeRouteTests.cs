@@ -144,7 +144,8 @@ public sealed class SleepModeRouteTests : IDisposable
         await using var rig = await ServerRig.StartTinyAsync(path, locked, SleepMode);
 
         // Within the 4096-byte limit, longer than this profile's step plan: the control message must still fit the buffer.
-        var (status, body) = await SendAsync(rig, "POST", "/update_weights", Body("/" + new string('a', 4000), locked.Size, locked.Sha256), IPAddress.Loopback);
+        var longPath = Path.Combine(_dir.FullName, new string('a', 3800));
+        var (status, body) = await SendAsync(rig, "POST", "/update_weights", Body(longPath, locked.Size, locked.Sha256), IPAddress.Loopback);
         Assert.NotEqual(200, status);
         Assert.DoesNotContain("worker_restarted", body.GetRawText(), StringComparison.Ordinal);
 
