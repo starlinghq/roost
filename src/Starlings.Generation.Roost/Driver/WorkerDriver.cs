@@ -767,7 +767,7 @@ internal sealed class WorkerDriver : IGenerationBackend
     {
         var step = _published.Peek();
         StepOutcome? outcome = null;
-        IReadOnlyDictionary<ulong, TokenLogprob[]>? logprobs = null;
+        IReadOnlyDictionary<ulong, Starlings.Roost.Requests.TokenLogprob[]>? logprobs = null;
         StepResultHeader header = default;
         try
         {
@@ -843,7 +843,7 @@ internal sealed class WorkerDriver : IGenerationBackend
         _ => new RoostError(RoostErrorCode.DeviceFault, string.Create(CultureInfo.InvariantCulture, $"The worker failed the step (recoverable fault, status {errorCode}); the worker is kept.")),
     };
 
-    private void Apply(StepOutcome outcome, IReadOnlyDictionary<ulong, TokenLogprob[]>? logprobs)
+    private void Apply(StepOutcome outcome, IReadOnlyDictionary<ulong, Starlings.Roost.Requests.TokenLogprob[]>? logprobs)
     {
         var finished = _planner.ApplyResult(outcome);
         foreach (var row in outcome.Sequences)
@@ -1015,7 +1015,7 @@ internal sealed class WorkerDriver : IGenerationBackend
 
         public Channel<TokenEvent> Channel { get; } = System.Threading.Channels.Channel.CreateUnbounded<TokenEvent>(new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
-        public void Tokens(ImmutableArray<int> tokens, TokenLogprob[]? logprobs)
+        public void Tokens(ImmutableArray<int> tokens, Starlings.Roost.Requests.TokenLogprob[]? logprobs)
         {
             _completion += tokens.Length;
             _ = Channel.Writer.TryWrite(new TokenEvent

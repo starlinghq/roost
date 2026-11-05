@@ -1,4 +1,4 @@
-using Starlings.Generation.OnnxGenAI;
+using Starlings.Generation;
 
 namespace Starlings.Roost.Generation;
 

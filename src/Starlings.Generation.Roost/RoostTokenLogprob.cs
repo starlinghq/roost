@@ -10,4 +10,4 @@ namespace Starlings.Generation.Roost;
 /// <param name="TokenId">The generated token.</param>
 /// <param name="Logprob">Its log probability.</param>
 /// <param name="TopLogprobs">The most likely tokens and their log probabilities, most likely first, as many as the request's <c>top_logprobs</c>.</param>
-public sealed record RoostTokenLogprob(int TokenId, float Logprob, IReadOnlyList<TokenLogprob> TopLogprobs);
+public sealed record RoostTokenLogprob(int TokenId, float Logprob, IReadOnlyList<Starlings.Roost.Requests.TokenLogprob> TopLogprobs);

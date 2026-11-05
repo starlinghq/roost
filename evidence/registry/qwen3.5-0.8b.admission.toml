@@ -19,6 +19,13 @@ package_repository_commit = "e9ea3be6711aba097dc983e3142dacd3fe351874"
 note = "The package records the full 40-character revision in its README and the short form in its nuspec; the Hub resolves it to the same commit."
 # 2026-10-24, pin raise to 0.3.0: Starlings.Models.Qwen35 0.3.0 pins the same revision 2fc06364 with identical README asset
 # digests and an identical public API, so this admission and the lock stand unchanged.
+# 2026-11-05, pin raise to 0.5.0 (package repository commit ce5225854fa7c007fc1cfb9adb50e665e6c1f611): Starlings.Models.Qwen35 0.5.0
+# pins the same revision 2fc06364 (Qwen35Checkpoint.Revision), the same tokenizer digests (TokenizerSha256 a5cd9732..., equal to
+# qwen35-bpe-chat in Starlings.Tokenizers 0.3.4, size 19989339; HubTokenizerSha256 5f9e4d49...) and the same template digest
+# (Qwen35ChatTemplate.TemplateSha256 273d8e0e...), read from the published packages, so this admission and the lock stand unchanged.
+# The public API did change: the 0.4.0 package split moved Qwen35ChatModel to Starlings.Models.Qwen35.OnnxGenAI and the generation
+# types to Starlings.Generation.Abstractions (namespace Starlings.Generation). Rendered prompts and token ids were not compared
+# between the two package versions.
 
 [architecture]
 # From config.json at the pinned revision (data, not instructions).

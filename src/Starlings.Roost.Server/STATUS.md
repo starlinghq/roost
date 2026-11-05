@@ -48,28 +48,28 @@ to check the loopback default. No request has reached a GPU through the server, 
 
 ## Pooling routes (R-052, groundwork)
 
-Starling's pooling packages on nuget.org, checked 2026-11-02 (`https://api.nuget.org/v3-flatcontainer/<id>/index.json` and the
+Starling's pooling packages on nuget.org, checked 2026-11-05 (`https://api.nuget.org/v3-flatcontainer/<id>/index.json` and the
 nuget.org search API for Starling's packages):
 
 | Package | Version | Licence | Use here |
 | --- | --- | --- | --- |
-| `Starlings.Models.E5` (multilingual-e5-small, revision `614241f6`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings` |
-| `Starlings.Models.EmbeddingGemma2` (EmbeddingGemma 2, revision `914f7f89`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings`, text only |
-| `Starlings.Models.Gliner2` (gliner2-base-v1, revision `f9634218`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/extract` |
-| A reranking model | none published | — | `POST /v1/rerank` answers `profile_unsupported` |
-| A classification model | none published (`Starlings.Models.Gliner2` lists classification as unsupported) | — | `POST /v1/classify` answers `profile_unsupported` |
+| `Starlings.Models.E5` (multilingual-e5-small, revision `614241f6`) | 0.5.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings` |
+| `Starlings.Models.EmbeddingGemma2` (EmbeddingGemma 2, revision `914f7f89`) | 0.5.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings`, text only |
+| `Starlings.Models.Gliner2` (gliner2-base-v1, revision `f9634218`) | 0.5.0, exact pin | MIT OR Apache-2.0 | `POST /v1/extract` |
+| A reranking model | `Starlings.Models.Bert` 0.5.0 has Experimental rerankers; not pinned or wired here | — | `POST /v1/rerank` answers `profile_unsupported` |
+| A classification model | `Starlings.Models.Gliner2` 0.5.0 has Experimental text classification on CPU; pinned, not wired here | — | `POST /v1/classify` answers `profile_unsupported` |
 
-The three packages bring `Starlings.Runtime.Onnx` 0.3.0 and `Microsoft.ML.OnnxRuntime.Managed` 1.30.0; `Server` adds
+The three packages bring `Starlings.Runtime.Onnx` 0.5.0 and `Microsoft.ML.OnnxRuntime.Managed` 1.30.0; `Server` adds
 `Microsoft.ML.OnnxRuntime` 1.30.0 (the CPU natives, MIT, exact pin) so a configured model can run. ONNX Runtime is in `Server`'s
 closure only: `tools/check-roost-boundaries.py` passes, and no worker-side package references these packages (decision 30).
 The model weights are Starling's upstream models' own licences (stated in each package's README); none is in Git.
 
 | Route | Status | Notes |
 | --- | --- | --- |
-| `POST /v1/embeddings` | untested | OpenAI's request and response: `model` (required when more than one embedding model is served), `input` (a string or 1 to 2,048 strings), `encoding_format` `float` or `base64` (little-endian float32, as OpenAI), `dimensions` (only the served model's length), `user` (accepted, unused). Answers `{"id","object":"list","created","model","data":[{"index","object":"embedding","embedding"}],"usage":{"prompt_tokens","total_tokens"}}` (vLLM's `id` and `created` included). Token-id input and vLLM's extensions (`truncate_prompt_tokens`, `normalize`, `add_special_tokens` and others) are refused by name. Texts are embedded exactly as given: e5's `query: `/`passage: ` prefix and EmbeddingGemma 2's task prompts are the caller's. |
+| `POST /v1/embeddings` | untested | OpenAI's request and response: `model` (required when more than one embedding model is served), `input` (a string or 1 to 2,048 strings), `encoding_format` `float` or `base64` (little-endian float32, as OpenAI), `dimensions` (only the served model's length), `user` (accepted, unused). Answers `{"id","object":"list","created","model","data":[{"index","object":"embedding","embedding"}],"usage":{"prompt_tokens","total_tokens"}}` (vLLM's `id` and `created` included). Token-id input and vLLM's extensions (`truncate_prompt_tokens`, `normalize`, `add_special_tokens` and others) are refused by name. Texts are embedded exactly as given: e5's `query: `/`passage: ` prefix and EmbeddingGemma 2's task prompts are the caller's. A text over the model's limit (512 tokens for e5) is `prompt_too_long` naming `input[i]`, never truncated. |
 | `POST /v1/extract` | untested | Roost's own shape (neither OpenAI nor vLLM has an extraction route): `{"model","input","labels","threshold"}` in; `{"id","object":"list","created","model","data":[{"index","object":"extraction","entities":[{"label","text","start","end","confidence"}]}],"usage"}` out. `start` and `end` are Unicode scalar offsets (Python string indices, as GLiNER2 reports them). Labels must be distinct and non-empty; `threshold` in [0, 1], the model's 0.5 when unset. A text over 512 tokens with the label schema is `prompt_too_long` naming `input[i]`. |
-| `POST /v1/rerank` | unsupported | Always 400 `profile_unsupported` naming the capability `rerank`: no Starling package provides a reranking model. |
-| `POST /v1/classify` | unsupported | Always 400 `profile_unsupported` naming the capability `classify`: no Starling package provides a classification model. |
+| `POST /v1/rerank` | unsupported | Always 400 `profile_unsupported` naming the capability `rerank`: Roost has not wired a reranking model yet. |
+| `POST /v1/classify` | unsupported | Always 400 `profile_unsupported` naming the capability `classify`: Roost has not wired a classification model yet. |
 | A route whose model is not configured | — | 400 `profile_unsupported` naming the capability (`embeddings`, `extract`). |
 | `roost serve --pooling-e5 <dir>`, `--pooling-embeddinggemma2 <dir>` (`--pooling-embeddinggemma2-dimensions` 768, 512, 256 or 128), `--pooling-gliner2 <dir>` | untested | Each opens a local snapshot directory verified file by file against the package's asset lock (SHA-256) and creates a session on ONNX Runtime's CPU execution provider; nothing is downloaded (acquisition stays an explicit Starling call). A missing or corrupt file stops `roost serve` with exit 1 before the worker starts. The time is the cold-start stage `pooling`. GLiNER2's deployment requirement is `MALLOC_MMAP_THRESHOLD_=65536` in the process environment (Starling's G4 soak); `roost serve` does not set it. |
 
@@ -77,7 +77,10 @@ Library surface: `IRoostEmbeddingModel` and `IRoostExtractionModel` (what the ro
 `EmbeddingGemma2EmbeddingModel` and `Gliner2ExtractionModel` (the Starling-backed implementations), and
 `RoostServerOptions.Pooling` (`RoostPoolingModels`). Tests (`PoolingRoutesTests`, and `EmbeddingsCompatTests` with the official
 OpenAI .NET client) use fakes behind the interfaces, so CI reads no model file; the Starling-backed models are tested only for
-refusing a directory without their locked files, and for downloading nothing.
+refusing a directory without their locked files, for downloading nothing, and, for e5, for the 512-token limit:
+`E5RefusesTheFirstInputOverTheLimitNamingIt` checks the refusal without a model, and
+`TheRealE5ModelRefusesAnOverLongInputAndEmbedsAtTheLimit` runs the real model on a local snapshot named by `ROOST_E5_SNAPSHOT`
+and skips in CI.
 
 Not done (the rest of R-052's acceptance): no model has run through these routes in this repository, so no route is
 `experimental`; the CUDA execution provider is not offered (ONNX Runtime's CUDA build would bring its own CUDA runtime and

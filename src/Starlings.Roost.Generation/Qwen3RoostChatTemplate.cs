@@ -5,12 +5,12 @@ namespace Starlings.Roost.Generation;
 
 /// <summary>
 /// The Qwen3 template (first used by the Qwen3-1.7B profile, R-015) as the engine calls it: Roost's message types are mapped field
-/// by field to Starling's and rendered by <see cref="QwenChatTemplate"/> with <see cref="QwenChatProfile.Qwen3"/>. No template
+/// by field to Starling's and rendered by <see cref="QwenChatTemplate"/> with <see cref="QwenChatCheckpoint.Qwen3"/>. No template
 /// logic lives here.
 /// </summary>
 /// <remarks>
 /// Starling publishes this template for a text-only profile with <c>enable_thinking=false</c> (<c>Starlings.Models.QwenChat</c>
-/// 0.3.0, Experimental). Tool definitions, tool calls, tool messages and thinking mode have no representation in it, so this class
+/// 0.5.0, Experimental). Tool definitions, tool calls, tool messages and thinking mode have no representation in it, so this class
 /// throws <see cref="NotSupportedException"/> for them rather than rendering something the published template does not define.
 /// Status: experimental (as Starling's profile); no Roost GPU evidence for a Qwen3 model yet.
 /// </remarks>
@@ -39,7 +39,7 @@ public sealed class Qwen3RoostChatTemplate : IRoostChatTemplate
             mapped[i] = Map(messages[i]);
         }
 
-        return QwenChatTemplate.Render(QwenChatProfile.Qwen3, mapped);
+        return QwenChatTemplate.Render(QwenChatCheckpoint.Qwen3, mapped);
     }
 
     private static QwenChatMessage Map(RoostChatMessage message)

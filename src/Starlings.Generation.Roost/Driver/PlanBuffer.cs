@@ -120,7 +120,7 @@ internal static class PlanBuffer
     /// <param name="header">Its header, from <see cref="ReadHeader"/>.</param>
     /// <returns>The rows by handle, or null when the result has none.</returns>
     /// <exception cref="InvalidDataException">The logprob table or a row's range is malformed.</exception>
-    public static IReadOnlyDictionary<ulong, TokenLogprob[]>? ReadLogprobs(ReadOnlySpan<byte> result, in StepResultHeader header)
+    public static IReadOnlyDictionary<ulong, Starlings.Roost.Requests.TokenLogprob[]>? ReadLogprobs(ReadOnlySpan<byte> result, in StepResultHeader header)
     {
         if (header.Logprobs.Count == 0)
         {
@@ -129,7 +129,7 @@ internal static class PlanBuffer
 
         var rows = Table<ResultLogprob>(result, header.Logprobs, header.Logprobs.Count);
         var sequences = Table<ResultSequence>(result, header.Sequences, header.SequenceCount);
-        var byHandle = new Dictionary<ulong, TokenLogprob[]>();
+        var byHandle = new Dictionary<ulong, Starlings.Roost.Requests.TokenLogprob[]>();
         foreach (var s in sequences)
         {
             if (s.LogprobCount == 0)
@@ -142,7 +142,7 @@ internal static class PlanBuffer
                 throw new InvalidDataException("A result row names logprobs outside the logprob table or not a whole number per token.");
             }
 
-            byHandle[s.SequenceHandle] = [.. rows.AsSpan((int)s.LogprobStart, (int)s.LogprobCount).ToArray().Select(static r => new TokenLogprob(r.Token, r.Logprob))];
+            byHandle[s.SequenceHandle] = [.. rows.AsSpan((int)s.LogprobStart, (int)s.LogprobCount).ToArray().Select(static r => new Starlings.Roost.Requests.TokenLogprob(r.Token, r.Logprob))];
         }
 
         return byHandle;

@@ -27,7 +27,7 @@ internal sealed record RawCase(string Name, string Completion, string[] Expected
 /// </summary>
 /// <remarks>
 /// <para><b>Qwen3.5.</b> Each case is an assistant turn rendered by Starling's published template
-/// (<see cref="Qwen35RoostChatTemplate"/> over <c>Qwen35ChatTemplate</c>, <c>Starlings.Models.Qwen35</c> 0.3.0) as the last turn of
+/// (<see cref="Qwen35RoostChatTemplate"/> over <c>Qwen35ChatTemplate</c>, <c>Starlings.Models.Qwen35</c> 0.5.0) as the last turn of
 /// a conversation: the template writes the think block and the <c>&lt;tool_call&gt;</c> blocks exactly as it instructs the model to
 /// answer, so the rendered turn is the completion a well-behaved model produces with thinking enabled. Parsing it must give back
 /// the turn's reasoning, content and calls.</para>

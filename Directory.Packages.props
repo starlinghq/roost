@@ -7,24 +7,24 @@
     Generation.Roost, Server) may use ONNX Runtime (decision 30).
   -->
   <ItemGroup>
-    <!-- Starling's published packages, exact pins (plan 2.2). They bring ONNX Runtime GenAI: host-process packages only (decision 30). -->
+    <!-- Starling's published packages, exact pins (plan 2.2). Starlings.Generation.Abstractions and the definition packages Starlings.Models.Qwen35 and Starlings.Models.QwenChat bring no ONNX Runtime (starling#215). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="3.11.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <!-- R-060, decision 12: Starlings.Roost.Kernels fetches the per-SM kernel library from the release by digest. BCL only, no ONNX Runtime, so it is allowed in the worker-side closure. -->
-    <PackageVersion Include="Starlings.Acquisition" Version="[0.3.0]" />
-    <PackageVersion Include="Starlings.Generation.OnnxGenAI" Version="[0.3.0]" />
-    <PackageVersion Include="Starlings.Models.Qwen35" Version="[0.3.0]" />
-    <!-- R-009: the Qwen3 template (QwenChatTemplate). Brings ONNX Runtime GenAI through Starlings.Generation.OnnxGenAI: host-process packages only (decision 30). -->
-    <PackageVersion Include="Starlings.Models.QwenChat" Version="[0.3.0]" />
-    <!-- Direct pin because Starlings.Tokenizers.Tokenizer is in the public API of Starlings.Generation.Roost (RoostModelProfile); the version must stay inside the exact range the Starling 0.3.0 packages require. -->
-    <PackageVersion Include="Starlings.Tokenizers" Version="[0.3.0]" />
+    <PackageVersion Include="Starlings.Acquisition" Version="[0.5.0]" />
+    <PackageVersion Include="Starlings.Generation.Abstractions" Version="[0.5.0]" />
+    <PackageVersion Include="Starlings.Models.Qwen35" Version="[0.5.0]" />
+    <!-- R-009: the Qwen3 template (QwenChatTemplate). The definition package, without ONNX Runtime. -->
+    <PackageVersion Include="Starlings.Models.QwenChat" Version="[0.5.0]" />
+    <!-- Direct pin because Starlings.Tokenizers.Tokenizer is in the public API of Starlings.Generation.Roost (RoostModelProfile); the version must stay inside the exact range the Starling 0.5.0 packages require. -->
+    <PackageVersion Include="Starlings.Tokenizers" Version="[0.3.4]" />
     <!-- R-023: reads kernels/manifest.toml in Starlings.Roost.Kernels (BSD-2-Clause; depends on System.Text.Json and System.Collections.Immutable only, no ONNX Runtime). -->
     <PackageVersion Include="Tomlyn" Version="[2.10.1]" />
     <PackageVersion Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <!-- R-036: the IChatClient contract of Starlings.Generation.Roost; a floor so consumers on a newer Microsoft.Extensions.AI do not conflict (lock files keep 9.8.0). -->
-    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="9.8.0" />
+    <!-- R-036: the IChatClient contract of Starlings.Generation.Roost; a floor so consumers on a newer Microsoft.Extensions.AI do not conflict. 10.10.1 is the minimum Starlings.Generation.Abstractions 0.5.0 requires. -->
+    <PackageVersion Include="Microsoft.Extensions.AI.Abstractions" Version="10.10.1" />
   </ItemGroup>
   <ItemGroup>
     <!-- R-037: the in-memory server for Starlings.Roost.Server.Tests (test only), matched to the ASP.NET Core 10.0.14 shared framework the SDK pins. -->
@@ -37,11 +37,13 @@
   <ItemGroup>
     <!-- R-052: Starling's ONNX pooling packages behind the server's /v1/embeddings and /v1/extract routes (MIT OR Apache-2.0,
          exact pins, plan 2.2). They bring Microsoft.ML.OnnxRuntime.Managed 1.30.0 through Starlings.Runtime.Onnx: Server only
-         (decision 30). No Starling package for reranking or classification exists on nuget.org (checked 2026-11-02). -->
-    <PackageVersion Include="Starlings.Models.E5" Version="[0.3.0]" />
-    <PackageVersion Include="Starlings.Models.EmbeddingGemma2" Version="[0.3.0]" />
-    <PackageVersion Include="Starlings.Models.Gliner2" Version="[0.3.0]" />
-    <!-- R-052: ONNX Runtime's CPU natives for those packages (MIT), pinned exactly to the managed binding Starlings.Runtime.Onnx 0.3.0 requires. Server only (decision 30). -->
+         (decision 30). Roost has not wired Starling's rerankers (Starlings.Models.Bert, not pinned) or GLiNER2 text classification. -->
+    <!-- Direct pin because Starlings.Models.TokenLimitCheck is used directly by Starlings.Roost.Server (E5EmbeddingModel). No ONNX Runtime. -->
+    <PackageVersion Include="Starlings.Models.Abstractions" Version="[0.5.0]" />
+    <PackageVersion Include="Starlings.Models.E5" Version="[0.5.0]" />
+    <PackageVersion Include="Starlings.Models.EmbeddingGemma2" Version="[0.5.0]" />
+    <PackageVersion Include="Starlings.Models.Gliner2" Version="[0.5.0]" />
+    <!-- R-052: ONNX Runtime's CPU natives for those packages (MIT), pinned exactly to the managed binding Starlings.Runtime.Onnx 0.5.0 requires. Server only (decision 30). -->
     <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="[1.30.0]" />
   </ItemGroup>
 </Project>

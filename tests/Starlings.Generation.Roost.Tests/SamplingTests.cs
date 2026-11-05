@@ -74,7 +74,7 @@ public sealed class SamplingTests
             Assert.Equal(1234UL, s.Seed);
             Assert.Equal(2u, s.Logprobs);
             Assert.Equal((ulong)i, s.PhiloxOffset); // the generated-token count: the draw depends on the position only
-            Assert.Equal(SamplingOptions.Seeded, s.Flags);
+            Assert.Equal(Starlings.Roost.Plans.SamplingOptions.Seeded, s.Flags);
         }
     }
 
