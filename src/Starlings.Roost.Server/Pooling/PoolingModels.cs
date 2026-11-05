@@ -22,7 +22,7 @@ public interface IRoostEmbeddingModel
 
 /// <summary>The vectors of one embedding call.</summary>
 /// <param name="Embeddings">One vector of <see cref="IRoostEmbeddingModel.Dimensions"/> values per input, in input order.</param>
-/// <param name="PromptTokens">Tokens of every input together, special tokens included, after any truncation by the model.</param>
+/// <param name="PromptTokens">Tokens of every input together, special tokens included.</param>
 public sealed record RoostEmbeddingResult(IReadOnlyList<float[]> Embeddings, int PromptTokens);
 
 /// <summary>

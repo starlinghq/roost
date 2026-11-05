@@ -12,6 +12,7 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 
 ### Fixed
 
+- `POST /v1/embeddings` on e5 refuses an input over 512 tokens as `prompt_too_long` naming `input[i]`, as EmbeddingGemma 2 and GLiNER2 do. It was silently truncated.
 - A worker that exits during startup keeps its output: `ProcessWorkerTransport` reads the end of the worker's streams before it reports the failure, so the error no longer loses the lines that explain it (#158).
 
 ### Added

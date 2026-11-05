@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Net;
 using Starlings.Generation.Roost;
 using Starlings.Generation.Roost.Tests.Support;
+using Starlings.Models;
 using Starlings.Roost.Requests;
 using Starlings.Roost.Server.Pooling;
 using Starlings.Roost.Server.Tests.Support;
@@ -11,10 +12,13 @@ namespace Starlings.Roost.Server.Tests;
 
 /// <summary>
 /// The pooling routes (R-052) over fake models behind <see cref="IRoostEmbeddingModel"/> and <see cref="IRoostExtractionModel"/>:
-/// no model file is read. The Starling-backed models are exercised only for refusing a directory without the locked files.
+/// no model file is read, except by the e5 test gated on <c>ROOST_E5_SNAPSHOT</c>. Otherwise the Starling-backed models are exercised
+/// only for refusing a directory without the locked files and for e5's limit check.
 /// </summary>
 public sealed class PoolingRoutesTests
 {
+    private const string E5SnapshotEnv = "ROOST_E5_SNAPSHOT";
+
     private const string Sha = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     [Fact]
@@ -265,6 +269,46 @@ public sealed class PoolingRoutesTests
         {
             empty.Delete(true);
         }
+    }
+
+    [Fact]
+    public void E5RefusesTheFirstInputOverTheLimitNamingIt()
+    {
+        static TokenLimitCheck Check(string text) => new(text.Length, 512, text.Length > 512);
+        string[] inputs = ["short", new string('a', 512), new string('a', 513), new string('a', 600)];
+
+        var refused = Assert.Throws<RoostChatException>(() => E5EmbeddingModel.ThrowIfTooLong(inputs, Check, TestContext.Current.CancellationToken));
+
+        Assert.Equal(RoostErrorCode.PromptTooLong, refused.Error.Code);
+        Assert.Equal("input[2]", refused.Error.Param);
+        Assert.Contains("513 tokens", refused.Error.Message, StringComparison.Ordinal);
+        Assert.Contains("at most 512", refused.Error.Message, StringComparison.Ordinal);
+        E5EmbeddingModel.ThrowIfTooLong(inputs[..2], Check, TestContext.Current.CancellationToken);
+    }
+
+    [Fact]
+    public void TheRealE5ModelRefusesAnOverLongInputAndEmbedsAtTheLimit()
+    {
+        var directory = Environment.GetEnvironmentVariable(E5SnapshotEnv);
+        if (string.IsNullOrEmpty(directory))
+        {
+            Assert.Skip($"Set {E5SnapshotEnv} to a local multilingual-e5-small snapshot.");
+        }
+
+        using var model = E5EmbeddingModel.Open(directory);
+        var token = TestContext.Current.CancellationToken;
+
+        // Each "a" is one token: with the two special tokens, 510 reach the limit exactly and 511 pass it.
+        var atLimit = string.Join(' ', Enumerable.Repeat("a", 510));
+        var overLimit = string.Join(' ', Enumerable.Repeat("a", 511));
+
+        var result = model.Embed(["short", atLimit], token);
+        Assert.Equal(2, result.Embeddings.Count);
+
+        var refused = Assert.Throws<RoostChatException>(() => model.Embed(["short", overLimit], token));
+        Assert.Equal(RoostErrorCode.PromptTooLong, refused.Error.Code);
+        Assert.Equal("input[1]", refused.Error.Param);
+        Assert.Contains("513 tokens", refused.Error.Message, StringComparison.Ordinal);
     }
 
     [Fact]
