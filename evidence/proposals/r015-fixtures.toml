@@ -1,0 +1,81 @@
+# PROPOSED reference fixtures for Qwen3-1.7B (R-015, stream B3). NOT BINDING. The maintainer copies what they accept into
+# evidence/protected/ and sets the binding tolerances and the near-tie bound per profile (decision 8); nothing here is read by any
+# gate, and this file sets no tolerance. Rationale and open questions: evidence/proposals/r015-fixtures.md.
+#
+# The fixture data (greedy outputs, step-0 log-probabilities, per-layer hidden states) is 106 MB and never enters Git. This file
+# pins it by SHA-256; the bytes sit in run artifacts on the development host (/home/mark/Projects/roost-evidence/R-015/ref) until
+# the maintainer chooses where protected fixture data is published.
+proposal_version = 1
+status = "proposed"
+item = "R-015"
+
+[reference]
+runner = "roost-evidence reference-run --capture-layers --state-forwards 0 (evidence/pipeline, R-010/R-011)"
+numerics = "transformers 5.20.1, torch 2.9.1+cpu, safetensors 0.8.0, float32, CPU, OMP_NUM_THREADS=4 and MKL_NUM_THREADS=4"
+reproducibility = "byte-identical across two runs at 4 threads on one host; at 2 threads the data files differ (greedy ids equal, step-0 max abs 4.2e-05, hidden rel L2 2.2e-06), so a digest identifies these bytes and a rerun at another thread count will not hash the same"
+checkpoint = "Qwen/Qwen3-1.7B at 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
+checkpoint_lock = "evidence/registry/qwen3-1.7b.lock.toml"
+checkpoint_check = "all 12 locked files present, none extra, each equal to the lock by size and computed SHA-256 before use, including both safetensors shards"
+prompt_set = "the five R022PromptSet conversations through Starling's Qwen3 template (Qwen3RoostChatTemplate over QwenChatCheckpoint.Qwen3, Starlings.Models.QwenChat 0.5.0, enable_thinking=false), tokenised by Starlings.Tokenizers 0.3.4, 25 to 133 prompt tokens"
+template_check = "text and ids equal the checkpoint's own Jinja template and the transformers tokenizer for all five cases"
+generation = "greedy, 24 new tokens per case, stop ids [151643, 151645] (none reached; finish_reason length)"
+layers = "28 decoder layers, all full_attention; 30 stages per forward (embeddings, 28 layers, final norm)"
+recurrent_state = "none: Qwen3-1.7B has no linear_attention layers, so the captures hold no recurrent or convolution state and state_forwards is 0"
+produced_by = "the commands in evidence/proposals/r015-fixtures.md; the reference is independent of Roost's model code (no Qwen3-1.7B definition exists)"
+
+# Computed from the snapshot the run loaded; each equals the lock's entry for that file.
+[reference.snapshot_sha256]
+"model-00001-of-00002.safetensors" = "169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5"
+"model-00002-of-00002.safetensors" = "912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9"
+"model.safetensors.index.json" = "0d660e94b165eb912669a5249dff44b83188c4777a07ddb9611fb78d91b0578d"
+"config.json" = "1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197"
+"generation_config.json" = "2325da0f15bb848e018c5ae071b7943332e9f871d6b60e2ed22ca97d4cb993d2"
+"tokenizer.json" = "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+"tokenizer_config.json" = "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101"
+"vocab.json" = "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910"
+"merges.txt" = "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5"
+
+# Deliberately no [profiles] entries: no Qwen3-1.7B model definition or profile exists (docs/capabilities.md: unsupported), so no
+# profile id is named and no tolerance is proposed. These fixtures are the reference for whichever profiles the maintainer defines.
+[profiles]
+
+[files]
+"reference.jsonl" = { sha256 = "802dacb002d79ecedb0980b43b4642f465c8d9197b8b9ebbc05a6aa4d9e43d14", size = 17224, content = "per case: prompt ids, rendered prompt, greedy output ids, top-2 margin per step, step-0 top tokens, digests of the files below" }
+"environment.json" = { sha256 = "7868f6c214960bbb39c2f8969cf88aa50739c980ab11b11a92b84ca82786a7eb", size = 1361, content = "model id, revision, runner versions, stop ids, layer types and capture stages" }
+# step0/*.f32: float32 log-probabilities (log-softmax) over the full 151936-entry vocabulary at step 0.
+"step0/capital.f32" = { sha256 = "fdcb9600ba1f9c5a4e3768ab1361e44d6e78e2bff53d7b19de4e95bf444ffa8a", size = 607744 }
+"step0/code.f32" = { sha256 = "bf18854fc7bdb8ed6eded308d887236cd2d8483143c55f22f99e4dbe44fa39cb", size = 607744 }
+"step0/long-context.f32" = { sha256 = "92bb9f643edf9bebd93fc8a0a6b53586248aefcc2fc4fcce83baaadfc12edd60", size = 607744 }
+"step0/multi-turn.f32" = { sha256 = "e620a2e3502855c1880f625865a2edae9552c8f730d395a09b5479bb843fe84a", size = 607744 }
+"step0/system-haiku.f32" = { sha256 = "d963cffd62d75f0fd9a0e1986cc92f05fed0d44e4e5793de8b9c8307ef3028e4", size = 607744 }
+"layers/capital.safetensors" = { sha256 = "163f05146251be0204060d8fee6fe090117c657f4a71125c67b245da1b70c395", size = 11860576 }
+"layers/code.safetensors" = { sha256 = "873bd2be1547e6696a320eb0c81f41331d9fefa2eb935d21fb7f26fb4cdb5dc9", size = 13335536 }
+"layers/long-context.safetensors" = { sha256 = "616e4d67d317e63ce6a2de8282ebf5593600fd1c25cdd9e6d9c96f9af7eb4c37", size = 38404296 }
+"layers/multi-turn.safetensors" = { sha256 = "2fbc8e3291da929a884580a7027841e50bcfd200f0e109f47c3877aa230478c9", size = 22675232 }
+"layers/system-haiku.safetensors" = { sha256 = "e0c0f137db655786c54f5e7b2507363473490881a652c3907c73da41a01763a6", size = 16531096 }
+
+# Greedy outputs (small enough to state here) and the three smallest top-2 margins per case, [step, margin].
+[cases.capital]
+prompt_tokens = 25
+output_ids = [59604, 6116, 279, 6722, 315, 9625, 304, 220, 16, 23, 15, 19, 979, 69427, 358, 14275, 432, 438, 279, 501, 6722, 1283, 279, 8585]
+smallest_margins = [[14, 0.2663], [17, 0.8918], [23, 1.2964]]
+
+[cases.system-haiku]
+prompt_tokens = 44
+output_ids = [59039, 61970, 279, 3241, 11, 2303, 2304, 4693, 34855, 315, 2297, 11, 2303, 19602, 21371, 594, 21700, 30138, 13, 18611, 785, 40445, 32411, 279]
+smallest_margins = [[2, 0.1136], [3, 0.1177], [16, 0.2746]]
+
+[cases.multi-turn]
+prompt_tokens = 69
+output_ids = [10061, 594, 11625, 419, 3019, 553, 3019, 1447, 16, 13, 3070, 3479, 448, 220, 23, 40676, 13, 334, 2303, 256, 1446, 614, 3070, 23]
+smallest_margins = [[7, 0.5503], [16, 0.5722], [22, 0.9096]]
+
+[cases.code]
+prompt_tokens = 31
+output_ids = [95456, 0, 5692, 594, 264, 13027, 729, 429, 4675, 279, 3070, 77, 7563, 79683, 1372, 334, 5367, 7887, 11, 3156, 448, 264, 11682, 4629]
+smallest_margins = [[0, 0.2616], [19, 0.5987], [15, 0.9635]]
+
+[cases.long-context]
+prompt_tokens = 133
+output_ids = [12, 576, 6290, 14833, 2270, 311, 4263, 279, 501, 6733, 323, 1378, 42463, 14431, 13, 2303, 12, 63248, 1033, 17779, 25, 6562, 4829, 264]
+smallest_margins = [[7, 0.2036], [11, 0.238], [10, 1.1486]]
