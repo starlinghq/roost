@@ -90,6 +90,10 @@ internal sealed class RouteRunner
         {
             // The client disconnected; the generation was cancelled with it and there is no one to answer.
         }
+        catch (IOException) when (ct.IsCancellationRequested)
+        {
+            // The client reset the connection while sending the body.
+        }
         catch (RoostChatException e) when (!context.Response.HasStarted)
         {
             await WriteErrorAsync(context.Response, e.Error.HttpStatus, e.Error.CodeName, e.Error.Message, e.Error.Param).ConfigureAwait(false);
@@ -97,6 +101,11 @@ internal sealed class RouteRunner
         catch (RouteException e) when (!context.Response.HasStarted)
         {
             await WriteErrorAsync(context.Response, e.Status, e.Code, e.Message, e.Param).ConfigureAwait(false);
+        }
+        catch (BadHttpRequestException e) when (!context.Response.HasStarted)
+        {
+            // Kestrel's refusal of the body: too large, or the client stopped sending it.
+            await WriteErrorAsync(context.Response, e.StatusCode, "bad_request", "The request body could not be read.", null).ConfigureAwait(false);
         }
         catch (Exception e) when (!context.Response.HasStarted && e is not OutOfMemoryException)
         {
@@ -120,13 +129,55 @@ internal sealed class RouteRunner
     /// <summary>Parses the request body; a body that is not JSON is an <see cref="RoostErrorCode.InvalidOption"/>.</summary>
     public static async Task<JsonDocument> ReadBodyAsync(HttpContext context, CancellationToken ct)
     {
+        JsonDocument document;
         try
         {
-            return await JsonDocument.ParseAsync(context.Request.Body, default, ct).ConfigureAwait(false);
+            document = await JsonDocument.ParseAsync(context.Request.Body, default, ct).ConfigureAwait(false);
         }
         catch (JsonException)
         {
             throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The request body is not valid JSON."));
+        }
+
+        try
+        {
+            CheckText(document.RootElement);
+        }
+        catch (InvalidOperationException)
+        {
+            document.Dispose();
+            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The request body holds text that is not valid Unicode."));
+        }
+
+        return document;
+    }
+
+    /// <summary>
+    /// Reads every string and property name, so a lone surrogate or invalid UTF-8 fails here and not wherever a route's
+    /// reader first touches it: <see cref="JsonDocument"/> accepts both, and reading them throws.
+    /// </summary>
+    private static void CheckText(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                foreach (var field in element.EnumerateObject())
+                {
+                    _ = field.Name;
+                    CheckText(field.Value);
+                }
+
+                break;
+            case JsonValueKind.Array:
+                foreach (var item in element.EnumerateArray())
+                {
+                    CheckText(item);
+                }
+
+                break;
+            case JsonValueKind.String:
+                _ = element.GetString();
+                break;
         }
     }
 

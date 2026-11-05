@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.DependencyInjection;
@@ -139,6 +140,59 @@ public sealed class ListenAndCliTests
 
         Assert.Equal(2, code);
         Assert.Contains("--allow-non-loopback", error.ToString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task KestrelsRefusalOfABodyIsAClientError()
+    {
+        await using var rig = await ServerRig.StartAsync(new Script { Tokens = ServerRig.Encode("ok") });
+        var app = RoostServer.Create(rig.Client, new RoostServerOptions { Port = 0 }, web => web.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 16));
+        await using (app)
+        {
+            await app.StartAsync(Ct);
+            try
+            {
+                var address = Assert.Single(app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses);
+                using var http = new HttpClient { BaseAddress = new Uri(address) };
+
+                var (response, body) = await PostAsync(http, "/v1/chat/completions", "{\"padding\":\"" + new string('x', 256) + "\"}");
+
+                Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
+                AssertErrorBody(body, "bad_request", null);
+            }
+            finally
+            {
+                await app.StopAsync(CancellationToken.None);
+            }
+        }
+    }
+
+    [Fact]
+    public void ServeParsesAllowedHosts()
+    {
+        var c = RoostCli.Parse(["serve", "--model", "qwen3.5-0.8b", "--weights", "w", "--weights-sha256", Sha, "--tokenizer", "t", "--allowed-host", "a.example, b.example"]);
+
+        Assert.Equal(["a.example", "b.example"], c.Listen.AllowedHosts);
+    }
+
+    [Fact]
+    public async Task ServeReportsACorruptTokenizer()
+    {
+        var path = Path.Combine(Path.GetTempPath(), "roost-corrupt-" + Guid.NewGuid().ToString("N") + ".json");
+        await File.WriteAllTextAsync(path, "{ not json", Ct);
+        try
+        {
+            using var error = new StringWriter();
+
+            var code = await RoostCli.RunAsync(["serve", "--model", "qwen3.5-0.8b", "--weights", "missing.safetensors", "--weights-sha256", Sha, "--tokenizer", path], error);
+
+            Assert.Equal(1, code);
+            Assert.Contains("the worker did not start", error.ToString(), StringComparison.Ordinal);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]

@@ -7,6 +7,21 @@ result writer through an in-process scripted worker, behind ASP.NET Core's in-me
 to check the loopback default. No request has reached a GPU through the server, so every route is `untested`, never
 `supported` or `experimental`.
 
+## Who can reach it
+
+- The server has no authentication and listens on loopback unless `--allow-non-loopback` is set.
+- `RequestOriginGuard` refuses web pages on every route with a 403 `forbidden_origin`. `Host` must name this machine or a
+  name in `--allowed-host`, which stops DNS rebinding; with `--allowed-host` set, the listen address counts too, but on
+  `0.0.0.0` the machine's own addresses must be listed. `Origin`, when present, must be an allowed name or the request's own
+  host, and on a loopback listener any name of this machine also passes. Clients that send no `Origin` (the official SDKs,
+  curl) are unaffected. These errors use the OpenAI body on every route, like the 404 and 405 answers.
+- **Not covered:** a listener opened with `--allow-non-loopback` and no `--allowed-host` accepts any `Host`, so DNS rebinding
+  can reach it. That includes a port published with `docker run -p` on a machine with a browser. Set `--allowed-host` there.
+- A reverse proxy on this machine needs `--allowed-host <its name>`. Sending a loopback `Host` instead works only for clients
+  that send no `Origin`, not for a browser behind the proxy.
+- The sleep-mode routes also need a loopback peer and a `Host` that names this machine. A proxy or SSH forward that sends a
+  loopback `Host` still makes every client local, so don't put one in front of them.
+
 ## Routes (PRD V1 set for R-037)
 
 | Route | Status | Notes |
@@ -14,7 +29,7 @@ to check the loopback default. No request has reached a GPU through the server, 
 | `POST /v1/chat/completions` | untested | Whole response, or SSE (`chat.completion.chunk`: a role chunk, content deltas, a finish chunk, a usage chunk when `stream_options.include_usage` is true, then `data: [DONE]`). |
 | `POST /v1/completions` | untested | Raw prompt, tokenised as given with no chat template (new `RoostChatClient.GetStreamingCompletionAsync`, capability `raw_completion`, `untested`). `max_tokens` defaults to 16, as in OpenAI's API and vLLM. Whole or SSE, as above, without the role chunk. |
 | `GET /v1/models` | untested | The one served model, `owned_by` `roost`. |
-| `POST /sleep`, `POST /wake_up`, `GET /is_sleeping`, `POST /update_weights` | untested | R-100, vLLM's sleep-mode routes. Mapped only with `--enable-sleep-mode` (`RoostServerOptions.EnableSleepMode`, off by default); a request whose remote address is not loopback (or that has none) gets 403 `forbidden`. `/sleep?level=1` releases the KV cache, `level=2` also the weights (vLLM's level 1 offloads weights instead). `/wake_up` answers `duration_ms` (the wake time, also logged) and `worker_duration_ms`; `/update_weights` takes `{"path", "size", "sha256"}` and answers `asset_mismatch` (500) when the file does not match. Tested over a roost-tiny-hybrid worker on `CpuOps` (`SleepModeRouteTests`); the packaged CUDA worker `roost serve` starts refuses them with `profile_unsupported`. |
+| `POST /sleep`, `POST /wake_up`, `GET /is_sleeping`, `POST /update_weights` | untested | R-100, vLLM's sleep-mode routes. Mapped only with `--enable-sleep-mode` (`RoostServerOptions.EnableSleepMode`, off by default); a request whose `Host` does not name this machine, or whose remote address is not loopback (or that has none) gets 403 `forbidden`. `/sleep?level=1` releases the KV cache, `level=2` also the weights (vLLM's level 1 offloads weights instead). `/wake_up` answers `duration_ms` (the wake time, also logged) and `worker_duration_ms`; `/update_weights` takes `{"path", "size", "sha256"}` and answers `asset_mismatch` (500) when the file does not match. Tested over a roost-tiny-hybrid worker on `CpuOps` (`SleepModeRouteTests`); the packaged CUDA worker `roost serve` starts refuses them with `profile_unsupported`. |
 
 ## Routes added by R-074
 

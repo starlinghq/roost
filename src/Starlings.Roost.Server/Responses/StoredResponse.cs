@@ -26,10 +26,11 @@ internal sealed class StoredResponse
     private (long Input, long Output)? _usage;
     private RoostError? _error;
     private bool _truncated;
+    private ResponsesRequest _request;
 
     public StoredResponse(ResponsesRequest request, string model, DateTimeOffset created)
     {
-        Request = request;
+        _request = request;
         Model = model;
         CreatedAt = created;
         Id = "resp_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
@@ -42,7 +43,17 @@ internal sealed class StoredResponse
     /// <summary>The id of the one output message item.</summary>
     public string MessageId { get; }
 
-    public ResponsesRequest Request { get; }
+    /// <summary>The request, without its prompt once the response has ended (<see cref="DropPrompt"/>).</summary>
+    public ResponsesRequest Request
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _request;
+            }
+        }
+    }
 
     public string Model { get; }
 
@@ -119,6 +130,7 @@ internal sealed class StoredResponse
             _truncated = finish == ChatFinishReason.Length;
             _status = _truncated ? Incomplete : Completed;
             _usage = (usage?.InputTokenCount ?? 0, usage?.OutputTokenCount ?? 0);
+            DropPrompt(keepInstructions: true);
         }
     }
 
@@ -130,6 +142,7 @@ internal sealed class StoredResponse
             {
                 _status = Failed;
                 _error = error;
+                DropPrompt(keepInstructions: false);
             }
         }
     }
@@ -141,8 +154,26 @@ internal sealed class StoredResponse
             if (!IsTerminalStatus(_status))
             {
                 _status = Cancelled;
+                DropPrompt(keepInstructions: false);
             }
         }
+    }
+
+    /// <summary>
+    /// Drops what no route returns. A finished response keeps its instructions for the echo: they fit the model's context.
+    /// One that failed or was cancelled may never have been tokenised, so its instructions could be any size up to the body
+    /// limit, and they go too.
+    /// </summary>
+    private void DropPrompt(bool keepInstructions)
+    {
+        var options = _request.Options;
+        if (!keepInstructions && options.Instructions is not null)
+        {
+            options = options.Clone();
+            options.Instructions = null;
+        }
+
+        _request = _request with { Messages = [], Options = options };
     }
 
     /// <summary>The response object, as it stands.</summary>

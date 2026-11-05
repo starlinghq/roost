@@ -12,13 +12,18 @@ namespace Starlings.Roost.WorkerHost;
 /// <param name="Sha256">Its locked SHA-256, 32 bytes.</param>
 public sealed record WeightSource(string Path, long Size, ImmutableArray<byte> Sha256)
 {
-    /// <summary>Checks the fields: an absolute path, a non-negative size and a 32-byte digest.</summary>
+    /// <summary>Checks the fields: an absolute path that fits a control message, a non-negative size and a 32-byte digest.</summary>
     /// <exception cref="ArgumentException">A field is invalid.</exception>
     public void Validate()
     {
         if (string.IsNullOrEmpty(Path) || !System.IO.Path.IsPathFullyQualified(Path))
         {
             throw new ArgumentException("The weights path must be absolute.", nameof(Path));
+        }
+
+        if (System.Text.Encoding.UTF8.GetByteCount(Path) > ControlMessages.MaxPathBytes)
+        {
+            throw new ArgumentException($"The weights path is longer than {ControlMessages.MaxPathBytes} UTF-8 bytes.", nameof(Path));
         }
 
         if (Size < 0)
