@@ -25,7 +25,8 @@ public sealed record RoostServerOptions
     public bool AllowNonLoopback { get; init; }
 
     /// <summary>
-    /// Names the server answers to besides this machine, for <c>Host</c> and <c>Origin</c> (<c>--allowed-host</c>): a same-host
+    /// Names the server answers to besides this machine and its listen address, for <c>Host</c> and <c>Origin</c>
+    /// (<c>--allowed-host</c>): a same-host
     /// reverse proxy's public name, for example. On a listener opened with <see cref="AllowNonLoopback"/>, leaving this empty
     /// accepts any <c>Host</c>, so DNS rebinding can reach the server; set it there unless the network is trusted.
     /// </summary>
@@ -59,7 +60,7 @@ public sealed record RoostServerOptions
     /// <summary>
     /// Maps the sleep-mode routes (R-100): <c>POST /sleep</c>, <c>POST /wake_up</c>, <c>GET /is_sleeping</c> and
     /// <c>POST /update_weights</c>, as vLLM's <c>--enable-sleep-mode</c> does. Off by default; even when on, they answer only
-    /// requests from a loopback address, which a proxy or SSH forward on this machine turns every client into.
+    /// requests from this machine, which a proxy or SSH forward that sends a loopback <c>Host</c> turns every client into.
     /// </summary>
     public bool EnableSleepMode { get; init; }
 

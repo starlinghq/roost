@@ -24,6 +24,8 @@ Layout: everything is in `/opt/roost/` (`roost`, `roost-worker`, `roost-kernels.
 `SHA256SUMS`). `roost` finds `roost-worker` beside itself, and the worker reads the manifest and loads the library from its own
 directory (`RoostWorkerRuntime`), so no flag points at them. The image runs as uid 10001 and carries no weights: they are
 mounted read-only. The server has no authentication, so listening on `0.0.0.0` stays an explicit `--allow-non-loopback`.
+With a published port on a machine that runs a browser, also pass `--allowed-host localhost,127.0.0.1`: without it the server
+accepts any `Host`, so a web page can reach it through DNS rebinding.
 
 The build checks itself: `sha256sum --check` over the staged files, then `roost doctor --no-gpu`, which compares each kernel
 library's SHA-256 with the manifest's. Either failure fails the build.

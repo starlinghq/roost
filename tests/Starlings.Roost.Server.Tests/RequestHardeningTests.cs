@@ -74,6 +74,21 @@ public sealed class RequestHardeningTests : IAsyncLifetime
     public void AllowedHostsExtendTheNamesTheServerAnswersTo(bool loopback, string host, string? origin, bool accepted) =>
         Assert.Equal(accepted, RequestOriginGuard.Refusal(new HostString(host), origin, loopback, ["roost.example"]) is null);
 
+    [Theory]
+    [InlineData("192.168.1.5", "192.168.1.5:8000", true)]
+    [InlineData("fd00::5", "[fd00::5]:8000", true)]
+    [InlineData("192.168.1.5", "192.168.1.6:8000", false)]
+    public void AllowedHostsDoNotCutOffTheListenAddress(string listen, string host, bool accepted)
+    {
+        var names = RequestOriginGuard.WithListenAddress(["roost.example"], IPAddress.Parse(listen));
+
+        Assert.Equal(accepted, RequestOriginGuard.Refusal(new HostString(host), null, loopbackListener: false, names) is null);
+    }
+
+    [Fact]
+    public void AnOpenListenerWithNoAllowedHostsStaysUnchecked() =>
+        Assert.Empty(RequestOriginGuard.WithListenAddress([], IPAddress.Parse("192.168.1.5")));
+
     [Fact]
     public async Task APageOnAnotherOriginIsRefusedBeforeAnyRouteRuns()
     {

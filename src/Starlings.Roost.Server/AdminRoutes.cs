@@ -14,11 +14,11 @@ namespace Starlings.Roost.Server;
 /// <summary>
 /// The sleep-mode routes (R-100), named as vLLM names them: <c>POST /sleep?level=1|2</c>, <c>POST /wake_up</c>,
 /// <c>GET /is_sleeping</c> and <c>POST /update_weights</c>. Mapped only with <see cref="RoostServerOptions.EnableSleepMode"/>
-/// (<c>--enable-sleep-mode</c>), and they answer only requests from a loopback address, whatever the listen address: they
+/// (<c>--enable-sleep-mode</c>), and they answer only requests from this machine (a loopback peer and a <c>Host</c> that names it), whatever the listen address: they
 /// release and replace the model, and the server has no authentication. Failures use the one error body.
 /// </summary>
 /// <remarks>
-/// The check is the TCP peer's address, so it can't tell who is behind a proxy or an SSH forward on this machine: every
+/// The check can't tell who is behind a proxy or an SSH forward on this machine that sends a loopback <c>Host</c>: every
 /// client of such a forwarder is local. Don't put one in front of a server with these routes enabled.
 /// </remarks>
 /// <remarks>
@@ -166,7 +166,7 @@ internal sealed class AdminRoutes
         context.Response,
         StatusCodes.Status403Forbidden,
         "forbidden",
-        $"{context.Request.Path} answers loopback clients only: it releases or replaces the model, and the server has no authentication.");
+        $"{context.Request.Path} answers clients on this machine only: it releases or replaces the model, and the server has no authentication.");
 
     private static async Task WriteAsync(HttpContext context, ArrayBufferWriter<byte> buffer)
     {

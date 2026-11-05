@@ -127,7 +127,7 @@ internal sealed partial class SystemDoctorProbes : IDoctorProbes
         {
             tokenizer = Tokenizers.Tokenizer.FromFile(path);
         }
-        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or FormatException or ArgumentException or InvalidOperationException or NotSupportedException)
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or FormatException or ArgumentException or InvalidOperationException or NotSupportedException or Tokenizers.TokenizerFormatException)
         {
             return $"{path} does not load: {e.Message}";
         }

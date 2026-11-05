@@ -51,7 +51,7 @@ public static class RoostServer
 
         var app = builder.Build();
         app.UseStatusCodePages(ErrorBodies.StatusCodePageAsync);
-        app.Use(RequestOriginGuard.Middleware(IPAddress.IsLoopback(address), options.AllowedHosts));
+        app.Use(RequestOriginGuard.Middleware(IPAddress.IsLoopback(address), RequestOriginGuard.WithListenAddress(options.AllowedHosts, address)));
         var routes = new OpenAiRoutes(client, DateTimeOffset.UtcNow, app.Logger);
         app.MapPost("/v1/chat/completions", (RequestDelegate)routes.ChatCompletionsAsync);
         app.MapPost("/v1/completions", (RequestDelegate)routes.CompletionsAsync);

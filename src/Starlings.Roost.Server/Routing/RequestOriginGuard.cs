@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using Starlings.Roost.Server.OpenAi;
 
 namespace Starlings.Roost.Server.Routing;
@@ -54,6 +55,18 @@ internal static class RequestOriginGuard
     /// <param name="host">The header.</param>
     /// <returns>True when it does.</returns>
     public static bool NamesThisMachine(HostString host) => !host.HasValue || IsThisMachine(host.Host);
+
+    /// <summary>
+    /// The names to check a request against: the allowed ones and the address the server listens on, so naming a host doesn't
+    /// cut off clients that use the listen address. None when none are allowed, which leaves an open listener unchecked.
+    /// </summary>
+    /// <param name="allowedHosts">Names allowed besides this machine.</param>
+    /// <param name="listen">The listen address.</param>
+    /// <returns>The names.</returns>
+    public static IReadOnlyList<string> WithListenAddress(IReadOnlyList<string> allowedHosts, IPAddress listen) =>
+        allowedHosts.Count == 0
+            ? allowedHosts
+            : [.. allowedHosts, listen.AddressFamily == AddressFamily.InterNetworkV6 ? $"[{listen}]" : listen.ToString()];
 
     /// <summary>The middleware.</summary>
     /// <param name="loopbackListener">Whether the server listens on loopback.</param>
