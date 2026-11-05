@@ -58,7 +58,7 @@ public sealed class Qwen3ChatTemplateTests
             },
             m.Content,
             m.ReasoningContent)).ToList();
-        return QwenChatTemplate.Render(QwenChatProfile.Qwen3, messages);
+        return QwenChatTemplate.Render(QwenChatCheckpoint.Qwen3, messages);
     }
 
     [Fact]
@@ -138,6 +138,6 @@ public sealed class Qwen3ChatTemplateTests
         // Starling accepts reasoning content on assistant history only; Roost must not swallow its rejection.
         var messages = new[] { new RoostChatMessage(RoostChatRole.User, "x", "reasoning") };
         Assert.Throws<NotSupportedException>(() => Qwen3RoostChatTemplate.Instance.Render(messages));
-        Assert.Throws<NotSupportedException>(() => QwenChatTemplate.Render(QwenChatProfile.Qwen3, [new QwenChatMessage(QwenChatRole.User, "x", "reasoning")]));
+        Assert.Throws<NotSupportedException>(() => QwenChatTemplate.Render(QwenChatCheckpoint.Qwen3, [new QwenChatMessage(QwenChatRole.User, "x", "reasoning")]));
     }
 }

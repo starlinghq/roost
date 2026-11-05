@@ -9,7 +9,7 @@ using Starlings.Runtime.Onnx;
 namespace Starlings.Roost.Server.Pooling;
 
 /// <summary>
-/// Starling's multilingual-e5-small embedder (<c>Starlings.Models.E5</c> 0.3.0) on ONNX Runtime's CPU execution provider, in
+/// Starling's multilingual-e5-small embedder (<c>Starlings.Models.E5</c> 0.5.0) on ONNX Runtime's CPU execution provider, in
 /// the server process (decision 30): 384-dimensional unit vectors, mean pooling, inputs truncated on the right to 512 tokens by
 /// the package. The caller adds e5's <c>"query: "</c> or <c>"passage: "</c> prefix; nothing is inserted.
 /// </summary>
@@ -65,7 +65,7 @@ public sealed class E5EmbeddingModel : IRoostEmbeddingModel, IDisposable
 }
 
 /// <summary>
-/// Starling's EmbeddingGemma 2 text embedder (<c>Starlings.Models.EmbeddingGemma2</c> 0.3.0) on ONNX Runtime's CPU execution
+/// Starling's EmbeddingGemma 2 text embedder (<c>Starlings.Models.EmbeddingGemma2</c> 0.5.0) on ONNX Runtime's CPU execution
 /// provider, in the server process (decision 30), at one Matryoshka dimension chosen when it is opened. Inputs are embedded with
 /// no prompt (<see cref="EmbeddingGemma2Prompt.None"/>); the caller adds a task prompt if it wants one. An input over the model's
 /// token limit is refused as <c>prompt_too_long</c>, never truncated (the package's behaviour).
@@ -128,7 +128,7 @@ public sealed class EmbeddingGemma2EmbeddingModel : IRoostEmbeddingModel, IDispo
         }
         catch (EmbeddingGemma2InputTooLongException e)
         {
-            throw PoolingErrors.TooLong(e.InputIndex, e.TokenCount, e.MaximumTokens);
+            throw PoolingErrors.TooLong(e.InputIndex, e.TokenCount, e.MaxTokens);
         }
     }
 
@@ -137,7 +137,7 @@ public sealed class EmbeddingGemma2EmbeddingModel : IRoostEmbeddingModel, IDispo
 }
 
 /// <summary>
-/// Starling's GLiNER2 entity extractor (<c>Starlings.Models.Gliner2</c> 0.3.0) on ONNX Runtime's CPU execution provider, in the
+/// Starling's GLiNER2 entity extractor (<c>Starlings.Models.Gliner2</c> 0.5.0) on ONNX Runtime's CPU execution provider, in the
 /// server process (decision 30): English text, one label set per call, at most 512 tokens per text with the schema prefix (a
 /// longer text is refused as <c>prompt_too_long</c>, never truncated). Starling's deployment requirement for this profile is
 /// <c>MALLOC_MMAP_THRESHOLD_=65536</c> in the process environment.

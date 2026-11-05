@@ -21,14 +21,6 @@
         "resolved": "6.0.0",
         "contentHash": "UcSjPsst+DfAdJGVDsu346FX0ci0ah+lw3WRtn18NUwEqRt70HaOQ7lI72vy3+1LxtqI3T5GWwV39rQSrCzAeg=="
       },
-      "Microsoft.ML.OnnxRuntimeGenAI.Managed": {
-        "type": "Transitive",
-        "resolved": "0.17.1",
-        "contentHash": "MIAOSt1TY4K96nGPZ1QLhEEH0XW7XmDTEwjDpxhaz+ruSnlkekaDsHmfvjXkcojQa6kgTA/SkNHkA7R849pERw==",
-        "dependencies": {
-          "Microsoft.Extensions.AI.Abstractions": "9.8.0"
-        }
-      },
       "Microsoft.Testing.Extensions.Telemetry": {
         "type": "Transitive",
         "resolved": "2.4.0",
@@ -140,61 +132,61 @@
       "starlings.roost.generation": {
         "type": "Project",
         "dependencies": {
-          "Starlings.Generation.OnnxGenAI": "[0.3.0, 0.3.0]",
-          "Starlings.Models.Qwen35": "[0.3.0, 0.3.0]",
-          "Starlings.Models.QwenChat": "[0.3.0, 0.3.0]",
-          "Starlings.Tokenizers": "[0.3.0, 0.3.0]"
+          "Starlings.Generation.Abstractions": "[0.5.0, 0.5.0]",
+          "Starlings.Models.Qwen35": "[0.5.0, 0.5.0]",
+          "Starlings.Models.QwenChat": "[0.5.0, 0.5.0]",
+          "Starlings.Tokenizers": "[0.3.4, 0.3.4]"
         }
       },
       "Microsoft.Extensions.AI.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[9.8.0, )",
-        "resolved": "9.8.0",
-        "contentHash": "0++t+lPqX5amr7Kgh+ZFm1C5hhzMmFc5Dhoc6siNZ4sPXxy0pLTFRk+4vHn0hZf7Xe8Y9OoqL2cL4oTdjt8STQ=="
+        "requested": "[10.10.1, )",
+        "resolved": "10.10.1",
+        "contentHash": "Kz6ezQfRb9x2TkIWyaXkVAfpvyoAlEDfC59klPrdr2XD5WM4HNw+PREAZ+Fo43GPldtX+E0i1aYzMFQ/zXYMLg=="
       },
       "Starlings.Acquisition": {
         "type": "CentralTransitive",
-        "requested": "[0.3.0, 0.3.0]",
-        "resolved": "0.3.0",
-        "contentHash": "8HHgiXgS+bbZsN/N2qmfeWSFS5Kk5Zbl77M4DfEfbluGPJUj5WPu4558k6m5SH3apj30t1fxU7QbFQq538CUAA=="
+        "requested": "[0.5.0, 0.5.0]",
+        "resolved": "0.5.0",
+        "contentHash": "uumCQFZdIGVadf/iUw3pFUaL2wuGIwwRT9eoAVMm3i8AZJrE8McgS5HZpspw209lmbo+FliyzxJICXyJemy9vg=="
       },
-      "Starlings.Generation.OnnxGenAI": {
+      "Starlings.Generation.Abstractions": {
         "type": "CentralTransitive",
-        "requested": "[0.3.0, 0.3.0]",
-        "resolved": "0.3.0",
-        "contentHash": "0juaWJVAMGFLCHLGmX/k/Wv1x4v93izxK8I7L3dcWqoD/1rVyBrHcm9roT6xTzILJ/GwkSi/ipCpFlk7Xpb9ew==",
+        "requested": "[0.5.0, 0.5.0]",
+        "resolved": "0.5.0",
+        "contentHash": "1N6l9VbAQS2iqftozTiOI7a/2T33Ic1RKNFP2EmagPuqGV2VfNS7K8wJncW/x41l/sf2Hw81JImLiE/ptWnRlQ==",
         "dependencies": {
-          "Microsoft.ML.OnnxRuntimeGenAI.Managed": "[0.17.1]",
-          "Starlings.Tokenizers": "[0.3.0]"
+          "Microsoft.Extensions.AI.Abstractions": "10.10.1",
+          "Starlings.Tokenizers": "[0.3.4]"
         }
       },
       "Starlings.Models.Qwen35": {
         "type": "CentralTransitive",
-        "requested": "[0.3.0, 0.3.0]",
-        "resolved": "0.3.0",
-        "contentHash": "TrdhyICuESdW5rjc3sun7lujkBouxHrZ9HhE6rpeY4hsUrxYI5iYxBer87HcnD1t5p8WYUm9JBDcWOq/0wNuEA==",
+        "requested": "[0.5.0, 0.5.0]",
+        "resolved": "0.5.0",
+        "contentHash": "GHRbMOWfA0tu4TcgJPBq2gGJLDeRuiIys/65OqL3gGrfpkUYiczqK0Cr+Ni/XmwSSqcXLfvc+Hgy/D2NUi0w2A==",
         "dependencies": {
-          "Starlings.Acquisition": "[0.3.0]",
-          "Starlings.Generation.OnnxGenAI": "[0.3.0]",
-          "Starlings.Tokenizers": "[0.3.0]"
+          "Starlings.Acquisition": "[0.5.0]",
+          "Starlings.Generation.Abstractions": "[0.5.0]",
+          "Starlings.Tokenizers": "[0.3.4]"
         }
       },
       "Starlings.Models.QwenChat": {
         "type": "CentralTransitive",
-        "requested": "[0.3.0, 0.3.0]",
-        "resolved": "0.3.0",
-        "contentHash": "JwN8Xw6oat3K3vXIZnquKKWH4uFmGt7M0DZQL3lT0m8P4udkg8jKZTCHahBb1/l8UvRARn2Yp5uj9O1jkQ2laQ==",
+        "requested": "[0.5.0, 0.5.0]",
+        "resolved": "0.5.0",
+        "contentHash": "yhBIA8FwbTAum931IQCGLvraod7f8VY5PpEWIgcczkQJHoqVcjmyCIrXq8+SqDX4qKIbXpNrRd0IExxyW3E7aw==",
         "dependencies": {
-          "Starlings.Acquisition": "[0.3.0]",
-          "Starlings.Generation.OnnxGenAI": "[0.3.0]",
-          "Starlings.Tokenizers": "[0.3.0]"
+          "Starlings.Acquisition": "[0.5.0]",
+          "Starlings.Generation.Abstractions": "[0.5.0]",
+          "Starlings.Tokenizers": "[0.3.4]"
         }
       },
       "Starlings.Tokenizers": {
         "type": "CentralTransitive",
-        "requested": "[0.3.0, 0.3.0]",
-        "resolved": "0.3.0",
-        "contentHash": "5VQxvrls4G1GQBsnJaHuMsgzGWGVDlUCQ4p3Z5/lAiMhTG4FZPZ4RbvGxegOtzqM/8kBVTMD8zvicspZyYlnTg=="
+        "requested": "[0.3.4, 0.3.4]",
+        "resolved": "0.3.4",
+        "contentHash": "YYBHbSofthVVprGN9ZTwbAvi8tjrGhWds1NPfN+szBx4CoJCrSxz65LUfX6lexUM5s3JHh9HuqzTA/jxPyp4TA=="
       }
     }
   }

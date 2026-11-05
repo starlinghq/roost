@@ -5,7 +5,7 @@ namespace Starlings.Roost.Generation.Tests;
 
 public sealed class IncrementalDetokenizerTests
 {
-    // Profile qwen35-bpe-chat of Starlings.Tokenizers 0.3.0 (asset sha256 and size from profiles/qwen35-bpe-chat.yaml).
+    // Profile qwen35-bpe-chat of Starlings.Tokenizers 0.3.4 (asset sha256 and size from profiles/qwen35-bpe-chat.yaml).
     private const string QwenTokenizerSha256 = "a5cd9732badce41de57e6efce8302930ded1c1188c5f81feb2bd6c24c4a1941f";
     private const string QwenTokenizerEnv = "ROOST_QWEN35_TOKENIZER_JSON";
 
@@ -102,7 +102,7 @@ public sealed class IncrementalDetokenizerTests
         var tokenizer = LoadTiny();
         var ids = tokenizer.Encode(Texts[6], false).Ids.ToArray();
         var ours = new RoostIncrementalDetokenizer(tokenizer, true);
-        var theirs = new Starlings.Generation.OnnxGenAI.IncrementalDetokenizer(tokenizer, true);
+        var theirs = new Starlings.Generation.IncrementalDetokenizer(tokenizer, true);
         foreach (var id in ids)
         {
             Assert.Equal(theirs.Push(id), ours.Push(id));

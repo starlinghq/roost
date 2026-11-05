@@ -28,7 +28,7 @@ flowchart LR
   kernels --> gpu["NVIDIA GPU"]
 ```
 
-[Starling](https://github.com/starlinghq/starling) works out the models. Roost runs on top of it and consumes Starling's published NuGet packages, pinned exactly, and nothing else (build plan section 2.2). ONNX Runtime may appear in host packages, for Starling's generation classes and pooling models, and never in the worker, which pins its own CUDA runtime and allocator.
+[Starling](https://github.com/starlinghq/starling) works out the models. Roost runs on top of it and consumes Starling's published NuGet packages, pinned exactly, and nothing else (build plan section 2.2). ONNX Runtime may appear in host packages, for Starling's pooling models, and never in the worker, which pins its own CUDA runtime and allocator.
 
 ## Status
 

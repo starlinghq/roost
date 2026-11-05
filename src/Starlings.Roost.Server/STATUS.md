@@ -38,13 +38,16 @@ nuget.org search API for Starling's packages):
 
 | Package | Version | Licence | Use here |
 | --- | --- | --- | --- |
-| `Starlings.Models.E5` (multilingual-e5-small, revision `614241f6`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings` |
-| `Starlings.Models.EmbeddingGemma2` (EmbeddingGemma 2, revision `914f7f89`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings`, text only |
-| `Starlings.Models.Gliner2` (gliner2-base-v1, revision `f9634218`) | 0.3.0, exact pin | MIT OR Apache-2.0 | `POST /v1/extract` |
+| `Starlings.Models.E5` (multilingual-e5-small, revision `614241f6`) | 0.5.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings` |
+| `Starlings.Models.EmbeddingGemma2` (EmbeddingGemma 2, revision `914f7f89`) | 0.5.0, exact pin | MIT OR Apache-2.0 | `POST /v1/embeddings`, text only |
+| `Starlings.Models.Gliner2` (gliner2-base-v1, revision `f9634218`) | 0.5.0, exact pin | MIT OR Apache-2.0 | `POST /v1/extract` |
 | A reranking model | none published | — | `POST /v1/rerank` answers `profile_unsupported` |
 | A classification model | none published (`Starlings.Models.Gliner2` lists classification as unsupported) | — | `POST /v1/classify` answers `profile_unsupported` |
 
-The three packages bring `Starlings.Runtime.Onnx` 0.3.0 and `Microsoft.ML.OnnxRuntime.Managed` 1.30.0; `Server` adds
+The `none published` rows are as of 2026-11-02. Starling has since published rerankers in `Starlings.Models.Bert` and GLiNER2
+text classification (both Experimental, 0.5.0); Roost pins and serves neither yet, so both routes stay unsupported.
+
+The three packages bring `Starlings.Runtime.Onnx` 0.5.0 and `Microsoft.ML.OnnxRuntime.Managed` 1.30.0; `Server` adds
 `Microsoft.ML.OnnxRuntime` 1.30.0 (the CPU natives, MIT, exact pin) so a configured model can run. ONNX Runtime is in `Server`'s
 closure only: `tools/check-roost-boundaries.py` passes, and no worker-side package references these packages (decision 30).
 The model weights are Starling's upstream models' own licences (stated in each package's README); none is in Git.

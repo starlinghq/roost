@@ -3,7 +3,7 @@
     <Description>Roost's host-side generation layer: chat templates and incremental detokenisation from Starling's published packages, and the stop-matching seam the engine calls. Host process only (decision 30).</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Starlings.Generation.OnnxGenAI" />
+    <PackageReference Include="Starlings.Generation.Abstractions" />
     <PackageReference Include="Starlings.Models.Qwen35" />
     <PackageReference Include="Starlings.Models.QwenChat" />
     <PackageReference Include="Starlings.Tokenizers" />

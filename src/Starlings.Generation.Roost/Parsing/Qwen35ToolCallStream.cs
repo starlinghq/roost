@@ -6,7 +6,7 @@ namespace Starlings.Generation.Roost.Parsing;
 
 /// <summary>
 /// The Qwen3.5 tool-call format through Starling's published <see cref="Qwen35ToolCallParser"/> (<c>Starlings.Models.Qwen35</c>
-/// 0.3.0): Roost maps the request's tools to Starling's and the parsed calls back. No parsing logic lives here. Starling's parser
+/// 0.5.0): Roost maps the request's tools to Starling's and the parsed calls back. No parsing logic lives here. Starling's parser
 /// runs with thinking off because <see cref="ThinkBlockParser"/> has already taken the reasoning out.
 /// </summary>
 internal sealed class Qwen35ToolCallStream : IToolCallStream

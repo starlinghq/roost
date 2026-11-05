@@ -528,7 +528,7 @@ public sealed class RoostChatClient : IChatClient, IAsyncDisposable
     }
 
     // One token's rows: the chosen token first, then the worker's alternatives, of which the request asked for `top`.
-    private static RoostTokenLogprob ToLogprob(ReadOnlySpan<TokenLogprob> rows, int top) =>
+    private static RoostTokenLogprob ToLogprob(ReadOnlySpan<Starlings.Roost.Requests.TokenLogprob> rows, int top) =>
         new(rows[0].TokenId, rows[0].Logprob, rows.Slice(1, Math.Min(top, rows.Length - 1)).ToArray());
 
     private static ChatFinishReason? MapFinish(FinishReason reason) => reason switch
