@@ -17,6 +17,7 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 - An oversized body, and text that is not valid Unicode, answer 4xx rather than a 500 and an error log, and a connection reset while sending a body is treated as a disconnect (#157).
 - A weights path over 4096 UTF-8 bytes is refused, and every shorter one now fits the plan buffer, so `POST /update_weights` no longer loses a healthy worker over its path (#157).
 - `roost serve` reports a corrupt `tokenizer.json`, or a listen address it can't bind, as an error and exit code 1 (#157).
+- A worker that exits during startup keeps its output: `ProcessWorkerTransport` reads the end of the worker's streams before it reports the failure, so the error no longer loses the lines that explain it (#158).
 
 ### Added
 

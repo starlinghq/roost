@@ -17,7 +17,7 @@ public sealed class TwoProcessStressTests
     {
         var steps = Env("ROOST_RING_STRESS_STEPS", 300_000UL);
         var seed = Env("ROOST_RING_STRESS_SEED", (ulong)Environment.TickCount64);
-        var outcome = StressHost.Run(steps, seed, TimeSpan.FromMinutes(Math.Max(2, steps / 1_000_000UL * 4)));
+        var outcome = StressHost.Run(steps, seed, TimeSpan.FromMinutes(2));
 
         Assert.Equal(steps, outcome.Steps);
         // Both rings must have hit full and empty, or the test did not exercise what it claims to.
