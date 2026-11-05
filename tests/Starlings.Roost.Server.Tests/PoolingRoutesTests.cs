@@ -274,7 +274,7 @@ public sealed class PoolingRoutesTests
     [Fact]
     public void E5RefusesTheFirstInputOverTheLimitNamingIt()
     {
-        static TokenLimitCheck Check(string text) => new(text.Length, 512, text.Length > 512);
+        static TokenLimitCheck Check(string text) => new(text.Length, 512, TokenCountIsLowerBound: false);
         string[] inputs = ["short", new string('a', 512), new string('a', 513), new string('a', 600)];
 
         var refused = Assert.Throws<RoostChatException>(() => E5EmbeddingModel.ThrowIfTooLong(inputs, Check, TestContext.Current.CancellationToken));

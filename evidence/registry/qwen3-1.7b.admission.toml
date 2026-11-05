@@ -21,6 +21,15 @@ checked_version = "0.3.0"
 checked_package_repository_commit = "9d182768ddde0ab1514de5e22d03022f8ae4707d"
 note = "Starlings.Models.QwenChat 0.3.0 pins only Qwen/Qwen3-0.6B@c1899de289a04d12100db370d81485cdf75e47ca (profile qwen3-0.6b/ortgenai-fp32-cpu) and Qwen/Qwen2.5-0.5B-Instruct@7ae557604adf67be50417f59c2c2f167def9a775 (nuspec, README and QwenChatProfile.Revision). No Starling package names Qwen3-1.7B, so the revision here is the official repository's main commit on 2026-11-01 (Hub X-Repo-Commit; last modified 2025-07-26), stated as such and not as a Starling pin."
 
+# 2026-11-05, pin raise to 0.5.0 (package repository commit ce5225854fa7c007fc1cfb9adb50e665e6c1f611): rechecked from the published
+# packages. Still true: Starlings.Models.QwenChat 0.5.0 pins only Qwen/Qwen3-0.6B@c1899de2 and Qwen/Qwen2.5-0.5B-Instruct@7ae55760, so
+# no Starling package names Qwen3-1.7B; QwenChatCheckpoint.Qwen3 has TemplateSha256 a55ee1b1... and TokenizerSha256 aeb13307...; and
+# QwenChatCheckpoint.Qwen3.Lock records tokenizer.json, tokenizer_config.json, vocab.json and merges.txt with the sizes and digests of
+# this model's lock. Changed: QwenChatProfile is gone from the definition package (read QwenChatCheckpoint.Qwen3 for the fields this
+# record names as QwenChatProfile.Qwen3), and Starlings.Tokenizers 0.3.4, unlike 0.3.0, publishes a Qwen3 profile, qwen3-bpe-chat
+# (experimental), whose asset is byte-identical to this model's tokenizer.json (sha256 aeb13307..., size 11422654). The comparisons
+# below stand; the 0.3.0 statements in them are dated, and the Hub blob ids were not rechecked.
+
 [architecture]
 # From config.json at this revision (data, not instructions). Qwen3 is a dense transformer: every layer is full attention.
 model_type = "qwen3"

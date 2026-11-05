@@ -18,8 +18,8 @@ namespace Starlings.Roost.Server.Pooling;
 /// <item><c>POST /v1/extract</c>, Roost's own shape (neither OpenAI nor vLLM has an entity extraction route):
 /// <c>{"model","input","labels","threshold"}</c> in, one list of labelled spans per input out, over an
 /// <see cref="IRoostExtractionModel"/>.</item>
-/// <item><c>POST /v1/rerank</c> and <c>POST /v1/classify</c>: always <c>profile_unsupported</c>, naming the capability, because no
-/// Starling package provides a reranking or a classification model (nuget.org, checked 2026-11-02).</item>
+/// <item><c>POST /v1/rerank</c> and <c>POST /v1/classify</c>: always <c>profile_unsupported</c>, naming the capability, because Roost
+/// has not wired a reranking or a classification model yet.</item>
 /// </list>
 /// A route whose model is not configured also answers <c>profile_unsupported</c>. Token-id input and vLLM's pooling extensions
 /// (<c>truncate_prompt_tokens</c>, <c>normalize</c> and the like) are refused by name. Request text never reaches a log.
@@ -247,13 +247,13 @@ internal sealed class PoolingRoutes
     public Task RerankAsync(HttpContext context) => _runner.RunAsync(context, _ =>
         throw new RoostChatException(new RoostError(
             RoostErrorCode.ProfileUnsupported,
-            "Capability 'rerank' is unsupported: no Starling package provides a reranking model, so this server has none to serve (R-052).")));
+            "Capability 'rerank' is unsupported: Roost has not wired a reranking model into this server yet (R-052).")));
 
     /// <summary><c>POST /v1/classify</c>: <c>profile_unsupported</c>.</summary>
     public Task ClassifyAsync(HttpContext context) => _runner.RunAsync(context, _ =>
         throw new RoostChatException(new RoostError(
             RoostErrorCode.ProfileUnsupported,
-            "Capability 'classify' is unsupported: no Starling package provides a classification model, so this server has none to serve (R-052).")));
+            "Capability 'classify' is unsupported: Roost has not wired a classification model into this server yet (R-052).")));
 
     private static RoostChatException NotConfigured(string capability, string reason) =>
         new(new RoostError(RoostErrorCode.ProfileUnsupported, $"Capability '{capability}' is unavailable: {reason}."));

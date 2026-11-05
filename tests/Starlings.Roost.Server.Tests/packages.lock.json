@@ -70,14 +70,6 @@
         "resolved": "5.0.0",
         "contentHash": "dDoKi0PnDz31yAyETfRntsLArTlVAVzUzCIvvEDsDsucrl33Dl8pIJG06ePTJTI3tGpeyHS9Cq7Foc/s4EeKcg=="
       },
-      "Starlings.Models.Abstractions": {
-        "type": "Transitive",
-        "resolved": "0.5.0",
-        "contentHash": "zuH6/QfgUzjlSoSoQmlIxgB/y/SP9Ya7kxZRaiwnsCZAn3M2MKqhVEBEx/DZjl7MfXCIRmSmI7jZKroBgfYo9Q==",
-        "dependencies": {
-          "Starlings.Acquisition": "[0.5.0]"
-        }
-      },
       "Starlings.Runtime.Onnx": {
         "type": "Transitive",
         "resolved": "0.5.0",
@@ -169,6 +161,7 @@
         "dependencies": {
           "Microsoft.ML.OnnxRuntime": "[1.30.0, 1.30.0]",
           "Starlings.Generation.Roost": "[0.0.0-dev, )",
+          "Starlings.Models.Abstractions": "[0.5.0, 0.5.0]",
           "Starlings.Models.E5": "[0.5.0, 0.5.0]",
           "Starlings.Models.EmbeddingGemma2": "[0.5.0, 0.5.0]",
           "Starlings.Models.Gliner2": "[0.5.0, 0.5.0]",
@@ -301,6 +294,15 @@
         "dependencies": {
           "Microsoft.Extensions.AI.Abstractions": "10.10.1",
           "Starlings.Tokenizers": "[0.3.4]"
+        }
+      },
+      "Starlings.Models.Abstractions": {
+        "type": "CentralTransitive",
+        "requested": "[0.5.0, 0.5.0]",
+        "resolved": "0.5.0",
+        "contentHash": "zuH6/QfgUzjlSoSoQmlIxgB/y/SP9Ya7kxZRaiwnsCZAn3M2MKqhVEBEx/DZjl7MfXCIRmSmI7jZKroBgfYo9Q==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.5.0]"
         }
       },
       "Starlings.Models.E5": {

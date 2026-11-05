@@ -37,7 +37,9 @@
   <ItemGroup>
     <!-- R-052: Starling's ONNX pooling packages behind the server's /v1/embeddings and /v1/extract routes (MIT OR Apache-2.0,
          exact pins, plan 2.2). They bring Microsoft.ML.OnnxRuntime.Managed 1.30.0 through Starlings.Runtime.Onnx: Server only
-         (decision 30). No Starling package for reranking or classification exists on nuget.org (checked 2026-11-02). -->
+         (decision 30). Roost has not wired Starling's rerankers (Starlings.Models.Bert, not pinned) or GLiNER2 text classification. -->
+    <!-- Direct pin because Starlings.Models.TokenLimitCheck is used directly by Starlings.Roost.Server (E5EmbeddingModel). No ONNX Runtime. -->
+    <PackageVersion Include="Starlings.Models.Abstractions" Version="[0.5.0]" />
     <PackageVersion Include="Starlings.Models.E5" Version="[0.5.0]" />
     <PackageVersion Include="Starlings.Models.EmbeddingGemma2" Version="[0.5.0]" />
     <PackageVersion Include="Starlings.Models.Gliner2" Version="[0.5.0]" />

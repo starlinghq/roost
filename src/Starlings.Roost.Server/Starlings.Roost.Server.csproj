@@ -18,6 +18,7 @@
     <!-- `roost doctor` (R-046) reads the kernel manifest (C5) itself: a host package names no Starlings.Roost.Kernels code (decision 21). -->
     <PackageReference Include="Tomlyn" />
     <!-- The pooling routes (R-052): Starling's ONNX packages and ONNX Runtime's CPU natives. ONNX Runtime enters Server only (decision 30). -->
+    <PackageReference Include="Starlings.Models.Abstractions" />
     <PackageReference Include="Starlings.Models.E5" />
     <PackageReference Include="Starlings.Models.EmbeddingGemma2" />
     <PackageReference Include="Starlings.Models.Gliner2" />

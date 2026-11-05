@@ -23,6 +23,15 @@
         "resolved": "10.0.14",
         "contentHash": "YlTamXppEQls6DYWt7RdUuwWDb0lyw/vXCaGeQpLCpsLmfwGuCkOz/vIGgMTV7ECsJcavkCOkxZXv9s8rdAHkQ=="
       },
+      "Starlings.Models.Abstractions": {
+        "type": "Direct",
+        "requested": "[0.5.0, 0.5.0]",
+        "resolved": "0.5.0",
+        "contentHash": "zuH6/QfgUzjlSoSoQmlIxgB/y/SP9Ya7kxZRaiwnsCZAn3M2MKqhVEBEx/DZjl7MfXCIRmSmI7jZKroBgfYo9Q==",
+        "dependencies": {
+          "Starlings.Acquisition": "[0.5.0]"
+        }
+      },
       "Starlings.Models.E5": {
         "type": "Direct",
         "requested": "[0.5.0, 0.5.0]",
@@ -71,14 +80,6 @@
         "contentHash": "KHW+vp+i4Mdf6RhIsMvurTVepafXHjg8/VQ0o6sa2wEK0KzV/4iEoRTUvsymcRP+XPAM/r6kZCaTADdV6Xn4RA==",
         "dependencies": {
           "System.Numerics.Tensors": "9.0.0"
-        }
-      },
-      "Starlings.Models.Abstractions": {
-        "type": "Transitive",
-        "resolved": "0.5.0",
-        "contentHash": "zuH6/QfgUzjlSoSoQmlIxgB/y/SP9Ya7kxZRaiwnsCZAn3M2MKqhVEBEx/DZjl7MfXCIRmSmI7jZKroBgfYo9Q==",
-        "dependencies": {
-          "Starlings.Acquisition": "[0.5.0]"
         }
       },
       "Starlings.Runtime.Onnx": {
