@@ -58,10 +58,9 @@ def test_qwen3_1_7b_lock_files_and_digests():
     for f in files:
         assert f["size"] > 0
         assert SHA256.match(f["sha256"]), f["path"]
-    # Only the weights may carry Hub-reported digests; every other file was hashed locally.
-    hub_only = {f["path"] for f in files if f.get("digest_source") == "hub-lfs"}
-    assert hub_only == {p for p in paths if p.endswith(".safetensors")}
-    assert len(hub_only) == 2
+    # Every file has been hashed locally, the weights since R-015, so no digest is only the Hub's word.
+    assert not any("digest_source" in f for f in files)
+    assert len([p for p in paths if p.endswith(".safetensors")]) == 2
 
 
 def test_qwen3_1_7b_admission_agrees_with_lock():

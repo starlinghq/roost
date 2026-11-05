@@ -1,6 +1,7 @@
 # Admission record for Qwen3-1.7B (R-015 groundwork, stream B3; build plan decision 15: the second profile, M1).
 # Proposed, not admitted: the revision is not pinned by any Starling package (see [source.pinned_by]), and
-# fixtures (R-015, as R-014), tolerances (maintainer) and the model definition (R-021 follow-up) are open.
+# fixtures are proposed (evidence/proposals/r015-fixtures.md); adopting them, tolerances (maintainer) and the model
+# definition (R-021 follow-up) are open.
 # Admission is not qualification: no profile manifest exists and no capability is claimed.
 admission_version = 1
 model = "qwen3-1.7b"
@@ -76,18 +77,18 @@ status = "not needed"
 reason = "tokenizer.json, tokenizer_config.json and the chat template are byte-identical to what QwenChat publishes for its Qwen3 profile; there is no difference to raise. Whether Starling should add a Qwen3-1.7B profile is a separate request, not a defect."
 
 [evidence]
-# What this record does and does not rest on (2026-11-01).
+# What this record does and does not rest on (2026-11-01; the weights' digests added 2026-11-05).
 evidenced = [
   "revision: Hub API sha and X-Repo-Commit of main for Qwen/Qwen3-1.7B",
   "sizes of all 12 files: Hub tree API at the revision",
   "SHA-256 of the 10 non-weight files: computed from downloads at the revision",
   "SHA-256 of tokenizer.json: computed, equal to the Hub LFS digest",
+  "SHA-256 of the two safetensors files: computed for R-015 on 2026-11-05, equal to the Hub LFS digests",
   "tokenizer and template digests equal to Starlings.Models.QwenChat 0.3.0 QwenChatProfile.Qwen3 (reflection)",
 ]
 not_evidenced = [
-  "SHA-256 of the two safetensors files: Hub LFS digests only, not downloaded or hashed here (R-024 verifies as read)",
   "any Starling pin of this revision (none exists)",
-  "reference fixtures (greedy outputs, step-0 logits, per-layer captures): R-015, as R-014",
+  "adopted reference fixtures: proposed in evidence/proposals/r015-fixtures.md, not adopted",
   "binding tolerances and the near-tie bound: set by the maintainer",
   "the Roost model definition for Qwen3-1.7B (R-021 follow-up in M1)",
   "any run on any GPU or SM",
