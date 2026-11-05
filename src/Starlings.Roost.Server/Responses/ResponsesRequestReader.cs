@@ -33,6 +33,13 @@ internal sealed record ResponsesRequest(
 /// </summary>
 internal static class ResponsesRequestReader
 {
+    // Stored and echoed for the store's lifetime and never tokenised, so no other limit applies to these fields. The
+    // metadata limits are the ones the OpenAI API documents; the limit on user is Roost's own.
+    private const int MaxMetadataPairs = 16;
+    private const int MaxMetadataKeyChars = 64;
+    private const int MaxMetadataValueChars = 512;
+    private const int MaxUserChars = 256;
+
     public static ResponsesRequest Read(JsonElement body)
     {
         var options = new ChatOptions();
@@ -81,6 +88,11 @@ internal static class ResponsesRequestReader
                     break;
                 case "user":
                     user = StringValue(v, name);
+                    if (user.Length > MaxUserChars)
+                    {
+                        throw Refuse(name, Inv($"user is limited to {MaxUserChars} characters."));
+                    }
+
                     break;
                 case "safety_identifier":
                 case "prompt_cache_key":
@@ -303,7 +315,13 @@ internal static class ResponsesRequestReader
 
         foreach (var field in Fields(v, "metadata"))
         {
-            metadata.Add(new(field.Name, StringValue(field.Value, "metadata." + field.Name)));
+            var value = StringValue(field.Value, "metadata." + field.Name);
+            if (metadata.Count == MaxMetadataPairs || field.Name.Length > MaxMetadataKeyChars || value.Length > MaxMetadataValueChars)
+            {
+                throw Refuse("metadata", Inv($"metadata is limited to {MaxMetadataPairs} pairs, with keys of up to {MaxMetadataKeyChars} and values of up to {MaxMetadataValueChars} characters."));
+            }
+
+            metadata.Add(new(field.Name, value));
         }
     }
 

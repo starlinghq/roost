@@ -1,10 +1,12 @@
 using System.Buffers;
 using System.Collections.Immutable;
 using System.Net;
+using System.Text;
 using System.Text.Json;
 using Starlings.Generation.Roost;
 using Starlings.Roost.Requests;
 using Starlings.Roost.Server.OpenAi;
+using Starlings.Roost.Server.Routing;
 using Starlings.Roost.WorkerHost;
 
 namespace Starlings.Roost.Server;
@@ -12,9 +14,13 @@ namespace Starlings.Roost.Server;
 /// <summary>
 /// The sleep-mode routes (R-100), named as vLLM names them: <c>POST /sleep?level=1|2</c>, <c>POST /wake_up</c>,
 /// <c>GET /is_sleeping</c> and <c>POST /update_weights</c>. Mapped only with <see cref="RoostServerOptions.EnableSleepMode"/>
-/// (<c>--enable-sleep-mode</c>), and they answer only requests from a loopback address, whatever the listen address: they
+/// (<c>--enable-sleep-mode</c>), and they answer only requests from this machine (a loopback peer and a <c>Host</c> that names it), whatever the listen address: they
 /// release and replace the model, and the server has no authentication. Failures use the one error body.
 /// </summary>
+/// <remarks>
+/// The check can't tell who is behind a proxy or an SSH forward on this machine that sends a loopback <c>Host</c>: every
+/// client of such a forwarder is local. Don't put one in front of a server with these routes enabled.
+/// </remarks>
 /// <remarks>
 /// Level 1 releases the KV cache and keeps the weights; level 2 also releases the weights, which the wake streams again from
 /// their locked file. (vLLM's level 1 offloads weights to host memory, which Roost does not do.) <c>/update_weights</c> takes
@@ -41,8 +47,12 @@ internal sealed class AdminRoutes
         app.MapPost("/update_weights", (RequestDelegate)UpdateWeightsAsync);
     }
 
-    /// <summary>Whether a request comes from this machine: a loopback remote address. A request with no remote address (no socket) is not.</summary>
-    internal static bool IsLoopback(HttpContext context) => context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address);
+    /// <summary>
+    /// Whether a request comes from this machine: a loopback remote address, and a <c>Host</c> that names this machine, so a
+    /// page rebound to loopback is refused on any listener. A request with no remote address is not local.
+    /// </summary>
+    internal static bool IsLoopback(HttpContext context) =>
+        context.Connection.RemoteIpAddress is { } address && IPAddress.IsLoopback(address) && RequestOriginGuard.NamesThisMachine(context.Request.Host);
 
     private Task SleepAsync(HttpContext context) => RunAsync(context, async ct =>
     {
@@ -70,7 +80,7 @@ internal sealed class AdminRoutes
     private Task UpdateWeightsAsync(HttpContext context) => RunAsync(context, async ct =>
     {
         WeightSource source;
-        using (var body = await ReadBodyAsync(context, ct).ConfigureAwait(false))
+        using (var body = await RouteRunner.ReadBodyAsync(context, ct).ConfigureAwait(false))
         {
             source = ReadSource(body.RootElement);
         }
@@ -132,6 +142,11 @@ internal sealed class AdminRoutes
             throw Invalid("path must be an absolute path to the safetensors file, as the worker sees it.", "path");
         }
 
+        if (Encoding.UTF8.GetByteCount(path) > ControlMessages.MaxPathBytes)
+        {
+            throw Invalid(FormattableString.Invariant($"path is limited to {ControlMessages.MaxPathBytes} UTF-8 bytes."), "path");
+        }
+
         if (size is null)
         {
             throw Invalid("size (the locked size in bytes) is required.", "size");
@@ -147,23 +162,11 @@ internal sealed class AdminRoutes
 
     private static RoostChatException Invalid(string message, string? param) => new(new RoostError(RoostErrorCode.InvalidOption, message, param));
 
-    private static async Task<JsonDocument> ReadBodyAsync(HttpContext context, CancellationToken ct)
-    {
-        try
-        {
-            return await JsonDocument.ParseAsync(context.Request.Body, default, ct).ConfigureAwait(false);
-        }
-        catch (JsonException e)
-        {
-            throw new RoostChatException(new RoostError(RoostErrorCode.InvalidOption, "The request body is not valid JSON: " + e.Message, null), e);
-        }
-    }
-
     private static Task RefuseAsync(HttpContext context) => ErrorBodies.WriteAsync(
         context.Response,
         StatusCodes.Status403Forbidden,
         "forbidden",
-        $"{context.Request.Path} answers loopback clients only: it releases or replaces the model, and the server has no authentication.");
+        $"{context.Request.Path} answers clients on this machine only: it releases or replaces the model, and the server has no authentication.");
 
     private static async Task WriteAsync(HttpContext context, ArrayBufferWriter<byte> buffer)
     {
@@ -189,6 +192,15 @@ internal sealed class AdminRoutes
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
             return; // the client disconnected; an operation already sent to the worker completes there
+        }
+        catch (IOException) when (ct.IsCancellationRequested)
+        {
+            return; // the client reset the connection while sending the body
+        }
+        catch (BadHttpRequestException e) when (!context.Response.HasStarted)
+        {
+            await ErrorBodies.WriteAsync(context.Response, e.StatusCode, "bad_request", "The request body could not be read.").ConfigureAwait(false);
+            return;
         }
         catch (RoostChatException e) when (!context.Response.HasStarted)
         {

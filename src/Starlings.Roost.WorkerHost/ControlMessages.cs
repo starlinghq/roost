@@ -50,6 +50,9 @@ public static class ControlMessages
     /// <summary>Longest error text written, in UTF-8 bytes; longer text is cut.</summary>
     public const int MaxErrorTextBytes = 1024;
 
+    /// <summary>The plan buffer a worker needs so that any valid control message fits, whatever size its step plans are.</summary>
+    public static int MinPlanBufferBytes => Align(MessageSize) + MaxPathBytes;
+
     private static int MessageSize => Unsafe.SizeOf<ControlMessage>();
 
     private static int ResultSize => Unsafe.SizeOf<ControlResult>();

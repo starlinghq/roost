@@ -98,7 +98,7 @@ internal sealed class WorkerDriver : IGenerationBackend
         _weightsDigest = profile.WeightsDigest;
         _transport = createTransport();
         _planner = CreatePlanner(profile, _async, out _blocks);
-        long planBytes = PlanBuffer.SizeFor(profile.MaxSequencesPerStep, profile.MaxTokensPerStep, profile.StateGroups.Length, profile.AttentionBlocks, profile.StopTokenIds.Length);
+        long planBytes = Math.Max(PlanBuffer.SizeFor(profile.MaxSequencesPerStep, profile.MaxTokensPerStep, profile.StateGroups.Length, profile.AttentionBlocks, profile.StopTokenIds.Length), ControlMessages.MinPlanBufferBytes);
         _launch = new WorkerLaunch
         {
             DeviceOrdinal = worker.DeviceOrdinal,

@@ -12,6 +12,11 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 
 ### Fixed
 
+- `Starlings.Roost.Server` refuses web pages by `Host` and `Origin`, with `--allowed-host` for other names. On a loopback listener a page in a local browser can no longer drive the server or read its answers through DNS rebinding; a non-loopback listener needs `--allowed-host` for the same protection (#157).
+- `POST /v1/responses`: `metadata` and `user` are limited, and a stored response drops its prompt when it ends, so finished responses can no longer fill the store with data no route returns (#157). The body-size limit still applies while a response is running.
+- An oversized body, and text that is not valid Unicode, answer 4xx rather than a 500 and an error log (#157).
+- A weights path over 4096 UTF-8 bytes is refused, and every shorter one now fits the plan buffer, so `POST /update_weights` no longer loses a healthy worker over its path (#157).
+- `roost serve` reports a corrupt `tokenizer.json`, or a listen address it can't bind, as an error and exit code 1, and `roost doctor` reports the tokenizer as a failed check (#157).
 - A worker that exits during startup keeps its output: `ProcessWorkerTransport` reads the end of the worker's streams before it reports the failure, so the error no longer loses the lines that explain it (#158).
 
 ### Added
