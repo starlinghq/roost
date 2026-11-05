@@ -44,7 +44,7 @@ Between 4 and 2 threads, on the same host and the same day:
 - step-0 log-probabilities differ by at most 4.2e-05;
 - hidden states differ by at most 8.5e-03 absolute (always at `forward0/layer.27`), and at most 2.2e-06 in relative L2 over a tensor.
 
-So a SHA-256 here identifies one exact set of bytes. It proves the fixture was not altered; it does not prove a rerun was correct. A rerun reproduces these digests only with 4 threads, and that is shown on this host only (Intel Core i7-5820K). Another CPU or a rebuilt torch wheel was not tried, and could well differ. Gates should fetch by digest and then compare numerically; they should not expect a fresh run to hash the same. The thread count is not in `environment.json`, so it is recorded here and in the TOML.
+So a SHA-256 here identifies one exact set of bytes. It proves the fixture was not altered; it does not prove a rerun was correct. A rerun with 4 threads reproduced these digests on this host (Intel Core i7-5820K), and one with 2 threads did not; other thread counts, another CPU and a rebuilt torch wheel were not tried, and could well differ. The run's logs and `environment.json` don't record the thread count, so the counts here come from the commands below. Gates should fetch by digest and then compare numerically; they should not expect a fresh run to hash the same. The thread count is not in `environment.json`, so it is recorded here and in the TOML.
 
 The differences above are an observed noise floor for this reference between thread counts. They are not a proposed tolerance.
 
@@ -106,7 +106,7 @@ HF_HUB_OFFLINE=1 OMP_NUM_THREADS=4 MKL_NUM_THREADS=4 uv run --project evidence/p
     --revision 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e --out $E/ref --capture-layers --state-forwards 0
 ```
 
-Steps 1 to 3 used small programs that are not in Git, because no Roost command does them for this model. They are kept with the data in `R-015/scripts/`, and the calls that matter are stated above. Input digests: `prompts.jsonl` `4f5a2a24bd1d15c6050f872b2252cec3d12e0abc4aeedc98220fa40fccd5e924`, `rendered.jsonl` `3d142296e8b816cac116479a3a24829e9ec412ef803ef2574c68d207c1f735e3`.
+Steps 1 to 3 used small programs that are not in Git, because no Roost command does them for this model. They are kept with the data in `R-015/scripts/`, and the calls that matter are stated above. `prompts/` there references Roost's projects by relative path, so it builds only from a directory two levels below a checkout. Input digests: `prompts.jsonl` `4f5a2a24bd1d15c6050f872b2252cec3d12e0abc4aeedc98220fa40fccd5e924`, `rendered.jsonl` `3d142296e8b816cac116479a3a24829e9ec412ef803ef2574c68d207c1f735e3`.
 
 Every file was then checked: `load_reference` and `load_reference_vectors` accept the run, `parse_capture` accepts every capture, each capture's digest, prompt ids and decode ids match `reference.jsonl`, and no value is non-finite.
 

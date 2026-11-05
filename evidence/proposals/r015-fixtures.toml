@@ -12,7 +12,7 @@ item = "R-015"
 [reference]
 runner = "roost-evidence reference-run --capture-layers --state-forwards 0 (evidence/pipeline, R-010/R-011)"
 numerics = "transformers 5.20.1, torch 2.9.1+cpu, safetensors 0.8.0, float32, CPU, OMP_NUM_THREADS=4 and MKL_NUM_THREADS=4"
-reproducibility = "byte-identical across two runs at 4 threads on one host; at 2 threads the data files differ (greedy ids equal, step-0 max abs 4.2e-05, hidden rel L2 2.2e-06), so a digest identifies these bytes and a rerun at another thread count will not hash the same"
+reproducibility = "byte-identical across two runs at 4 threads on one host; at 2 threads the data files differ (greedy ids equal, step-0 max abs 4.2e-05, hidden rel L2 2.2e-06), so a digest identifies these bytes, and a rerun at another thread count may not hash the same (only 2 and 4 were tried)"
 checkpoint = "Qwen/Qwen3-1.7B at 70d244cc86ccca08cf5af4e1e306ecf908b1ad5e"
 checkpoint_lock = "evidence/registry/qwen3-1.7b.lock.toml"
 checkpoint_check = "all 12 locked files present, none extra, each equal to the lock by size and computed SHA-256 before use, including both safetensors shards"
