@@ -14,6 +14,7 @@ namespace Starlings.Roost.WorkerHost;
 public sealed class ProcessWorkerTransport : WorkerTransportBase
 {
     private const int TailBytes = 8192;
+    private static readonly TimeSpan OutputDrainTimeout = TimeSpan.FromSeconds(2);
 
     private readonly WorkerCommand _command;
     private readonly StringBuilder _tail = new();
@@ -126,10 +127,34 @@ public sealed class ProcessWorkerTransport : WorkerTransportBase
     /// <inheritdoc />
     protected override string Diagnostics()
     {
+        var exit = string.Empty;
+        if (_process is { HasExited: true } process)
+        {
+            DrainOutput(process);
+            exit = $" (exit code {process.ExitCode})";
+        }
+
         lock (_tail)
         {
-            var exit = _process is { HasExited: true } p ? $" (exit code {p.ExitCode})" : string.Empty;
             return $"Worker output{exit}: {_tail}";
+        }
+    }
+
+    /// <summary>
+    /// Waits for the end of the worker's streams: the exit can be seen before the last lines reach <see cref="Append"/>,
+    /// and those lines are usually the reason it exited (#158). Holds no lock, because <see cref="Append"/> takes
+    /// <c>_tail</c>. The wait is bounded because a process the worker started can keep a stream open after it exits.
+    /// </summary>
+    private static void DrainOutput(Process process)
+    {
+        using var timeout = new CancellationTokenSource(OutputDrainTimeout);
+        try
+        {
+            process.WaitForExitAsync(timeout.Token).GetAwaiter().GetResult();
+        }
+        catch (OperationCanceledException)
+        {
+            // Report what has arrived.
         }
     }
 

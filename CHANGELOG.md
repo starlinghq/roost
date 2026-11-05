@@ -10,6 +10,10 @@ Nothing has been released yet. The first release is Preview 1 (build plan R-062)
 
 - SDK 10.0.403 and .NET 10.0.14, for CVE-2026-111497 (GHSA-p3jp-9v83-76w9, a Brotli decoder out-of-bounds write). `roost` and `roost-worker` compile with `Microsoft.DotNet.ILCompiler`, and NuGet audit refused 10.0.12 at restore.
 
+### Fixed
+
+- A worker that exits during startup keeps its output: `ProcessWorkerTransport` reads the end of the worker's streams before it reports the failure, so the error no longer loses the lines that explain it (#158).
+
 ### Added
 
 - roost-v1 onboarding plugin (R-055, partial), a tool in `evidence/pipeline/onboarding/` that never ships in the runtime: `roost-onboard inspect` maps a Hugging Face config.json to the C3 op vocabulary and C4 state groups (full, sliding-window, Gated DeltaNet recurrent, MLA latent, optional expert group) and reports a typed JSON verdict (`composes`, `composes_pending_reference` or `missing_ops`) with a status per op (`available`, `declared`, `gap`, `missing`), the load transforms a definition needs and its assumptions; `roost-onboard validate-recipe` checks recipes against the strict roost-v1 recipe schema and the rules beyond it. First recipe `evidence/recipes/qwen3.5-0.8b.json` (the existing profile, `experimental`). Tested on hand-written configs of Qwen3, Qwen3.5, Qwen3-MoE, Gemma 3 and DeepSeek-V3; capabilities `untested`. Onboarding three unseen models (M3 gate, R-057) is open.
