@@ -8,13 +8,27 @@ substring of a word (catching it inside a longer identifier or address) or as tw
 is decoded too: every base64 run of 16 or more characters and every even-length hex run of 32 or more is decoded
 (and gunzipped when it is gzip data) and scanned, so a term inside embedded bytes (a test model, a fixture) is found.
 
-    tools/check-boundary.py            # tracked files, file names, and commits reachable from HEAD
+    tools/check-boundary.py                  # tracked files and names; commits since the recorded baseline
+    tools/check-boundary.py --range A..B     # tracked files and names; the commits of a revision range (a PR)
+    tools/check-boundary.py --all-history    # tracked files and names; every commit reachable from HEAD
+
+Files and file names are always scanned in full (the tree at HEAD). Commits (author, committer and message) are
+scanned from a baseline on, because a published commit cannot be corrected without rewriting history. The baseline
+is the full commit SHA in `tools/check-boundary.baseline` (lines starting with `#` are comments): the commits
+reachable from HEAD but not from the baseline are scanned. The baseline commit and its ancestors were scanned when it
+was recorded; only the maintainer moves it. Without that file every commit reachable from HEAD is scanned, as before
+the baseline existed. `--range` scans the commits `git log` lists for the range instead (for a pull request,
+`<base sha>..<head sha>`). The baseline commit must be in the clone (a full-history checkout); a missing baseline or
+an invalid range is an error (exit 2), never a pass.
+
+Exit 0 when nothing is found, 1 when a term is found, 2 on bad arguments or a baseline the clone does not hold.
 
 Add a term by appending the SHA-256 of its lowercase alphanumeric form under its length.
 """
 
 from __future__ import annotations
 
+import argparse
 import base64
 import binascii
 import gzip
@@ -36,6 +50,12 @@ FORBIDDEN = {
 WORD = re.compile(rb"[a-z0-9]+")
 BASE64 = re.compile(rb"[A-Za-z0-9+/]{16,}={0,2}")
 HEX = re.compile(rb"(?<![0-9A-Fa-f])[0-9A-Fa-f]{32,}(?![0-9A-Fa-f])")
+BASELINE_FILE = Path("tools/check-boundary.baseline")
+FULL_SHA = re.compile(r"^[0-9a-f]{40}$")
+
+
+class UsageError(Exception):
+    """Bad arguments, a malformed baseline file, or a baseline or range the clone cannot resolve."""
 
 
 def _decoded(data: bytes) -> list[bytes]:
@@ -93,8 +113,82 @@ def git(root: Path, *args: str) -> bytes:
     ).stdout
 
 
-def main() -> int:
-    root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").decode().strip())
+def _git_ok(root: Path, *args: str) -> bool:
+    return (
+        subprocess.run(
+            ["git", *args], cwd=root, capture_output=True, check=False
+        ).returncode
+        == 0
+    )
+
+
+def read_baseline(root: Path) -> str | None:
+    """The recorded baseline commit, or None when the repository records none."""
+    path = root / BASELINE_FILE
+    if not path.is_file():
+        return None
+    entries = [
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    ]
+    if len(entries) != 1 or not FULL_SHA.match(entries[0]):
+        raise UsageError(
+            f"{BASELINE_FILE.as_posix()} must hold exactly one full 40-hex commit SHA (and # comments)"
+        )
+    return entries[0]
+
+
+def commit_selection(
+    root: Path, revision_range: str | None, all_history: bool
+) -> tuple[list[str], str]:
+    """The `git log` revision arguments of the commits to scan, and a description for the report."""
+    if not _git_ok(root, "rev-parse", "--verify", "-q", "HEAD"):
+        return [], "no commits (no HEAD)"
+    if revision_range is not None:
+        if not revision_range or revision_range.startswith("-"):
+            raise UsageError(
+                f"--range must be a revision range, not {revision_range!r}"
+            )
+        if not _git_ok(root, "rev-list", "--quiet", "--end-of-options", revision_range):
+            raise UsageError(
+                f"--range {revision_range!r} does not resolve in this clone"
+            )
+        return [revision_range], f"the commits in {revision_range}"
+    baseline = None if all_history else read_baseline(root)
+    if baseline is None:
+        return ["HEAD"], "the commits reachable from HEAD"
+    if not _git_ok(root, "cat-file", "-e", f"{baseline}^{{commit}}"):
+        raise UsageError(
+            f"baseline commit {baseline} ({BASELINE_FILE.as_posix()}) is not in this clone: check out the full "
+            "history (actions/checkout fetch-depth: 0) or pass --range"
+        )
+    return [f"{baseline}..HEAD"], f"the commits since baseline {baseline[:12]}"
+
+
+def scan_commits(root: Path, revisions: list[str]) -> list[str]:
+    """Problems in the author, committer and message of the commits `git log` lists for the revisions."""
+    if not revisions:
+        return []
+    log = git(
+        root,
+        "log",
+        "--format=%H%x00%an <%ae>%x00%cn <%ce>%x00%B%x01",
+        "--end-of-options",
+        *revisions,
+    )
+    problems = []
+    for entry in log.split(b"\x01"):
+        fields = entry.strip(b"\n").split(b"\x00")
+        if len(fields) == 4 and find(b"\n".join(fields[1:])):
+            problems.append(
+                f"commit {fields[0][:12].decode()}: author, committer or message"
+            )
+    return problems
+
+
+def scan_files(root: Path) -> tuple[int, list[str]]:
+    """The number of tracked files, and the problems in their names and contents."""
     problems: list[str] = []
     files = [p for p in git(root, "ls-files", "-z").split(b"\0") if p]
     for raw in files:
@@ -111,34 +205,40 @@ def main() -> int:
             problems.append(f"{name}:{line}")
         if any(find(payload) for payload in _decoded(data)):
             problems.append(f"{name}: inside embedded base64 or hex data")
-    has_head = (
-        subprocess.run(
-            ["git", "rev-parse", "--verify", "-q", "HEAD"],
-            cwd=root,
-            capture_output=True,
-            check=False,
-        ).returncode
-        == 0
+    return len(files), problems
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Boundary check of tracked files, file names and commits."
     )
-    log = (
-        git(root, "log", "--format=%H%x00%an <%ae>%x00%cn <%ce>%x00%B%x01")
-        if has_head
-        else b""
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument(
+        "--range",
+        dest="revision_range",
+        metavar="A..B",
+        help="scan the commits of this revision range instead of those since the baseline",
     )
-    for entry in log.split(b"\x01"):
-        fields = entry.strip(b"\n").split(b"\x00")
-        if len(fields) == 4 and find(b"\n".join(fields[1:])):
-            problems.append(
-                f"commit {fields[0][:12].decode()}: author, committer or message"
-            )
+    which.add_argument(
+        "--all-history",
+        action="store_true",
+        help="scan every commit reachable from HEAD, ignoring the baseline",
+    )
+    args = parser.parse_args(argv)
+    root = Path(git(Path.cwd(), "rev-parse", "--show-toplevel").decode().strip())
+    try:
+        revisions, scope = commit_selection(root, args.revision_range, args.all_history)
+    except UsageError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    count, problems = scan_files(root)
+    problems += scan_commits(root, revisions)
     if problems:
         print("Boundary check failed: a forbidden term appears in", file=sys.stderr)
         for problem in problems:
             print(f"  {problem}", file=sys.stderr)
         return 1
-    print(
-        f"ok:   {len(files)} tracked files, their names, and the commits reachable from HEAD are clean"
-    )
+    print(f"ok:   {count} tracked files, their names, and {scope} are clean")
     return 0
 
 

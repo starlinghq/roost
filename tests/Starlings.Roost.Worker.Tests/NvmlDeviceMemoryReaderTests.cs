@@ -185,7 +185,8 @@ public sealed class NvmlDeviceMemoryReaderTests
         var nvml = new FakeNvml { InitStatus = NvmlReturn.LibraryNotFound };
         using var reader = NvmlDeviceMemoryReader.ForIndex(0, nvml);
         using var source = new PolledDeviceMemorySource(reader, new PolledDeviceMemorySourceOptions { Period = TimeSpan.FromHours(1) });
-        Assert.True(source.Refresh() || source.Reads > 0);
+        // Refresh answers false while the timer's first read runs, and Reads counts it only when it ends.
+        Assert.True(SpinWait.SpinUntil(() => source.Refresh() || source.Reads > 0, TimeSpan.FromSeconds(30)));
         Assert.False(source.TryRead(out _));
         Assert.Equal(DeviceMemoryReadStatus.LibraryMissing, source.Current.Status);
     }
