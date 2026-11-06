@@ -16,6 +16,6 @@ The kernel pins above are the ones in `kernels/manifest.toml`, which the CMake b
 in this repository. `kernels/tools/check_provenance.py` fails a pin or patch-set change that does not also change this file
 and `THIRD-PARTY-NOTICES.md`. Digests of the built libraries are in the manifest; the libraries are release assets.
 
-cuBLASLt is not a source Roost adopts: the kernel library links `libcublasLt.so.13` of the installed CUDA toolkit (13.6.0.2 with CUDA 13.3.73 on the development host; its digest and the Gemm algorithms pinned for it are in `kernels/manifest.toml`, `external_libraries` and `gemm_algos`). Its licence is the CUDA toolkit EULA; whether the library may be redistributed is decision 5's licence review.
+cuBLASLt is not a source Roost adopts: the kernel library links `libcublasLt.so.13` of the installed CUDA toolkit (13.8.0.4 with CUDA 13.4.92 on the development host; its digest and the Gemm algorithms pinned for it are in `kernels/manifest.toml`, `external_libraries` and `gemm_algos`). Its licence is the CUDA toolkit EULA; whether the library may be redistributed is decision 5's licence review.
 
 The llguidance pin is the one in `native/roost-grammar/Cargo.toml` and `Cargo.lock` (decision 22), the revision spike S10 measured (`docs/m0/roost-s10-llguidance-abi.md`). The built `roost_grammar` library is a release asset; nothing built is committed.

@@ -75,13 +75,14 @@ license = "MIT"
 files = [{ path = "fla/**", spdx = "MIT" }]
 
 # Vendor libraries the kernel library links and does not redistribute: cuBLASLt from the CUDA toolkit (S2). The digest is the
-# development host's libcublasLt.so.13.6.0.2 (CUDA 13.3.73); the Gemm algorithms pinned below are valid for it. The licence is the
+# development host's libcublasLt.so.13.8.0.4 (CUDA 13.4.92); the Gemm algorithms pinned below were re-observed on it (#155,
+# kernels/results/r155-ops-gemm-sm86.log: the same five ids as on 13.6.0.2) and conformance passed with them. The licence is the
 # CUDA toolkit EULA; its redistribution terms belong to the decision 5 licence review and are not asserted here.
 [[external_libraries]]
 name = "cublaslt"
-version = "13.6.0.2"
-sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
-bytes = 516598272
+version = "13.8.0.4"
+sha256 = "d3b51f2253ba58f0a7f299b883bc6b4f3a27f81701c9ab15accb3bd770a91669"
+bytes = 545528240
 license = "NVIDIA CUDA Toolkit EULA"
 
 # Residual is the registered stub of R-016: a correct but unoptimised op that proves build, registration and run.
@@ -401,7 +402,7 @@ algo_id = 21
 split_k = 5
 tile = 15
 stages = 18
-library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+library_sha256 = "d3b51f2253ba58f0a7f299b883bc6b4f3a27f81701c9ab15accb3bd770a91669"
 
 [[ops.variants.gemm_algos]]
 n = 4096
@@ -412,7 +413,7 @@ algo_id = 6
 split_k = 1
 tile = 15
 stages = 17
-library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+library_sha256 = "d3b51f2253ba58f0a7f299b883bc6b4f3a27f81701c9ab15accb3bd770a91669"
 
 [[ops.variants.gemm_algos]]
 n = 7168
@@ -423,7 +424,7 @@ algo_id = 6
 split_k = 1
 tile = 18
 stages = 15
-library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+library_sha256 = "d3b51f2253ba58f0a7f299b883bc6b4f3a27f81701c9ab15accb3bd770a91669"
 
 [[ops.variants.gemm_algos]]
 n = 1024
@@ -434,7 +435,7 @@ algo_id = 21
 split_k = 9
 tile = 20
 stages = 11
-library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+library_sha256 = "d3b51f2253ba58f0a7f299b883bc6b4f3a27f81701c9ab15accb3bd770a91669"
 
 [[ops.variants.gemm_algos]]
 n = 512
@@ -445,7 +446,7 @@ algo_id = 21
 split_k = 8
 tile = 11
 stages = 20
-library_sha256 = "93c275af70b6d39fbd9b78cbc925ad9a9a0a81189aaec1521a951119ebe72da3"
+library_sha256 = "d3b51f2253ba58f0a7f299b883bc6b4f3a27f81701c9ab15accb3bd770a91669"
 
 # BEGIN binaries gemm-cublaslt
 [[ops.variants.binaries]]
