@@ -17,7 +17,7 @@ public class ManifestAndNamesTests
         Assert.Equal("13.4", m.Cuda);
         Assert.Equal(13, m.CudaMajor);
         Assert.Contains(m.Sms, s => s is { Arch: 86, Status: SmStatus.Experimental });
-        Assert.Contains(m.Sms, s => s is { Arch: 89, Status: SmStatus.Untested });
+        Assert.Contains(m.Sms, s => s is { Arch: 89, Status: SmStatus.Experimental });
         var stub = Assert.Single(m.Variants, v => v.Id == "residual-stub");
         Assert.Equal(OpId.Residual, stub.Op);
         Assert.Equal(VariantTraits.GraphCapturable | VariantTraits.Deterministic | VariantTraits.BatchInvariant, stub.Flags);

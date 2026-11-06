@@ -417,6 +417,7 @@ public sealed class DoctorTests
         Assert.Equal("580", manifest.MinDriver);
         Assert.Equal([80, 86, 89, 90, 100, 120], manifest.SmStatuses.Keys);
         Assert.Equal("experimental", manifest.SmStatuses[86]);
+        Assert.Equal("experimental", manifest.SmStatuses[89]);
         Assert.DoesNotContain("supported", manifest.SmStatuses.Values); // nothing is supported before R-026
         Assert.All(manifest.LibraryDigests.Values, digests => Assert.Single(digests)); // one library per SM holds every variant
     }

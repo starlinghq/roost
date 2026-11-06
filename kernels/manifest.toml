@@ -28,7 +28,8 @@ evidence = "kernels/results/r017-ops-sm86.log"
 
 [[sm]]
 arch = 89
-status = "untested"
+status = "experimental"
+evidence = "tests/Starlings.Roost.Conformance/results/r155-r019-cuda-sm89.out"
 
 [[sm]]
 arch = 90
