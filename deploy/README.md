@@ -30,6 +30,8 @@ accepts any `Host`, so a web page can reach it through DNS rebinding.
 The build checks itself: `sha256sum --check` over the staged files, then `roost doctor --no-gpu`, which compares each kernel
 library's SHA-256 with the manifest's. Either failure fails the build.
 
+**The base image is behind the manifest.** `kernels/manifest.toml` now pins cuBLASLt 13.8.0.4 and the libraries are built with CUDA 13.4, so the image below, with cuBLASLt 13.6.0.2, is out of date and has not run these libraries. Raising it is tracked on #167.
+
 **Base image.** `nvidia/cuda:13.3.1-runtime-ubuntu24.04@sha256:63da350831208559df18c7b8f3e0d5d1c984eaa815cdde690aacd6606cd0cb11`,
 the tag's multi-platform index digest as the Docker Hub registry returned it on 2026-11-02 (`Docker-Content-Digest` of
 `GET /v2/nvidia/cuda/manifests/13.3.1-runtime-ubuntu24.04`). Its linux/amd64 image config sets `CUDA_VERSION=13.3.1` and

@@ -208,6 +208,23 @@ internal static unsafe class DecodeGpu
             {
                 failures++;
             }
+
+            // Contract version 5 and the grammar slot: the eager worker does not do these yet (#155), so it refuses them.
+            var sampledInput = PlanWriter.WriteWithInput(203, 202, 2, new TestSequence(1, [SharedLayout.PendingTokenId], 5, [0], 0) { SampledInput = true });
+            outcome = executor.Execute(sampledInput, resultBuffer);
+            Console.WriteLine($"plan with a sampled-input row: {outcome.Fault}, code {outcome.ErrorCode} ({(PlanRejection)outcome.ErrorCode})");
+            if (outcome.Fault != FaultClass.Recoverable || (PlanRejection)outcome.ErrorCode != PlanRejection.Unsupported)
+            {
+                failures++;
+            }
+
+            var grammar = PlanWriter.Write(204, 2, new TestSequence(1, [760], 0, [0], 0) { GrammarSlot = 0 });
+            outcome = executor.Execute(grammar, resultBuffer);
+            Console.WriteLine($"plan with grammar_slot 0: {outcome.Fault}, code {outcome.ErrorCode} ({(PlanRejection)outcome.ErrorCode})");
+            if (outcome.Fault != FaultClass.Recoverable || (PlanRejection)outcome.ErrorCode != PlanRejection.Unsupported)
+            {
+                failures++;
+            }
         }
 
         Console.WriteLine("variants chosen: " + string.Join(", ", worker.Session.ChosenVariants.OrderBy(static v => v.Op).Select(static v => $"{v.Op}={v.Variant}")));

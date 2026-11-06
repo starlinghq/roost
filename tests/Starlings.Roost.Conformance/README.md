@@ -337,10 +337,18 @@ other case has utilisation 0. Log: `results/r080-moe-cpu-full.out`.
     runs, so the manifest names one build). That path is a worktree that will not exist once this branch is merged, so the digests
     reproduce only by rebuilding there; the release pipeline (R-060) replaces them.
 - The goldens file is not uploaded as a release asset (no release is made here) and CI does not fetch it; the real-goldens test is skipped there.
-- Only SM 86 and SM 89 have hardware evidence; other SMs stay `untested`. The manifest still lists SM 89 `untested`: setting it `experimental` with this evidence is the maintainer's (or stream C's) call, and `ManifestAndNamesTests` (stream F) asserts the current value.
+- Only SM 86 and SM 89 have hardware evidence; other SMs stay `untested`. SM 89 is `experimental` since #155, on the rerun below.
 - Argmax, Sample, GeluAndMul and the fused ops have no GPU variant in this library, so they have no cases. RopeScaled, the MoE ops and
   the quantisation ops have CPU-half cases but no GPU variant, and the MoE ops have no upstream golden (above).
 - No `graph` case: capturing a graph is not a conformance property here; the R-034 harness replays the graph-capturable hybrid ops once.
 - The suite does not run real Qwen3.5-0.8B weights (R-017's harness does); it uses seeded random data of the model's shapes.
 - CI timing of the Conformance assembly in Release: the CPU half took 67 to 135 s locally in Release (`dotnet test` reported 77 s for 51
   tests and 67 s for 52), not measured on the CI runners.
+
+## Rerun at ABI 1.3 (#155, 2026-11-05)
+
+`results/r155-r019-cuda-sm86.out` and `results/r155-r019-cuda-sm89.out`, with their `.results.json`: full profile with goldens, commit
+`ccbdd1f`, CUDA 13.4.92, cuBLASLt 13.8.0.4, driver 615.78.08. Both SMs: 578 passed, 0 failed, 0 errors, 62 refused as registered, 1 not run.
+The earlier runs refused 43. The 19 more are PagedAttention windowed cases added to the catalogue since, refused as the library registers
+no window support, and the case not run is `RopeScaled`, which has no variant. The goldens were regenerated, and the file's SHA-256 equals
+`goldens.lock.json` (`99b07260...`). The sanitizers were not repeated on this build.

@@ -42,3 +42,18 @@ near-tie rule (#141) applies to exactly this kind of flip.
 
 The manifest lists SM 89 as `untested`, and `run.sh` passes `--allow-untested`. The times in the logs come from a shared machine and are
 not throughput figures.
+
+## Rerun at ABI 1.3 (#155, 2026-11-05)
+
+The harness starts the packaged `roost-worker`, unzipped from `dotnet pack src/Starlings.Roost.Worker.Runtime` (version `0.0.1-r155`), with the
+manifest shipped beside it. The commands are `run.sh`'s, with lease stream F. Libraries `9e26f00c...` (SM 86) and `0edb2b2e...` (SM 89), CUDA
+13.4.92, cuBLASLt 13.8.0.4, driver 615.78.08.
+
+| File | Manifest | `--allow-untested` | Result |
+| --- | --- | --- | --- |
+| `r036-chat-r155-sm86-roost-worker.log` | `ccb3c9c4...` | yes | PASS |
+| `r036-chat-r155-sm89-roost-worker.log` | `ccb3c9c4...` | yes | PASS |
+| `r036-chat-r155-final-sm86-roost-worker.log` | `fac25890...` (final, repacked) | no | PASS |
+| `r036-chat-r155-final-sm89-roost-worker.log` | `fac25890...` (final, repacked) | no | PASS |
+
+Finishes and usage equal the October runs (`stop`, `stop`, `length`; 24+2, 19+23, 17+48), and so does the one-word cross-SM difference.

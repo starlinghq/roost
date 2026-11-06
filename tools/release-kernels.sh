@@ -17,7 +17,7 @@
 #    before the check, so a first build at a new path still gives the libraries to record (docs/releasing.md).
 #
 # Why not the CI container: the AOT step needs the GPU inside the build, and this runner's Docker has no NVIDIA
-# container runtime (runc only), so the build runs on the runner's own toolchain (CUDA 13.3, the host gcc). Digests
+# container runtime (runc only), so the build runs on the runner's own toolchain (CUDA 13.4, the host gcc). Digests
 # depend on the checkout path and the work directory (nvcc hashes source paths into symbol names; kernels/README.md),
 # so they reproduce only from the same paths: the workflow uses $GITHUB_WORKSPACE and $RUNNER_TEMP/roost-kernels.
 #

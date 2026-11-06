@@ -6,6 +6,7 @@
 #   docker build -f deploy/Dockerfile -t roost:local artifacts/image-context
 #   docker run --rm --gpus all roost:local                       # runs `roost doctor`
 #
+# Out of date: kernels/manifest.toml now pins cuBLASLt 13.8.0.4 (deploy/README.md).
 # Base: nvidia/cuda:13.3.1-runtime-ubuntu24.04, pinned by its multi-platform index digest, read from the Docker Hub registry API
 # on 2026-11-02 (GET registry-1.docker.io/v2/nvidia/cuda/manifests/13.3.1-runtime-ubuntu24.04, Docker-Content-Digest header).
 # Its linux/amd64 config sets CUDA_VERSION=13.3.1 and NV_LIBCUBLAS_VERSION=13.6.0.2-1: the cuBLASLt version kernels/manifest.toml

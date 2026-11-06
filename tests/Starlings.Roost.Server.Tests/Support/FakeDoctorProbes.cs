@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Starlings.Generation.Roost;
+using Starlings.Roost.Abi;
 using Starlings.Roost.Server.Doctor;
 
 namespace Starlings.Roost.Server.Tests.Support;
@@ -65,10 +66,10 @@ internal sealed class FakeDoctorProbes : IDoctorProbes
     public static string Sha(byte[] bytes) => Convert.ToHexStringLower(SHA256.HashData(bytes));
 
     /// <summary>A C5-shaped manifest with the given SM statuses and one variant whose per-SM library digests are those of the given bytes.</summary>
-    public static string Manifest(IReadOnlyDictionary<int, string> sms, IReadOnlyDictionary<int, byte[]> libraries, string minDriver = "580")
+    public static string Manifest(IReadOnlyDictionary<int, string> sms, IReadOnlyDictionary<int, byte[]> libraries, string minDriver = "580", int abiMajor = KernelAbi.Major, int abiMinor = KernelAbi.Minor)
     {
         var text = new StringBuilder();
-        text.Append("schema_version = 1\ncontract_version = 3\n\n[abi]\nmajor = 1\nminor = 2\n\n");
+        text.Append("schema_version = 1\ncontract_version = 6\n\n[abi]\nmajor = ").Append(abiMajor).Append("\nminor = ").Append(abiMinor).Append("\n\n");
         text.Append("[toolkit]\ncuda = \"13.3\"\nmin_driver = \"").Append(minDriver).Append("\"\n\n");
         foreach (var (arch, status) in sms)
         {

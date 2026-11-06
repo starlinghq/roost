@@ -16,3 +16,5 @@ The absolute paths in `run.json` and `scripts/*.sh` are on the development host,
 - the GPU captures under `gpu-sm86/` and `gpu-sm89/` beside them.
 
 The runs used the R-034 kernel libraries named in `run.json`, not the rebuilt libraries of #137 (see the proposal's caveats).
+
+The rerun of 2026-11-05 on the ABI 1.3 libraries (#155) is in `r155/`. Its captures are byte-identical to these.

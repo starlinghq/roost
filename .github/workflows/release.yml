@@ -97,7 +97,7 @@ jobs:
   # The only self-hosted job: it needs the RTX 3090 (Triton AOT) and a fixed checkout path (the digests depend on it). It
   # holds no secret and no write token; its output is checked against the committed manifest by the hosted jobs. Not in
   # the pinned CUDA container of ci.yml: the AOT step needs the GPU during the build, and the runner's Docker has no
-  # NVIDIA container runtime, so it uses the runner's CUDA 13.3 toolchain (tools/release-kernels.sh says why).
+  # NVIDIA container runtime, so it uses the runner's CUDA 13.4 toolchain (tools/release-kernels.sh says why).
   kernels:
     name: kernel libraries (every SM, Triton AOT, digests)
     needs: candidate

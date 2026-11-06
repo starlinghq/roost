@@ -36,8 +36,8 @@ Status per SM, as `kernels/manifest.toml` lists it. Every SM library is built fr
 | Capability | Status | Evidence | Notes |
 | --- | --- | --- | --- |
 | SM 80 | `untested` | `kernels/manifest.toml` | Built only (digest in the manifest); never run. |
-| SM 86 | `experimental` | `kernels/results/r017-ops-sm86.log`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/sanitizer-sm86/` | RTX 3090, driver 610.57. Conformance 578 passed, 0 failed, 43 refused as registered (R-019). FA2 prefill racecheck hazards (see `PagedAttention`). |
-| SM 89 | `untested` | `tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out`<br>`tests/Starlings.Roost.Conformance/results/sanitizer-sm89/`<br>`tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-sm89.log` | RTX 4060 Ti. The manifest says `untested`, so the loader needs `AllowUntested`; every SM 89 run passed it. The evidence equals SM 86's (conformance 578 passed, 0 failed): see [Disagreements](#disagreements). |
+| SM 86 | `experimental` | `kernels/results/r017-ops-sm86.log`<br>`tests/Starlings.Roost.Conformance/results/r155-r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm86.out`<br>`tests/Starlings.Roost.Conformance/results/sanitizer-sm86/` | RTX 3090, driver 610.57. Conformance 578 passed, 0 failed, 43 refused as registered (R-019). Rerun at ABI 1.3 on driver 615.78, CUDA 13.4 (#155): 578 passed, 0 failed, 62 refused as registered, 1 not run. FA2 prefill racecheck hazards (see `PagedAttention`). |
+| SM 89 | `experimental` | `tests/Starlings.Roost.Conformance/results/r155-r019-cuda-sm89.out`<br>`tests/Starlings.Roost.Conformance/results/r019-cuda-sm89.out`<br>`tests/Starlings.Roost.Conformance/results/sanitizer-sm89/`<br>`tests/Starlings.Roost.Worker.Tests.Cuda/results/r025-eager-decode-r155-sm89.log`<br>`tests/Starlings.Generation.Roost.Tests.Cuda/results/r036-chat-r155-final-sm89-roost-worker.log` | RTX 4060 Ti. Rerun at ABI 1.3 on driver 615.78, CUDA 13.4 (#155): conformance 578 passed, 0 failed, 62 refused as registered, 1 not run. The sanitizers were not repeated on this build. FA2 prefill racecheck hazards (see `PagedAttention`). |
 | SM 90 | `untested` | `kernels/manifest.toml` | Built only; never run. |
 | SM 100 | `untested` | `kernels/manifest.toml` | Built only; never run. |
 | SM 120 | `untested` | `kernels/manifest.toml` | Built only; never run. |
@@ -284,16 +284,11 @@ SM 89 and are listed as evidence, but the code keeps these rows `untested` until
 
 Reported, not changed here: each is owned by another stream or needs a maintainer decision.
 
-1. **SM 89 in `kernels/manifest.toml` is `untested` although it has the same evidence as SM 86.** R-019 conformance (578 passed, 0
-   failed), the sanitizer runs, R-025 greedy decode and R-036 chat all ran on the RTX 4060 Ti, with `AllowUntested`. By the rule
-   "SM 86/89 evidence is experimental" SM 89 would be `experimental`. Setting it is stream C's change (the manifest) and stream F's
-   (`ManifestAndNamesTests` asserts the current value); `tests/Starlings.Roost.Conformance/README.md` already leaves it to the
-   maintainer. This table follows the manifest.
-2. **`RoostCapabilities` keeps `chat`, `streaming`, `cancellation`, `usage`, `greedy_decoding`, `stop_token_ids` and
+1. **`RoostCapabilities` keeps `chat`, `streaming`, `cancellation`, `usage`, `greedy_decoding`, `stop_token_ids` and
    `max_output_tokens` at `untested` although the R-036 GPU smoke runs passed on SM 86 and SM 89.** The class documents that they
    move to `experimental` when they pass the Preview 1 drill (R-062), so this is by design, but it is stricter than the hardware-
    evidence rule used elsewhere in this table (for example the worker process transport is `experimental` on the same runs). Stream H
    owns the class; this table follows it.
-3. **The kernel manifest (C5) has no per-variant status.** The FA2 prefill path of `paged-attention-flashinfer-fa2` is
+2. **The kernel manifest (C5) has no per-variant status.** The FA2 prefill path of `paged-attention-flashinfer-fa2` is
    experimental by the R-019 ruling, but only `kernels/README.md`, the conformance README and this table say so; nothing machine
    readable does. A `status` field on a manifest variant (or a C1 flag) is a contract change for stream A at R-026.

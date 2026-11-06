@@ -5,7 +5,7 @@ CUDA C++ behind the C1 ABI (`kernels/include/roost_kernels.h`, frozen). One shar
 Each library exports `roost_abi_version`, `roost_last_error`, `roost_register` (the registration table),
 `roost_context_create` and `roost_context_destroy`. The table holds the `residual-stub` variant of `Residual` (R-016: a
 correct, unoptimised op that proves the build, registration and run path), the ten M0 attention-side variants of R-017
-(next section) and the hybrid ops of R-034 (Hybrid ops), all against C1 ABI 1.2 (contract version 3).
+(next section) and the hybrid ops of R-034 (Hybrid ops), all against C1 ABI 1.3 (contract version 6).
 
 ## Files
 
@@ -257,14 +257,14 @@ at one path. Nothing shows a path-independent build. R-017 measured 576 differin
 `_INTERNAL_<hash>_<file>_cu_...` symbol names whose hash derives from the source path (they come from `cuda::std` entities in the headers, so a
 named namespace in our sources does not remove them), and R-034's reviewer saw the same kind of difference on the AOT library (12 bytes in every
 nvcc-compiled object, while the generated C++ and all 7 Triton cubins were identical). The manifest digests therefore reproduce only from the
-checkout path they were recorded at (since R-019 `/home/mark/Projects/roost/.claude/worktrees/agent-aaf3b503d96fd1902`, a worktree that
-will not outlive the R-019 branch; before it `/home/mark/Projects/roost-wave4/R-034`); making the build path independent (for example a fixed build path
+checkout path they were recorded at (since #155 `/home/mark/Projects/roost/.claude/worktrees/agent-a92a4858a64443e53`, a worktree that
+will not outlive that branch); making the build path independent (for example a fixed build path
 in CI) is open and belongs to the release pipeline (R-060). Linking needs no line info (it records source mtimes), no build id and no local
-symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.3.73, gcc 16.2.1).
+symbols (nvcc names them after the process id). The digest also depends on the toolchain (CUDA 13.4.92, gcc 16.2.1).
 
-The manifest's six digests are the R-019 build (one source with the `gemm.cu` refusal, one path, two cmake invocations: SM 86 and 89,
-then SM 80, 90, 100 and 120), each with the AOT cubins, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and
-other bytes. SM 86 and SM 89 have run on hardware. SM 89 has run the R-019 conformance suite and compute-sanitizer (RTX 4060 Ti, `tests/Starlings.Roost.Conformance/results/`); the manifest still lists it `untested` until the maintainer sets its status. The CI job reports, and does not fail on, a difference from the digests; the release workflow
+The manifest's six digests are the #155 build (one source at C1 ABI 1.3, one path, one cmake invocation, CUDA 13.4.92), each with the AOT
+cubins, so they include the GatedDeltaRule cubins; the GPU-less CI build has no GatedDeltaRule and other bytes. A second build was not
+compared on this toolchain. The digests change again at release, whose path differs. SM 86 and SM 89 have run on hardware. The CI job reports, and does not fail on, a difference from the digests; the release workflow
 (R-060) records the digests of the pinned container build and publishes the libraries.
 
 ## Not done
@@ -286,8 +286,8 @@ other bytes. SM 86 and SM 89 have run on hardware. SM 89 has run the R-019 confo
 - MSVC build: an unmet R-016 criterion that needs a maintainer decision (self-hosted Windows runner with CUDA, a CUDA install step, or relaxing the criterion and amending the plan).
 - The `kernels` CI job has not run in GitHub Actions; its script passes locally for all six SMs outside the container.
 - The patch-set check has never run on a real patch (there are none yet).
-- `toolkit.min_driver = "580"` is unverified; only driver 610.57 was tested.
-- SM 80, 90, 100 and 120 are built and registration-checked only; none ran on hardware. SM 89 ran R-019's suite and sanitizers (manifest status unchanged, `untested`).
+- `toolkit.min_driver = "580"` is unverified; only drivers 610.57 and 615.78 were tested.
+- SM 80, 90, 100 and 120 are built and registration-checked only; none ran on hardware. SM 89 ran R-019's suite and sanitizers and is `experimental` since #155; the sanitizers were not repeated on the #155 build, on either SM.
 
 ## Gemm: epilogues with C or bias are refused (R-019)
 

@@ -255,7 +255,7 @@ internal static unsafe class DecodeCpu
     /// <summary>One sequence on CpuOps: host arena, plan region and state pools, the same plan writer and forward as the worker.</summary>
     private sealed class HostRun : IDisposable
     {
-        private readonly Qwen35EagerModel _model;
+        private readonly IEagerModel _model;
         private readonly EagerLayout _layout;
         private readonly HostModelWeights _weights;
         private readonly int _maxTokens;
@@ -264,7 +264,7 @@ internal static unsafe class DecodeCpu
         private readonly DeviceSpan _plan;
         private readonly DeviceSpan[] _state;
 
-        public HostRun(Qwen35EagerModel model, EagerLayout layout, HostModelWeights weights, int maxTokens)
+        public HostRun(IEagerModel model, EagerLayout layout, HostModelWeights weights, int maxTokens)
         {
             _model = model;
             _layout = layout;

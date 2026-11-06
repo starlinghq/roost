@@ -38,3 +38,15 @@ The manifest lists SM 89 as `untested`; `run-eager.sh` always passes `--allow-un
 **Caveats.** The prompt steps go through the FA2 prefill path of `paged-attention-flashinfer-fa2`, which R-019 marks experimental:
 racecheck hazards and batch-composition dependence, so it is not proven benign. Forward times in the logs are eager and synchronised,
 on a shared machine, and are not throughput figures.
+
+## Rerun at ABI 1.3 (#155, 2026-11-05)
+
+`r025-eager-decode-r155-sm86.log`, `r025-eager-decode-r155-sm89.log`, `r025-cpu-compare-r155-sm86.txt` and `r025-cpu-compare-r155-sm89.txt`:
+the same command with labels `r155-sm86` and `r155-sm89`. Libraries `9e26f00c...` and `0edb2b2e...`, built with CUDA 13.4.92, running on
+cuBLASLt 13.8.0.4 and driver 615.78.08. The manifest at the run has sha256 `ccb3c9c4...`; the final one differs only in the cuBLASLt pins and
+SM 89's status.
+
+Both GPU phases pass. The harness now also sends a sampled-input row and a `grammar_slot` of 0: both are refused with code 1003
+(`Unsupported`), as the out-of-vocabulary and sampling plans are with 1002 and 1003.
+
+The `r155` runs used `--allow-untested` too, so their logs show SM 89 as `Untested`: its move to `experimental` came after them.

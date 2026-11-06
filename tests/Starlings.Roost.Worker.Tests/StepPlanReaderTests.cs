@@ -114,6 +114,14 @@ public sealed class StepPlanReaderTests
     }
 
     [Fact]
+    public void RefusesAGrammarSlotAndNamesGrammar()
+    {
+        var e = Assert.Throws<PlanRejectedException>(() => StepPlanReader.Parse(Plan(new TestSequence(1, [1], 0, [0], 0) { GrammarSlot = 0 }), Limits));
+        Assert.Equal(PlanRejection.Unsupported, e.Reason);
+        Assert.Contains("grammar", e.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void RefusesWorkItDoesNotDo()
     {
         var bytes = Plan(new TestSequence(1, [1], 0, [0], 0));

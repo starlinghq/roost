@@ -22,6 +22,9 @@ public sealed record TestSequence(ulong Handle, int[] Tokens, int PositionOffset
     /// <summary>Tokens the request may still emit.</summary>
     public uint MaxNewTokensLeft { get; init; }
 
+    /// <summary>The row's grammar slot; -1 when it has none.</summary>
+    public int GrammarSlot { get; init; } = -1;
+
     /// <summary>Sampling record (greedy by default).</summary>
     public PlanSampling Sampling { get; init; } = new() { Temperature = 0f, TopP = 1f, TopK = 0, RepetitionPenalty = 1f, Flags = SamplingOptions.Greedy };
 }
@@ -67,7 +70,7 @@ public static class PlanWriter
                 GroupBlocksStart = (uint)(row * groupCount),
                 RecurrentSlot = s.RecurrentSlot,
                 LoraSlot = -1,
-                GrammarSlot = -1,
+                GrammarSlot = s.GrammarSlot,
                 EmbeddingSlot = -1,
                 SamplingIndex = (uint)sampling.Count,
                 Flags = (s.PositionOffset == 0 ? SequenceOptions.Prefill : SequenceOptions.None) | (s.Sample ? SequenceOptions.Sample : SequenceOptions.None)
