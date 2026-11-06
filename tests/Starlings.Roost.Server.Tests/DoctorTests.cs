@@ -1,4 +1,5 @@
 using System.Text;
+using Starlings.Roost.Abi;
 using Starlings.Roost.Server.Doctor;
 using Starlings.Roost.Server.Tests.Support;
 
@@ -192,6 +193,25 @@ public sealed class DoctorTests
         Assert.Equal(DoctorStatus.Fail, report[DoctorChecks.Manifest].Status);
         Assert.Contains("C5 schema", report[DoctorChecks.Manifest].Detail, StringComparison.Ordinal);
         Assert.Equal(DoctorStatus.Fail, report[DoctorChecks.Kernels].Status);
+    }
+
+    [Theory]
+    [InlineData(KernelAbi.Major, KernelAbi.Minor - 1)] // the case of #155: doctor passed, then roost serve failed
+    [InlineData(KernelAbi.Major, KernelAbi.Minor + 1)]
+    [InlineData(KernelAbi.Major + 1, KernelAbi.Minor)]
+    public void AManifestAtAnotherAbiFailsTheCheck(int major, int minor)
+    {
+        var probes = new FakeDoctorProbes();
+        probes.Files[probes.ManifestPath] = Encoding.UTF8.GetBytes(FakeDoctorProbes.Manifest(
+            new Dictionary<int, string> { [90] = "supported" }, new Dictionary<int, byte[]> { [90] = FakeDoctorProbes.Library90 }, abiMajor: major, abiMinor: minor));
+
+        var report = RoostDoctor.Run(Full(probes), probes);
+
+        Assert.Equal(DoctorStatus.Fail, report[DoctorChecks.Manifest].Status);
+        Assert.Contains($"ABI {major}.{minor}", report[DoctorChecks.Manifest].Detail, StringComparison.Ordinal);
+        Assert.Contains($"needs ABI {KernelAbi.Major}.{KernelAbi.Minor}", report[DoctorChecks.Manifest].Detail, StringComparison.Ordinal);
+        Assert.False(report.Healthy);
+        Assert.Equal(DoctorStatus.Pass, report[DoctorChecks.Kernels].Status); // the digests are still reported
     }
 
     [Fact]
@@ -392,7 +412,8 @@ public sealed class DoctorTests
         var manifest = DoctorManifest.Parse(bytes);
 
         Assert.Equal(FakeDoctorProbes.Sha(bytes), manifest.Sha256);
-        Assert.Equal(1, manifest.AbiMajor);
+        Assert.Equal(KernelAbi.Major, manifest.AbiMajor);
+        Assert.Equal(KernelAbi.Minor, manifest.AbiMinor); // a manifest behind the loader fails roost doctor and roost serve
         Assert.Equal("580", manifest.MinDriver);
         Assert.Equal([80, 86, 89, 90, 100, 120], manifest.SmStatuses.Keys);
         Assert.Equal("experimental", manifest.SmStatuses[86]);

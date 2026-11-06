@@ -11,7 +11,8 @@ namespace Starlings.Roost.Server.Doctor;
 /// The parts of the kernel manifest (contract C5, <c>kernels/manifest.toml</c>) that <c>roost doctor</c> reports: the ABI,
 /// the toolkit's minimum driver, each SM's status and each SM's library digest. A host package names no worker-side namespace
 /// (decision 21, <c>tools/check-roost-boundaries.py</c>), so this reads the TOML itself; the worker's loader stays the
-/// authority on what is admitted, and this reader only reports.
+/// authority on what is admitted, and this reader only reports. <see cref="RoostDoctor"/> compares the ABI read here with
+/// <c>KernelAbi</c>, which is Abstractions and not worker code.
 /// </summary>
 internal sealed class DoctorManifest
 {

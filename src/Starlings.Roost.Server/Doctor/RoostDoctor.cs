@@ -1,5 +1,6 @@
 using System.Globalization;
 using Starlings.Generation.Roost;
+using Starlings.Roost.Abi;
 
 namespace Starlings.Roost.Server.Doctor;
 
@@ -123,10 +124,10 @@ internal static class RoostDoctor
         try
         {
             var manifest = DoctorManifest.Parse(bytes);
-            return (manifest, new(
-                DoctorChecks.Manifest,
-                DoctorStatus.Pass,
-                $"{path}: sha256 {manifest.Sha256}, ABI {manifest.AbiMajor}.{manifest.AbiMinor}, CUDA {manifest.Cuda}"), workerDirectory);
+            var detail = $"{path}: sha256 {manifest.Sha256}, ABI {manifest.AbiMajor}.{manifest.AbiMinor}, CUDA {manifest.Cuda}";
+            return manifest.AbiMajor == KernelAbi.Major && manifest.AbiMinor == KernelAbi.Minor
+                ? (manifest, new(DoctorChecks.Manifest, DoctorStatus.Pass, detail), workerDirectory)
+                : (manifest, new(DoctorChecks.Manifest, DoctorStatus.Fail, $"{detail}: this build needs ABI {KernelAbi.Major}.{KernelAbi.Minor}, and roost serve would refuse the manifest"), workerDirectory);
         }
         catch (FormatException e)
         {
