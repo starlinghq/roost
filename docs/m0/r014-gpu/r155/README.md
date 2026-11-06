@@ -10,3 +10,5 @@ adoption: `evidence/proposals/` is unchanged.
   13.3.73, cuBLASLt 13.6.0.2 and driver 610.57. So every measured value equals the `[measured]` table of the proposal.
 - **The one flip** is the one the proposal already lists: SM 89, `code`, forward 23, GPU 13 against reference 5199, reference margin 0.0096.
 - **Commands.** `capture.sh` and `evaluate.sh` of `../scripts`, with paths changed and lease stream F, and `analyze.py` unchanged.
+
+The captures ran with `--allow-untested`, because SM 89 was still `untested` in the manifest at that point. The final R-036 runs are the only ones made on the final manifest without it.

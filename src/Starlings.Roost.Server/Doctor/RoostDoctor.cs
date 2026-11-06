@@ -125,9 +125,9 @@ internal static class RoostDoctor
         {
             var manifest = DoctorManifest.Parse(bytes);
             var detail = $"{path}: sha256 {manifest.Sha256}, ABI {manifest.AbiMajor}.{manifest.AbiMinor}, CUDA {manifest.Cuda}";
-            return manifest.AbiMajor == KernelAbi.Major && manifest.AbiMinor == KernelAbi.Minor
+            return manifest.AbiMajor == KernelAbi.Major && manifest.AbiMinor >= KernelAbi.Minor
                 ? (manifest, new(DoctorChecks.Manifest, DoctorStatus.Pass, detail), workerDirectory)
-                : (manifest, new(DoctorChecks.Manifest, DoctorStatus.Fail, $"{detail}: this build needs ABI {KernelAbi.Major}.{KernelAbi.Minor}, and roost serve would refuse the manifest"), workerDirectory);
+                : (manifest, new(DoctorChecks.Manifest, DoctorStatus.Fail, $"{detail}: this build needs ABI {KernelAbi.Major}.{KernelAbi.Minor} or a newer minor, and roost serve would refuse the manifest"), workerDirectory);
         }
         catch (FormatException e)
         {

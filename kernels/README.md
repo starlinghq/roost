@@ -287,7 +287,7 @@ compared on this toolchain. The digests change again at release, whose path diff
 - The `kernels` CI job has not run in GitHub Actions; its script passes locally for all six SMs outside the container.
 - The patch-set check has never run on a real patch (there are none yet).
 - `toolkit.min_driver = "580"` is unverified; only drivers 610.57 and 615.78 were tested.
-- SM 80, 90, 100 and 120 are built and registration-checked only; none ran on hardware. SM 89 ran R-019's suite and sanitizers and is `experimental` since #155.
+- SM 80, 90, 100 and 120 are built and registration-checked only; none ran on hardware. SM 89 ran R-019's suite and sanitizers and is `experimental` since #155; the sanitizers were not repeated on the #155 build, on either SM.
 
 ## Gemm: epilogues with C or bias are refused (R-019)
 

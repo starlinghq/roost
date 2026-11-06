@@ -38,7 +38,7 @@ The road to a full replacement runs through seven gates, M0 to M6, with ROCm aft
 | --- | --- |
 | Qwen3.5-0.8B greedy decode and `IChatClient` chat on the eager worker | Ran on an RTX 3090 (SM 86) and an RTX 4060 Ti (SM 89) in October, with committed evidence |
 | Server routes, async scheduling, sampling, tool-call parsers, sleep and wake, and more | Built and tested on the CPU path only; no GPU evidence |
-| Kernel library on current `main` | Rebuilt at ABI 1.3. On SM 86 and SM 89, conformance, greedy decode and chat through the packaged `roost-worker` passed on 2026-11-05 on locally built libraries ([#155](https://github.com/starlinghq/roost/issues/155)). No library is released |
+| Kernel library on current `main` | Rebuilt at ABI 1.3. On SM 86 and SM 89, conformance, greedy decode, and chat through the packaged `roost-worker` passed on 2026-11-05 on locally built libraries ([#155](https://github.com/starlinghq/roost/issues/155)). No library is released |
 | Protected fixtures and tolerances | Proposed, not adopted, so nothing can reach `supported` |
 | Packages, images and releases | None published |
 

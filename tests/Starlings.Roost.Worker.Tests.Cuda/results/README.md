@@ -48,3 +48,5 @@ SM 89's status.
 
 Both GPU phases pass. The harness now also sends a sampled-input row and a `grammar_slot` of 0: both are refused with code 1003
 (`Unsupported`), as the out-of-vocabulary and sampling plans are with 1002 and 1003.
+
+The `r155` runs used `--allow-untested` too, so their logs show SM 89 as `Untested`: its move to `experimental` came after them.

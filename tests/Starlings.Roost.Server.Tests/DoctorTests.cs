@@ -195,11 +195,22 @@ public sealed class DoctorTests
         Assert.Equal(DoctorStatus.Fail, report[DoctorChecks.Kernels].Status);
     }
 
+    [Fact]
+    public void AManifestAtANewerMinorPassesAsItDoesInTheLoader()
+    {
+        var probes = new FakeDoctorProbes();
+        probes.Files[probes.ManifestPath] = Encoding.UTF8.GetBytes(FakeDoctorProbes.Manifest(
+            new Dictionary<int, string> { [90] = "supported" }, new Dictionary<int, byte[]> { [90] = FakeDoctorProbes.Library90 }, abiMajor: KernelAbi.Major, abiMinor: KernelAbi.Minor + 1));
+
+        var report = RoostDoctor.Run(Full(probes), probes);
+
+        Assert.Equal(DoctorStatus.Pass, report[DoctorChecks.Manifest].Status);
+    }
+
     [Theory]
     [InlineData(KernelAbi.Major, KernelAbi.Minor - 1)] // the case of #155: doctor passed, then roost serve failed
-    [InlineData(KernelAbi.Major, KernelAbi.Minor + 1)]
     [InlineData(KernelAbi.Major + 1, KernelAbi.Minor)]
-    public void AManifestAtAnotherAbiFailsTheCheck(int major, int minor)
+    public void AManifestTheLoaderWouldRefuseFailsTheCheck(int major, int minor)
     {
         var probes = new FakeDoctorProbes();
         probes.Files[probes.ManifestPath] = Encoding.UTF8.GetBytes(FakeDoctorProbes.Manifest(
