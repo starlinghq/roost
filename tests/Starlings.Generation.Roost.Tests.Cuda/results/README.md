@@ -53,7 +53,7 @@ manifest shipped beside it. The commands are `run.sh`'s, with lease stream F. Li
 | --- | --- | --- | --- |
 | `r036-chat-r155-sm86-roost-worker.log` | `ccb3c9c4...` | yes | PASS |
 | `r036-chat-r155-sm89-roost-worker.log` | `ccb3c9c4...` | yes | PASS |
-| `r036-chat-r155-final-sm86-roost-worker.log` | final, repacked | no | see the log |
-| `r036-chat-r155-final-sm89-roost-worker.log` | final, repacked | no | see the log |
+| `r036-chat-r155-final-sm86-roost-worker.log` | `fac25890...` (final, repacked) | no | PASS |
+| `r036-chat-r155-final-sm89-roost-worker.log` | `fac25890...` (final, repacked) | no | PASS |
 
 Finishes and usage equal the October runs (`stop`, `stop`, `length`; 24+2, 19+23, 17+48), and so does the one-word cross-SM difference.
