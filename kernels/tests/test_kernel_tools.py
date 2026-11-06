@@ -50,7 +50,7 @@ def test_every_upstream_pin_is_a_full_sha_and_the_sm_list_is_complete():
     assert all(len(u["sha"]) == 40 for u in manifest["upstreams"])
     assert [s["arch"] for s in manifest["sm"]] == [80, 86, 89, 90, 100, 120]
     # An SM without hardware evidence is untested.
-    assert {s["arch"] for s in manifest["sm"] if s["status"] != "untested"} == {86}
+    assert {s["arch"] for s in manifest["sm"] if s["status"] != "untested"} == {86, 89}
 
 
 def test_cmake_variables_come_from_the_manifest():
