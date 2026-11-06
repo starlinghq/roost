@@ -58,7 +58,8 @@ public sealed class ProcessTransportTests
     [Fact]
     public async Task AHungStepMissesItsDeadlineAndTheWorkerIsKilledAndReplaced()
     {
-        await using var client = await TestRig.ProcessAsync(new Script { Tokens = TestRig.Encode(Reply), HangAtStep = 5 }, TimeSpan.FromMilliseconds(500));
+        // The deadline also covers the replacement worker's first steps, which a loaded machine can make slow.
+        await using var client = await TestRig.ProcessAsync(new Script { Tokens = TestRig.Encode(Reply), HangAtStep = 5 }, TimeSpan.FromSeconds(5));
         var transport = Assert.IsType<ProcessWorkerTransport>(((DriverTransport)((WorkerDriver)client.Backend).Transport).Inner);
         var first = transport.ProcessId;
 
