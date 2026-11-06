@@ -80,7 +80,7 @@ def test_schema_rejects(example, change, expected):
         (lambda m: m["sm"].pop(1), "is not in the SM list"),
         (lambda m: m["ops"][0]["variants"][0].update(source="nowhere"), "is not an upstream"),
         (lambda m: m["abi"].update(major=2), "ROOST_ABI_MAJOR"),
-        (lambda m: m["abi"].update(minor=9), "newer than ROOST_ABI_MINOR"),
+        (lambda m: m["abi"].update(minor=9), "differs from ROOST_ABI_MINOR"),
         (lambda m: m["ops"][2]["variants"][0].update(triton_kernels=["other"]), "not declared under triton_aot"),
         (lambda m: m["upstreams"][0].update(ops=["Gemm", "Sample"]), "'Sample' is not an op of this manifest"),
     ],
@@ -88,6 +88,18 @@ def test_schema_rejects(example, change, expected):
 def test_semantic_checks_reject(example, change, expected):
     errors = mutate(example, change)
     assert any(expected in e for e in errors), errors
+
+
+@pytest.mark.parametrize("offset", [-1, 1])
+def test_a_minor_that_differs_from_the_header_in_either_direction_is_rejected(example, offset):
+    _, _, minor = manifest_tool.header_ops_and_abi()
+    errors = mutate(example, lambda m: m["abi"].update(minor=minor + offset))
+    assert any(f"differs from ROOST_ABI_MINOR {minor}" in e for e in errors), errors
+
+
+def test_the_committed_manifest_is_at_the_header_abi():
+    with (ROOT / "kernels" / "manifest.toml").open("rb") as handle:
+        assert manifest_tool.check(tomllib.load(handle)) == []
 
 
 def test_c3_op_names_come_from_the_header():

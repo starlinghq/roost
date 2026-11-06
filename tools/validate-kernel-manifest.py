@@ -12,7 +12,7 @@ minimum, maximum, local $ref) and then checks what a schema cannot:
   - every binary and constraint arch is in the SM list, and every variant source is a declared upstream, external
     library or "roost";
   - an upstream's ops are ops of the manifest, and a variant's triton_kernels are declared under triton_aot;
-  - abi.major equals ROOST_ABI_MAJOR and abi.minor is at most ROOST_ABI_MINOR.
+  - abi.major equals ROOST_ABI_MAJOR and abi.minor equals ROOST_ABI_MINOR.
 """
 
 from __future__ import annotations
@@ -119,8 +119,10 @@ def semantic_errors(manifest: dict, header: Path = HEADER) -> list[str]:
     abi = manifest.get("abi", {})
     if abi.get("major") != abi_major:
         errors.append(f"$.abi.major: {abi.get('major')} but roost_kernels.h has ROOST_ABI_MAJOR {abi_major}")
-    if isinstance(abi.get("minor"), int) and abi["minor"] > abi_minor:
-        errors.append(f"$.abi.minor: {abi['minor']} is newer than ROOST_ABI_MINOR {abi_minor}")
+    # Equal, not "at most": the loader refuses a manifest older than its ABI (KernelLibrary.Admit), so one that lags the header
+    # builds and passes CI and then cannot load.
+    if isinstance(abi.get("minor"), int) and abi["minor"] != abi_minor:
+        errors.append(f"$.abi.minor: {abi['minor']} differs from ROOST_ABI_MINOR {abi_minor}")
 
     archs = {entry.get("arch") for entry in manifest.get("sm", [])}
     sources = {"roost"}
