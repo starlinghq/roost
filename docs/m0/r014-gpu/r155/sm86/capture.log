@@ -1,0 +1,7 @@
+device SM 86; library libroost_kernels_sm86.so sha256 9e26f00c647654e813dd2279cc983bc411868935aa910f2cf96b488df0ba844e; SM status Experimental
+capital: 24 forwards, 25 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 3.9 s
+system-haiku: 24 forwards, 44 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 3.2 s
+multi-turn: 24 forwards, 69 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 3.0 s
+code: 24 forwards, 31 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 3.4 s
+long-context: 24 forwards, 134 prompt tokens, argmax equals the reference's greedy token at 24 of 24; 5.9 s
+PASS
