@@ -5,7 +5,7 @@ CUDA C++ behind the C1 ABI (`kernels/include/roost_kernels.h`, frozen). One shar
 Each library exports `roost_abi_version`, `roost_last_error`, `roost_register` (the registration table),
 `roost_context_create` and `roost_context_destroy`. The table holds the `residual-stub` variant of `Residual` (R-016: a
 correct, unoptimised op that proves the build, registration and run path), the ten M0 attention-side variants of R-017
-(next section) and the hybrid ops of R-034 (Hybrid ops), all against C1 ABI 1.2 (contract version 3).
+(next section) and the hybrid ops of R-034 (Hybrid ops), all against C1 ABI 1.3 (contract version 6).
 
 ## Files
 

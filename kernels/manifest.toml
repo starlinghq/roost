@@ -4,11 +4,11 @@
 # pins from it (kernels/tools/manifest_cmake.py), so this file is the only place a pin lives.
 
 schema_version = 1
-contract_version = 3
+contract_version = 6
 
 [abi]
 major = 1
-minor = 2
+minor = 3
 
 [toolkit]
 cuda = "13.3"
