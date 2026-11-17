@@ -12,7 +12,7 @@ Committed evidence for `evidence/proposals/r014-gpu-tolerances.toml`. The propos
 | `scripts/` | The capture, evaluation and analysis commands as run |
 
 The absolute paths in `run.json` and `scripts/*.sh` are on the development host, where the run artifacts live:
-- the reference fixtures under `/home/mark/Projects/roost-evidence/R-014/ref`, pinned by `evidence/proposals/r014-fixtures.toml`;
+- the reference fixtures under `<evidence dir>/R-014/ref`, pinned by `evidence/proposals/r014-fixtures.toml`;
 - the GPU captures under `gpu-sm86/` and `gpu-sm89/` beside them.
 
 The runs used the R-034 kernel libraries named in `run.json`, not the rebuilt libraries of #137 (see the proposal's caveats).

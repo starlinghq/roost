@@ -21,7 +21,7 @@ if (!File.Exists(args[0]))
     return 2;
 }
 
-// An exception escaping Main would abort the process with SIGABRT (a core dump on the maintainer's desktop), so every
+// An exception escaping Main would abort the process with SIGABRT (and leave a core dump), so every
 // failure is caught and reported as a failed check.
 // That includes the device setup (no visible device, a card that cannot create a context), the library load and saving the log.
 int Finish(int code)

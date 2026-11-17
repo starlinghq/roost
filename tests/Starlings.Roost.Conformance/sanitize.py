@@ -22,8 +22,8 @@ report).
 
 compute-sanitizer reports errors without crashing the process, so a run that ends in a signal (SIGSEGV, SIGABRT, SIGBUS,
 ...) is not an expected outcome: the driver stops at once, records the command and what it printed, and starts nothing
-else (the maintainer's desktop rule: a process that dies by a signal floods it with crash alerts, so nothing is rerun in
-a loop).
+else (a process that dies by a signal can flood a developer machine with crash reports, so nothing is rerun in a
+loop).
 
 Exit status: 0 when every run reported zero errors, 1 when any reported errors or did not complete, 3 after a signal
 death.
