@@ -1,6 +1,6 @@
 # R-014 GPU comparison, rerun for #155 (2026-11-05)
 
-The GPU half of R-014 on the ABI 1.3 libraries, against the same fixtures (`/home/mark/Projects/roost-evidence/R-014/ref`). Layout as in
+The GPU half of R-014 on the ABI 1.3 libraries, against the same fixtures (`<evidence dir>/R-014/ref`). Layout as in
 the parent directory: `sm86/`, `sm89/`, `layers-sm<N>.json` and `.out`, `summary.json` and `summary.txt`. These are measurements, not an
 adoption: `evidence/proposals/` is unchanged.
 
