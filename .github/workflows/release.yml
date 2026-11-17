@@ -22,7 +22,7 @@ name: release
 #
 # Run by hand (workflow_dispatch) it builds the candidate only and never publishes. Pull requests never run it. The jobs
 # that hold a write token or mint an OIDC token, and the job whose output is published, run on fresh GitHub-hosted
-# runners, never on the persistent self-hosted runner that pull-request CI also uses (R-060 review).
+# runners, never on the persistent self-hosted runner (R-060 review).
 on:
   push:
     tags: ["v*"]
